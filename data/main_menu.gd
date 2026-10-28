@@ -146,9 +146,12 @@ func _build_title_page() -> void:
 	title.custom_minimum_size = Vector2(560, 136)
 	title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	head.add_child(title)
+	var spot := Control.new()            # 光靈的「家」：版面上留一格空位，光靈本體疊在整頁最上層，可以拖著到處丟
+	spot.custom_minimum_size = Vector2(170, 170)
+	spot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(spot)
 	_title_spirit = TitleSpirit.new()
-	_title_spirit.custom_minimum_size = Vector2(170, 170)
-	head.add_child(_title_spirit)
+	_title_spirit.home = spot
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	col.add_child(gap)
@@ -175,6 +178,9 @@ func _build_title_page() -> void:
 	_quest_chip(_title_page, Vector2(1152 - 140 - 18, 14))
 	_gacha_chip(_title_page, Vector2(1152 - 140 - 18 - 150, 14))
 	_wardrobe_chip(_title_page, Vector2(1152 - 140 - 18 - 300, 14))
+	# 光靈最後加入：整頁大小的透明層，只有點在光靈身上才會接住（其他地方照常點得到按鈕）
+	_title_spirit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_title_page.add_child(_title_spirit)
 
 
 func _menu_button(text: String, h: int) -> Button:
@@ -1222,30 +1228,135 @@ class TitleSpirit extends Control:
 	const SL := preload("spirit_look.gd")
 	const UITheme := preload("game_theme.gd")
 	const Game := preload("game.gd")
+	const R := 54.0          # 光靈半徑
+	const HIT := 70.0        # 點得到的範圍（比身體大一點，手指比較好抓）
+	const EDGE := 60.0       # 碰牆時，光靈中心離畫面邊緣的距離
+	const BOUNCE := 0.72     # 反彈後保留的速度
+	const FRICTION := 1.3    # 飛行時速度衰減（越大停得越快）
 	var eq: Dictionary = {}
 	var t := 0.0
 	var hop := -10.0        # 上一次被點的時間
+	## 主畫面用：版面上的空位。有設定時，光靈可以拖曳、丟出去、碰到畫面邊緣反彈；
+	## 沒設定（例如通知詢問視窗裡）就是原本在格子正中間飄的樣子。
+	var home: Control = null
+	var pos := Vector2(NAN, NAN)    # 目前位置（本元件座標）；NAN = 還沒放過，待在家
+	var vel := Vector2.ZERO
+	var dragging := false
+	var grab := Vector2.ZERO        # 手指按下的位置和光靈中心的差
+	var press_at := Vector2.ZERO
+	var moved := false
+	var last_mouse := Vector2.ZERO
+	var last_ms := 0
+	var hit_t := -10.0              # 上一次撞牆的時間
+	var hit_x := true               # 撞的是左右牆（true）還是上下牆
+	var tilt := 0.0
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		eq = Game.of(self).equipped.duplicate()
 
+	func _center() -> Vector2:
+		if home == null:
+			return size / 2.0
+		if is_nan(pos.x):
+			return home.get_global_rect().get_center() - get_global_rect().position
+		return pos
+
+	func _has_point(p: Vector2) -> bool:
+		if home == null:
+			return Rect2(Vector2.ZERO, size).has_point(p)
+		return p.distance_to(_center() + Vector2(0, 6)) < HIT
+
 	func _gui_input(e: InputEvent) -> void:
-		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-			if t - hop > 0.5:
-				hop = t
-				Game.of(self).play("bell", Game.semi(Game.scale_semi(4 + randi() % 4)), -8.0)
+		if home == null:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				_hop()
+				accept_event()
+			return
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+			if e.pressed:
+				pos = _center()
+				dragging = true
+				moved = false
+				vel = Vector2.ZERO
+				grab = e.position - pos
+				press_at = e.position
+				last_mouse = e.position
+				last_ms = Time.get_ticks_msec()
+			elif dragging:
+				dragging = false
+				if not moved:
+					_hop()
+				elif Time.get_ticks_msec() - last_ms > 120:
+					vel = Vector2.ZERO       # 停住一下才放手：就放在那裡，不丟出去
+				vel = vel.limit_length(3200.0)
+			accept_event()
+		elif e is InputEventMouseMotion and dragging:
+			if e.position.distance_to(press_at) > 8.0:
+				moved = true
+			if moved:
+				var now := Time.get_ticks_msec()
+				var dt := maxf((now - last_ms) / 1000.0, 0.001)
+				var v: Vector2 = (e.position - last_mouse) / dt
+				vel = vel.lerp(v, 0.6)       # 平滑一點，放手時的速度比較穩
+				last_mouse = e.position
+				last_ms = now
+				pos = _clamp(e.position - grab)
 			accept_event()
 
+	func _hop() -> void:
+		if t - hop > 0.5:
+			hop = t
+			Game.of(self).play("bell", Game.semi(Game.scale_semi(4 + randi() % 4)), -8.0)
+
+	func _clamp(p: Vector2) -> Vector2:
+		var lo := Vector2(EDGE, EDGE)
+		var hi := size - Vector2(EDGE, EDGE)
+		return Vector2(clampf(p.x, lo.x, maxf(lo.x, hi.x)), clampf(p.y, lo.y, maxf(lo.y, hi.y)))
+
 	func _process(delta: float) -> void:
-		if is_visible_in_tree():
-			t += delta
-			eq = Game.of(self).equipped      # 在衣櫃換了裝扮，馬上跟著換（不用重開主畫面）
-			queue_redraw()
+		if not is_visible_in_tree():
+			return
+		t += delta
+		eq = Game.of(self).equipped      # 在衣櫃換了裝扮，馬上跟著換（不用重開主畫面）
+		if home != null and not is_nan(pos.x) and not dragging:
+			_fly(minf(delta, 0.05))
+		var want := 0.0 if dragging else clampf(vel.x / 2600.0, -0.35, 0.35)
+		if dragging:
+			want = clampf(vel.x / 3000.0, -0.25, 0.25)
+		tilt = lerpf(tilt, want, minf(1.0, delta * 10.0))
+		queue_redraw()
+
+	func _fly(dt: float) -> void:
+		if vel.length() < 15.0:
+			vel = Vector2.ZERO
+			pos = _clamp(pos)
+			return
+		pos += vel * dt
+		vel *= exp(-FRICTION * dt)
+		var lo := Vector2(EDGE, EDGE)
+		var hi := size - Vector2(EDGE, EDGE)
+		var hx := 0.0
+		var hy := 0.0
+		if pos.x < lo.x or pos.x > hi.x:
+			pos.x = clampf(pos.x, lo.x, hi.x)
+			hx = absf(vel.x)
+			vel.x = -vel.x * BOUNCE
+		if pos.y < lo.y or pos.y > hi.y:
+			pos.y = clampf(pos.y, lo.y, hi.y)
+			hy = absf(vel.y)
+			vel.y = -vel.y * BOUNCE
+		var hit := maxf(hx, hy)
+		if hit > 0.0:
+			hit_x = hx >= hy
+		if hit > 120.0:
+			hit_t = t
+			if hit > 500.0:
+				Game.of(self).play("bell", Game.semi(Game.scale_semi(randi() % 4)), -14.0)
 
 	func _draw() -> void:
-		var r := 54.0
+		var r := R
 		var k := t - hop
 		var jump := 0.0
 		var squash := Vector2.ONE
@@ -1253,19 +1364,27 @@ class TitleSpirit extends Control:
 			jump = -sin(k / 0.6 * PI) * 34.0
 			if k < 0.08:
 				squash = Vector2(1.12, 0.88)
-		var c := size / 2.0 + Vector2(0, 6 + sin(t * 1.8) * 6.0 + jump)
+		var hk := t - hit_t
+		if hk < 0.18:                      # 撞牆：往撞的方向壓扁一下再彈回來
+			var s := sin(hk / 0.18 * PI) * 0.18
+			squash = Vector2(1.0 - s, 1.0 + s) if hit_x else Vector2(1.0 + s, 1.0 - s)
+		var flying := home != null and (dragging or vel != Vector2.ZERO)
+		var bob := 0.0 if flying else sin(t * 1.8) * 6.0
+		if dragging:
+			squash *= 1.08                 # 抓起來的時候大一點點
+		var c := _center() + Vector2(0, 6 + bob + jump)
 		# 柔和的光暈
 		for i in 3:
 			UITheme.dot(self, c, r * (1.38 - i * 0.12), Color(1.0, 0.9, 0.5, 0.05))
 		# 身邊繞圈的小星星
 		for i in 5:
-			var a := t * (0.9 + 0.3 * float(k < 0.6)) * (1.0 + i * 0.08) + i * TAU / 5.0
+			var a := t * (0.9 + 0.3 * float(k < 0.6 or flying)) * (1.0 + i * 0.08) + i * TAU / 5.0
 			var p := c + Vector2(cos(a) * r * 1.55, sin(a) * r * 0.55 - 4.0)
 			var front := sin(a) > 0.0
 			var col := Color(1, 0.9, 0.55, 0.85 if front else 0.35)
 			_spark(p, 4.0 + 1.5 * sin(t * 3.0 + i), col)
 		# 光靈本體（裝扮也一起畫）
-		draw_set_transform(c, 0.0, squash)
+		draw_set_transform(c, tilt, squash)
 		SL.draw_all(self, Vector2.ZERO, r, eq, t)      # 原版的光靈＋衣櫃裡穿的裝扮
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
