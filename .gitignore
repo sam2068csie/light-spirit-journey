@@ -1,0 +1,20 @@
+# Godot 4：編輯器自動產生的快取（每台電腦會自己重建，不用上傳）
+.godot/
+
+# Android 建置範本（在 Godot 裡「安裝 Android 建置範本」就會重新產生）
+/android/
+
+# 匯出的安裝檔
+*.apk
+*.aab
+/export/
+/build/
+
+# 簽章金鑰：絕對不要上傳！
+*.keystore
+*.jks
+
+# 系統檔
+.DS_Store
+Thumbs.db
+desktop.ini

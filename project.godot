@@ -1,0 +1,44 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="光靈的旅程"
+run/main_scene="uid://dodh6vc5e70n3"
+config/features=PackedStringArray("4.7", "Mobile")
+config/icon="uid://bx46m6s6t0pfm"
+
+[autoload]
+
+QuizManager="*res://data/quiz_manager.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/handheld/orientation=4
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/NotificationSchedulerPlugin/plugin.cfg")
+
+[gui]
+
+theme/custom_font="res://fonts/game_font.tres"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://cg8k7xbx4ihrj"]
+
+[ext_resource type="Script" uid="uid://qa4dtvnp85x6" path="res://data/level_01_light_bridge.gd" id="1_mckh2"]
+
+[node name="Level01" type="Control" unique_id=372138463]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mckh2")
