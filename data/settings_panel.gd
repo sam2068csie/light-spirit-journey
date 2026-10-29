@@ -63,7 +63,7 @@ func _ready() -> void:
 	rows.add_child(_power_row())
 	# 進度備份說明＋回報問題
 	var bk := Label.new()
-	bk.text = "遊戲進度會跟著手機的 Google 備份一起備份：換手機時登入同一個 Google 帳號，重新安裝就能接著玩。"
+	#bk.text = "遊戲進度會跟著手機的 Google 備份一起備份：換手機時登入同一個 Google 帳號，重新安裝就能接著玩。"
 	bk.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	bk.custom_minimum_size = Vector2(380, 0)
 	bk.add_theme_font_size_override("font_size", UITheme.fs(13))
@@ -155,7 +155,7 @@ func _build_dev() -> void:
 	box.add_child(res_row)
 	if not g.can_resize_window():
 		var note := Label.new()
-		note.text = "目前是內嵌執行或手機版，視窗大小不能調整。\n要測試解析度，請關掉編輯器的「內嵌遊戲」再執行。" if OS.has_feature("editor") else "這個平台不能調整視窗大小。"
+		note.text = "此裝置不能調整視窗大小。\n要測試解析度，請關掉編輯器的「內嵌遊戲」再執行。" if OS.has_feature("editor") else "這個平台不能調整視窗大小。"
 		note.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 		note.custom_minimum_size = Vector2(340, 0)
 		note.add_theme_font_size_override("font_size", UITheme.fs(13))
@@ -198,7 +198,7 @@ func _build_dev() -> void:
 	f1.text = "顯示幀數"
 	fl.add_child(f1)
 	var f2 := Label.new()
-	f2.text = "左上角顯示每秒幀數（檢查效能用）"
+	f2.text = "左上角顯示每秒幀數"
 	f2.add_theme_font_size_override("font_size", UITheme.fs(13))
 	f2.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	fl.add_child(f2)
@@ -263,7 +263,7 @@ func _power_row() -> Control:
 		_power_btn.icon = UITheme.switch_icon(g.power_save))
 	row.add_child(_power_btn)
 	var n := Label.new()
-	n.text = "畫面沒在操作時降低更新頻率，手機比較不會發燙、比較省電"
+	n.text = "畫面沒在操作時降低更新頻率"
 	n.add_theme_font_size_override("font_size", UITheme.fs(13))
 	n.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	n.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
@@ -333,7 +333,7 @@ func _refresh_notify() -> void:
 	_notify_time.text = g.notify_time
 	_notify_time.modulate.a = 1.0 if g.notify_on else 0.4
 	if not g.notifier.available():
-		_notify_note.text = "好幾天沒來時，光靈會在這個時間傳通知想念你（手機版才有）"
+		_notify_note.text = "光靈會在這個時間傳通知想念你（手機版）"
 	elif g.notify_on and not g.notifier.has_permission():
 		_notify_note.text = "手機還沒允許通知：請在跳出的視窗按「允許」"
 	else:
@@ -383,7 +383,7 @@ func _confirm_wipe() -> void:
 	var col: VBoxContainer = o[1]
 	col.add_child(UITheme.title_label("刪除所有遊玩紀錄？", 24, UITheme.BAD))
 	var msg := Label.new()
-	msg.text = "星數、旅程進度、錯題本、每日修煉、看過的劇情、終焉之塔紀錄都會清空，而且不能復原。\n（音量和開發者設定會保留）"
+	msg.text = "星數、旅程進度、錯題本、每日修煉、看過的劇情、終焉之塔紀錄都會清空，而且不能復原。"
 	msg.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	msg.custom_minimum_size = Vector2(360, 0)
 	msg.add_theme_color_override("font_color", UITheme.TEXT_DIM)
