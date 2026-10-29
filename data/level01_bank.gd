@@ -373,6 +373,7 @@ static func slots() -> Array:
 
 		{"id": "peak", "chapter": 2, "type": "fit", "title": "倒立的山", "form": "abs_in",
 		 "params": ["a"], "live": true, "view": {"x": Vector2(-4, 4), "y": Vector2(-0.5, 2.5)},
+		 "start": {"a": 0.8},     # 底數一開始就在 0～1 之間，拖動時山形不會先翻成谷
 		 "story": "這座山越往兩邊越低，最高的寶石在正中間。",
 		 "predicts": [
 			{"q": "這座山是 y = a^{|x|}（0 < a < 1）。它的最大值是？",
