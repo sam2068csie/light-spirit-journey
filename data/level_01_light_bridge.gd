@@ -1928,10 +1928,15 @@ func _cross_begin_side(side: int) -> void:
 	sketch_fails = 0
 	stage.begin_cross_sketch(side)
 	step_label.text = UITheme.step_bar(_steps(), side - 1)
+	stage.guide_pts = []
 	if stage.begin_mark():
 		_mark_ui(" " + _cross_side_name(side) + " ")
 	else:
+		for g in r.get("guides", {}).get(side, []):
+			stage.guide_pts.append([Vector2(g[0], g[1]), String(g[2])])
 		_cross_draw_ui(side)
+		if not stage.guide_pts.is_empty():
+			task_label.text += "\n圖形會通過畫面上標出的三個點。"
 	_update_hud()
 
 
@@ -3529,6 +3534,7 @@ class Stage extends Control:
 
 	# 找整數點（徒手作圖之前）
 	var mark_on := false             # 正在點選整數點
+	var guide_pts: Array = []        # 徒手畫圖前先給的參考點 [[Vector2, 標籤], …]（沒有整數點可以標時用）
 	var mark_targets: Array = []     # 曲線經過的整數點（答案）
 	var mark_sel: Array = []         # 學生點選的點
 	var mark_bad: Array = []         # 點錯的點（紅色）
@@ -4381,6 +4387,7 @@ class Stage extends Control:
 
 	## 這一條畫對了：把正確的圖形亮出來
 	func finish_cross_side(side: int) -> void:
+		guide_pts = []
 		cross_drawn[side - 1] = true
 		var f: Callable = f_exp if side == 1 else f_quad
 		for seg in _segments(f):
@@ -5166,6 +5173,15 @@ class Stage extends Control:
 	## 筆跡、提示點、「按住拖曳」的提示（徒手作圖與交點獵人共用）
 	func _draw_stroke_layer(font: Font, ink: Color) -> void:
 		_draw_marks(font)
+		for g in guide_pts:
+			var gc := to_screen(g[0])
+			UITheme.dot(self, gc, 11.0, Color(0.55, 0.85, 1.0, 0.2))
+			UITheme.dot(self, gc, 5.5, Color("8fd8ff"))
+			var gl := String(g[1])
+			var gw := font.get_string_size(gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+			var gx := 10.0 if gc.x + 10.0 + gw < size.x - 4.0 else -10.0 - gw     # 太靠右就寫在點的左邊
+			draw_string(font, gc + Vector2(gx + 1, -9), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(0, 0, 0, 0.7))
+			draw_string(font, gc + Vector2(gx, -10), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color("cfeeff"))
 		if draw_show_keys or draw_reveal:
 			for kp in (hint_keys if draw_show_keys and not hint_keys.is_empty() else draw_keys):
 				var c := to_screen(kp)
