@@ -219,7 +219,7 @@ func _build_dev() -> void:
 	tn.text = "試發一則提醒通知（10 秒後，先切到桌面）"
 	tn.custom_minimum_size = Vector2(0, 40)
 	tn.focus_mode = Control.FOCUS_NONE
-	tn.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tn.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tn.pressed.connect(func():
 		var ok: bool = g.notifier.test_now()
 		_notify_note.text = "已排好，10 秒後會跳出來。" if ok else "沒有找到通知外掛（電腦版或還沒安裝），沒辦法試發。"
@@ -232,7 +232,7 @@ func _build_dev() -> void:
 	del.custom_minimum_size = Vector2(0, 44)
 	del.focus_mode = Control.FOCUS_NONE
 	del.add_theme_color_override("font_color", UITheme.BAD)
-	del.add_theme_color_override("font_hover_color", Color("ff9aa5"))
+	del.add_theme_color_override("font_hover_color", UITheme.ROSE)
 	del.add_theme_stylebox_override("normal", UITheme.box(Color(1, 0.42, 0.48, 0.08), 12, Color(1, 0.42, 0.48, 0.5), 1, 8))
 	del.add_theme_stylebox_override("hover", UITheme.box(Color(1, 0.42, 0.48, 0.16), 12, UITheme.BAD, 1, 8))
 	del.add_theme_stylebox_override("pressed", UITheme.box(Color(1, 0.42, 0.48, 0.24), 12, UITheme.BAD, 2, 8))
@@ -345,7 +345,7 @@ func _arrow(t: String) -> Button:
 	b.text = t
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(40, 36)
-	b.add_theme_font_size_override("font_size", UITheme.fs(22))
+	b.add_theme_font_size_override("font_size", UITheme.fs(24))
 	return b
 
 

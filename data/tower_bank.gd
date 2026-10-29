@@ -20,11 +20,12 @@ extends RefCounted
 ##     {t: "line", q, row: 這一列的名稱, marks: [數線上的關鍵點…], seg: [每一段選不選], pt: [每個點包不包含], write}
 ##         數線封印：點選數線上的區段和端點。同一題連續的 line 步驟共用同一條數線，前面完成的列會留著當參考。
 ##         seg 有 marks.size()+1 段（由左到右），pt 有 marks.size() 個；1 = 選、0 = 不選。
+const UITheme := preload("game_theme.gd")
 
 const KIND_NAME := {"judge": "真假審判", "roots": "驗根之刃", "line": "數線封印", "extreme": "極值換元",
 	"quest": "現實委託", "boss": "試煉大題"}
-const KIND_COLOR := {"judge": Color("5ad8ff"), "roots": Color("ff7eb6"), "line": Color("a6f05a"),
-	"extreme": Color("ffb454"), "quest": Color("c792ff"), "boss": Color("ff8fa0")}
+const KIND_COLOR := {"judge": UITheme.CYAN, "roots": UITheme.PINK, "line": UITheme.LIME,
+	"extreme": UITheme.ORANGE, "quest": UITheme.VIOLET, "boss": UITheme.ROSE}
 
 
 static var _items: Array = []

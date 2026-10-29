@@ -26,7 +26,7 @@ const Concepts := preload("concept_cards.gd")
 const ConceptDeck := preload("concept_deck.gd")
 const Buddy := preload("buddy.gd")
 const QP := preload("quest_panel.gd")       # 物品圖示（星塵、寶箱…）
-const QUAD_COL := Color("ffb454")
+const QUAD_COL := UITheme.ORANGE
 
 const PARAM_INFO := {
 	"a": {"name": "底數 a", "range": [0.1, 4.0, 0.05], "start": 1.5},
@@ -38,7 +38,7 @@ const PARAM_INFO := {
 	"s": {"name": "掃描線 x", "range": [-6.0, 6.0, 0.05], "start": 0.0},
 }
 const MAX_ENERGY := 3
-const RANK_COLORS := [Color("ff7eb6"), Color("5ad8ff"), Color("a6f05a"), Color("ffb454")]
+const RANK_COLORS := [UITheme.PINK, UITheme.CYAN, UITheme.LIME, UITheme.ORANGE]
 const RANK_TAGS := ["A", "B", "C", "D"]
 const ROMAN := ["", "Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ"]
 
@@ -432,12 +432,12 @@ func _build_ui() -> void:
 	add_child(top)
 	var title := Label.new()
 	title.text = level_title()
-	title.add_theme_font_size_override("font_size", UITheme.fs(26))
+	title.add_theme_font_size_override("font_size", UITheme.fs(24))
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(title)
 	journey_label = Label.new()
-	journey_label.add_theme_font_size_override("font_size", UITheme.fs(19))
+	journey_label.add_theme_font_size_override("font_size", UITheme.fs(20))
 	journey_label.add_theme_color_override("font_color", UITheme.TEXT)
 	journey_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	journey_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -458,7 +458,7 @@ func _build_ui() -> void:
 	dust_ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(dust_ic)
 	score_label = Label.new()
-	score_label.add_theme_font_size_override("font_size", UITheme.fs(22))
+	score_label.add_theme_font_size_override("font_size", UITheme.fs(24))
 	score_label.add_theme_color_override("font_color", UITheme.ACCENT)
 	score_label.custom_minimum_size = Vector2(64, 0)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -685,8 +685,8 @@ func _big_label(text: String, size: int, c: Color) -> Label:
 # ================= 章節選單與章節卡 =================
 
 const CHAPTERS := [
-	{"ch": 1, "name": "第一章．指數之光", "topic": "圖形、平移、象限與交點", "color": Color("5ad8ff")},
-	{"ch": 2, "name": "第二章．鏡之谷", "topic": "絕對值：對稱與翻折", "color": Color("ff7eb6")},
+	{"ch": 1, "name": "第一章．指數之光", "topic": "圖形、平移、象限與交點", "color": UITheme.CYAN},
+	{"ch": 2, "name": "第二章．鏡之谷", "topic": "絕對值：對稱與翻折", "color": UITheme.PINK},
 ]
 
 
@@ -764,7 +764,7 @@ func _chapter_button(item: Dictionary, best: int) -> Button:
 	col.add_child(name_l)
 	var topic := Label.new()
 	topic.text = item.topic
-	topic.add_theme_font_size_override("font_size", UITheme.fs(14))
+	topic.add_theme_font_size_override("font_size", UITheme.fs(15))
 	topic.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	topic.clip_text = true
 	topic.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -800,7 +800,7 @@ func _show_chapter_card() -> void:
 	col.add_child(_big_label(cc.title, 34, col2))
 	var d := MathLabel.new()
 	d.max_width = 440
-	d.font_size = UITheme.fs(19)
+	d.font_size = UITheme.fs(20)
 	d.text = cc.text
 	col.add_child(d)
 	var go := Button.new()
@@ -1342,7 +1342,7 @@ func _build_rank_rows() -> void:
 		tag.custom_minimum_size = Vector2(36, 42)
 		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		tag.add_theme_font_size_override("font_size", UITheme.fs(19))
+		tag.add_theme_font_size_override("font_size", UITheme.fs(20))
 		tag.add_theme_color_override("font_color", Color("1a1530"))
 		tag.add_theme_stylebox_override("normal", UITheme.box(c, 12, Color(0, 0, 0, 0), 0, 0))
 		row.add_child(tag)
@@ -1356,7 +1356,7 @@ func _build_rank_rows() -> void:
 			chip.focus_mode = Control.FOCUS_NONE
 			chip.custom_minimum_size = Vector2(0, 42)
 			chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			chip.add_theme_font_size_override("font_size", UITheme.fs(18))
+			chip.add_theme_font_size_override("font_size", UITheme.fs(17))
 			UITheme.tight(chip)
 			var on := UITheme.box(c.darkened(0.55), 12, c, 2, 4)
 			chip.add_theme_stylebox_override("pressed", on)
@@ -1468,7 +1468,7 @@ func _build_table() -> void:
 	table_q_label.add_theme_color_override("font_color", UITheme.ACCENT)
 	v.add_child(table_q_label)
 	table_line = MathLabel.new()
-	table_line.font_size = UITheme.fs(26)
+	table_line.font_size = UITheme.fs(24)
 	table_line.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(table_line)
 	var row := HBoxContainer.new()
@@ -1528,7 +1528,7 @@ func _row_head_math(expr: String, c: Color) -> Control:
 	var cc := CenterContainer.new()
 	cc.custom_minimum_size = Vector2(52, 26)
 	var m := MathLabel.new()
-	m.font_size = UITheme.fs(14)
+	m.font_size = UITheme.fs(15)
 	m.color = c
 	m.text = expr
 	cc.add_child(m)
@@ -2565,12 +2565,12 @@ func _journey_card(slot: Dictionary, i: int, open: bool, c: Color) -> Button:
 	top.add_child(num)
 	var name_l := Label.new()
 	name_l.text = slot.title
-	name_l.add_theme_font_size_override("font_size", UITheme.fs(18))
+	name_l.add_theme_font_size_override("font_size", UITheme.fs(17))
 	name_l.add_theme_color_override("font_color", UITheme.TEXT if open else UITheme.TEXT_DIM)
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.clip_text = true
 	# 名字長（五個字以上）時字縮小一點，整個名字都放得下
-	var nfs := UITheme.fs(18)
+	var nfs := UITheme.fs(17)
 	var name_w := 228.0 - 24.0 - 28.0 - 8.0
 	var nfont := name_l.get_theme_font("font")
 	while nfs > UITheme.fs(13) and nfont.get_string_size(slot.title, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > name_w:
@@ -2600,14 +2600,14 @@ func _journey_card(slot: Dictionary, i: int, open: bool, c: Color) -> Button:
 		pct.text = "%d%%" % roundi(100.0 * comp)
 		pct.custom_minimum_size = Vector2(44, 0)
 		pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		pct.add_theme_font_size_override("font_size", UITheme.fs(14))
+		pct.add_theme_font_size_override("font_size", UITheme.fs(15))
 		pct.add_theme_color_override("font_color", UITheme.ACCENT if full else UITheme.TEXT)
 		row.add_child(pct)
 		# 星星放在進度條這一行最右邊，讓上面的名字可以用整行
 		var best := int(g.stars.get(_jkey(slot), 0))
 		var st := Label.new()
 		st.text = _star_text(best, 3)
-		st.add_theme_font_size_override("font_size", UITheme.fs(14))
+		st.add_theme_font_size_override("font_size", UITheme.fs(15))
 		st.add_theme_color_override("font_color", UITheme.ACCENT if best > 0 else Color(1, 1, 1, 0.22))
 		row.add_child(st)
 	else:
@@ -2828,7 +2828,7 @@ func _finish_journey() -> void:
 	row.add_child(bar)
 	var pct := Label.new()
 	pct.text = "%d%%" % roundi(100.0 * comp)
-	pct.add_theme_font_size_override("font_size", UITheme.fs(18))
+	pct.add_theme_font_size_override("font_size", UITheme.fs(17))
 	pct.add_theme_color_override("font_color", UITheme.ACCENT)
 	row.add_child(pct)
 	var left: int = slot.variants.size() - roundi(comp * slot.variants.size())
@@ -2944,8 +2944,8 @@ func _reward_row(got: Dictionary, note: String = "") -> Control:
 		var l := Label.new()
 		l.text = "%s +%d　" % [names[k], int(got[k])]
 		l.add_theme_font_override("font", UITheme.bold_font())
-		l.add_theme_font_size_override("font_size", UITheme.fs(19))
-		l.add_theme_color_override("font_color", UITheme.ACCENT if k == "dust" else (Color("7fe3ff") if k == "shard" else Color("b9a8ff")))
+		l.add_theme_font_size_override("font_size", UITheme.fs(20))
+		l.add_theme_color_override("font_color", UITheme.ACCENT if k == "dust" else (UITheme.CYAN_LIGHT if k == "shard" else UITheme.VIOLET_LIGHT))
 		row.add_child(l)
 	if note != "":
 		v.add_child(_big_label(note, 13, UITheme.TEXT_DIM))
@@ -2986,7 +2986,7 @@ func _chest_status(ch: int, list_layer: Control) -> Control:
 	l.add_theme_font_size_override("font_size", UITheme.fs(15))
 	if g.chest_claimed(_chest_key(ch)):
 		l.text = "章節大寶箱　已打開 ✓"
-		l.add_theme_color_override("font_color", Color("6ee7a0"))
+		l.add_theme_color_override("font_color", UITheme.GOOD)
 		ic.modulate = Color(1, 1, 1, 0.45)
 	else:
 		l.text = "章節大寶箱：通過這一章全部 %d 段旅程就能打開（%d／%d）" % [sl.size(), done, sl.size()]
@@ -3087,7 +3087,7 @@ func _pop_in_row(row: Control) -> void:
 class ChestFx extends Control:
 	signal tapped
 	const UITheme := preload("game_theme.gd")
-	var glow := Color("ffcf5a")
+	var glow := UITheme.GOLD
 	var t := 0.0
 	var phase := 0          # 0 等待（輕輕晃）、1 抖動、2 打開
 	var pt := 0.0           # 這個階段經過的時間
@@ -3137,7 +3137,7 @@ class ChestFx extends Control:
 		_spawn(26)
 
 	func _spawn(n: int) -> void:
-		var cols := [Color("ffcf5a"), Color("fff3c4"), Color("7fe3ff"), Color("b9a8ff"), glow]
+		var cols := [UITheme.GOLD, UITheme.GOLD_PALE, UITheme.CYAN_LIGHT, UITheme.VIOLET_LIGHT, glow]
 		for i in n:
 			var ang := randf_range(-PI * 0.85, -PI * 0.15)
 			var sp := randf_range(160.0, 330.0)
@@ -3172,9 +3172,9 @@ class ChestFx extends Control:
 		var body := Rect2(o.x - W / 2.0, o.y, W, 66)
 		draw_rect(Rect2(body.position + Vector2(4, 6), body.size), Color(0, 0, 0, 0.25))
 		draw_rect(body, Color("7a3d1c"))
-		draw_rect(Rect2(body.position, Vector2(W, 10)), Color("e8b040"))
-		draw_rect(Rect2(body.position.x + W * 0.17, body.position.y, 12, 66), Color("d9a238"))
-		draw_rect(Rect2(body.position.x + W * 0.83 - 12, body.position.y, 12, 66), Color("d9a238"))
+		draw_rect(Rect2(body.position, Vector2(W, 10)), UITheme.GOLD_DEEP)
+		draw_rect(Rect2(body.position.x + W * 0.17, body.position.y, 12, 66), UITheme.GOLD_DEEP)
+		draw_rect(Rect2(body.position.x + W * 0.83 - 12, body.position.y, 12, 66), UITheme.GOLD_DEEP)
 		# 開口的光
 		if lid > 0.0:
 			draw_rect(Rect2(o.x - W / 2.0 + 6, o.y - 4, W - 12, 10), Color(1, 0.95, 0.7, 0.9 * lid))
@@ -3185,18 +3185,18 @@ class ChestFx extends Control:
 			var lp := PackedVector2Array([Vector2(o.x - W / 2.0, o.y), Vector2(o.x - W / 2.0 + 8, o.y - front),
 				Vector2(o.x + W / 2.0 - 8, o.y - front), Vector2(o.x + W / 2.0, o.y)])
 			draw_colored_polygon(lp, Color("9a5228"))
-			draw_rect(Rect2(o.x - W / 2.0, o.y - 6, W, 6), Color("e8b040"))
-			draw_rect(Rect2(o.x - W * 0.33, o.y - front, 12, front), Color("d9a238"))
-			draw_rect(Rect2(o.x + W * 0.33 - 12, o.y - front, 12, front), Color("d9a238"))
+			draw_rect(Rect2(o.x - W / 2.0, o.y - 6, W, 6), UITheme.GOLD_DEEP)
+			draw_rect(Rect2(o.x - W * 0.33, o.y - front, 12, front), UITheme.GOLD_DEEP)
+			draw_rect(Rect2(o.x + W * 0.33 - 12, o.y - front, 12, front), UITheme.GOLD_DEEP)
 		if lid > 0.0:
 			var back := lh * 1.1 * lid
 			var ip := PackedVector2Array([Vector2(o.x - W / 2.0 + 4, o.y - 2), Vector2(o.x - W / 2.0 + 12, o.y - 2 - back),
 				Vector2(o.x + W / 2.0 - 12, o.y - 2 - back), Vector2(o.x + W / 2.0 - 4, o.y - 2)])
 			draw_colored_polygon(ip, Color("4e2410"))
-			draw_rect(Rect2(o.x - W / 2.0 + 12, o.y - 2 - back, W - 24, 6), Color("e8b040"))
+			draw_rect(Rect2(o.x - W / 2.0 + 12, o.y - 2 - back, W - 24, 6), UITheme.GOLD_DEEP)
 		# 鎖
 		if lid < 0.5:
-			draw_rect(Rect2(o.x - 11, o.y - 8, 22, 26), Color("ffe08a"))
+			draw_rect(Rect2(o.x - 11, o.y - 8, 22, 26), UITheme.GOLD_LIGHT)
 			UITheme.dot(self, o + Vector2(0, 4), 3.5, Color("5a2c10"))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		# 星星
@@ -3289,7 +3289,7 @@ func _finish() -> void:
 	again.text = "再挑戰一次"
 	again.custom_minimum_size = Vector2(0, 52)
 	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	again.add_theme_font_size_override("font_size", UITheme.fs(18))
+	again.add_theme_font_size_override("font_size", UITheme.fs(17))
 	again.pressed.connect(func():
 		layer.queue_free()
 		_begin(chapter_now))
@@ -3368,7 +3368,7 @@ func _concept_button() -> Button:
 	row.add_child(col)
 	var t := Label.new()
 	t.text = "觀念整理"
-	t.add_theme_font_size_override("font_size", UITheme.fs(19))
+	t.add_theme_font_size_override("font_size", UITheme.fs(20))
 	t.add_theme_color_override("font_color", c.lightened(0.25))
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(t)
@@ -3380,7 +3380,7 @@ func _concept_button() -> Button:
 	col.add_child(sub)
 	var go := Label.new()
 	go.text = "▶"
-	go.add_theme_font_size_override("font_size", UITheme.fs(18))
+	go.add_theme_font_size_override("font_size", UITheme.fs(17))
 	go.add_theme_color_override("font_color", c)
 	go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	go.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3444,9 +3444,9 @@ class Stage extends Control:
 
 	const RUN_SPEED := 0.4      # 光靈每秒跑過畫面寬度的比例
 	const HOLE_PX := 26.0
-	const CURVE_COL := Color("5ad8ff")
-	const GOLD := Color("ffcf5a")
-	const MIRROR_COL := Color("ff7eb6")
+	const CURVE_COL := UITheme.CYAN
+	const GOLD := UITheme.GOLD
+	const MIRROR_COL := UITheme.PINK
 
 	var type := "fit"
 	var form := "exp"
@@ -3878,7 +3878,7 @@ class Stage extends Control:
 	func show_table_point(i: int) -> void:
 		table_shown[i] = true
 		_burst(to_screen(Vector2(table_xs[i], table_e[i])), CURVE_COL, 8)
-		_burst(to_screen(Vector2(table_xs[i], table_q[i])), Color("ffb454"), 8)
+		_burst(to_screen(Vector2(table_xs[i], table_q[i])), UITheme.ORANGE, 8)
 
 	## 曲線從左畫到右（約 1.6 秒）
 	func reveal_curves() -> void:
@@ -4000,8 +4000,8 @@ class Stage extends Control:
 							UITheme.dot(self, to_screen(Vector2(xi, yi)), 2.2, Color(1, 1, 1, 0.28))
 			for p in mark_bad:
 				var c := to_screen(p)
-				draw_line(c + Vector2(-7, -7), c + Vector2(7, 7), Color("ff6b7a"), 3.0, true)
-				draw_line(c + Vector2(-7, 7), c + Vector2(7, -7), Color("ff6b7a"), 3.0, true)
+				draw_line(c + Vector2(-7, -7), c + Vector2(7, 7), UITheme.BAD, 3.0, true)
+				draw_line(c + Vector2(-7, 7), c + Vector2(7, -7), UITheme.BAD, 3.0, true)
 			for p in mark_sel:
 				var c2 := to_screen(p)
 				UITheme.dot(self, c2, 12.0, Color(1, 0.85, 0.4, 0.18))
@@ -4095,11 +4095,11 @@ class Stage extends Control:
 		draw_string(font, Vector2(m.x - 80, ly), xm_txt, HORIZONTAL_ALIGNMENT_CENTER, 160, UITheme.fs(13), Color(1, 1, 1, 0.6 * k))
 
 	func _tag(font: Font, at: Vector2, text: String, c: Color) -> void:
-		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x
 		var x := clampf(at.x, 6.0, size.x - w - 18.0)
 		var box := Rect2(Vector2(x - 6, at.y - 17), Vector2(w + 12, 23))
 		draw_style_box(UITheme.boxc(Color(0.05, 0.06, 0.14, 0.85 * c.a), 8, Color(c.r, c.g, c.b, 0.7 * c.a), 1, 0), box)
-		draw_string(font, Vector2(x, at.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), c)
+		draw_string(font, Vector2(x, at.y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), c)
 
 	# ---------- 徒手作圖：輸入與評分 ----------
 
@@ -4392,7 +4392,7 @@ class Stage extends Control:
 		var f: Callable = f_exp if side == 1 else f_quad
 		for seg in _segments(f):
 			for i in range(0, seg.size(), 12):
-				_burst(seg[i], CURVE_COL if side == 1 else Color("ffb454"), 3)
+				_burst(seg[i], CURVE_COL if side == 1 else UITheme.ORANGE, 3)
 		cross_sketch = 0
 		draw_on = false
 		stroke = PackedVector2Array()
@@ -4705,7 +4705,7 @@ class Stage extends Control:
 					cc.a = fade
 					_glow_line(sp, cc)
 				"hot":
-					var hc := CURVE_COL.lerp(Color("ff6b7a"), float(pc.f))
+					var hc := CURVE_COL.lerp(UITheme.BAD, float(pc.f))
 					hc.a = fade * (0.75 + 0.25 * sin(t * 8.0))
 					_glow_line(sp, hc)
 				"gone":
@@ -4718,7 +4718,7 @@ class Stage extends Control:
 						acc += d
 		# 說明文字
 		var cap: String = ("[color=#ffcf5a]%s[/color]" % demo_final) if ending else demo_steps[si].cap
-		var fs := UITheme.fs(18)
+		var fs := UITheme.fs(17)
 		var tw := MathLabel.text_width(font, cap, fs)
 		var bw := minf(size.x - 24.0, tw + 40.0)
 		var fs2 := fs if tw + 40.0 <= size.x - 24.0 else maxi(UITheme.fs(12), int(fs * (size.x - 64.0) / tw))
@@ -4806,7 +4806,7 @@ class Stage extends Control:
 						gems_got += 1
 					else:
 						gem_state[i] = 2
-						_burst(to_screen(gems[i]), Color("ff6b7a"), 10)
+						_burst(to_screen(gems[i]), UITheme.BAD, 10)
 						for b in spirits.size():
 							spirits[b] = Vector2(gx, fb(gx, b))
 						_start_fall("miss")
@@ -4926,7 +4926,7 @@ class Stage extends Control:
 			ghost_label = "x 軸倒影"
 			var y0 := to_screen(Vector2(0, 0)).y
 			draw_line(Vector2(0, y0), Vector2(size.x, y0), Color(0.85, 0.9, 1.0, 0.08), 14.0)
-			preload("math_text.gd").draw_text(self, font, Vector2(size.x - 120, y0 - 10), "鏡子  x 軸", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14),
+			preload("math_text.gd").draw_text(self, font, Vector2(size.x - 120, y0 - 10), "鏡子  x 軸", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15),
 				Color(0.85, 0.9, 1.0, 0.8))
 		if gf.is_valid():
 			# 分身的線段也快取：底數、範圍沒變就不用每一幀重算
@@ -4976,7 +4976,7 @@ class Stage extends Control:
 			var lit: bool = gem_state[i] == 1 or (live and not running and passes(gp))
 			var gc := GOLD if lit else Color(0.75, 0.85, 1.0)
 			if gem_state[i] == 2:
-				gc = Color("ff6b7a")
+				gc = UITheme.BAD
 			UITheme.dot(self, c, 18.0 if lit else 13.0, Color(gc.r, gc.g, gc.b, 0.18))
 			var sz := 11.0
 			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -sz), c + Vector2(sz * 0.75, 0),
@@ -5016,9 +5016,9 @@ class Stage extends Control:
 
 		if type == "fit":
 			_pill(font, "練習模式" if live else "霧中模式",
-				Color("6ee7a0") if live else Color("c792ff"))
+				UITheme.GOOD if live else UITheme.VIOLET)
 		elif type == "cross" and cross_sketch > 0:
-			_pill(font, ("找整數點：第 %d 條" if mark_on else "徒手作圖：第 %d 條") % cross_sketch, CURVE_COL if cross_sketch == 1 else Color("ffb454"))
+			_pill(font, ("找整數點：第 %d 條" if mark_on else "徒手作圖：第 %d 條") % cross_sketch, CURVE_COL if cross_sketch == 1 else UITheme.ORANGE)
 		elif type == "draw" and not draw_reveal:
 			_pill(font, "找整數點" if mark_on else "徒手作圖", Color(1, 0.85, 0.4))
 		elif type == "table" and bands_on:
@@ -5059,7 +5059,7 @@ class Stage extends Control:
 		draw_dashed_line(p0, p1, Color(0.85, 0.9, 1.0, 0.55), 2.0, 10.0)
 		var lp := p1 + (p0 - p1).normalized() * 110.0
 		lp.x = clampf(lp.x, 10.0, size.x - 110.0)
-		preload("math_text.gd").draw_text(self, font, lp + Vector2(12, -4), "鏡子  y = x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(0.85, 0.9, 1.0, 0.8))
+		preload("math_text.gd").draw_text(self, font, lp + Vector2(12, -4), "鏡子  y = x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(0.85, 0.9, 1.0, 0.8))
 
 	## 鏡像配對：原曲線（粉紅）＋每顆寶石和它在原曲線上的「本尊」之間的虛線
 	func _draw_source(font: Font) -> void:
@@ -5083,7 +5083,7 @@ class Stage extends Control:
 			var y: float = f.call(x)
 			if not is_nan(y) and y > y_range.x + 0.12 * span and y < y_range.y - 0.08 * span:
 				draw_string(font, to_screen(Vector2(x, y)) + Vector2(-60, -16), text,
-					HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(14), c)
+					HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(15), c)
 				return
 			x -= 0.02 * (x_range.y - x_range.x)
 
@@ -5176,12 +5176,12 @@ class Stage extends Control:
 		for g in guide_pts:
 			var gc := to_screen(g[0])
 			UITheme.dot(self, gc, 11.0, Color(0.55, 0.85, 1.0, 0.2))
-			UITheme.dot(self, gc, 5.5, Color("8fd8ff"))
+			UITheme.dot(self, gc, 5.5, UITheme.CYAN_LIGHT)
 			var gl := String(g[1])
-			var gw := font.get_string_size(gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+			var gw := font.get_string_size(gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x
 			var gx := 10.0 if gc.x + 10.0 + gw < size.x - 4.0 else -10.0 - gw     # 太靠右就寫在點的左邊
-			draw_string(font, gc + Vector2(gx + 1, -9), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(0, 0, 0, 0.7))
-			draw_string(font, gc + Vector2(gx, -10), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color("cfeeff"))
+			draw_string(font, gc + Vector2(gx + 1, -9), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(0, 0, 0, 0.7))
+			draw_string(font, gc + Vector2(gx, -10), gl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), UITheme.CYAN_PALE)
 		if draw_show_keys or draw_reveal:
 			for kp in (hint_keys if draw_show_keys and not hint_keys.is_empty() else draw_keys):
 				var c := to_screen(kp)
@@ -5201,13 +5201,13 @@ class Stage extends Control:
 			UITheme.dot(self, p, 5.5, Color(1.0, 0.35, 0.45, 0.95))
 		if draw_on and stroke.is_empty() and strokes.is_empty():
 			var a2 := 0.45 + 0.3 * sin(t * 3.0)
-			draw_string(font, Vector2(0, size.y / 2.0 - 60), "按住拖曳畫出圖形（可以分好幾筆）", HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(22),
+			draw_string(font, Vector2(0, size.y / 2.0 - 60), "按住拖曳畫出圖形（可以分好幾筆）", HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(24),
 				Color(1, 1, 1, a2))
 
 	## 列表作圖：已比較過的點、可點選的區間、「＝」的交點、最後揭曉的曲線
 	func _draw_table(font: Font) -> void:
 		var exp_col := CURVE_COL
-		var q_col := Color("ffb454")
+		var q_col := UITheme.ORANGE
 		var gold := Color(1, 0.85, 0.4)
 		# 區間
 		for i in band_sel.size():
@@ -5220,7 +5220,7 @@ class Stage extends Control:
 				var mid := Vector2((xa + xb) * 0.5, 66.0)
 				UITheme.dot(self, mid, 11.0, gold)
 				_star(mid, 6.0, Color(0.1, 0.08, 0.2))
-				draw_string(font, Vector2(xa, 98), "有交點", HORIZONTAL_ALIGNMENT_CENTER, xb - xa, UITheme.fs(14), gold)
+				draw_string(font, Vector2(xa, 98), "有交點", HORIZONTAL_ALIGNMENT_CENTER, xb - xa, UITheme.fs(15), gold)
 			elif bands_on:
 				var a := 0.10 if i == band_hover else 0.04
 				draw_rect(rect, Color(1, 1, 1, a))
@@ -5235,7 +5235,7 @@ class Stage extends Control:
 				draw_line(Vector2(cx, yy), Vector2(cx, yy + 8), Color(1, 0.85, 0.4, 0.55), 2.0)
 				yy += 16.0
 			preload("math_text.gd").draw_text(self, font, Vector2(cx - 30, 28), "x = %s" % x_text_s(table_xs[table_cur]),
-				HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(16), Color(1, 0.85, 0.4))
+				HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(15), Color(1, 0.85, 0.4))
 		# 揭曉的曲線
 		if reveal_t >= 0.0:
 			var x_end := lerpf(x_range.x, x_range.y, reveal_t)
@@ -5259,7 +5259,7 @@ class Stage extends Control:
 				UITheme.dot(self, pe, 14.0, Color(1, 1, 1, 0.18))
 				draw_arc(pe, 12.0, 0, TAU, 32, Color.WHITE, 2.0, true)
 				UITheme.dot(self, pe, 6.0, gold)
-				draw_string(font, pe + Vector2(-40, -20), "交點", HORIZONTAL_ALIGNMENT_CENTER, 80, UITheme.fs(14), Color.WHITE)
+				draw_string(font, pe + Vector2(-40, -20), "交點", HORIZONTAL_ALIGNMENT_CENTER, 80, UITheme.fs(15), Color.WHITE)
 			else:
 				UITheme.dot(self, pq, 7.0, Color(q_col.r, q_col.g, q_col.b, 0.25))
 				UITheme.dot(self, pq, 5.0, q_col)
@@ -5309,7 +5309,7 @@ class Stage extends Control:
 	## 交點獵人：兩條曲線、掃過的區域上色、掃描線、找到的交點
 	func _draw_cross(font: Font) -> void:
 		var exp_col := CURVE_COL
-		var q_col := Color("ffb454")
+		var q_col := UITheme.ORANGE
 		# 漸近線提示（畫錯兩次以上）
 		if draw_show_asym and cross_sketch > 0:
 			var axv := asymptote_x()
@@ -5407,7 +5407,7 @@ class Stage extends Control:
 		draw_line(top, bot, Color(1, 0.85, 0.4, 0.22), 8.0)
 		draw_dashed_line(top, bot, Color(1, 0.85, 0.4, 0.95), 2.0, 8.0)
 		preload("math_text.gd").draw_text(self, font, bot + Vector2(-50, -20), "x = " + UITheme.num(scan_x, 2),
-			HORIZONTAL_ALIGNMENT_CENTER, 100, UITheme.fs(14), Color(1, 0.85, 0.4))
+			HORIZONTAL_ALIGNMENT_CENTER, 100, UITheme.fs(15), Color(1, 0.85, 0.4))
 		# 還能往左右走的提示箭頭
 		var a := 0.35 + 0.25 * sin(t * 3.0)
 		var cy := size.y / 2.0
@@ -5446,7 +5446,7 @@ class Stage extends Control:
 
 	## 底數辨識：多條曲線 + 名牌 + x = 1 的參考線
 	func _draw_rank(font: Font) -> void:
-		var cols: Array = [Color("ff7eb6"), Color("5ad8ff"), Color("a6f05a"), Color("ffb454")]
+		var cols: Array = [UITheme.PINK, UITheme.CYAN, UITheme.LIME, UITheme.ORANGE]
 		var tags := ["A", "B", "C", "D"]
 		for i in bases.size():
 			var ba: float = bases[i]
@@ -5471,19 +5471,19 @@ class Stage extends Control:
 			if reveal_bases:
 				# 答案揭曉：名牌直接換成底數
 				var txt := UITheme.nice_text(ba)
-				var tw := maxf(font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(16)).x + 14.0, 26.0)
+				var tw := maxf(font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x + 14.0, 26.0)
 				draw_style_box(UITheme.boxc(cols[i], 13, Color(0, 0, 0, 0), 0, 0), Rect2(tp.x - tw / 2.0, tp.y - 13, tw, 26))
-				draw_string(font, Vector2(tp.x - tw / 2.0, tp.y + 6), txt, HORIZONTAL_ALIGNMENT_CENTER, tw, UITheme.fs(16), Color("1a1530"))
+				draw_string(font, Vector2(tp.x - tw / 2.0, tp.y + 6), txt, HORIZONTAL_ALIGNMENT_CENTER, tw, UITheme.fs(15), Color("1a1530"))
 			else:
 				UITheme.dot(self, tp, 13.0, cols[i])
-				draw_string(font, tp + Vector2(-13, 6), tags[i], HORIZONTAL_ALIGNMENT_CENTER, 26, UITheme.fs(16), Color("1a1530"))
+				draw_string(font, tp + Vector2(-13, 6), tags[i], HORIZONTAL_ALIGNMENT_CENTER, 26, UITheme.fs(15), Color("1a1530"))
 		if not is_nan(probe_y):
 			var l0 := to_screen(Vector2(x_range.x, probe_y))
 			var l1 := to_screen(Vector2(x_range.y, probe_y))
 			draw_line(l0, l1, Color(1, 0.85, 0.4, 0.25), 8.0)
 			draw_dashed_line(l0, l1, Color(1, 0.85, 0.4, 0.9), 2.0, 8.0)
 			preload("math_text.gd").draw_text(self, font, l1 + Vector2(-90, -10), "y = " + UITheme.num(probe_y, 2),
-				HORIZONTAL_ALIGNMENT_RIGHT, 80, UITheme.fs(14), Color(1, 0.85, 0.4))
+				HORIZONTAL_ALIGNMENT_RIGHT, 80, UITheme.fs(15), Color(1, 0.85, 0.4))
 			for i in bases.size():
 				var xb := pow(float(bases[i]), probe_y)
 				if xb >= x_range.x and xb <= x_range.y:
@@ -5496,7 +5496,7 @@ class Stage extends Control:
 			draw_line(top, bot, Color(1, 0.85, 0.4, 0.25), 8.0)
 			draw_dashed_line(top, bot, Color(1, 0.85, 0.4, 0.9), 2.0, 8.0)
 			preload("math_text.gd").draw_text(self, font, bot + Vector2(-50, -10), "x = " + UITheme.num(probe_x, 2),
-				HORIZONTAL_ALIGNMENT_CENTER, 100, UITheme.fs(14), Color(1, 0.85, 0.4))
+				HORIZONTAL_ALIGNMENT_CENTER, 100, UITheme.fs(15), Color(1, 0.85, 0.4))
 			for i in bases.size():
 				var y := pow(float(bases[i]), probe_x)
 				if y <= y_range.y and y >= y_range.x:
@@ -5522,7 +5522,7 @@ class Stage extends Control:
 				UITheme.dot(self, p, 30.0, Color(1, 0.85, 0.4, 0.55))
 			if want:
 				draw_arc(p, 36.0, 0, TAU, 48, Color(1, 0.85, 0.4, 0.8), 2.0)
-			draw_string(font, p + Vector2(-30, 12), roman[q], HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(34),
+			draw_string(font, p + Vector2(-30, 12), roman[q], HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(30),
 				Color(1, 0.95, 0.75) if on else Color(1, 1, 1, 0.25))
 
 	## 交點調頻：水平線與交點
@@ -5537,7 +5537,7 @@ class Stage extends Control:
 				UITheme.dot(self, p, 12.0 + 2.0 * sin(t * 6.0), Color(1, 0.85, 0.4, 0.3))
 				UITheme.dot(self, p, 6.0, Color.WHITE)
 		draw_string(font, Vector2(size.x - 170, 92), "交點：%d 個" % rs.size(),
-			HORIZONTAL_ALIGNMENT_RIGHT, 150, UITheme.fs(22), Color(1, 0.9, 0.5))
+			HORIZONTAL_ALIGNMENT_RIGHT, 150, UITheme.fs(24), Color(1, 0.9, 0.5))
 
 	## 遠景的水晶塔：兩排剪影，塔尖有一點微光
 	##   part = "shape"：塔身（不會動）；"glow"：後排塔尖的微光（會閃）

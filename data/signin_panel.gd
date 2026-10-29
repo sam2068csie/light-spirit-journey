@@ -39,7 +39,7 @@ func _ready() -> void:
 	_toast = Label.new()
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_font_override("font", UITheme.bold_font())
-	_toast.add_theme_font_size_override("font_size", UITheme.fs(22))
+	_toast.add_theme_font_size_override("font_size", UITheme.fs(24))
 	_toast.add_theme_color_override("font_color", UITheme.ACCENT)
 	_toast.add_theme_constant_override("outline_size", 7)
 	_toast.add_theme_color_override("font_outline_color", Color(0.03, 0.03, 0.1, 0.95))
@@ -105,7 +105,7 @@ func _build() -> void:
 	var shown: int = int(g.streak.count)
 	big.text = "已連續 %d 天" % shown
 	big.add_theme_font_override("font", UITheme.bold_font())
-	big.add_theme_font_size_override("font_size", UITheme.fs(22))
+	big.add_theme_font_size_override("font_size", UITheme.fs(24))
 	st.add_child(big)
 	var best := Label.new()
 	best.text = "最佳紀錄 %d 天" % int(g.streak.best)
@@ -119,7 +119,7 @@ func _build() -> void:
 	var gl := Label.new()
 	gl.text = "光靈的守護"
 	gl.add_theme_font_size_override("font_size", UITheme.fs(15))
-	gl.add_theme_color_override("font_color", Color("7fe3ff"))
+	gl.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 	gl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	st.add_child(gl)
 	for k in g.GUARD_MAX:
@@ -152,17 +152,17 @@ func _build() -> void:
 	var info := Label.new()
 	info.text = "漏簽的日子，光靈的守護會自動補上（每連續簽到 7 天多一個，最多 %d 個）。守護不夠時，連續天數保留一半，不會歸零。" % g.GUARD_MAX
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_theme_font_size_override("font_size", UITheme.fs(14))
+	info.add_theme_font_size_override("font_size", UITheme.fs(15))
 	info.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_body.add_child(info)
 	if can and int(pv.missed) > 0:
 		var warn := Label.new()
 		if int(pv.guards_used) > 0:
 			warn.text = "上次簽到後漏了 %d 天：這次簽到會用掉 %d 個守護補上，連續天數不中斷！" % [int(pv.missed), int(pv.guards_used)]
-			warn.add_theme_color_override("font_color", Color("7fe3ff"))
+			warn.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 		else:
 			warn.text = "上次簽到後漏了 %d 天，守護不夠：連續天數會保留一半（%d → %d 天）。" % [int(pv.missed), int(g.streak.count), int(g.streak.count) / 2]
-			warn.add_theme_color_override("font_color", Color("ffb454"))
+			warn.add_theme_color_override("font_color", UITheme.ORANGE)
 		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		warn.add_theme_font_size_override("font_size", UITheme.fs(15))
 		_body.add_child(warn)
@@ -242,7 +242,7 @@ func _cell(g, k: int, state: String) -> Control:
 		ck.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ck.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		ck.add_theme_font_size_override("font_size", UITheme.fs(40))
-		ck.add_theme_color_override("font_color", Color("6ee7a0"))
+		ck.add_theme_color_override("font_color", UITheme.GOOD)
 		ck.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		ck.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p.add_child(ck)
@@ -298,8 +298,8 @@ class Shield extends Control:
 		var pts := PackedVector2Array([Vector2(w * 0.5, 2), Vector2(w - 3, h * 0.2), Vector2(w - 4, h * 0.55),
 			Vector2(w * 0.5, h - 2), Vector2(4, h * 0.55), Vector2(3, h * 0.2)])
 		if full:
-			draw_colored_polygon(pts, Color("5ad8ff"))
-			draw_polyline(pts + PackedVector2Array([pts[0]]), Color("e8fbff"), 1.5, true)
+			draw_colored_polygon(pts, UITheme.CYAN)
+			draw_polyline(pts + PackedVector2Array([pts[0]]), UITheme.CYAN_PALE, 1.5, true)
 			UITheme.dot(self, Vector2(w * 0.5, h * 0.45), w * 0.16, Color(1, 1, 1, 0.9))
 		else:
 			draw_polyline(pts + PackedVector2Array([pts[0]]), Color(1, 1, 1, 0.3), 1.5, true)

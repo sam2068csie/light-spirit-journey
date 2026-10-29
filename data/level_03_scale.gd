@@ -11,10 +11,10 @@ extends "level_02_forge.gd"
 
 const Bank3 := preload("level03_bank.gd")
 const CHAPTERS3 := [
-	{"ch": 1, "name": "第一章．不等號的天秤", "topic": "比大小、指數不等式與數線", "color": Color("a6f05a")},
-	{"ch": 2, "name": "第二章．極值的祭壇", "topic": "換元求極值、成立條件與算幾", "color": Color("5ad8ff")},
+	{"ch": 1, "name": "第一章．不等號的天秤", "topic": "比大小、指數不等式與數線", "color": UITheme.LIME},
+	{"ch": 2, "name": "第二章．極值的祭壇", "topic": "換元求極值、成立條件與算幾", "color": UITheme.CYAN},
 ]
-const LEAF := Color("a6f05a")
+const LEAF := UITheme.LIME
 
 # 排序
 # 符號表
@@ -99,7 +99,7 @@ func _forge_step() -> void:
 			fview.mouse_filter = Control.MOUSE_FILTER_STOP
 			var tip := Label.new()
 			tip.text = "在左邊的數線上點選。"
-			tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+			tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 			tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 			rank_box.add_child(tip)
 		"grid":
@@ -218,7 +218,7 @@ func _build_grid(st: Dictionary) -> void:
 		var cc := CenterContainer.new()
 		cc.custom_minimum_size = Vector2(92, 40)
 		var m := MathLabel.new()
-		m.font_size = UITheme.fs(14)
+		m.font_size = UITheme.fs(15)
 		m.text = st.rows[i]
 		m.color = UITheme.ACCENT if i == st.rows.size() - 1 else UITheme.TEXT
 		cc.add_child(m)
@@ -311,13 +311,13 @@ func _build_explore(st: Dictionary) -> void:
 		Color(LEAF.r, LEAF.g, LEAF.b, 0.35), 1, 10))
 	rank_box.add_child(card)
 	ex_info = MathLabel.new()
-	ex_info.font_size = UITheme.fs(18)
+	ex_info.font_size = UITheme.fs(17)
 	ex_info.max_width = 320
 	ex_info.align_center = true
 	card.add_child(ex_info)
 	var tip := Label.new()
 	tip.text = "也可以直接在左邊的圖上拖動。"
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
 	_sv().explore = st
@@ -385,7 +385,7 @@ func _explore_submit() -> void:
 class ScaleView extends ForgeView:
 	signal line_toggled
 
-	const LEAF := Color("a6f05a")
+	const LEAF := UITheme.LIME
 
 	# 數線
 	var line_on := false
@@ -544,7 +544,7 @@ class ScaleView extends ForgeView:
 		var x1 := rect.end.x - 14.0
 		draw_line(Vector2(x0, y), Vector2(x1, y), Color(1, 1, 1, 0.6), 2.0)
 		draw_polyline(PackedVector2Array([Vector2(x1 - 10, y - 7), Vector2(x1, y), Vector2(x1 - 10, y + 7)]), Color(1, 1, 1, 0.6), 2.0)
-		preload("math_text.gd").draw_text(self, font, Vector2(x1 - 8, y - 12), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+		preload("math_text.gd").draw_text(self, font, Vector2(x1 - 8, y - 12), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.7))
 		var n := line_pts.size()
 		for i in n + 1:
 			var a := x0 if i == 0 else _nl_x(rect, i - 1)
@@ -646,7 +646,7 @@ class ScaleView extends ForgeView:
 		var y0: float = to_px.call(Vector2(0, 0)).y
 		if y0 > rect.position.y and y0 < rect.end.y:
 			draw_line(Vector2(rect.position.x, y0), Vector2(rect.end.x, y0), Color(1, 1, 1, 0.4), 1.5)
-			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, y0 - 6), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, y0 - 6), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.7))
 		var x0: float = to_px.call(Vector2(0, 0)).x
 		if x0 > rect.position.x and x0 < rect.end.x:
 			draw_line(Vector2(x0, rect.position.y), Vector2(x0, rect.end.y), Color(1, 1, 1, 0.25), 1.0)
@@ -681,7 +681,7 @@ class ScaleView extends ForgeView:
 		for mk in marks:
 			var mt: float = mk.t
 			var mp: Vector2 = to_px.call(Vector2(mt, A * mt * mt + B * mt + C))
-			var mc := Color("ff7eb6") if mk.goal == "max" else Color("5ad8ff")
+			var mc := UITheme.PINK if mk.goal == "max" else UITheme.CYAN
 			UITheme.dot(self, mp, 11.0, Color(mc.r, mc.g, mc.b, 0.25))
 			UITheme.dot(self, mp, 6.0, mc)
 			var up := 28.0 if mk.goal == "max" else -16.0

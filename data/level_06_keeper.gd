@@ -9,7 +9,7 @@ extends "level_04_alchemy.gd"
 
 const Bank6 := preload("level06_bank.gd")
 const CHAPTERS6 := [
-	{"ch": 1, "name": "第一章．守門基本功", "topic": "同底比較、化同底、換元與檢查", "color": Color("ffcf5a")},
+	{"ch": 1, "name": "第一章．守門基本功", "topic": "同底比較、化同底、換元與檢查", "color": UITheme.GOLD},
 	{"ch": 2, "name": "第二章．大師的球門", "topic": "取對數、根與係數、互換", "color": Color("ff9f5a")},
 ]
 
@@ -110,7 +110,7 @@ func _speed_gen(kind: String, n: int) -> Array:
 
 class GoalView extends AlchemyView:
 	const GRASS := Color("3fbf6a")
-	const GOLDB := Color("ffcf5a")
+	const GOLDB := UITheme.GOLD
 
 	var gate_on := false
 	var gate_st := {}
@@ -240,7 +240,7 @@ class GoalView extends AlchemyView:
 					MathLabel.draw_on(self, font, home.x, home.y + 72, checks[i], UITheme.fs(13), tc.lightened(0.2))
 		if done and u >= 1.0:
 			var pa := 0.6 + 0.4 * sin(t * 4.0)
-			draw_string(font, Vector2(G.position.x - 10, G.end.y + 22), "合格的解進門！", HORIZONTAL_ALIGNMENT_CENTER, G.size.x + 20, UITheme.fs(16),
+			draw_string(font, Vector2(G.position.x - 10, G.end.y + 22), "合格的解進門！", HORIZONTAL_ALIGNMENT_CENTER, G.size.x + 20, UITheme.fs(15),
 				Color(GOLDB.r, GOLDB.g, GOLDB.b, pa))
 
 	func _draw_ball(p: Vector2, rr: float, a: float, spin: float) -> void:

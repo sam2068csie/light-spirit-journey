@@ -67,7 +67,7 @@ func _ready() -> void:
 	var feat := Label.new()
 	feat.text = "本期：光靈初登場　★ 傳說裝扮"
 	feat.add_theme_font_override("font", UITheme.bold_font())
-	feat.add_theme_font_size_override("font_size", UITheme.fs(18))
+	feat.add_theme_font_size_override("font_size", UITheme.fs(17))
 	feat.add_theme_color_override("font_color", Cos.RARITY[3].color)
 	col.add_child(feat)
 	var fr := HBoxContainer.new()
@@ -124,11 +124,11 @@ func _ready() -> void:
 	var br := HBoxContainer.new()
 	br.add_theme_constant_override("separation", 12)
 	col.add_child(br)
-	_btn_one = _pull_button(br, UITheme.ACCENT, Color("c27a14"), Color("3a2306"))
+	_btn_one = _pull_button(br, UITheme.ACCENT, UITheme.ACCENT_LIP, UITheme.GOLD_INK)
 	_btn_one.pressed.connect(func(): _pull("one"))
-	_btn_ten = _pull_button(br, Color("8f6bff"), Color("4b2fa8"), Color.WHITE)
+	_btn_ten = _pull_button(br, UITheme.VIOLET_DEEP, Color("4b2fa8"), Color.WHITE)
 	_btn_ten.pressed.connect(func(): _pull("ten"))
-	_btn_shine = _pull_button(br, Color("5ad8ff"), Color("1f7fa8"), Color("082436"))
+	_btn_shine = _pull_button(br, UITheme.CYAN, Color("1f7fa8"), Color("082436"))
 	_btn_shine.pressed.connect(func(): _pull("shine"))
 	var note := Label.new()
 	note.text = "十連保證至少一個稀有；閃光抽保證史詩以上。重複的裝扮會變成光之碎片。"
@@ -147,7 +147,7 @@ func _ready() -> void:
 	var wb := Button.new()
 	wb.text = "衣櫃"
 	wb.custom_minimum_size = Vector2(120, 50)
-	UITheme.button_3d(wb, Color("3d46a8"), Color("191b52"), UITheme.TEXT, 18, 6, 14, 6)
+	UITheme.button_3d(wb, UITheme.BTN, UITheme.BTN_LIP, UITheme.TEXT, 18, 6, 14, 6)
 	wb.pressed.connect(_open_wardrobe)
 	lr.add_child(wb)
 	var xb := Button.new()
@@ -165,7 +165,7 @@ func _ready() -> void:
 	_book_label = Label.new()
 	_book_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_book_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_book_label.add_theme_font_size_override("font_size", UITheme.fs(16))
+	_book_label.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_book_label.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	lr.add_child(_book_label)
 
@@ -208,7 +208,7 @@ func _refresh() -> void:
 		_hold.add_child(ii)
 		var n := Label.new()
 		n.text = str(int(g.inv.get(k, 0)))
-		n.add_theme_font_size_override("font_size", UITheme.fs(16))
+		n.add_theme_font_size_override("font_size", UITheme.fs(15))
 		n.custom_minimum_size = Vector2(40, 0)
 		_hold.add_child(n)
 	var c1: Dictionary = g.gacha_cost("one")
@@ -295,7 +295,7 @@ func _open_rates() -> void:
 		nl.text = "%s　%.1f%%" % [Cos.RARITY[r].name, Cos.RARITY[r].rate * 100.0]
 		nl.custom_minimum_size = Vector2(120, 0)
 		nl.add_theme_color_override("font_color", Cos.RARITY[r].color)
-		nl.add_theme_font_size_override("font_size", UITheme.fs(16))
+		nl.add_theme_font_size_override("font_size", UITheme.fs(15))
 		row.add_child(nl)
 		# 只寫件數和每件的機率（全部名稱太長了；想看有哪些可以去衣櫃）
 		var n: int = Cos.items_of_rarity(r).size()
@@ -338,7 +338,7 @@ class Bg extends Control:
 class Machine extends Control:
 	const UITheme := preload("game_theme.gd")
 	const Cos := preload("cosmetics.gd")
-	const CAP_COLS := [Color("ff7eb6"), Color("5ad8ff"), Color("a6f05a"), Color("ffcf5a"), Color("c792ff"), Color("ffb454")]
+	const CAP_COLS := [UITheme.PINK, UITheme.CYAN, UITheme.LIME, UITheme.GOLD, UITheme.VIOLET, UITheme.ORANGE]
 	var t := 0.0
 	var crank := 0.0          # 把手角度
 	var shake := 0.0          # 玻璃罩裡的扭蛋晃多大
@@ -390,27 +390,27 @@ class Machine extends Control:
 		draw_colored_polygon(PackedVector2Array([base[0] + Vector2(0, 10), base[1] + Vector2(0, 10), base[2] + Vector2(0, 14), base[3] + Vector2(0, 14)]), Color("8e2a63"))
 		draw_colored_polygon(base, Color("e05a9a"))
 		draw_rect(Rect2(cx - 175, 505, 350, 20), Color("6a1f4a"))
-		draw_rect(Rect2(cx - 150, base_top, 300, 18), Color("ff8fc0"))
+		draw_rect(Rect2(cx - 150, base_top, 300, 18), UITheme.PINK_LIGHT)
 		# 玻璃罩＋扭蛋
 		UITheme.dot(self, dome_c, R, Color(0.75, 0.88, 1.0, 0.10))
 		for cp in _caps:
 			var wob := Vector2(sin(t * 1.3 + cp.ph), cos(t * 1.1 + cp.ph)) * 2.0
 			var sh := Vector2(sin(t * 23.0 + cp.ph * 3.0), cos(t * 19.0 + cp.ph)) * 10.0 * shake
 			_capsule(dome_c + cp.p + wob + sh, 26.0, cp.c, cp.rot + shake * t * 6.0)
-		draw_arc(dome_c, R + 5.0, 0, TAU, 96, Color("ff8fc0"), 10.0, true)
+		draw_arc(dome_c, R + 5.0, 0, TAU, 96, UITheme.PINK_LIGHT, 10.0, true)
 		draw_arc(dome_c, R, 0, TAU, 72, Color(1, 1, 1, 0.35), 3.0, true)
 		draw_arc(dome_c + Vector2(-50, -50), R * 0.55, PI * 1.05, PI * 1.45, 16, Color(1, 1, 1, 0.5), 6.0, true)
 		# 正面：投幣口、出口、把手
 		var font := get_theme_default_font()
 		draw_string(font, Vector2(cx - 150, 360), "✦ 光靈扭蛋 ✦", HORIZONTAL_ALIGNMENT_CENTER, 300, UITheme.fs(20), Color(1, 1, 1, 0.92))
 		var outlet := Rect2(cx - 120, 410, 110, 80)
-		draw_style_box(UITheme.boxc(Color("3a0f2a"), 16, Color("ff8fc0"), 3, 0), outlet)
+		draw_style_box(UITheme.boxc(Color("3a0f2a"), 16, UITheme.PINK_LIGHT, 3, 0), outlet)
 		var knob := Vector2(cx + 85, 450)
-		UITheme.dot(self, knob, 46.0, Color("ffcf5a"))
-		UITheme.dot(self, knob, 38.0, Color("f4b532"))
+		UITheme.dot(self, knob, 46.0, UITheme.GOLD)
+		UITheme.dot(self, knob, 38.0, UITheme.GOLD_DEEP)
 		var hd := Vector2(cos(crank), sin(crank))
 		draw_line(knob - hd * 34.0, knob + hd * 34.0, Color("8a5a10"), 12.0, true)
-		UITheme.dot(self, knob + hd * 34.0, 9.0, Color("fff3c4"))
+		UITheme.dot(self, knob + hd * 34.0, 9.0, UITheme.GOLD_PALE)
 		UITheme.dot(self, knob, 8.0, Color("8a5a10"))
 		# 掉出來的扭蛋
 		if drop >= 0.0:
@@ -467,7 +467,7 @@ class Reveal extends Control:
 		add_child(cap)
 		var tip := Label.new()
 		tip.text = "點一下打開！"
-		tip.add_theme_font_size_override("font_size", UITheme.fs(18))
+		tip.add_theme_font_size_override("font_size", UITheme.fs(17))
 		tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tip.position = Vector2(376, 540)
@@ -520,12 +520,12 @@ class Reveal extends Control:
 		nm.text = it.name
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nm.add_theme_font_override("font", UITheme.bold_font())
-		nm.add_theme_font_size_override("font_size", UITheme.fs(28))
+		nm.add_theme_font_size_override("font_size", UITheme.fs(30))
 		nm.add_theme_color_override("font_color", rc if r > 0 else UITheme.TEXT)
 		v.add_child(nm)
 		var ds := preload("math_text.gd").new()
 		ds.text = it.desc
-		ds.font_size = UITheme.fs(16)
+		ds.font_size = UITheme.fs(15)
 		ds.max_width = 470
 		ds.align_center = true
 		ds.color = UITheme.TEXT_DIM
@@ -535,7 +535,7 @@ class Reveal extends Control:
 			dup.text = "已經有了 → 光之碎片 +%d" % int(res.shards)
 			dup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			dup.add_theme_font_size_override("font_size", UITheme.fs(15))
-			dup.add_theme_color_override("font_color", Color("7fe3ff"))
+			dup.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 			v.add_child(dup)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -553,7 +553,7 @@ class Reveal extends Control:
 		var keep := Button.new()
 		keep.text = "收進衣櫃"
 		keep.custom_minimum_size = Vector2(190, 52)
-		UITheme.button_3d(keep, Color("3d46a8"), Color("191b52"), UITheme.TEXT, 18, 6, 14, 6)
+		UITheme.button_3d(keep, UITheme.BTN, UITheme.BTN_LIP, UITheme.TEXT, 18, 6, 14, 6)
 		keep.pressed.connect(_finish)
 		row.add_child(keep)
 		card.pivot_offset = Vector2(260, 240)
@@ -605,7 +605,7 @@ class Reveal extends Control:
 		var fin := Button.new()
 		fin.text = "完成"
 		fin.custom_minimum_size = Vector2(180, 54)
-		UITheme.button_3d(fin, Color("3d46a8"), Color("191b52"), UITheme.TEXT, 18, 6, 14, 6)
+		UITheme.button_3d(fin, UITheme.BTN, UITheme.BTN_LIP, UITheme.TEXT, 18, 6, 14, 6)
 		fin.visible = false
 		row.add_child(fin)
 		fin.pressed.connect(_finish)
@@ -742,7 +742,7 @@ class TenCard extends Control:
 			draw_string(font, Vector2(0, size.y - 14), "點一下", HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(13), Color(1, 1, 1, 0.4))
 			return
 		var it := Cos.item(String(res.id))
-		draw_string(font, Vector2(0, 150), it.name, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(16), rc if r > 0 else UITheme.TEXT)
+		draw_string(font, Vector2(0, 150), it.name, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(15), rc if r > 0 else UITheme.TEXT)
 		var sub: String = Cos.RARITY[r].name + ("・NEW" if res.new else "・碎片 +%d" % int(res.shards))
 		draw_string(font, Vector2(0, 176), sub, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(13),
-			Color("ffcf5a") if res.new else Color("7fe3ff"))
+			UITheme.GOLD if res.new else UITheme.CYAN_LIGHT)

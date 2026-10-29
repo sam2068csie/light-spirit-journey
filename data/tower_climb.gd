@@ -167,13 +167,13 @@ func _draw_floor(font: Font, f: int) -> void:
 			draw_rect(wr, Color(0.25, 0.28, 0.5, 0.7))
 	# 樓層號碼
 	var tc := Color(1, 0.88, 0.55) if lit else Color(0.7, 0.74, 0.9, 0.6)
-	draw_string(font, Vector2(c.x + half + 16, c.y + 8), "%d F" % f, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(22), tc)
+	draw_string(font, Vector2(c.x + half + 16, c.y + 8), "%d F" % f, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(24), tc)
 	var tag_y := c.y + 32.0
 	if f % 5 == 0:
 		draw_string(font, Vector2(c.x + half + 16, tag_y), "試煉層", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 0.55, 0.6, 0.9))
 		tag_y += 20.0
 	if f == best and best > 0 and f >= to_floor:
-		draw_string(font, Vector2(c.x + half + 16, tag_y), "最高紀錄", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 0.88, 0.55, 0.8))
+		draw_string(font, Vector2(c.x + half + 16, tag_y), "最高紀錄", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 0.88, 0.55, 0.8))
 
 
 func _draw_hud(font: Font) -> void:
@@ -184,14 +184,14 @@ func _draw_hud(font: Font) -> void:
 	var pop := 1.0 + 0.25 * sin(k * PI)
 	var num := to_floor if t >= 1.1 else from_floor
 	var cy := size.y * 0.42
-	draw_string(font, Vector2(0, cy - 70), "終焉之塔", HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(18), Color("ff8fa0"))
+	draw_string(font, Vector2(0, cy - 70), "終焉之塔", HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(17), UITheme.ROSE)
 	draw_string(font, Vector2(0, cy), "第 %d 層" % num, HORIZONTAL_ALIGNMENT_CENTER, col_w, int(52 * pop), UITheme.ACCENT)
 	var sub := "往上爬！"
 	var sub_c := Color(1, 1, 1, 0.8)
 	if t >= 1.15:
 		if to_floor % 5 == 0:
 			sub = "這一層是試煉層，小心！"
-			sub_c = Color("ff8fa0")
+			sub_c = UITheme.ROSE
 		elif to_floor > best and best > 0:
 			sub = "新紀錄！"
 			sub_c = UITheme.ACCENT
@@ -200,11 +200,11 @@ func _draw_hud(font: Font) -> void:
 	draw_string(font, Vector2(0, cy + 46), sub, HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(20), sub_c)
 	# 剛剛那一層拿到的星星
 	var st := ("★".repeat(stars) + "☆".repeat(3 - stars)) if stars > 0 else "示範通過"
-	draw_string(font, Vector2(0, cy + 100), "第 %d 層　%s" % [from_floor, st], HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(18),
+	draw_string(font, Vector2(0, cy + 100), "第 %d 層　%s" % [from_floor, st], HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(17),
 		Color(1, 0.88, 0.55, 0.85))
 	# 右上：剩下的心
 	var hs := "♥".repeat(clampi(hearts, 0, 3)) + "♡".repeat(clampi(3 - hearts, 0, 3))
-	draw_string(font, Vector2(w - 160, 50), hs, HORIZONTAL_ALIGNMENT_RIGHT, 124, UITheme.fs(26), UITheme.PINK)
+	draw_string(font, Vector2(w - 160, 50), hs, HORIZONTAL_ALIGNMENT_RIGHT, 124, UITheme.fs(24), UITheme.PINK)
 	if t > 0.8:
 		draw_string(font, Vector2(0, size.y - 30), "點一下繼續", HORIZONTAL_ALIGNMENT_CENTER, col_w, UITheme.fs(15),
 			Color(1, 1, 1, 0.35 + 0.15 * sin(t * 4.0)))

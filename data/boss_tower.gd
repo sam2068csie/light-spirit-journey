@@ -107,12 +107,12 @@ func _build_ui() -> void:
 	add_child(top)
 	var title := Label.new()
 	title.text = "終焉之塔"
-	title.add_theme_font_size_override("font_size", UITheme.fs(26))
-	title.add_theme_color_override("font_color", Color("ff8fa0"))
+	title.add_theme_font_size_override("font_size", UITheme.fs(24))
+	title.add_theme_color_override("font_color", UITheme.ROSE)
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(title)
 	floor_label = Label.new()
-	floor_label.add_theme_font_size_override("font_size", UITheme.fs(19))
+	floor_label.add_theme_font_size_override("font_size", UITheme.fs(20))
 	floor_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	floor_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(floor_label)
@@ -122,7 +122,7 @@ func _build_ui() -> void:
 	heart_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(heart_label)
 	timer_label = Label.new()
-	timer_label.add_theme_font_size_override("font_size", UITheme.fs(22))
+	timer_label.add_theme_font_size_override("font_size", UITheme.fs(24))
 	timer_label.custom_minimum_size = Vector2(96, 0)
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -212,12 +212,12 @@ func _build_ui() -> void:
 	step_label.color = UITheme.TEXT_DIM
 	col.add_child(step_label)
 	part_label = Label.new()
-	part_label.add_theme_font_size_override("font_size", UITheme.fs(16))
+	part_label.add_theme_font_size_override("font_size", UITheme.fs(15))
 	part_label.add_theme_color_override("font_color", kind_col)
 	part_label.visible = false
 	col.add_child(part_label)
 	prompt_label = MathLabel.new()
-	prompt_label.font_size = UITheme.fs(18)
+	prompt_label.font_size = UITheme.fs(17)
 	prompt_label.max_width = CARD_W
 	prompt_label.color = UITheme.ACCENT
 	col.add_child(prompt_label)
@@ -353,9 +353,9 @@ func _write(line: String, dim := false) -> void:
 	if line == "":
 		return
 	var l := MathLabel.new()
-	l.font_size = UITheme.fs(19)
+	l.font_size = UITheme.fs(20)
 	l.max_width = INNER_W - (284.0 if plot and plot.get_parent() != null and item.kind != "judge" else 0.0)
-	l.color = UITheme.TEXT_DIM if dim else Color("cfe9ff")
+	l.color = UITheme.TEXT_DIM if dim else UITheme.CYAN_PALE
 	l.text = line
 	l.mouse_filter = Control.MOUSE_FILTER_PASS     # 手指按在字上也能拖動捲動
 	board.add_child(l)
@@ -587,7 +587,7 @@ func _build_judge(s: Dictionary) -> void:
 		mid.mouse_filter = Control.MOUSE_FILTER_PASS
 		mid.add_child(st)
 		var why := MathLabel.new()
-		why.font_size = UITheme.fs(14)
+		why.font_size = UITheme.fs(15)
 		why.max_width = st.max_width
 		why.color = UITheme.TEXT_DIM
 		why.visible = false
@@ -698,7 +698,7 @@ func _build_roots(s: Dictionary) -> void:
 	widget_box.add_child(whys)
 	var tip := Label.new()
 	tip.text = "點一下劃掉，再點一下復原"
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	whys.add_child(tip)
 	action_btn.text = "確認"
@@ -810,7 +810,7 @@ class Strike extends Control:
 	func _draw() -> void:
 		if not on:
 			return
-		var c := UITheme.BAD if not bad else Color("ffb454")
+		var c := UITheme.BAD if not bad else UITheme.ORANGE
 		draw_line(Vector2(12, size.y - 14), Vector2(size.x - 12, 14), c, 4.0, true)
 
 
@@ -909,7 +909,7 @@ class NumLine extends Control:
 			var r: Dictionary = rows[ri]
 			var y := _row_y(ri)
 			var active: bool = not r.done
-			var col: Color = r.col if active else (Color("ffb454") if r.bad else Color("5ad8ff"))
+			var col: Color = r.col if active else (UITheme.ORANGE if r.bad else UITheme.CYAN)
 			if r.done and not r.bad and ri == rows.size() - 1:
 				col = UITheme.GOOD
 			if active:
@@ -999,7 +999,7 @@ class Plot extends Control:
 		return pts
 
 	static func _col(nm: String) -> Color:
-		return {"cyan": UITheme.CYAN, "pink": UITheme.PINK, "orange": Color("ffb454"), "lime": UITheme.LIME,
+		return {"cyan": UITheme.CYAN, "pink": UITheme.PINK, "orange": UITheme.ORANGE, "lime": UITheme.LIME,
 			"dim": Color(1, 1, 1, 0.55), "faint": Color(1, 1, 1, 0.22)}.get(nm, UITheme.CYAN)
 
 	func _draw() -> void:
@@ -1036,7 +1036,7 @@ class Plot extends Control:
 			draw_line(_to(Vector2(0, yr[0])), _to(Vector2(0, yr[1])), Color(1, 1, 1, 0.4), 1.5)
 		if yr[0] < 0.0 and yr[1] > 0.0:
 			draw_line(_to(Vector2(xr[0], 0)), _to(Vector2(xr[1], 0)), Color(1, 1, 1, 0.4), 1.5)
-			preload("math_text.gd").draw_text(self, font, _to(Vector2(xr[1], 0)) + Vector2(-14, -6), String(data.get("var", "x")), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.6))
+			preload("math_text.gd").draw_text(self, font, _to(Vector2(xr[1], 0)) + Vector2(-14, -6), String(data.get("var", "x")), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.6))
 		# 鉛直虛線（漸近線）
 		for v in data.get("vlines", []):
 			if _vis(v):
@@ -1084,9 +1084,9 @@ class Plot extends Control:
 			var lbl := String(p.get("label", ""))
 			if lbl != "":
 				var right := sp.x < size.x - 70.0
-				var off := Vector2(8, -8) if right else Vector2(-8 - font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x, -8)
+				var off := Vector2(8, -8) if right else Vector2(-8 - font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x, -8)
 				if p.has("off"):
 					off = Vector2(p.off[0], p.off[1])
 				var tp := sp + off
 				draw_string_outline(font, tp, lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UITheme.fs(4), Color(0.04, 0.05, 0.12, 0.9))
-				draw_string(font, tp, lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), UITheme.ACCENT)
+				draw_string(font, tp, lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), UITheme.ACCENT)

@@ -718,11 +718,11 @@ func _build_card() -> void:
 	_card_name.add_theme_font_size_override("font_size", UITheme.fs(24))
 	top.add_child(_card_name)
 	_card_stars = Label.new()
-	_card_stars.add_theme_font_size_override("font_size", UITheme.fs(18))
+	_card_stars.add_theme_font_size_override("font_size", UITheme.fs(17))
 	_card_stars.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(_card_stars)
 	_card_topic = Label.new()
-	_card_topic.add_theme_font_size_override("font_size", UITheme.fs(14))
+	_card_topic.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_card_topic.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_card_topic.clip_text = true
 	_card_topic.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -1234,7 +1234,7 @@ func _draw_tower(font: Font) -> void:
 	for k in 3:
 		var a := t * 1.6 + k * TAU / 3.0
 		UITheme.dot(_tgt, p + Vector2(cos(a) * 20.0, -34.0 + sin(a) * 6.0), 1.8, Color(1, 0.6, 0.65, 0.7))
-	UITheme.text_ol(_tgt, font, p + Vector2(-60, 22), "終焉之塔", HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(14),
+	UITheme.text_ol(_tgt, font, p + Vector2(-60, 22), "終焉之塔", HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(15),
 		Color(1, 0.78, 0.8, 1.0 if hov else 0.92))
 	var g = Game.of(self)
 	if g.tower_best > 0:
@@ -1596,7 +1596,7 @@ func _show_story_list() -> void:
 		var b := Button.new()
 		b.text = STORY_TITLES[k] if seen else "？？？（點亮聖地後解鎖）"
 		b.custom_minimum_size = Vector2(0, 44)
-		b.add_theme_font_size_override("font_size", UITheme.fs(16))
+		b.add_theme_font_size_override("font_size", UITheme.fs(15))
 		b.disabled = not seen
 		b.mouse_filter = Control.MOUSE_FILTER_PASS     # 手指按在按鈕上拖動也能捲動列表
 		if not seen:
@@ -1643,7 +1643,7 @@ class StoryPlayer extends Control:
 		size = SZ
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		_who = Label.new()
-		_who.add_theme_font_size_override("font_size", UITheme.fs(16))
+		_who.add_theme_font_size_override("font_size", UITheme.fs(15))
 		_who.add_theme_color_override("font_color", Color(1, 0.85, 0.45))
 		var vs := SZ
 		_who.position = Vector2(120, vs.y - 104)
@@ -1658,7 +1658,7 @@ class StoryPlayer extends Control:
 		_face.visible = false
 		add_child(_face)
 		_label = Label.new()
-		_label.add_theme_font_size_override("font_size", UITheme.fs(21))
+		_label.add_theme_font_size_override("font_size", UITheme.fs(20))
 		_label.add_theme_color_override("font_color", UITheme.TEXT)
 		_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 		_label.position = Vector2(120, vs.y - 80)
@@ -1684,7 +1684,7 @@ class StoryPlayer extends Control:
 			draw_string(font, Vector2(0, 40), title, HORIZONTAL_ALIGNMENT_CENTER, SZ.x, UITheme.fs(20), Color(1, 0.85, 0.45, bars))
 		if not typing and bars > 0.9:
 			var a := 0.4 + 0.4 * sin(t * 4.0)
-			draw_string(get_theme_default_font(), Vector2(SZ.x - 220, SZ.y - 18), "點一下繼續  ▸", HORIZONTAL_ALIGNMENT_RIGHT, 200, UITheme.fs(14), Color(1, 1, 1, a))
+			draw_string(get_theme_default_font(), Vector2(SZ.x - 220, SZ.y - 18), "點一下繼續  ▸", HORIZONTAL_ALIGNMENT_RIGHT, 200, UITheme.fs(15), Color(1, 1, 1, a))
 
 	func intro() -> void:
 		var tw := create_tween()

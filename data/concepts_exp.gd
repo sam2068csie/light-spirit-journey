@@ -17,15 +17,16 @@ extends RefCounted
 ##
 ## 解題流程卡片（拼積木）：
 ##   {"kind": "order", "title", "tag", "glyph", "prompt": 題目, "steps": [依正確順序的步驟…], "done": 完成後的一句話}
+const UITheme := preload("game_theme.gd")
 
-const C1 := Color("5ad8ff")
-const C2 := Color("ffb454")
-const C3 := Color("a6f05a")
-const C4 := Color("c792ff")
-const C5 := Color("ff7eb6")
-const C6 := Color("ffcf5a")
-const C7 := Color("6ee7a0")
-const C8 := Color("8fb4ff")
+const C1 := UITheme.CYAN
+const C2 := UITheme.ORANGE
+const C3 := UITheme.LIME
+const C4 := UITheme.VIOLET
+const C5 := UITheme.PINK
+const C6 := UITheme.GOLD
+const C7 := UITheme.GOOD
+const C8 := UITheme.BLUE
 
 
 static func cards(level: String) -> Array:

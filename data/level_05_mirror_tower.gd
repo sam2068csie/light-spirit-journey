@@ -10,8 +10,8 @@ extends "level_01_light_bridge.gd"
 const Bank5 := preload("level05_bank.gd")
 
 const CHAPTERS5 := [
-	{"ch": 1, "name": "第一章．鏡中之光", "topic": "對數圖形、平移與 y = x 對稱", "color": Color("ff7eb6")},
-	{"ch": 2, "name": "第二章．交點之鏡", "topic": "絕對值與交點個數", "color": Color("c792ff")},
+	{"ch": 1, "name": "第一章．鏡中之光", "topic": "對數圖形、平移與 y = x 對稱", "color": UITheme.PINK},
+	{"ch": 2, "name": "第二章．交點之鏡", "topic": "絕對值與交點個數", "color": UITheme.VIOLET},
 ]
 
 

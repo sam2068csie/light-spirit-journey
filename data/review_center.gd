@@ -4,12 +4,13 @@ extends RefCounted
 ##   ・熟練度：答錯幾次、複習答對幾次 → 哪些觀念還需要加強
 ##   ・每日修煉：每天從最弱的觀念各挑一題，湊成 5 題
 ## 存檔資料放在 Game（game.gd）裡；這個檔案只負責計算。
+const UITheme := preload("game_theme.gd")
 
 const QuizInfo := preload("quiz_manager.gd")
 const TowerBank := preload("tower_bank.gd")
 
 ## 終焉之塔的段考風格題目（不在八大關裡，level 記成 "T"）
-const TOWER_INFO := {"id": "T", "name": "終焉之塔", "file": "boss_tower.gd", "bank": "", "color": Color("ff8fa0")}
+const TOWER_INFO := {"id": "T", "name": "終焉之塔", "file": "boss_tower.gd", "bank": "", "color": UITheme.ROSE}
 
 const Units := preload("units.gd")
 

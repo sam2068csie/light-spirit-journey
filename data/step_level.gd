@@ -19,7 +19,7 @@ extends "level_01_light_bridge.gd"
 ## 想加新的步驟種類：覆寫 _forge_step()（先 super()，再處理自己的 kind）、_custom_go()、_custom_reveal()。
 ## 也可以用實體鍵盤輸入：數字、−、/、Backspace、Enter（送出）、Tab（下一格）。
 
-const FIRE := Color("ffb454")
+const FIRE := UITheme.ORANGE
 
 var fview: ForgeView
 # 開場動畫：題目逐字出現，出現完才顯示右邊的引導作答區
@@ -431,13 +431,13 @@ func _build_fill(st: Dictionary) -> void:
 	if _inline_fill():
 		var tip := Label.new()
 		tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
-		tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+		tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 		tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		rank_box.add_child(tip)
 		rank_box.move_child(tip, 0)
 	fill_preview = MathLabel.new()
 	fill_tpl = _wrap_template(st.template)
-	fill_preview.font_size = UITheme.fs(21) if fill_tpl.contains("\n") else UITheme.fs(24)
+	fill_preview.font_size = UITheme.fs(20) if fill_tpl.contains("\n") else UITheme.fs(24)
 	fill_preview.max_width = 320
 	fill_preview.align_center = true
 	fill_preview.color = UITheme.TEXT
@@ -509,7 +509,7 @@ func _build_keypad(multi: bool) -> void:
 			b.custom_minimum_size = Vector2(0, 40)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.focus_mode = Control.FOCUS_NONE
-			b.add_theme_font_size_override("font_size", UITheme.fs(20) if k.length() == 1 else UITheme.fs(16))
+			b.add_theme_font_size_override("font_size", UITheme.fs(20) if k.length() == 1 else UITheme.fs(15))
 			if k == "√":
 				b.add_theme_color_override("font_color", UITheme.CYAN)
 			if k == "→":
@@ -903,7 +903,7 @@ func _build_filter(st: Dictionary) -> void:
 		filter_btns.append(b)
 	var tip := Label.new()
 	tip.text = st.get("tip", "點一下可以切換「保留」或「丟掉」。")
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
 	go_btn.visible = true
@@ -978,7 +978,7 @@ func _build_order(st: Dictionary) -> void:
 		Color(step_color().r, step_color().g, step_color().b, 0.4), 1, 10))
 	rank_box.add_child(card)
 	order_preview = MathLabel.new()
-	order_preview.font_size = UITheme.fs(22)
+	order_preview.font_size = UITheme.fs(24)
 	order_preview.max_width = 320
 	order_preview.align_center = true
 	card.add_child(order_preview)
@@ -1430,8 +1430,8 @@ class LogDrag extends Control:
 class ForgeView extends Control:
 	const UITheme := preload("game_theme.gd")
 	const MathLabel := preload("math_text.gd")
-	const FIRE := Color("ffb454")
-	const GOLD := Color("ffcf5a")
+	const FIRE := UITheme.ORANGE
+	const GOLD := UITheme.GOLD
 
 	var intro := -1.0        # ≥ 0：開場動畫中，題目出現到第幾個字
 	var t := 0.0
@@ -1605,7 +1605,7 @@ class ForgeView extends Control:
 
 	func _eq_fs(line: String) -> int:
 		var given := line.begins_with("（")
-		return _fit_fs(get_theme_default_font(), line, UITheme.fs(21) if given else UITheme.fs(26))
+		return _fit_fs(get_theme_default_font(), line, UITheme.fs(20) if given else UITheme.fs(24))
 
 	func _extra(markup: String, fs: float) -> Vector2:
 		return MathLabel.line_extra(get_theme_default_font(), markup, fs)
@@ -1613,7 +1613,7 @@ class ForgeView extends Control:
 	## 鍛造紀錄每一行占的高度（有分數的行比較高）
 	func _row_h(i: int) -> float:
 		var tx: String = lines[i].text
-		var e := _extra(tx, _fit_fs(get_theme_default_font(), tx, UITheme.fs(21)))
+		var e := _extra(tx, _fit_fs(get_theme_default_font(), tx, UITheme.fs(20)))
 		return 40.0 + e.x + e.y
 
 	func _graph_on() -> bool:
@@ -1713,9 +1713,9 @@ class ForgeView extends Control:
 		var o: Vector2 = to_px.call(Vector2(0, 0))
 		if o.y >= rect.position.y and o.y <= rect.end.y:
 			draw_line(Vector2(rect.position.x, o.y), Vector2(rect.end.x, o.y), Color(1, 1, 1, 0.45), 1.5)
-			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, o.y - 6), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, o.y - 6), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.7))
 		draw_line(Vector2(o.x, rect.position.y), Vector2(o.x, rect.end.y), Color(1, 1, 1, 0.35), 1.0)
-		preload("math_text.gd").draw_text(self, font, Vector2(o.x + 6, rect.position.y + 14), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+		preload("math_text.gd").draw_text(self, font, Vector2(o.x + 6, rect.position.y + 14), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.7))
 		# 曲線
 		var pts := PackedVector2Array()
 		var segs := []
@@ -1730,7 +1730,7 @@ class ForgeView extends Control:
 			pts.append(to_px.call(Vector2(x, y)))
 		if pts.size() >= 2:
 			segs.append(pts)
-		var cc := Color("5ad8ff")
+		var cc := UITheme.CYAN
 		for sg in segs:
 			draw_polyline(UITheme.thin(sg), Color(cc.r, cc.g, cc.b, 0.2), 8.0)
 			draw_polyline(UITheme.thin(sg), cc, 2.5, true)
@@ -1768,7 +1768,7 @@ class ForgeView extends Control:
 		for k in range(first, mini(i, lines.size())):
 			y += _row_h(k)
 		if i < lines.size():
-			y += _extra(lines[i].text, _fit_fs(get_theme_default_font(), lines[i].text, UITheme.fs(21))).x
+			y += _extra(lines[i].text, _fit_fs(get_theme_default_font(), lines[i].text, UITheme.fs(20))).x
 		return y
 
 	func _bottom_limit() -> float:
@@ -1782,7 +1782,7 @@ class ForgeView extends Control:
 		var he := _extra(_live_head(), UITheme.fs(15))
 		var h := 40.0 + he.x + he.y + (6.0 if he.x > 0.0 else 0.0)
 		for ln in live_fill.split("\n"):
-			var e := _extra(ln, _fit_fs(font, ln, UITheme.fs(22)))
+			var e := _extra(ln, _fit_fs(font, ln, UITheme.fs(24)))
 			h += 40.0 + e.x + e.y
 		return h
 
@@ -1885,7 +1885,7 @@ class ForgeView extends Control:
 			# 括號開頭的那一行是給的數值（例如 log 2 ≈ 0.3010）：字小一點、顏色淡一點
 			var given := eql[i].begins_with("（")
 			MathLabel.draw_on(self, font, cx, _eq_y(i) - (4.0 if given else 0.0), eql[i],
-				_fit_fs(font, eql[i], UITheme.fs(21) if given else UITheme.fs(26)), Color(1, 0.9, 0.7, 0.85) if given else GOLD, rev)
+				_fit_fs(font, eql[i], UITheme.fs(20) if given else UITheme.fs(24)), Color(1, 0.9, 0.7, 0.85) if given else GOLD, rev)
 		var sep_y := _eq_y(eql.size() - 1) + 22.0 + _extra(eql[-1], _eq_fs(eql[-1])).y
 		# 分隔線放在「題目最下緣」和「第一行紀錄最上緣」的正中間（有上標、分數時兩邊都會長高，不會壓到字）
 		if intro < 0.0 and not lines.is_empty():
@@ -1894,7 +1894,7 @@ class ForgeView extends Control:
 				var fs_e := _eq_fs(eql[-1])
 				var bot := _eq_y(eql.size() - 1) + MathLabel.line_extent(eql[-1], fs_e).y
 				var tx: String = lines[f0].text
-				var top := _line_y(f0) - MathLabel.line_extent(tx, _fit_fs(font, tx, UITheme.fs(21))).x
+				var top := _line_y(f0) - MathLabel.line_extent(tx, _fit_fs(font, tx, UITheme.fs(20))).x
 				if f0 > 0:
 					top = minf(top, _top_y() - 30.0)      # 上面還有「⋯」
 				sep_y = (bot + top) / 2.0
@@ -1905,14 +1905,14 @@ class ForgeView extends Control:
 			return
 		var first := _first_shown()
 		if first > 0:
-			draw_string(font, Vector2(cx - 20, _top_y() - 16), "⋯", HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(18), Color(1, 1, 1, 0.4))
+			draw_string(font, Vector2(cx - 20, _top_y() - 16), "⋯", HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(17), Color(1, 1, 1, 0.4))
 		var cut := false
 		for i in range(first, lines.size()):
 			var ln: Dictionary = lines[i]
 			var a := clampf((t - float(ln.born)) / 0.35, 0.0, 1.0)
 			var y := _line_y(i) + (1.0 - a) * 10.0
 			# 往上捲的時候，超出下緣的行先不畫（下面顯示「往下還有」）
-			if scroll_rows > 0 and _line_y(i) + _extra(ln.text, _fit_fs(font, ln.text, UITheme.fs(21))).y + 10.0 > _bottom_limit() - (0.0 if done else 30.0):
+			if scroll_rows > 0 and _line_y(i) + _extra(ln.text, _fit_fs(font, ln.text, UITheme.fs(20))).y + 10.0 > _bottom_limit() - (0.0 if done else 30.0):
 				cut = true
 				break
 			var last := i == lines.size() - 1
@@ -1920,7 +1920,7 @@ class ForgeView extends Control:
 			if last and t - float(ln.born) < 0.8:
 				var g := 1.0 - (t - float(ln.born)) / 0.8
 				draw_rect(Rect2(40, y - 24, size.x - 80, 34), Color(1, 0.6, 0.25, 0.12 * g))
-			MathLabel.draw_on(self, font, cx, y, ln.text, _fit_fs(font, ln.text, UITheme.fs(21)), c)
+			MathLabel.draw_on(self, font, cx, y, ln.text, _fit_fs(font, ln.text, UITheme.fs(20)), c)
 		_draw_log_bar()
 		if scroll_rows > 0:
 			if cut or not done:
@@ -1932,7 +1932,7 @@ class ForgeView extends Control:
 		elif not done and cur_name != "":
 			var y2 := _line_y(lines.size())
 			var pa := 0.4 + 0.3 * sin(t * 4.0)
-			draw_string(font, Vector2(0, y2), "▸ 正在%s：%s ⋯" % [work_word, cur_name], HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(18),
+			draw_string(font, Vector2(0, y2), "▸ 正在%s：%s ⋯" % [work_word, cur_name], HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17),
 				Color(FIRE.r, FIRE.g, FIRE.b, pa))
 		if done:
 			var k := clampf((t - done_t) / 0.4, 0.0, 1.0)
@@ -1952,7 +1952,7 @@ class ForgeView extends Control:
 		draw_style_box(UITheme.boxc(Color(FIRE.r, FIRE.g, FIRE.b, 0.10), 12, Color(FIRE.r, FIRE.g, FIRE.b, pulse), 2, 0), box)
 		var head := _live_head()
 		var hfs := UITheme.fs(15)
-		while hfs > UITheme.fs(11) and _mw(font, head, hfs) > box.size.x - 24.0:
+		while hfs > UITheme.fs(12) and _mw(font, head, hfs) > box.size.x - 24.0:
 			hfs -= 1
 		# 標題裡有分數時（例如 log (1/3^{20})）往下多留空間，免得和框線、下面的算式疊在一起
 		var he := _extra(head, UITheme.fs(15))
@@ -1962,7 +1962,7 @@ class ForgeView extends Control:
 			Color(1, 0.85, 0.6, 0.95))
 		var y := box.position.y + 30.0 + he.x + he.y
 		for ln in rows:
-			var fs := _fit_fs(font, ln, UITheme.fs(22))
+			var fs := _fit_fs(font, ln, UITheme.fs(24))
 			var e := _extra(ln, fs)
 			y += e.x + 26.0
 			MathLabel.draw_on(self, font, cx, y, ln, fs, Color(1, 0.95, 0.85))
@@ -2016,7 +2016,7 @@ class ForgeView extends Control:
 		var y0: float = to_px.call(Vector2(0, 0)).y
 		if y0 >= rect.position.y and y0 <= rect.end.y:
 			draw_line(Vector2(rect.position.x, y0), Vector2(rect.end.x, y0), Color(1, 1, 1, 0.5), 1.5)
-			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, y0 - 6), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 14, y0 - 6), "t", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.7))
 		var x0: float = to_px.call(Vector2(0, 0)).x
 		if x0 >= rect.position.x and x0 <= rect.end.x:
 			draw_line(Vector2(x0, rect.position.y), Vector2(x0, rect.end.y), Color(1, 1, 1, 0.25), 1.0)
@@ -2154,8 +2154,8 @@ class ForgeView extends Control:
 			shake = sin(t * 60.0) * 10.0 * ma
 		var pop := clampf(1.0 - (t - hit_t) / 0.3, 0.0, 1.0)
 		var y := size.y * 0.42
-		draw_string(font, Vector2(0, y - 70), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(18), Color(1, 1, 1, 0.55))
-		MathLabel.draw_on(self, font, cx + shake, y, sp_eq, _fit_fs(font, sp_eq, UITheme.fs(42)), Color(1, 0.97, 0.9))
+		draw_string(font, Vector2(0, y - 70), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
+		MathLabel.draw_on(self, font, cx + shake, y, sp_eq, _fit_fs(font, sp_eq, UITheme.fs(40)), Color(1, 0.97, 0.9))
 		if streak >= 2:
 			var fc := GOLD if streak >= 4 else FIRE
 			draw_string(font, Vector2(0, y + 70), "連對 ×%d" % streak, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(24 + 8 * pop),
@@ -2169,9 +2169,9 @@ class ForgeView extends Control:
 		# 開場：題目和問句逐字出現，圖等開場結束才畫
 		if intro >= 0.0:
 			var n_eq := float(MathLabel.glyph_count(rd.eq))
-			MathLabel.draw_on(self, font, cx, 42, rd.eq, UITheme.fs(22), GOLD, intro)
+			MathLabel.draw_on(self, font, cx, 42, rd.eq, UITheme.fs(24), GOLD, intro)
 			if ask != "" and intro > n_eq:
-				MathLabel.draw_on(self, font, cx, 78, ask, _fit_fs(font, ask, UITheme.fs(18)), Color(1, 0.95, 0.88), intro - n_eq)
+				MathLabel.draw_on(self, font, cx, 78, ask, _fit_fs(font, ask, UITheme.fs(17)), Color(1, 0.95, 0.88), intro - n_eq)
 			return
 		# 計算步驟：內容可能比畫面高，整塊往上捲
 		MathLabel.set_xform(self, Transform2D(0.0, Vector2(0, -roundf(scroll))))
@@ -2181,10 +2181,10 @@ class ForgeView extends Control:
 		var A: float = c[0][0] + c[0][1] * pv
 		var B: float = c[1][0] + c[1][1] * pv
 		var C: float = c[2][0] + c[2][1] * pv
-		MathLabel.draw_on(self, font, cx, 42, rd.eq, UITheme.fs(22), GOLD)
+		MathLabel.draw_on(self, font, cx, 42, rd.eq, UITheme.fs(24), GOLD)
 		var top := 76.0
 		if ask != "":
-			MathLabel.draw_on(self, font, cx, 78, ask, _fit_fs(font, ask, UITheme.fs(18)), Color(1, 0.95, 0.88))
+			MathLabel.draw_on(self, font, cx, 78, ask, _fit_fs(font, ask, UITheme.fs(17)), Color(1, 0.95, 0.88))
 			top = 110.0
 		var pname: String = rd.param.name
 		var teq: String = rd.teq.replace(pname, "[color=#ffb454]%s[/color]" % pname)
@@ -2199,7 +2199,7 @@ class ForgeView extends Control:
 				n += 1
 		if demo:
 			preload("math_text.gd").draw_text(self, font, Vector2(rect.end.x - 330, rect.position.y + 40), "示意：兩個 t 都落在亮區",
-				HORIZONTAL_ALIGNMENT_RIGHT, 320, UITheme.fs(18), Color(1, 0.9, 0.5, 0.9))
+				HORIZONTAL_ALIGNMENT_RIGHT, 320, UITheme.fs(17), Color(1, 0.9, 0.5, 0.9))
 		else:
 			draw_string(font, Vector2(rect.end.x - 220, rect.position.y + 44), "%s：%d 個" % [rd.unit, n],
 				HORIZONTAL_ALIGNMENT_RIGHT, 210, UITheme.fs(24), Color(1, 0.9, 0.5))
@@ -2208,7 +2208,7 @@ class ForgeView extends Control:
 			for i in lines.size():
 				var ln: Dictionary = lines[i]
 				var a := clampf((t - float(ln.born)) / 0.35, 0.0, 1.0)
-				MathLabel.draw_on(self, font, cx, y0 + 38.0 * i + (1.0 - a) * 10.0, ln.text, _fit_fs(font, ln.text, UITheme.fs(19)),
+				MathLabel.draw_on(self, font, cx, y0 + 38.0 * i + (1.0 - a) * 10.0, ln.text, _fit_fs(font, ln.text, UITheme.fs(20)),
 					Color(1, 0.95, 0.85, a))
 			var yl := y0 + 38.0 * lines.size()
 			var end_y := yl

@@ -11,7 +11,7 @@ extends "step_level.gd"
 
 const Bank2 := preload("level02_bank.gd")
 const CHAPTERS2 := [
-	{"ch": 1, "name": "第一章．同底熔爐", "topic": "化同底、換元與 t > 0", "color": Color("ffb454")},
+	{"ch": 1, "name": "第一章．同底熔爐", "topic": "化同底、換元與 t > 0", "color": UITheme.ORANGE},
 	{"ch": 2, "name": "第二章．大師工坊", "topic": "成立條件、分解、聯立與參數", "color": Color("ff7e6b")},
 ]
 

@@ -13,44 +13,45 @@ extends RefCounted
 ##   3. map：這個單元的世界地圖腳本；tower：終焉之塔的題庫（沒有就先留空）
 ##      concepts：觀念卡片檔（例如 "concepts_vec2.gd"，寫法照 concepts_exp.gd）
 ##   4. 劇情的 key 加上單元前綴（例如 "vec2/prologue"）
+const UITheme := preload("game_theme.gd")
 
 const UNITS := [
 	# ======================= 高二上 =======================
 	# 三角函數：建造中。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看（學生看不到）
-	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": Color("ff7eb6"), "open": false, "preview": true,
+	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": false, "preview": true,
 	 "world": "光靈的旅程：月輪島與正弦海岸", "map": "trig_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_trig.gd",
 	 "levels": [
-		{"id": "G1", "name": "弧之渡口", "topic": "弧度量", "file": "level_trig1_arc.gd", "bank": "trig1_bank.gd", "color": Color("5ad8ff")},
-		{"id": "G2", "name": "扇形潟湖", "topic": "扇形弧長與面積", "file": "level_trig2_sector.gd", "bank": "trig2_bank.gd", "color": Color("ffb454")},
-		{"id": "G3", "name": "浪之階梯", "topic": "三角函數的圖形", "file": "level_trig3_wave.gd", "bank": "trig3_bank.gd", "color": Color("a6f05a")},
-		{"id": "G4", "name": "潮汐調音台", "topic": "伸縮與平移", "file": "", "bank": "", "color": Color("c792ff")},
-		{"id": "G5", "name": "和角羅盤", "topic": "和角公式", "file": "", "bank": "", "color": Color("ff7eb6")},
-		{"id": "G6", "name": "倍角鏡池", "topic": "二倍角與半角公式", "file": "", "bank": "", "color": Color("ffcf5a")},
-		{"id": "G7", "name": "疊合燈塔", "topic": "正餘弦函數的疊合", "file": "", "bank": "", "color": Color("6ee7a0")},
+		{"id": "G1", "name": "弧之渡口", "topic": "弧度量", "file": "level_trig1_arc.gd", "bank": "trig1_bank.gd", "color": UITheme.CYAN},
+		{"id": "G2", "name": "扇形潟湖", "topic": "扇形弧長與面積", "file": "level_trig2_sector.gd", "bank": "trig2_bank.gd", "color": UITheme.ORANGE},
+		{"id": "G3", "name": "浪之階梯", "topic": "三角函數的圖形", "file": "level_trig3_wave.gd", "bank": "trig3_bank.gd", "color": UITheme.LIME},
+		{"id": "G4", "name": "潮汐調音台", "topic": "伸縮與平移", "file": "", "bank": "", "color": UITheme.VIOLET},
+		{"id": "G5", "name": "和角羅盤", "topic": "和角公式", "file": "", "bank": "", "color": UITheme.PINK},
+		{"id": "G6", "name": "倍角鏡池", "topic": "二倍角與半角公式", "file": "", "bank": "", "color": UITheme.GOLD},
+		{"id": "G7", "name": "疊合燈塔", "topic": "正餘弦函數的疊合", "file": "", "bank": "", "color": UITheme.GOOD},
 	 ]},
-	{"id": "exp", "term": "高二上", "title": "指數與對數", "exam": "高二上・第二次段考", "color": Color("ffcf5a"), "open": true,
+	{"id": "exp", "term": "高二上", "title": "指數與對數", "exam": "高二上・第二次段考", "color": UITheme.GOLD, "open": true,
 	 "world": "光靈的旅程：指數島與對數島", "map": "world_map.gd", "tower": "tower_bank.gd", "tower_name": "終焉之塔",
 	 "concepts": "concepts_exp.gd",
 	 "levels": [
-		{"id": "L1", "name": "光之橋", "topic": "指數函數的圖形", "file": "level_01_light_bridge.gd", "bank": "level01_bank.gd", "color": Color("5ad8ff")},
-		{"id": "L2", "name": "換元鍛造所", "topic": "指數方程式", "file": "level_02_forge.gd", "bank": "level02_bank.gd", "color": Color("ffb454")},
-		{"id": "L3", "name": "天秤神殿", "topic": "指數不等式與極值", "file": "level_03_scale.gd", "bank": "level03_bank.gd", "color": Color("a6f05a")},
-		{"id": "L4", "name": "對數鍊金術", "topic": "對數的運算性質", "file": "level_04_alchemy.gd", "bank": "level04_bank.gd", "color": Color("c792ff")},
-		{"id": "L5", "name": "鏡像之塔", "topic": "對數函數的圖形", "file": "level_05_mirror_tower.gd", "bank": "level05_bank.gd", "color": Color("ff7eb6")},
-		{"id": "L6", "name": "真數守門員", "topic": "對數方程式", "file": "level_06_keeper.gd", "bank": "level06_bank.gd", "color": Color("ffcf5a")},
-		{"id": "L7", "name": "正負羅盤", "topic": "對數不等式", "file": "level_07_compass.gd", "bank": "level07_bank.gd", "color": Color("6ee7a0")},
-		{"id": "L8", "name": "位數望遠鏡", "topic": "首數、尾數與應用", "file": "level_08_telescope.gd", "bank": "level08_bank.gd", "color": Color("8fb4ff")},
+		{"id": "L1", "name": "光之橋", "topic": "指數函數的圖形", "file": "level_01_light_bridge.gd", "bank": "level01_bank.gd", "color": UITheme.CYAN},
+		{"id": "L2", "name": "換元鍛造所", "topic": "指數方程式", "file": "level_02_forge.gd", "bank": "level02_bank.gd", "color": UITheme.ORANGE},
+		{"id": "L3", "name": "天秤神殿", "topic": "指數不等式與極值", "file": "level_03_scale.gd", "bank": "level03_bank.gd", "color": UITheme.LIME},
+		{"id": "L4", "name": "對數鍊金術", "topic": "對數的運算性質", "file": "level_04_alchemy.gd", "bank": "level04_bank.gd", "color": UITheme.VIOLET},
+		{"id": "L5", "name": "鏡像之塔", "topic": "對數函數的圖形", "file": "level_05_mirror_tower.gd", "bank": "level05_bank.gd", "color": UITheme.PINK},
+		{"id": "L6", "name": "真數守門員", "topic": "對數方程式", "file": "level_06_keeper.gd", "bank": "level06_bank.gd", "color": UITheme.GOLD},
+		{"id": "L7", "name": "正負羅盤", "topic": "對數不等式", "file": "level_07_compass.gd", "bank": "level07_bank.gd", "color": UITheme.GOOD},
+		{"id": "L8", "name": "位數望遠鏡", "topic": "首數、尾數與應用", "file": "level_08_telescope.gd", "bank": "level08_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	{"id": "vec2", "term": "高二上", "title": "平面向量", "exam": "", "color": Color("5ad8ff"), "open": false,
+	{"id": "vec2", "term": "高二上", "title": "平面向量", "exam": "", "color": UITheme.CYAN, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# ======================= 高二下 =======================
-	{"id": "vec3", "term": "高二下", "title": "空間向量", "exam": "", "color": Color("c792ff"), "open": false,
+	{"id": "vec3", "term": "高二下", "title": "空間向量", "exam": "", "color": UITheme.VIOLET, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	{"id": "plane", "term": "高二下", "title": "空間中的平面與直線", "exam": "", "color": Color("6ee7a0"), "open": false,
+	{"id": "plane", "term": "高二下", "title": "空間中的平面與直線", "exam": "", "color": UITheme.GOOD, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	{"id": "prob", "term": "高二下", "title": "條件機率與貝氏定理", "exam": "", "color": Color("ffb454"), "open": false,
+	{"id": "prob", "term": "高二下", "title": "條件機率與貝氏定理", "exam": "", "color": UITheme.ORANGE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	{"id": "matrix", "term": "高二下", "title": "矩陣", "exam": "", "color": Color("8fb4ff"), "open": false,
+	{"id": "matrix", "term": "高二下", "title": "矩陣", "exam": "", "color": UITheme.BLUE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 ]
 

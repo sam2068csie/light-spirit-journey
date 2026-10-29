@@ -11,6 +11,7 @@ extends RefCounted
 ##     x（範圍，以 π 為單位，例如 [0, 2]）、y（範圍）、period（標出一個週期的長度，π 為單位）、x0（從哪裡開始標）、
 ##     shift（畫一條往右平移的虛線副本，π 為單位）、pts（標點 [[x(π), y], …]）、vlines（虛線 x(π)）、
 ##     centers（對稱中心 [[x(π), y]]）、inc（亮起來的區間 [[a, b], …]，π 為單位）
+const UITheme := preload("game_theme.gd")
 
 const SB := preload("step_bank.gd")
 
@@ -20,10 +21,10 @@ const T_COMBO := "trig_period_combo"
 const T_PROP := "trig_graph_prop"
 const T_JUDGE := "trig_graph_judge"
 
-const SIN_C := Color("5ad8ff")
-const COS_C := Color("ffb454")
-const TAN_C := Color("a6f05a")
-const PINK := Color("ff8fb6")
+const SIN_C := UITheme.CYAN
+const COS_C := UITheme.ORANGE
+const TAN_C := UITheme.LIME
+const PINK := UITheme.PINK_LIGHT
 
 
 static func _c(name: String, q: String, options: Array, correct: int, why: String, nudge: String,

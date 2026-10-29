@@ -87,7 +87,7 @@ func _ready() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nav.add_child(sp)
 	_counter = Label.new()
-	_counter.add_theme_font_size_override("font_size", UITheme.fs(14))
+	_counter.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_counter.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_counter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nav.add_child(_counter)
@@ -226,7 +226,7 @@ func _head(inner: VBoxContainer, badge: String, title: String, tag: String) -> v
 	num.add_theme_stylebox_override("normal", UITheme.box(color, 20, Color(0, 0, 0, 0), 0, 0))
 	head.add_child(num)
 	var tl := MathLabel.new()
-	tl.font_size = UITheme.fs(26)
+	tl.font_size = UITheme.fs(24)
 	tl.color = UITheme.TEXT
 	tl.text = title
 	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -367,7 +367,7 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		var bullet := Label.new()
 		bullet.text = "▸"
 		bullet.add_theme_color_override("font_color", color)
-		bullet.add_theme_font_size_override("font_size", UITheme.fs(16))
+		bullet.add_theme_font_size_override("font_size", UITheme.fs(15))
 		nr.add_child(bullet)
 		var it := _swap(n, 17, false, wmax - 30, UITheme.TEXT)
 		nr.add_child(it.stack)
@@ -384,7 +384,7 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		bp.add_child(br)
 		var badge := Label.new()
 		badge.text = "例" if key == "example" else "⚠ 小心"
-		badge.add_theme_font_size_override("font_size", UITheme.fs(14))
+		badge.add_theme_font_size_override("font_size", UITheme.fs(15))
 		badge.add_theme_color_override("font_color", bc)
 		br.add_child(badge)
 		var it := _swap(cd[key], 16, false, wmax - 70, UITheme.TEXT)
@@ -608,7 +608,7 @@ func _build_check(inner: VBoxContainer, cd: Dictionary) -> void:
 	var ck: Dictionary = cd.check
 	_head(inner, "✦", "隨堂小測", "第 %d 張" % (idx + 1))
 	var q := MathLabel.new()
-	q.font_size = UITheme.fs(21)
+	q.font_size = UITheme.fs(20)
 	q.color = UITheme.TEXT
 	q.max_width = 700
 	q.text = _hl(ck.q, color)
@@ -644,7 +644,7 @@ func _build_check(inner: VBoxContainer, cd: Dictionary) -> void:
 				_style_row(rb, UITheme.GOOD)
 		rb.pressed.connect(func(): _on_check(rb, oi == int(ck.a), ck))
 	_feedback = MathLabel.new()
-	_feedback.font_size = UITheme.fs(16)
+	_feedback.font_size = UITheme.fs(15)
 	_feedback.color = UITheme.TEXT
 	_feedback.max_width = 700
 	_feedback.custom_minimum_size = Vector2(0, 52)
@@ -692,7 +692,7 @@ func _row_button(badge: String, markup: String) -> Button:
 	bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	bl.custom_minimum_size = Vector2(28, 28)
 	bl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bl.add_theme_font_size_override("font_size", UITheme.fs(14))
+	bl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	bl.add_theme_color_override("font_color", color)
 	bl.add_theme_stylebox_override("normal", UITheme.box(Color(color.r, color.g, color.b, 0.15), 13, Color(color.r, color.g, color.b, 0.6), 1, 0))
 	hb.add_child(bl)
@@ -745,11 +745,11 @@ func _build_order(inner: VBoxContainer, cd: Dictionary) -> void:
 	bp.add_child(br)
 	var badge := Label.new()
 	badge.text = "題"
-	badge.add_theme_font_size_override("font_size", UITheme.fs(14))
+	badge.add_theme_font_size_override("font_size", UITheme.fs(15))
 	badge.add_theme_color_override("font_color", color)
 	br.add_child(badge)
 	var pq := MathLabel.new()
-	pq.font_size = UITheme.fs(19)
+	pq.font_size = UITheme.fs(20)
 	pq.color = Color(1, 0.96, 0.85)
 	pq.max_width = 650
 	pq.text = _hl(cd.prompt, color)
@@ -772,7 +772,7 @@ func _build_order(inner: VBoxContainer, cd: Dictionary) -> void:
 			_lock_row(rb, si, false)
 		rb.pressed.connect(func(): _on_order(rb))
 	_feedback = MathLabel.new()
-	_feedback.font_size = UITheme.fs(16)
+	_feedback.font_size = UITheme.fs(15)
 	_feedback.color = UITheme.TEXT
 	_feedback.max_width = 700
 	_feedback.custom_minimum_size = Vector2(0, 26)
@@ -894,7 +894,7 @@ class ConceptDots extends Control:
 				continue
 			if done:
 				UITheme.dot(self, Vector2(x + 5, cy), 5.0, Color(c.r, c.g, c.b, 0.8))
-				var dk := Color("171c3a")
+				var dk := UITheme.PANEL
 				draw_polyline(PackedVector2Array([Vector2(x + 2.6, cy), Vector2(x + 4.4, cy + 2.0), Vector2(x + 7.6, cy - 2.2)]), dk, 1.4, true)
 			else:
 				draw_arc(Vector2(x + 5, cy), 4.4, 0, TAU, 24, Color(c.r, c.g, c.b, 0.6), 1.2, true)
@@ -1278,8 +1278,8 @@ class ConceptPlot extends Control:
 	func _draw_shape(font: Font, kind: String) -> void:
 		match kind:
 			"cone":
-				var amber := Color("ffb454")
-				var cyan := Color("5ad8ff")
+				var amber := UITheme.ORANGE
+				var cyan := UITheme.CYAN
 				var pulse := 0.55 + 0.45 * sin(t * 3.0)
 				var w := size.x
 				var h := _ph
@@ -1318,15 +1318,15 @@ class ConceptPlot extends Control:
 					var a2 := TAU * i / 48.0
 					ell.append(base + Vector2(cos(a2) * bw, sin(a2) * bw * 0.3))
 				draw_polyline(ell, _col(cyan, pulse), 3.0, true)
-				draw_dashed_line(base, base + Vector2(bw, 0), _col(Color("ffcf5a"), 0.9), 1.5, 4.0)
+				draw_dashed_line(base, base + Vector2(bw, 0), _col(UITheme.GOLD, 0.9), 1.5, 4.0)
 				draw_dashed_line(apex, base, _col(Color.WHITE, 0.3), 1.2, 4.0)
 				MathLabel.draw_on(self, font, (apex.x + base.x - bw) / 2.0 - 10.0, (apex.y + base.y) / 2.0, "ℓ", LABEL_FS, _col(Color.WHITE))
-				MathLabel.draw_on(self, font, base.x + bw / 2.0, base.y - 6.0, "r", LABEL_FS, _col(Color("ffcf5a")))
+				MathLabel.draw_on(self, font, base.x + bw / 2.0, base.y - 6.0, "r", LABEL_FS, _col(UITheme.GOLD))
 				MathLabel.draw_on(self, font, base.x, base.y + bw * 0.3 + 20.0, "2πr", LABEL_FS - 2, _col(cyan))
 
 	## 平移動畫：先停在原本的位置 → 往右 h → 往上 k → 停一下
 	func _draw_shift(font: Font, sh: Dictionary, ts: float, labels: Array) -> void:
-		var col: Color = sh.get("c", Color("5ad8ff"))
+		var col: Color = sh.get("c", UITheme.CYAN)
 		var H: float = sh.get("h", 0.0)
 		var K: float = sh.get("k", 0.0)
 		var uh := clampf((ts - 0.8) / 1.1, 0.0, 1.0)
@@ -1377,8 +1377,8 @@ class ConceptPlot extends Control:
 		var u := clampf((ts - 0.5) / (SCENE_T - 1.4), 0.0, 1.0)
 		u = u * u * (3.0 - 2.0 * u)
 		var a := lerpf(float(sw.a0), float(sw.a1), u)
-		var ce: Color = sw.get("c_exp", Color("5ad8ff"))
-		var cl: Color = sw.get("c_log", Color("ff7eb6"))
+		var ce: Color = sw.get("c_exp", UITheme.CYAN)
+		var cl: Color = sw.get("c_log", UITheme.PINK)
 		var ev := {"f": "exp", "a": a, "c": ce, "lx": _xr.x + 0.25 * (_xr.y - _xr.x), "side": "a", "label": "y = a^{x}"}
 		var lv := {"f": "log", "a": a, "c": cl, "lx": _xr.y - 0.18 * (_xr.y - _xr.x), "side": "b", "label": "y = log_{a} x"}
 		_poly(func(x): return x, _xr.x, _xr.y, _col(Color(1, 1, 1), 0.45), 1.6, true)

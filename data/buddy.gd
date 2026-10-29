@@ -52,7 +52,7 @@ func _ready() -> void:
 	_bubble.add_theme_stylebox_override("panel", sb)
 	add_child(_bubble)
 	_label = Label.new()
-	_label.add_theme_font_size_override("font_size", UITheme.fs(16))
+	_label.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_label.add_theme_color_override("font_color", Color("2a2350"))
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bubble.add_child(_label)

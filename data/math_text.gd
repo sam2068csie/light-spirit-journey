@@ -57,7 +57,7 @@ static var _frac_depth := 0
 	set(v):
 		font_size = v
 		_changed()
-@export var color := Color("eef1ff"):
+@export var color := _UI.TEXT:
 	set(v):
 		color = v
 		_changed()

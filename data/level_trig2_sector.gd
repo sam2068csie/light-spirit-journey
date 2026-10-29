@@ -8,10 +8,10 @@ extends "level_trig1_arc.gd"
 ##   ・速算：已知 r、θ 求弧長、面積，或已知弧長求 θ
 
 const BankG2 := preload("trig2_bank.gd")
-const LAGOON := Color("ffb454")
+const LAGOON := UITheme.ORANGE
 
 const CHAPTERS_G2 := [
-	{"ch": 1, "name": "第一章．扇子展開", "topic": "弧長與面積、周長與面積、最大面積", "color": Color("ffb454")},
+	{"ch": 1, "name": "第一章．扇子展開", "topic": "弧長與面積、周長與面積、最大面積", "color": UITheme.ORANGE},
 	{"ch": 2, "name": "第二章．潟湖深處", "topic": "時鐘、滾動、弓形與圓錐", "color": Color("ff9f6b")},
 ]
 
@@ -138,7 +138,7 @@ func _build_fan(st: Dictionary) -> void:
 	tip.text = "拖動扇子邊上的光點，把扇子打開或收起來。"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(300, 0)
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
 	go_btn.visible = true
@@ -245,8 +245,8 @@ static func _gen_sector() -> Dictionary:
 # ================= 畫面 =================
 
 class SectorView extends MoonView:
-	const AMBER := Color("ffb454")
-	const CYANC := Color("5ad8ff")
+	const AMBER := UITheme.ORANGE
+	const CYANC := UITheme.CYAN
 
 	var fan_on := false
 	var fan_r := 4.0              # 題目的半徑（數字）
@@ -355,11 +355,11 @@ class SectorView extends MoonView:
 		var p := c + Vector2(cos(th), -sin(th)) * rad
 		draw_line(c, p, Color(1, 1, 1, 0.8), 2.5, true)
 		# 半徑的標示
-		MathLabel.draw_on(self, font, c.x + rad / 2.0, c.y + 22.0, "r = %d" % int(fan_r), UITheme.fs(16), Color(1, 1, 1, 0.8))
+		MathLabel.draw_on(self, font, c.x + rad / 2.0, c.y + 22.0, "r = %d" % int(fan_r), UITheme.fs(15), Color(1, 1, 1, 0.8))
 		var mid := c + Vector2(cos(th / 2.0), -sin(th / 2.0)) * (rad + 22.0)
-		MathLabel.draw_on(self, font, mid.x, mid.y + 6.0, "弧長", UITheme.fs(14), CYANC)
+		MathLabel.draw_on(self, font, mid.x, mid.y + 6.0, "弧長", UITheme.fs(15), CYANC)
 		UITheme.dot(self, p, 18.0 + 2.0 * sin(t * 4.0), Color(1, 0.85, 0.45, 0.22))
-		UITheme.dot(self, p, 9.0, Color("ffcf5a"))
+		UITheme.dot(self, p, 9.0, UITheme.GOLD)
 		UITheme.dot(self, p, 4.0, Color.WHITE)
 		UITheme.dot(self, c, 4.0, Color(1, 1, 1, 0.8))
 		_draw_drag_hint(font, c, rad, th)
@@ -508,7 +508,7 @@ class SectorView extends MoonView:
 					draw_polyline(poly.slice(1), CYANC, 3.0, true)
 				var hf: float = (float(circ.h) + m1 / 60.0) / 12.0
 				hand.call(hf, rad * 0.5, Color(1, 1, 1, 0.6), 4.0)
-				hand.call(f1, rad - 8.0, Color("ffcf5a"), 3.0)
+				hand.call(f1, rad - 8.0, UITheme.GOLD, 3.0)
 			"hour":
 				var g0: float = float(circ.h0) / 12.0
 				var g1: float = float(circ.h1) / 12.0
@@ -519,7 +519,7 @@ class SectorView extends MoonView:
 					draw_colored_polygon(poly2, Color(AMBER.r, AMBER.g, AMBER.b, 0.3))
 					draw_polyline(poly2.slice(1), CYANC, 3.0, true)
 				hand.call(0.0, rad - 8.0, Color(1, 1, 1, 0.45), 2.0)
-				hand.call(gf, rad * 0.62, Color("ffcf5a"), 4.5)
+				hand.call(gf, rad * 0.62, UITheme.GOLD, 4.5)
 			"angle":
 				var mf: float = float(circ.m0) / 60.0
 				var hf2: float = (float(circ.h) + float(circ.m0) / 60.0) / 12.0
@@ -531,8 +531,8 @@ class SectorView extends MoonView:
 					hi = tmp + 1.0
 				var poly3 := _sector_poly(c, rad * 0.4, to_math.call(lo), to_math.call(hi))
 				draw_colored_polygon(poly3, Color(1.0, 0.55, 0.7, 0.35))
-				hand.call(hf2, rad * 0.55, Color("ff8fb6"), 4.5)
-				hand.call(mf, rad - 8.0, Color("ffcf5a"), 3.0)
+				hand.call(hf2, rad * 0.55, UITheme.PINK_LIGHT, 4.5)
+				hand.call(mf, rad - 8.0, UITheme.GOLD, 3.0)
 		UITheme.dot(self, c, 4.0, Color.WHITE)
 
 	## 車輪：左邊是一開始（A 貼地），右邊是滾過之後，A 的高度
@@ -559,9 +559,9 @@ class SectorView extends MoonView:
 		draw_polyline(arc, CYANC, 3.0, true)
 		var pa := c1 + Vector2(cos(a_math), -sin(a_math)) * rad
 		draw_line(c1, pa, Color(1, 1, 1, 0.6), 1.5, true)
-		draw_dashed_line(pa, Vector2(pa.x, gy), Color("ffcf5a"), 2.0, 5.0)
-		UITheme.dot(self, pa, 6.0, Color("ffcf5a"))
-		draw_string(font, pa + Vector2(8, -6), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color("ffcf5a"))
+		draw_dashed_line(pa, Vector2(pa.x, gy), UITheme.GOLD, 2.0, 5.0)
+		UITheme.dot(self, pa, 6.0, UITheme.GOLD)
+		draw_string(font, pa + Vector2(8, -6), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), UITheme.GOLD)
 		UITheme.dot(self, c1, 3.0, Color.WHITE)
 		_txt(font, rect.end.x - 110.0, rect.position.y + 36.0, "滾過的距離 = 弧長", CYANC, 14)
 
@@ -653,13 +653,13 @@ class SectorView extends MoonView:
 		var pb: Vector2 = poly[poly.size() - 1]
 		draw_line(sc, pa, Color(1, 1, 1, 0.7), 2.0)
 		draw_line(sc, pb, Color(1, 1, 1, 0.7), 2.0)
-		draw_line(pa, pb, Color("ffcf5a"), 3.0, true)
+		draw_line(pa, pb, UITheme.GOLD, 3.0, true)
 		var u := fposmod(t * 0.3, 1.0)
 		UITheme.dot(self, pa.lerp(pb, u), 5.0, Color(1, 0.5, 0.6))
-		draw_string(font, pa + Vector2(-16, 18), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.8))
-		draw_string(font, pb + Vector2(6, 18), "A′", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.8))
+		draw_string(font, pa + Vector2(-16, 18), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.8))
+		draw_string(font, pb + Vector2(6, 18), "A′", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.8))
 		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 44.0, "攤開側面", Color(1, 0.92, 0.7), 15)
-		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 72.0, "最短 = 弦 AA′", Color("ffcf5a"), 15)
+		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 72.0, "最短 = 弦 AA′", UITheme.GOLD, 15)
 
 	## 立體的圓錐：螞蟻從底圓上的 A 出發，沿著側面繞一圈回到 A（前面實線、後面虛線），路線就是攤開後的那條直線
 	func _draw_ant3d(font: Font, rect: Rect2) -> void:
@@ -700,19 +700,19 @@ class SectorView extends MoonView:
 			var phi2 := psi * L / rr
 			var front_side := cos(phi2 - (th * 0.5 / n) * L / rr) > 0.0
 			if front_side:
-				draw_line(prev, q, Color("ffcf5a"), 2.5, true)
+				draw_line(prev, q, UITheme.GOLD, 2.5, true)
 			elif i % 2 == 0:
 				draw_line(prev, q, Color(1, 0.81, 0.35, 0.55), 1.8, true)
 			prev = q
 		var pa: Vector2 = to3.call(0.0)
 		UITheme.dot(self, pa, 5.0, Color.WHITE)
-		draw_string(font, pa + Vector2(-22, 18), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.85))
+		draw_string(font, pa + Vector2(-22, 18), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.85))
 		# 爬行中的螞蟻
 		var u := fposmod(t * 0.18, 1.0)
 		UITheme.dot(self, to3.call(th * u), 5.0, Color(1, 0.5, 0.6))
 		draw_dashed_line(apex, base, Color(1, 1, 1, 0.25), 1.2, 4.0)
 		_txt(font, rect.position.x + rect.size.x * 0.78, rect.position.y + 44.0, "螞蟻繞側面一圈", Color(1, 0.92, 0.7), 15)
-		_txt(font, rect.position.x + rect.size.x * 0.78, rect.position.y + 76.0, "攤開來看是直線", Color("ffcf5a"), 15)
+		_txt(font, rect.position.x + rect.size.x * 0.78, rect.position.y + 76.0, "攤開來看是直線", UITheme.GOLD, 15)
 
 	## 周長固定的扇形面積：A(r) = \\frac{1}{2}r(L − 2r) 的拋物線，頂點在 r = L/4
 	func _draw_parab(font: Font, rect: Rect2) -> void:
@@ -723,8 +723,8 @@ class SectorView extends MoonView:
 			return Vector2(area.position.x + r / (L / 2.0) * area.size.x, area.end.y - a / (amax * 1.15) * area.size.y)
 		draw_line(Vector2(area.position.x, area.end.y), Vector2(area.end.x + 10, area.end.y), Color(1, 1, 1, 0.45), 1.5)
 		draw_line(Vector2(area.position.x, area.end.y), Vector2(area.position.x, area.position.y - 6), Color(1, 1, 1, 0.45), 1.5)
-		draw_string(font, Vector2(area.end.x + 12, area.end.y + 4), "r", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.6))
-		draw_string(font, Vector2(area.position.x - 18, area.position.y), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.6))
+		draw_string(font, Vector2(area.end.x + 12, area.end.y + 4), "r", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.6))
+		draw_string(font, Vector2(area.position.x - 18, area.position.y), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.6))
 		var pts := PackedVector2Array()
 		for i in 41:
 			var r := L / 2.0 * i / 40.0
@@ -734,6 +734,6 @@ class SectorView extends MoonView:
 		var v: Vector2 = to_px.call(L / 4.0, amax)
 		draw_dashed_line(v, Vector2(v.x, area.end.y), Color(1, 1, 1, 0.4), 1.2, 4.0)
 		UITheme.dot(self, v, 8.0 + 1.5 * sin(t * 4.0), Color(1, 0.85, 0.45, 0.25))
-		UITheme.dot(self, v, 4.5, Color("ffcf5a"))
+		UITheme.dot(self, v, 4.5, UITheme.GOLD)
 		_txt(font, rect.position.x + rect.size.x * 0.82, rect.position.y + 44.0, "A = \\frac{1}{2}r(%s − 2r)" % _num(L), AMBER, 15)
 		_txt(font, rect.position.x + rect.size.x * 0.82, rect.position.y + 76.0, "頂點：面積最大", Color(1, 0.92, 0.7), 15)

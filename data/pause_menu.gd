@@ -124,7 +124,7 @@ func _button(text: String, h: int) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, h)
-	b.add_theme_font_size_override("font_size", UITheme.fs(19))
+	b.add_theme_font_size_override("font_size", UITheme.fs(20))
 	return b
 
 

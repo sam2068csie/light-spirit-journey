@@ -10,10 +10,10 @@ extends "level_04_alchemy.gd"
 
 const Bank8 := preload("level08_bank.gd")
 const CHAPTERS8 := [
-	{"ch": 1, "name": "第一章．位數望遠鏡", "topic": "首數、尾數、位數與首位數字", "color": Color("8fb4ff")},
-	{"ch": 2, "name": "第二章．成長與衰退", "topic": "倍增、半衰期、複利與星等", "color": Color("ffcf5a")},
+	{"ch": 1, "name": "第一章．位數望遠鏡", "topic": "首數、尾數、位數與首位數字", "color": UITheme.BLUE},
+	{"ch": 2, "name": "第二章．成長與衰退", "topic": "倍增、半衰期、複利與星等", "color": UITheme.GOLD},
 ]
-const SKYB := Color("8fb4ff")
+const SKYB := UITheme.BLUE
 
 var ruler_btns: Array = []
 var grow_slider: HSlider
@@ -132,14 +132,14 @@ func _build_ruler(st: Dictionary) -> void:
 		b.custom_minimum_size = Vector2(0, 46)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", UITheme.fs(22))
+		b.add_theme_font_size_override("font_size", UITheme.fs(24))
 		b.set_meta("silent", true)
 		var dd: int = d
 		b.pressed.connect(func(): _ruler_pick(dd))
 		grid.add_child(b)
 		ruler_btns.append(b)
 	var tip := MathLabel.new()
-	tip.font_size = UITheme.fs(14)
+	tip.font_size = UITheme.fs(15)
 	tip.max_width = 330
 	tip.color = UITheme.TEXT_DIM
 	tip.text = "log 2 ≈ 0.3010、log 3 ≈ 0.4771、log 7 ≈ 0.8451\nlog 4 = 2log 2、log 5 = 1 − log 2、log 6 = log 2 + log 3……"
@@ -298,8 +298,8 @@ static func sci(v: float, st: Dictionary = {}) -> String:
 # ================= 天文台（畫在舞台上） =================
 
 class ScopeView extends AlchemyView:
-	const SKYB := Color("8fb4ff")
-	const STARC := Color("fff4c2")
+	const SKYB := UITheme.BLUE
+	const STARC := UITheme.GOLD_PALE
 	const LOGS := [0.0, 0.3010, 0.4771, 0.6020, 0.6990, 0.7781, 0.8451, 0.9030, 0.9542, 1.0]
 
 	var mode := ""                 # scope、ruler、grow
@@ -420,7 +420,7 @@ class ScopeView extends AlchemyView:
 	func _box(font: Font, c: Vector2, w: float, ch: String, col: Color, a: float) -> void:
 		draw_style_box(UITheme.boxc(Color(col.r, col.g, col.b, 0.12 * a), 6, Color(col.r, col.g, col.b, 0.7 * a), 2, 0),
 			Rect2(c.x - w / 2.0, c.y - 18, w - 2, 36))
-		draw_string(font, Vector2(c.x - w / 2.0, c.y + 8), ch, HORIZONTAL_ALIGNMENT_CENTER, w - 2, int(minf(UITheme.fs(22), w * 0.8)), Color(col.r, col.g, col.b, a))
+		draw_string(font, Vector2(c.x - w / 2.0, c.y + 8), ch, HORIZONTAL_ALIGNMENT_CENTER, w - 2, int(minf(UITheme.fs(24), w * 0.8)), Color(col.r, col.g, col.b, a))
 
 	## 很大的數：一排數字格子，第一格是最高位數字
 	func _draw_strip(font: Font, R: Rect2) -> void:
@@ -438,7 +438,7 @@ class ScopeView extends AlchemyView:
 			var a := clampf((t - scope_t - i * 0.025) / 0.2, 0.0, 1.0)
 			var c := Vector2(x0 + bw * (i + 0.5), y)
 			if not full and i == 12:
-				draw_string(font, Vector2(c.x - bw / 2.0, y + 8), "⋯", HORIZONTAL_ALIGNMENT_CENTER, bw, UITheme.fs(22), Color(1, 1, 1, 0.7 * a))
+				draw_string(font, Vector2(c.x - bw / 2.0, y + 8), "⋯", HORIZONTAL_ALIGNMENT_CENTER, bw, UITheme.fs(24), Color(1, 1, 1, 0.7 * a))
 				continue
 			if i == 0:
 				var pop := clampf(1.0 - (t - scope_t) / 0.5, 0.0, 1.0)
@@ -452,9 +452,9 @@ class ScopeView extends AlchemyView:
 		draw_line(Vector2(x0, y + 30), Vector2(x0, y + 38), Color(1, 1, 1, 0.5), 1.5)
 		draw_line(Vector2(x1 - 2, y + 30), Vector2(x1 - 2, y + 38), Color(1, 1, 1, 0.5), 1.5)
 		draw_line(Vector2(x0, y + 38), Vector2(x1 - 2, y + 38), Color(1, 1, 1, 0.5), 1.5)
-		draw_string(font, Vector2(x0, y + 62), "共 %d 位" % n, HORIZONTAL_ALIGNMENT_CENTER, x1 - x0, UITheme.fs(18), Color(1, 0.95, 0.75, 0.95))
+		draw_string(font, Vector2(x0, y + 62), "共 %d 位" % n, HORIZONTAL_ALIGNMENT_CENTER, x1 - x0, UITheme.fs(17), Color(1, 0.95, 0.75, 0.95))
 		if lead != "?":
-			draw_string(font, Vector2(x0 - 30, y - 30), "最高位數字 %s" % lead, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(GOLD.r, GOLD.g, GOLD.b, 0.9))
+			draw_string(font, Vector2(x0 - 30, y - 30), "最高位數字 %s" % lead, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(GOLD.r, GOLD.g, GOLD.b, 0.9))
 
 	## 很小的數：0.000…0d
 	func _draw_tiny(font: Font, R: Rect2) -> void:
@@ -466,7 +466,7 @@ class ScopeView extends AlchemyView:
 		var y := R.position.y + 78
 		MathLabel.draw_on(self, font, R.position.x + 60, y + 8, str(scope.get("label", "N")) + " =", UITheme.fs(20), Color(1, 1, 1, 0.9))
 		var x0 := R.position.x + 124.0
-		draw_string(font, Vector2(x0, y + 8), "0.", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(22), Color(1, 1, 1, 0.9))
+		draw_string(font, Vector2(x0, y + 8), "0.", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(24), Color(1, 1, 1, 0.9))
 		x0 += 26.0
 		for i in cells:
 			var a := clampf((t - scope_t - i * 0.03) / 0.2, 0.0, 1.0)
@@ -479,7 +479,7 @@ class ScopeView extends AlchemyView:
 			else:
 				_box(font, c, bw, "?", SKYB, a * 0.6)
 			if i < place - 1 and (i == 0 or (i + 1) % 5 == 0):
-				draw_string(font, Vector2(c.x - 20, y + 36), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(11), Color(1, 1, 1, 0.45))
+				draw_string(font, Vector2(c.x - 20, y + 36), str(i + 1), HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(12), Color(1, 1, 1, 0.45))
 		draw_string(font, Vector2(R.position.x, R.end.y - 14), "首數 −%d ⇒ 小數點後第 %d 位開始不為 0" % [place, place], HORIZONTAL_ALIGNMENT_CENTER, R.size.x, UITheme.fs(15),
 			Color(1, 0.95, 0.75, 0.85))
 
@@ -520,7 +520,7 @@ class ScopeView extends AlchemyView:
 				col = Color(GOLD.r, GOLD.g, GOLD.b, 0.25 + 0.1 * sin(t * 5.0))
 			draw_rect(Rect2(a, y - 16, b - a, 32), col)
 			if done:
-				draw_string(font, Vector2(a, y + 8), str(k), HORIZONTAL_ALIGNMENT_CENTER, b - a, UITheme.fs(18),
+				draw_string(font, Vector2(a, y + 8), str(k), HORIZONTAL_ALIGNMENT_CENTER, b - a, UITheme.fs(17),
 					GOLD if k == ans else Color(1, 1, 1, 0.55))
 		draw_line(Vector2(_rx(R, 0.0), y + 16), Vector2(_rx(R, 1.0), y + 16), Color(1, 1, 1, 0.7), 2.0)
 		# 刻度：log k
@@ -531,7 +531,7 @@ class ScopeView extends AlchemyView:
 			var up := k % 2 == 1
 			draw_string(font, Vector2(x - 30, y + (40 if not up else -24)), lab, HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(12), Color(0.85, 0.9, 1.0, 0.85))
 			if k > 0 and k < 9:
-				draw_string(font, Vector2(x - 30, y + (54 if not up else -38)), "%.3f" % LOGS[k], HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(10), Color(1, 1, 1, 0.4))
+				draw_string(font, Vector2(x - 30, y + (54 if not up else -38)), "%.3f" % LOGS[k], HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(12), Color(1, 1, 1, 0.4))
 		# 指針
 		var px := _rx(R, alpha)
 		var bob := 3.0 * sin(t * 3.0)
@@ -652,7 +652,7 @@ class ScopeView extends AlchemyView:
 		var ref := base.y - 12.0 * 7.0
 		draw_dashed_line(Vector2(base.x - 60, ref), Vector2(base.x + 60, ref), Color(1, 0.55, 0.45, 0.8), 1.5, 5.0)
 		draw_string(font, Vector2(base.x + 62, ref + 4), "2 倍", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(1, 0.6, 0.5))
-		draw_string(font, Vector2(S.position.x, S.position.y + 14), "本金的 %.2f 倍" % ratio, HORIZONTAL_ALIGNMENT_CENTER, S.size.x, UITheme.fs(14), Color(1, 0.95, 0.7, 0.9))
+		draw_string(font, Vector2(S.position.x, S.position.y + 14), "本金的 %.2f 倍" % ratio, HORIZONTAL_ALIGNMENT_CENTER, S.size.x, UITheme.fs(15), Color(1, 0.95, 0.7, 0.9))
 
 	func _scene_plant(font: Font, S: Rect2, n: float, st: Dictionary) -> void:
 		var ratio := pow(float(st.r), n - float(st.nmin))
@@ -673,7 +673,7 @@ class ScopeView extends AlchemyView:
 		var ty := ground - 0.8 * (ground - top)
 		draw_dashed_line(Vector2(S.position.x + 10, ty), Vector2(S.end.x - 10, ty), Color(1, 0.55, 0.45, 0.8), 1.5, 5.0)
 		draw_string(font, Vector2(S.end.x - 70, ty - 4), "10 倍", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(1, 0.6, 0.5))
-		draw_string(font, Vector2(S.position.x + 6, S.position.y + 14), "%.2f 倍" % ratio, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 0.95, 0.7, 0.9))
+		draw_string(font, Vector2(S.position.x + 6, S.position.y + 14), "%.2f 倍" % ratio, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 0.95, 0.7, 0.9))
 
 	func _scene_star(font: Font, S: Rect2, n: float, _st: Dictionary) -> void:
 		var bright := float(_st.a0) * pow(float(_st.r), n)

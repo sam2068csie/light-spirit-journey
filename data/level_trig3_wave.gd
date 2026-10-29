@@ -9,11 +9,11 @@ extends "level_trig1_arc.gd"
 ##   ・速算：週期、最大值、最小值
 
 const BankG3 := preload("trig3_bank.gd")
-const WAVEC := Color("a6f05a")
+const WAVEC := UITheme.LIME
 
 const CHAPTERS_G3 := [
-	{"ch": 1, "name": "第一章．波的形狀", "topic": "sin、cos、tan 的圖形與週期", "color": Color("a6f05a")},
-	{"ch": 2, "name": "第二章．波的性質", "topic": "最大最小、對稱、遞增遞減", "color": Color("6ee7a0")},
+	{"ch": 1, "name": "第一章．波的形狀", "topic": "sin、cos、tan 的圖形與週期", "color": UITheme.LIME},
+	{"ch": 2, "name": "第二章．波的性質", "topic": "最大最小、對稱、遞增遞減", "color": UITheme.GOOD},
 ]
 
 var wave_info: MathLabel
@@ -262,9 +262,9 @@ static func _gen_wave() -> Dictionary:
 # ================= 畫面 =================
 
 class WaveView extends MoonView:
-	const GREEN := Color("a6f05a")
-	const BLUEC := Color("5ad8ff")
-	const ORANGE := Color("ffb454")
+	const GREEN := UITheme.LIME
+	const BLUEC := UITheme.CYAN
+	const ORANGE := UITheme.ORANGE
 
 	var wave_on := false
 	var wave_fn := "sin"
@@ -300,7 +300,7 @@ class WaveView extends MoonView:
 		_mark_t = t
 		var g := _wave_geo()
 		var gp: Vector2 = _gpt(g, wave_k * STEPA)
-		_burst(gp, Color("ffcf5a"), 22)
+		_burst(gp, UITheme.GOLD, 22)
 
 	func _process(delta: float) -> void:
 		wave_show = lerpf(wave_show, wave_raw if _drag else wave_k * STEPA, 1.0 - exp(-14.0 * delta))
@@ -419,10 +419,10 @@ class WaveView extends MoonView:
 		for f in found:
 			var fp := _gpt(g, float(f))
 			UITheme.dot(self, fp, 10.0, Color(1, 0.85, 0.35, 0.3))
-			UITheme.dot(self, fp, 5.5, Color("ffcf5a"))
+			UITheme.dot(self, fp, 5.5, UITheme.GOLD)
 		UITheme.dot(self, q, 6.0, col)
 		UITheme.dot(self, p, 16.0 + 2.0 * sin(t * 4.0), Color(1, 0.85, 0.45, 0.22))
-		UITheme.dot(self, p, 8.0, Color("ffcf5a"))
+		UITheme.dot(self, p, 8.0, UITheme.GOLD)
 		UITheme.dot(self, p, 3.5, Color.WHITE)
 		UITheme.dot(self, c, 3.0, Color(1, 1, 1, 0.8))
 		_draw_drag_hint(font, c, rad, th, Vector2(rc.end.x - 110.0, rc.end.y - 14.0))
@@ -561,7 +561,7 @@ class WaveView extends MoonView:
 		for pt in circ.get("pts", []):
 			var pp: Vector2 = to_px.call(float(pt[0]) * PI, float(pt[1]))
 			UITheme.dot(self, pp, 8.0 + 1.5 * sin(t * 4.0), Color(1, 0.85, 0.35, 0.25))
-			UITheme.dot(self, pp, 4.5, Color("ffcf5a"))
+			UITheme.dot(self, pp, 4.5, UITheme.GOLD)
 		for cpt in circ.get("centers", []):
 			var cp: Vector2 = to_px.call(float(cpt[0]) * PI, float(cpt[1]))
 			draw_arc(cp, 6.0, 0, TAU, 16, Color(1, 0.6, 0.75), 2.0, true)

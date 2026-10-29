@@ -142,22 +142,22 @@ func _build_ui() -> void:
 	add_child(top)
 	var title := Label.new()
 	title.text = "高塔排序"
-	title.add_theme_font_size_override("font_size", UITheme.fs(26))
+	title.add_theme_font_size_override("font_size", UITheme.fs(24))
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(title)
 	status_label = Label.new()
-	status_label.add_theme_font_size_override("font_size", UITheme.fs(19))
+	status_label.add_theme_font_size_override("font_size", UITheme.fs(20))
 	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(status_label)
 	combo_label = Label.new()
-	combo_label.add_theme_font_size_override("font_size", UITheme.fs(18))
+	combo_label.add_theme_font_size_override("font_size", UITheme.fs(17))
 	combo_label.add_theme_color_override("font_color", UITheme.PINK)
 	combo_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(combo_label)
 	score_label = Label.new()
-	score_label.add_theme_font_size_override("font_size", UITheme.fs(22))
+	score_label.add_theme_font_size_override("font_size", UITheme.fs(24))
 	score_label.add_theme_color_override("font_color", UITheme.ACCENT)
 	score_label.custom_minimum_size = Vector2(84, 0)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -220,7 +220,7 @@ func _build_ui() -> void:
 	hint_panel = PanelContainer.new()
 	hint_label = MathLabel.new()
 	hint_label.max_width = 420
-	hint_label.font_size = UITheme.fs(16)
+	hint_label.font_size = UITheme.fs(15)
 	hint_panel.add_child(hint_label)
 	panel.add_child(hint_panel)
 
@@ -710,7 +710,7 @@ func _finish() -> void:
 	home.text = "返回關卡列表"
 	home.custom_minimum_size = Vector2(0, 52)
 	home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	home.add_theme_font_size_override("font_size", UITheme.fs(18))
+	home.add_theme_font_size_override("font_size", UITheme.fs(17))
 	home.pressed.connect(func(): Game.of(self).goto("main_menu.gd", {"page": "levels"}))
 	row.add_child(home)
 	var again := Button.new()
@@ -764,7 +764,7 @@ class TowerView extends Control:
 	func _y(v: float) -> float:
 		return TOP + (hi - v) / (hi - lo) * (size.y - TOP - BOTTOM)
 
-	const ZONE_COLS := [Color("ff9a6b"), Color("6ee7a0"), Color("7fb2ff")]
+	const ZONE_COLS := [Color("ff9a6b"), UITheme.GOOD, UITheme.BLUE]
 
 	func _draw() -> void:
 		var font := get_theme_default_font()
@@ -784,11 +784,11 @@ class TowerView extends Control:
 		draw_rect(Rect2(0, _y(0), w, _y(lo) - _y(0)), Color(zc[0].r, zc[0].g, zc[0].b, 0.07))
 		draw_rect(Rect2(0, _y(1), w, _y(0) - _y(1)), Color(zc[1].r, zc[1].g, zc[1].b, 0.08))
 		draw_rect(Rect2(0, _y(hi), w, _y(1) - _y(hi)), Color(zc[2].r, zc[2].g, zc[2].b, 0.07))
-		draw_string(font, Vector2(right - 140, _y(lo) - 10), "地底  < 0", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(14),
+		draw_string(font, Vector2(right - 140, _y(lo) - 10), "地底  < 0", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(15),
 			Color(zc[0].r, zc[0].g, zc[0].b, 0.85))
-		draw_string(font, Vector2(right - 140, _y(0) - 10), "地面層  0 ~ 1", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(14),
+		draw_string(font, Vector2(right - 140, _y(0) - 10), "地面層  0 ~ 1", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(15),
 			Color(zc[1].r, zc[1].g, zc[1].b, 0.85))
-		draw_string(font, Vector2(right - 140, _y(hi) + 22), "高空  > 1", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(14),
+		draw_string(font, Vector2(right - 140, _y(hi) + 22), "高空  > 1", HORIZONTAL_ALIGNMENT_RIGHT, 140, UITheme.fs(15),
 			Color(zc[2].r, zc[2].g, zc[2].b, 0.85))
 		draw_line(Vector2(0, _y(0)), Vector2(w, _y(0)), Color(1, 1, 1, 0.75), 2.0)
 		draw_dashed_line(Vector2(0, _y(1)), Vector2(w, _y(1)), Color(1, 1, 1, 0.45), 1.5, 8.0)
@@ -796,18 +796,18 @@ class TowerView extends Control:
 		draw_string(font, Vector2(10, _y(1) - 6), "1", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color.WHITE)
 
 		if message != "":
-			var mw := font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x + 24.0
-			var pc := Color("ffcf5a")
+			var mw := font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x + 24.0
+			var pc := UITheme.GOLD
 			draw_style_box(UITheme.boxc(Color(pc.r, pc.g, pc.b, 0.16), 14, Color(pc.r, pc.g, pc.b, 0.6), 1, 0),
 				Rect2(12, 12, mw, 28))
-			draw_string(font, Vector2(24, 31), message, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), pc)
+			draw_string(font, Vector2(24, 31), message, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), pc)
 
 		if groups.is_empty() and not waiting.is_empty():
 			var nw := waiting.size()
 			var sw := (w - 36.0 - 150.0) / nw
 			for k in nw:
 				var cx := 36.0 + sw * (k + 0.5)
-				MathLabel.draw_on(self, font, cx, size.y - 20.0, waiting[k].label, UITheme.fs(18), Color(1, 1, 1, 0.75))
+				MathLabel.draw_on(self, font, cx, size.y - 20.0, waiting[k].label, UITheme.fs(17), Color(1, 1, 1, 0.75))
 		if not towers.is_empty():
 			var n := towers.size()
 			var left := 36.0
@@ -836,7 +836,7 @@ class TowerView extends Control:
 				by1 = _y(0) - 6.0
 			draw_style_box(UITheme.boxc(Color(col.r, col.g, col.b, 0.08), 8, Color(col.r, col.g, col.b, 0.5), 2, 0),
 				Rect2(x, by0, tw, by1 - by0))
-			draw_string(font, Vector2(x, (by0 + by1) / 2.0 + 9.0), "?", HORIZONTAL_ALIGNMENT_CENTER, tw, UITheme.fs(26), Color(1, 1, 1, 0.7))
+			draw_string(font, Vector2(x, (by0 + by1) / 2.0 + 9.0), "?", HORIZONTAL_ALIGNMENT_CENTER, tw, UITheme.fs(24), Color(1, 1, 1, 0.7))
 		else:
 			var v: float = t.value * progress
 			var top_y := minf(_y(v), _y(0))
@@ -855,8 +855,8 @@ class TowerView extends Control:
 				var vy := _y(t.value) - 10.0 if t.value >= 0.0 else _y(t.value) + 22.0
 				draw_string(font, Vector2(x - 20, vy), "%.3f" % t.value, HORIZONTAL_ALIGNMENT_CENTER, tw + 40, UITheme.fs(15), Color.WHITE)
 		if eq_mark:
-			draw_string(font, Vector2(x - slot + tw, _y(1) - 70), "=", HORIZONTAL_ALIGNMENT_CENTER, slot - tw, UITheme.fs(26), Color("ffcf5a"))
-		MathLabel.draw_on(self, font, x + tw / 2.0, size.y - 20.0, t.label, UITheme.fs(18), Color.WHITE)
+			draw_string(font, Vector2(x - slot + tw, _y(1) - 70), "=", HORIZONTAL_ALIGNMENT_CENTER, slot - tw, UITheme.fs(24), UITheme.GOLD)
+		MathLabel.draw_on(self, font, x + tw / 2.0, size.y - 20.0, t.label, UITheme.fs(17), Color.WHITE)
 
 	static func _zone_of(v: float) -> int:
 		if v < 0.0:

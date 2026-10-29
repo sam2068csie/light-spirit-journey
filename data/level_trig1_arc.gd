@@ -10,12 +10,12 @@ extends "step_level.gd"
 ##   ・月光的背景（不是熔爐的火光）
 
 const BankG1 := preload("trig1_bank.gd")
-const MOON := Color("5ad8ff")
+const MOON := UITheme.CYAN
 const STEP := PI / 12.0
 
 const CHAPTERS_G1 := [
-	{"ch": 1, "name": "第一章．弧與角", "topic": "度與弧度、有向角、同界角與象限", "color": Color("5ad8ff")},
-	{"ch": 2, "name": "第二章．月光刻度", "topic": "單位圓求值、奇變偶不變與比大小", "color": Color("8fb4ff")},
+	{"ch": 1, "name": "第一章．弧與角", "topic": "度與弧度、有向角、同界角與象限", "color": UITheme.CYAN},
+	{"ch": 2, "name": "第二章．月光刻度", "topic": "單位圓求值、奇變偶不變與比大小", "color": UITheme.BLUE},
 ]
 
 var spin_info: MathLabel
@@ -131,7 +131,7 @@ func _build_spin(st: Dictionary) -> void:
 	tip.text = "拖動圓上的光點轉動：逆時針是正、順時針是負，可以轉超過一圈。"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(300, 0)
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
 	go_btn.visible = true
@@ -321,9 +321,9 @@ func radicals_ok() -> bool:
 class MoonView extends ForgeView:
 	signal spin_changed
 
-	const MOONC := Color("5ad8ff")
-	const SILVER := Color("dfe8ff")
-	const PINK := Color("ff8fb6")
+	const MOONC := UITheme.CYAN
+	const SILVER := UITheme.TEXT
+	const PINK := UITheme.PINK_LIGHT
 	const STEPA := PI / 12.0
 
 	var spin_on := false
@@ -422,7 +422,7 @@ class MoonView extends ForgeView:
 		if max_w <= 0.0:
 			max_w = rc.size.x - 28.0
 		var fs := UITheme.fs(17)
-		while fs > UITheme.fs(11) and MathLabel.text_width(font, s, fs) > max_w:
+		while fs > UITheme.fs(12) and MathLabel.text_width(font, s, fs) > max_w:
 			fs -= 1
 		var w := MathLabel.text_width(font, s, fs)
 		var ex := MathLabel.line_extent(s, fs)
@@ -495,7 +495,7 @@ class MoonView extends ForgeView:
 			for q in 4:
 				var a2 := PI / 4.0 + q * PI / 2.0
 				var p2 := c + Vector2(cos(a2), -sin(a2)) * rad * 0.62
-				draw_string(font, p2 + Vector2(-20, 6), qn[q], HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(16), Color(1, 1, 1, 0.12))
+				draw_string(font, p2 + Vector2(-20, 6), qn[q], HORIZONTAL_ALIGNMENT_CENTER, 40, UITheme.fs(15), Color(1, 1, 1, 0.12))
 
 	## 從 0 轉到 θ 的螺旋箭頭（每多轉一圈就往外一點）
 	func _draw_turn(c: Vector2, r0: float, th: float, col: Color, width: float) -> void:
@@ -526,7 +526,7 @@ class MoonView extends ForgeView:
 		var rad: float = g[1]
 		_draw_frame(font, c, rad, true)
 		var th := spin_show
-		var col := Color("ffcf5a") if spin_k >= 0 else PINK
+		var col := UITheme.GOLD if spin_k >= 0 else PINK
 		# 始邊
 		draw_line(c, c + Vector2(rad, 0), Color(1, 1, 1, 0.55), 2.5)
 		_draw_turn(c, rad * 0.26, th, col, 3.0)
@@ -539,7 +539,7 @@ class MoonView extends ForgeView:
 		_draw_drag_hint(font, c, rad)
 		var turns := int(floor(absf(spin_k) / 24.0))
 		if turns > 0:
-			draw_string(font, rc.end - Vector2(210, 14), "已經轉了 %d 圈多" % turns, HORIZONTAL_ALIGNMENT_RIGHT, 200, UITheme.fs(14),
+			draw_string(font, rc.end - Vector2(210, 14), "已經轉了 %d 圈多" % turns, HORIZONTAL_ALIGNMENT_RIGHT, 200, UITheme.fs(15),
 				Color(col.r, col.g, col.b, 0.85))
 
 	## 小手示範：從光點出發，沿著圓逆時針滑一段，再放開（一直重複）
@@ -585,7 +585,7 @@ class MoonView extends ForgeView:
 		# 文字
 		var tp := c + Vector2(rad + 120.0, -rad * 0.55) if is_nan(tip_at.x) else tip_at
 		var msg := "按住光點，沿著圓轉"
-		var w := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+		var w := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x
 		var rc := _spin_rect()
 		tp.x = clampf(tp.x, rc.position.x + w / 2.0 + 10.0, rc.end.x - w / 2.0 - 10.0)
 		tp.y = clampf(tp.y, rc.position.y + 40.0, rc.end.y - 30.0)
@@ -593,7 +593,7 @@ class MoonView extends ForgeView:
 		sb.bg_color = Color(1, 0.85, 0.4, 0.9 * alpha)
 		sb.set_corner_radius_all(12)
 		draw_style_box(sb, Rect2(tp.x - w / 2.0 - 10.0, tp.y - 18.0, w + 20.0, 26.0))
-		draw_string(font, Vector2(tp.x - w / 2.0, tp.y), msg, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(0.1, 0.08, 0.2, alpha))
+		draw_string(font, Vector2(tp.x - w / 2.0, tp.y), msg, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(0.1, 0.08, 0.2, alpha))
 
 	## 一隻小手（食指點在 tip）
 	func _draw_hand(tip: Vector2, k: float, alpha: float) -> void:
@@ -624,7 +624,7 @@ class MoonView extends ForgeView:
 		var c := Vector2(rect.position.x + rect.size.x * 0.36, rect.get_center().y + 4.0)
 		_draw_frame(font, c, rad, false)
 		if circ.has("angles"):
-			var cols := [Color("5ad8ff"), Color("ffcf5a"), Color("ff8fb6"), Color("a6f05a")]
+			var cols := [UITheme.CYAN, UITheme.GOLD, UITheme.PINK_LIGHT, UITheme.LIME]
 			var proj := String(circ.get("proj", "y"))
 			var labels: Array = circ.get("labels", [])
 			for i in circ.angles.size():
@@ -640,13 +640,13 @@ class MoonView extends ForgeView:
 					draw_line(Vector2(p.x, c.y - 5), Vector2(p.x, c.y + 5), col, 3.0)
 				UITheme.dot(self, p, 5.0, col)
 				var lp := c + Vector2(cos(a), -sin(a)) * (rad + 16.0)
-				MathLabel.draw_on(self, font, lp.x, lp.y + 5.0, String(labels[i]) if i < labels.size() else "", UITheme.fs(14), col)
+				MathLabel.draw_on(self, font, lp.x, lp.y + 5.0, String(labels[i]) if i < labels.size() else "", UITheme.fs(15), col)
 			var cap := "比高度：sin = 縱坐標" if proj == "y" else "比左右：cos = 橫坐標"
 			MathLabel.draw_on(self, font, rect.position.x + rect.size.x * 0.78, rect.get_center().y + 6.0, cap, UITheme.fs(15),
 				Color(0.85, 0.92, 1.0, 0.85))
 			return
 		var th: float = circ.get("theta", 0.0)
-		var col2 := Color("ffcf5a") if th >= 0.0 else PINK
+		var col2 := UITheme.GOLD if th >= 0.0 else PINK
 		draw_line(c, c + Vector2(rad, 0), Color(1, 1, 1, 0.5), 2.0)
 		_draw_turn(c, rad * 0.3, th, Color(col2.r, col2.g, col2.b, 0.85), 2.0)
 		var p2 := c + Vector2(cos(th), -sin(th)) * rad
@@ -657,10 +657,10 @@ class MoonView extends ForgeView:
 		UITheme.dot(self, p2, 5.0, col2)
 		var x0 := rect.position.x + rect.size.x * 0.66
 		var y0 := rect.position.y + 40.0
-		MathLabel.draw_on(self, font, x0 + 70.0, y0, "θ = " + String(circ.get("label", "")), UITheme.fs(19), Color(1, 0.92, 0.7))
+		MathLabel.draw_on(self, font, x0 + 70.0, y0, "θ = " + String(circ.get("label", "")), UITheme.fs(20), Color(1, 0.92, 0.7))
 		var qtext := _quad_name(th)
 		MathLabel.draw_on(self, font, x0 + 70.0, y0 + 34.0, qtext, UITheme.fs(15), Color(0.85, 0.92, 1.0, 0.85))
-		MathLabel.draw_on(self, font, x0 + 70.0, y0 + 64.0, "交點 (cos θ, sin θ)", UITheme.fs(14), Color(0.75, 0.85, 1.0, 0.65))
+		MathLabel.draw_on(self, font, x0 + 70.0, y0 + 64.0, "交點 (cos θ, sin θ)", UITheme.fs(15), Color(0.75, 0.85, 1.0, 0.65))
 
 	static func _quad_name(th: float) -> String:
 		var a := fposmod(th, TAU)

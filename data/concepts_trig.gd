@@ -1,6 +1,7 @@
 extends RefCounted
 ## 三角函數單元（G1～G7）的「觀念整理」卡片內容（介面在 concept_deck.gd，入口在 concept_cards.gd）
 ## 卡片的寫法見 concepts_exp.gd 開頭的說明（?{…} 先藏起來、[b]…[/b] 強調、check 隨堂小測、kind = "order" 拼流程）。
+const UITheme := preload("game_theme.gd")
 
 
 static func cards(level: String) -> Array:
@@ -59,8 +60,8 @@ static func cards(level: String) -> Array:
 				 "formulas": ["sin、cos：值域 ?{−1 ≤ y ≤ 1}、週期 ?{2π}", "tan：值域 ?{所有實數}、週期 ?{π}"],
 				 "notes": ["tan x 在 x = ?{π/2 + kπ} 沒有定義（漸近線）", "sin 過原點；cos 過 ?{(0, 1)}"],
 				 "plot": {"view": {"x": [-0.5, 6.6], "y": [-1.6, 1.6]},
-					"curves": [{"f": "sin", "a": 1.0, "c": Color("5ad8ff"), "lx": 1.57, "side": "a", "label": "y = sin x"},
-						{"f": "cos", "a": 1.0, "c": Color("ffb454"), "lx": 3.14, "side": "b", "label": "y = cos x"}]},
+					"curves": [{"f": "sin", "a": 1.0, "c": UITheme.CYAN, "lx": 1.57, "side": "a", "label": "y = sin x"},
+						{"f": "cos", "a": 1.0, "c": UITheme.ORANGE, "lx": 3.14, "side": "b", "label": "y = cos x"}]},
 				 "check": {"q": "y = tan x 的週期是？", "opts": ["π", "2π", "π/2"], "a": 0,
 					"why": "相鄰兩條漸近線相隔 π。", "hint": "tan 不是 2π 喔。"}},
 				{"title": "週期公式", "tag": "公式", "glyph": "2π/|b|",
@@ -74,7 +75,7 @@ static func cards(level: String) -> Array:
 					"|sin x| + |cos x|：特例，週期 ?{π/2}"],
 				 "notes": ["兩個函數相加：週期取 ?{最小公倍數}，例如 sin 2x + cos 3x 是 2π"],
 				 "plot": {"view": {"x": [-0.3, 6.6], "y": [-0.4, 1.6]},
-					"curves": [{"f": "abssin", "a": 1.0, "c": Color("5ad8ff"), "lx": 1.57, "side": "a", "label": "y = |sin x|"}]},
+					"curves": [{"f": "abssin", "a": 1.0, "c": UITheme.CYAN, "lx": 1.57, "side": "a", "label": "y = |sin x|"}]},
 				 "check": {"q": "y = |sin x| + |cos x| 的週期是？", "opts": ["π/2", "π", "2π"], "a": 0,
 					"why": "平移 π/2：|cos x| + |sin x|，和原式一樣。", "hint": "試著平移 π/2。"}},
 				{"title": "對稱與單調", "tag": "第二章", "glyph": "⫶",

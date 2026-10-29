@@ -4,17 +4,44 @@ extends RefCounted
 ##       然後在 _ready() 裡寫  theme = UITheme.shared()
 ## 字型：res://fonts/game_font.tres（同時設為專案預設字型 gui/theme/custom_font），手機上才不會缺字。
 
+## ---------- 色票（全遊戲共用；關卡、面板請從這裡取色，不要另外寫色碼） ----------
+## 每個色相有「主色／淺色（文字、提示）／深色（底邊、厚度）」三階。
+## 背景與面板
 const BG := Color("0d1024")
 const PANEL := Color("171c3a")
 const PANEL_LIGHT := Color("232b55")
-const ACCENT := Color("ffcf5a")     # 金色：主要按鈕、星星
-const CYAN := Color("5ad8ff")       # 參數 a
-const PINK := Color("ff7eb6")       # 參數 h
-const LIME := Color("a6f05a")       # 參數 k
+const BTN := Color("3d46a8")          # 一般按鈕面（藍紫）
+const BTN_LIP := Color("191b52")      # 一般按鈕的厚度
+## 文字
 const TEXT := Color("eef1ff")
-const TEXT_DIM := Color("9aa3c7")
+const TEXT_SOFT := Color("c8d0e8")    # 次要內文
+const TEXT_DIM := Color("9aa3c7")     # 說明、標籤
+## 金色：主要按鈕、星星、重點
+const GOLD := Color("ffcf5a")
+const GOLD_LIGHT := Color("ffe08a")
+const GOLD_PALE := Color("fff3c4")
+const GOLD_DEEP := Color("e8b040")
+const GOLD_INK := Color("3a2306")     # 金色按鈕上的字
+const ACCENT := GOLD
+## 參數／曲線色（a 青、h 粉、k 綠、第二條曲線橘）
+const CYAN := Color("5ad8ff")
+const CYAN_LIGHT := Color("7fe3ff")
+const CYAN_PALE := Color("cfeeff")
+const PINK := Color("ff7eb6")
+const PINK_LIGHT := Color("ff8fc0")
+const LIME := Color("a6f05a")
+const ORANGE := Color("ffb454")
+const ORANGE_DEEP := Color("ff9a3a")
+## 其他色相
+const VIOLET := Color("c792ff")
+const VIOLET_LIGHT := Color("b9a8ff")
+const VIOLET_DEEP := Color("8f7bff")
+const BLUE := Color("8fb4ff")
+const MINT := Color("7ef0c0")
+## 狀態
 const GOOD := Color("6ee7a0")
 const BAD := Color("ff6b7a")
+const ROSE := Color("ff8fa0")         # 柔和的錯誤／提醒
 const FONT_PATH := "res://fonts/game_font.tres"   # 思源黑體繁中子集 + DejaVu 數學符號後備
 
 
@@ -79,10 +106,25 @@ static func thin(pts: PackedVector2Array, tol: float = 0.15, max_len: float = 60
 
 ## ---------- 字級 ----------
 ## 全遊戲的字級都經過這裡：程式裡寫的是「設計字級」，實際顯示放大 TEXT_SCALE 倍（手機上才看得清楚）。
+## 設計字級只用 TYPE_SCALE 這幾階；寫了其他數字會自動對到最近的一階（見 _SNAP），版面才有一致的層次：
+##   12 註腳　13 小字　15 內文　17 強調內文／選項　20 小標　24 標題　30 大標　40 特大
 ## 想再調大或調小，只要改 TEXT_SCALE。超過 26 的大標題只加一點，免得版面爆掉。
 const TEXT_SCALE := 1.2
+const FS_TINY := 12
+const FS_SMALL := 13
+const FS_BODY := 15
+const FS_STRONG := 17
+const FS_SUB := 20
+const FS_TITLE := 24
+const FS_HEAD := 30
+const FS_HERO := 40
+const TYPE_SCALE := [FS_TINY, FS_SMALL, FS_BODY, FS_STRONG, FS_SUB, FS_TITLE, FS_HEAD, FS_HERO]
+## 舊寫法的字級 → 字級表（逐一看過版面後決定的對應）
+const _SNAP := {10: 12, 11: 12, 14: 15, 16: 15, 18: 17, 19: 20, 21: 20, 22: 24, 26: 24, 28: 30, 34: 30, 42: 40}
 
 static func fs(n: float) -> int:
+	if n >= 10.0 and n <= 42.0 and is_equal_approx(n, roundf(n)):
+		n = float(_SNAP.get(int(n), int(n)))
 	if n <= 26.0:
 		return int(round(n * TEXT_SCALE))
 	return int(round(n + 26.0 * (TEXT_SCALE - 1.0)))
@@ -148,7 +190,7 @@ static func build() -> Theme:
 	var th := Theme.new()
 	if ResourceLoader.exists(FONT_PATH):
 		th.default_font = load(FONT_PATH)
-	th.default_font_size = fs(18)
+	th.default_font_size = fs(17)
 
 	# 按鈕
 	th.set_stylebox("normal", "Button", box(PANEL_LIGHT, 12, Color(1, 1, 1, 0.08), 1, 10))
@@ -419,7 +461,8 @@ static func bold_font() -> Font:
 
 ## 立體按鈕：底下有一條較深色的「厚度」，按下去時按鈕面往下沉、厚度變薄
 ##   face：按鈕面的顏色　lip：厚度（底邊）的顏色　text：文字顏色
-const ACCENT_LIP := Color("c27a14")   # 金色按鈕底下的厚度顏色
+const ACCENT_LIP := Color("c27a14")   # (同 GOLD_LIP)
+const GOLD_LIP := ACCENT_LIP   # 金色按鈕底下的厚度顏色
 
 static func button_3d(b: Button, face: Color, lip: Color, text: Color, size: int = 20, depth: int = 6,
 		radius: int = 18, pad: int = 6) -> void:

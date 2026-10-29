@@ -10,10 +10,10 @@ extends "level_03_scale.gd"
 
 const Bank4 := preload("level04_bank.gd")
 const CHAPTERS4 := [
-	{"ch": 1, "name": "第一章．鍊金基礎", "topic": "定義、有意義的條件與對數律", "color": Color("c792ff")},
-	{"ch": 2, "name": "第二章．大師的配方", "topic": "互換、代換、指對互換與應用", "color": Color("6ee7c8")},
+	{"ch": 1, "name": "第一章．鍊金基礎", "topic": "定義、有意義的條件與對數律", "color": UITheme.VIOLET},
+	{"ch": 2, "name": "第二章．大師的配方", "topic": "互換、代換、指對互換與應用", "color": UITheme.MINT},
 ]
-const VIOLET := Color("c792ff")
+const VIOLET := UITheme.VIOLET
 
 # 連鎖
 var chain_btns: Array = []
@@ -329,7 +329,7 @@ func _mag_begin() -> void:
 		Color(VIOLET.r, VIOLET.g, VIOLET.b, 0.4), 1, 10))
 	rank_box.add_child(card)
 	mag_info = MathLabel.new()
-	mag_info.font_size = UITheme.fs(19)
+	mag_info.font_size = UITheme.fs(20)
 	mag_info.max_width = 320
 	mag_info.align_center = true
 	card.add_child(mag_info)
@@ -349,7 +349,7 @@ func _mag_begin() -> void:
 		grid.add_child(b)
 	var tip := Label.new()
 	tip.text = "調到目標之後，按「就是這裡！」"
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
 	task_label.visible = true
@@ -477,8 +477,8 @@ func _speed_show() -> void:
 # ================= 鍊金工房（畫在舞台上） =================
 
 class AlchemyView extends ScaleView:
-	const VIOLET := Color("c792ff")
-	const TEAL := Color("6ee7c8")
+	const VIOLET := UITheme.VIOLET
+	const TEAL := UITheme.MINT
 
 	# 施放法則
 	var cast_text := ""
@@ -657,12 +657,12 @@ class AlchemyView extends ScaleView:
 			UITheme.dot(self, c + Vector2(cos(ang), sin(ang)) * (rad - 5.0), 3.5, Color(GOLD.r, GOLD.g, GOLD.b, a))
 		draw_string(font, Vector2(c.x - 100, c.y - 26), "✦ 施放法則 ✦", HORIZONTAL_ALIGNMENT_CENTER, 200, UITheme.fs(15),
 			Color(VIOLET.r, VIOLET.g, VIOLET.b, a))
-		var fs := mini(UITheme.fs(22), _fit_in(font, cast_text, UITheme.fs(22), rad * 2.0 - 30.0))
+		var fs := mini(UITheme.fs(24), _fit_in(font, cast_text, UITheme.fs(24), rad * 2.0 - 30.0))
 		MathLabel.draw_on(self, font, c.x, c.y + 12, cast_text, fs, Color(1, 0.93, 0.7, a))
 
 	func _fit_in(font: Font, markup: String, fs: int, room: float) -> int:
 		var w := _mw(font, markup, fs)
-		return fs if w <= room else maxi(UITheme.fs(11), int(floor(fs * room / w)))
+		return fs if w <= room else maxi(UITheme.fs(12), int(floor(fs * room / w)))
 
 	# ---------- 連鎖之環 ----------
 
@@ -720,7 +720,7 @@ class AlchemyView extends ScaleView:
 				continue
 			UITheme.dot(self, p, 19.0, Color("140c24"))
 			draw_arc(p, 18.0, 0, TAU, 32, nc, 2.5, true)
-			draw_string(font, p + Vector2(-30, 7), lab, HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(18) if lab.length() <= 2 else UITheme.fs(14), Color(1, 1, 1, 0.95))
+			draw_string(font, p + Vector2(-30, 7), lab, HORIZONTAL_ALIGNMENT_CENTER, 60, UITheme.fs(17) if lab.length() <= 2 else UITheme.fs(15), Color(1, 1, 1, 0.95))
 			# 接不上：下面寫出下一環的底數
 			if not good:
 				var want: String = chain_items[chain_seq[i]].a
@@ -746,7 +746,7 @@ class AlchemyView extends ScaleView:
 			MathLabel.draw_on(self, font, rect.get_center().x, rect.end.y - 22, res, UITheme.fs(24), Color(GOLD.r, GOLD.g, GOLD.b, k2))
 		elif chain_seq.is_empty():
 			draw_string(font, Vector2(rect.position.x, rect.end.y - 26), "點右邊的鍊環，一環一環接起來",
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UITheme.fs(16), Color(1, 1, 1, 0.45 + 0.15 * sin(t * 3.0)))
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, UITheme.fs(15), Color(1, 1, 1, 0.45 + 0.15 * sin(t * 3.0)))
 
 	# ---------- 數量級實驗室 ----------
 
@@ -835,7 +835,7 @@ class AlchemyView extends ScaleView:
 		var rows: Array = mag_rd.get("formula", [])
 		if rows.is_empty():
 			return
-		var fs := UITheme.fs(16)
+		var fs := UITheme.fs(15)
 		var w := 0.0
 		var hs := []
 		for ln in rows:
@@ -954,7 +954,7 @@ class AlchemyView extends ScaleView:
 		draw_set_transform(Vector2.ZERO)
 		if n > 100.5:
 			draw_string(font, Vector2(S.position.x, S.end.y - 8), "每個圖示 = %d 支喇叭" % int(roundf(n / 100.0)),
-				HORIZONTAL_ALIGNMENT_CENTER, S.size.x, UITheme.fs(16), Color(1, 0.9, 0.6, 0.85))
+				HORIZONTAL_ALIGNMENT_CENTER, S.size.x, UITheme.fs(15), Color(1, 0.9, 0.6, 0.85))
 
 	func _draw_speaker(c: Vector2, r: float) -> void:
 		var col := Color(0.85, 0.75, 1.0)

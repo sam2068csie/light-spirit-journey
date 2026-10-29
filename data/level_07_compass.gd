@@ -9,10 +9,10 @@ extends "level_04_alchemy.gd"
 
 const Bank7 := preload("level07_bank.gd")
 const CHAPTERS7 := [
-	{"ch": 1, "name": "第一章．正負羅盤", "topic": "log 的正負、比大小與對數不等式", "color": Color("6ee7a0")},
-	{"ch": 2, "name": "第二章．極值羅盤", "topic": "換元、取對數與算幾求極值", "color": Color("5ad8ff")},
+	{"ch": 1, "name": "第一章．正負羅盤", "topic": "log 的正負、比大小與對數不等式", "color": UITheme.GOOD},
+	{"ch": 2, "name": "第二章．極值羅盤", "topic": "換元、取對數與算幾求極值", "color": UITheme.CYAN},
 ]
-const MINT := Color("6ee7a0")
+const MINT := UITheme.GOOD
 
 var compass_vals: Array = []
 var compass_btns: Array = []
@@ -133,7 +133,7 @@ func _build_compass(st: Dictionary) -> void:
 		grid.add_child(Control.new())
 	var tip := Label.new()
 	tip.text = "看左邊的表：底數、真數各和 1 比。同時大於 1 或同時小於 1 ⇒ 正，反之為負。"
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rank_box.add_child(tip)
@@ -177,8 +177,8 @@ func _compass_submit() -> void:
 # ================= 星空羅盤（畫在舞台上） =================
 
 class CompassView extends AlchemyView:
-	const MINT := Color("6ee7a0")
-	const SKY := Color("5ad8ff")
+	const MINT := UITheme.GOOD
+	const SKY := UITheme.CYAN
 
 	var compass_on := false
 	var compass_items: Array = []
@@ -239,7 +239,7 @@ class CompassView extends AlchemyView:
 		for k in 4:
 			var ang := rot + k * PI / 2.0 - PI / 2.0
 			var p := c + Vector2(cos(ang), sin(ang)) * (rad + 16)
-			draw_string(get_theme_default_font(), p + Vector2(-8, 6), ["N", "E", "S", "W"][k], HORIZONTAL_ALIGNMENT_CENTER, 16, UITheme.fs(14), col * 2.0)
+			draw_string(get_theme_default_font(), p + Vector2(-8, 6), ["N", "E", "S", "W"][k], HORIZONTAL_ALIGNMENT_CENTER, 16, UITheme.fs(15), col * 2.0)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
@@ -278,7 +278,7 @@ class CompassView extends AlchemyView:
 		var ML := preload("math_text.gd")
 		ML.draw_text(self, font, R.position + Vector2(4, -10),
 			"口訣：真、底同時 > 1 或同時 < 1 ⇒ [color=#ffcf5a]正[/color]；一個 > 1、一個 < 1 ⇒ [color=#5ad8ff]負[/color]",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(0.8, 1, 0.9, 0.9))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(0.8, 1, 0.9, 0.9))
 		var done := compass_t > 0.0
 		var n := compass_items.size()
 		var cols := [0.20, 0.47, 0.71, 0.90]
@@ -310,7 +310,7 @@ class CompassView extends AlchemyView:
 			if done:
 				mark = ("＋" if same else "−") + "  ✓"
 				mc = UITheme.ACCENT if same else SKY
-			draw_string(font, Vector2(R.position.x + R.size.x * cols[3] - 40, y + 6), mark, HORIZONTAL_ALIGNMENT_CENTER, 80, UITheme.fs(18), mc)
+			draw_string(font, Vector2(R.position.x + R.size.x * cols[3] - 40, y + 6), mark, HORIZONTAL_ALIGNMENT_CENTER, 80, UITheme.fs(17), mc)
 
 	func _draw_star(p: Vector2, rr: float, c: Color) -> void:
 		var pts := PackedVector2Array()

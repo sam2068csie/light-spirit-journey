@@ -41,7 +41,7 @@ func _ready() -> void:
 	_count.position = Vector2(900, 24)
 	_count.size = Vector2(230, 30)
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_count.add_theme_font_size_override("font_size", UITheme.fs(16))
+	_count.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_count.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	add_child(_count)
 
@@ -61,7 +61,7 @@ func _ready() -> void:
 	_info_name = Label.new()
 	_info_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_name.add_theme_font_override("font", UITheme.bold_font())
-	_info_name.add_theme_font_size_override("font_size", UITheme.fs(22))
+	_info_name.add_theme_font_size_override("font_size", UITheme.fs(24))
 	sv.add_child(_info_name)
 	var ds := preload("math_text.gd").new()
 	ds.font_size = UITheme.fs(15)
@@ -138,7 +138,7 @@ func _refresh() -> void:
 		for st in ["normal", "hover", "pressed"]:
 			b.add_theme_stylebox_override(st, sb)
 		for k in ["font_color", "font_hover_color", "font_pressed_color"]:
-			b.add_theme_color_override(k, Color("3a2306") if on else UITheme.TEXT)
+			b.add_theme_color_override(k, UITheme.GOLD_INK if on else UITheme.TEXT)
 		var cid: String = cat.id
 		b.pressed.connect(func():
 			_cat = cid

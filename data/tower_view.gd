@@ -73,7 +73,7 @@ func _draw() -> void:
 				UITheme.dot(self, Vector2(wx, y0 + FLOOR_H / 2.0), 12.0, Color(1, 0.85, 0.45, 0.10))
 		# 樓層號碼
 		var tc := Color(1, 0.88, 0.55) if cleared else Color(0.7, 0.74, 0.9, 0.6)
-		draw_string(font, Vector2(cx + half + 10, y0 + FLOOR_H / 2.0 + 6), "%d F" % f, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), tc)
+		draw_string(font, Vector2(cx + half + 10, y0 + FLOOR_H / 2.0 + 6), "%d F" % f, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), tc)
 		if f % 5 == 0:
 			draw_string(font, Vector2(cx - half - 70, y0 + FLOOR_H / 2.0 + 6), "試煉層", HORIZONTAL_ALIGNMENT_RIGHT, 60, UITheme.fs(13), Color(1, 0.55, 0.6, 0.8))
 	# 塔頂：有上限就畫尖頂和旗子；沒有就伸進雲裡
@@ -81,14 +81,14 @@ func _draw() -> void:
 	if top_floor > 0 and shown < SHOW:
 		var half_top := 70.0 * (1.0 - 0.025 * shown)
 		var summit := best >= top_floor
-		var roof := Color("ff8fa0") if summit else Color("3b3270")
+		var roof := UITheme.ROSE if summit else Color("3b3270")
 		draw_colored_polygon(PackedVector2Array([Vector2(cx - half_top - 6, top), Vector2(cx + half_top + 6, top),
 			Vector2(cx, top - 62)]), roof.darkened(0.15))
 		draw_line(Vector2(cx, top - 62), Vector2(cx, top - 96), Color(1, 1, 1, 0.7), 2.0)
 		var wave := 4.0 * sin(t * 3.0)
 		draw_colored_polygon(PackedVector2Array([Vector2(cx, top - 96), Vector2(cx + 30, top - 88 + wave), Vector2(cx, top - 80)]),
 			Color(1, 0.85, 0.45) if summit else Color(0.7, 0.74, 0.9, 0.6))
-		draw_string(font, Vector2(cx + 36, top - 70), "塔頂 %d F" % top_floor, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14),
+		draw_string(font, Vector2(cx + 36, top - 70), "塔頂 %d F" % top_floor, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15),
 			Color(1, 0.88, 0.55) if summit else Color(0.8, 0.82, 0.95, 0.8))
 	else:
 		_clouds(font, top, cx, w)
@@ -100,7 +100,7 @@ func _clouds(font: Font, top: float, cx: float, w: float) -> void:
 		var cxk := cx + (k - 3) * 46.0 + 10.0 * sin(t * 0.5 + k)
 		UITheme.dot(self, Vector2(cxk, top + 4.0 * sin(t * 0.7 + k)), 34.0, Color(0.55, 0.6, 0.85, 0.10))
 		UITheme.dot(self, Vector2(cxk, top - 10.0), 24.0, Color(0.55, 0.6, 0.85, 0.08))
-	draw_string(font, Vector2(0, top - 30), "？", HORIZONTAL_ALIGNMENT_CENTER, w, UITheme.fs(26), Color(1, 1, 1, 0.35 + 0.15 * sin(t * 2.0)))
+	draw_string(font, Vector2(0, top - 30), "？", HORIZONTAL_ALIGNMENT_CENTER, w, UITheme.fs(24), Color(1, 1, 1, 0.35 + 0.15 * sin(t * 2.0)))
 
 
 ## 光靈：停在最高紀錄那一層的右邊（還沒爬過就在塔腳）

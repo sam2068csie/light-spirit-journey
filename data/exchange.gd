@@ -37,7 +37,7 @@ func _ready() -> void:
 	back.position = Vector2(16, 14)
 	back.pressed.connect(_close)
 	add_child(back)
-	var title := UITheme.title_label("碎片兌換所", 30, Color("7fe3ff"))
+	var title := UITheme.title_label("碎片兌換所", 30, UITheme.CYAN_LIGHT)
 	title.position = Vector2(376, 14)
 	title.size = Vector2(400, 48)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -51,8 +51,8 @@ func _ready() -> void:
 	ii.custom_minimum_size = Vector2(28, 28)
 	hold.add_child(ii)
 	_shards = Label.new()
-	_shards.add_theme_font_size_override("font_size", UITheme.fs(18))
-	_shards.add_theme_color_override("font_color", Color("7fe3ff"))
+	_shards.add_theme_font_size_override("font_size", UITheme.fs(17))
+	_shards.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 	hold.add_child(_shards)
 
 	# 左：預覽與兌換
@@ -71,7 +71,7 @@ func _ready() -> void:
 	_name = Label.new()
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.add_theme_font_override("font", UITheme.bold_font())
-	_name.add_theme_font_size_override("font_size", UITheme.fs(22))
+	_name.add_theme_font_size_override("font_size", UITheme.fs(24))
 	sv.add_child(_name)
 	var ds := preload("math_text.gd").new()
 	ds.font_size = UITheme.fs(15)
@@ -91,7 +91,7 @@ func _ready() -> void:
 	_buy.text = "兌換"
 	_buy.custom_minimum_size = Vector2(220, 54)
 	_buy.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	UITheme.button_3d(_buy, Color("5ad8ff"), Color("1f7fa8"), Color("082436"), 19, 6, 14, 6)
+	UITheme.button_3d(_buy, UITheme.CYAN, Color("1f7fa8"), Color("082436"), 19, 6, 14, 6)
 	_buy.pressed.connect(_do_buy)
 	sv.add_child(_buy)
 
@@ -151,7 +151,7 @@ func _refresh() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.add_theme_font_size_override("font_size", UITheme.fs(15))
 		var on: bool = cat.id == _cat
-		var sb := UITheme.box(Color("5ad8ff") if on else Color(1, 1, 1, 0.05), 12, Color(1, 1, 1, 0.12), 1, 6)
+		var sb := UITheme.box(UITheme.CYAN if on else Color(1, 1, 1, 0.05), 12, Color(1, 1, 1, 0.12), 1, 6)
 		for st in ["normal", "hover", "pressed"]:
 			b.add_theme_stylebox_override(st, sb)
 		for k in ["font_color", "font_hover_color", "font_pressed_color"]:
@@ -198,7 +198,7 @@ func _show_sel(g) -> void:
 	else:
 		var enough: bool = int(g.inv.shard) >= cost
 		_price.text = "需要 光之碎片 %d　（目前 %d）" % [cost, int(g.inv.shard)]
-		_price.add_theme_color_override("font_color", Color("7fe3ff") if enough else UITheme.BAD)
+		_price.add_theme_color_override("font_color", UITheme.CYAN_LIGHT if enough else UITheme.BAD)
 		_buy.disabled = not enough
 		_buy.text = "兌換" if enough else "碎片不夠"
 
@@ -211,7 +211,7 @@ func _tile(it: Dictionary, g) -> Control:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(150, 136)
 	b.focus_mode = Control.FOCUS_NONE
-	var edge := Color("5ad8ff") if sel else Color(rc.r, rc.g, rc.b, 0.5)
+	var edge := UITheme.CYAN if sel else Color(rc.r, rc.g, rc.b, 0.5)
 	for st in ["normal", "hover", "pressed"]:
 		b.add_theme_stylebox_override(st, UITheme.box(Color(0.1, 0.14, 0.28, 0.95).lightened(0.05 if st == "hover" else 0.0), 14, edge, 3 if sel else 1, 0))
 	var pv := SL.Preview.new()
@@ -236,7 +236,7 @@ func _tile(it: Dictionary, g) -> Control:
 	sub.position = Vector2(0, 108)
 	sub.size = Vector2(150, 20)
 	sub.add_theme_font_size_override("font_size", UITheme.fs(13))
-	sub.add_theme_color_override("font_color", UITheme.GOOD if own else Color("7fe3ff"))
+	sub.add_theme_color_override("font_color", UITheme.GOOD if own else UITheme.CYAN_LIGHT)
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(sub)
 	if own:
@@ -255,7 +255,7 @@ func _do_buy() -> void:
 		return
 	g.sfx("fanfare" if int(it.r) >= 2 else "success")
 	_toast.text = "換到了：%s！到衣櫃穿上吧" % it.name
-	_toast.add_theme_color_override("font_color", Color("7fe3ff"))
+	_toast.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 	_toast.modulate.a = 1.0
 	var tw := create_tween()
 	tw.tween_interval(1.4)

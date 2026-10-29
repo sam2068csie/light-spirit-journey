@@ -157,7 +157,7 @@ func _build_title_page() -> void:
 	col.add_child(gap)
 
 	var start := _menu_button("開始冒險", 68)
-	UITheme.button_3d(start, UITheme.ACCENT, Color("c27a14"), Color("3a2306"), 24, 7)
+	UITheme.button_3d(start, UITheme.ACCENT, UITheme.ACCENT_LIP, UITheme.GOLD_INK, 24, 7)
 	start.pressed.connect(func(): _show_page("units"))
 	col.add_child(start)
 	var rv := _menu_button("修煉之間", 52)
@@ -188,7 +188,7 @@ func _menu_button(text: String, h: int) -> Button:
 	b.text = text
 	b.custom_minimum_size = Vector2(380, h)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	UITheme.button_3d(b, Color("3d46a8"), Color("191b52"), UITheme.TEXT, 20, 7)
+	UITheme.button_3d(b, UITheme.BTN, UITheme.BTN_LIP, UITheme.TEXT, 20, 7)
 	return b
 
 
@@ -311,7 +311,7 @@ func _refresh_units() -> void:
 				ar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 				ar.position = Vector2(x0 + i * (cw + gap) + cw, y)
 				ar.size = Vector2(gap, UNIT_CARD.y)
-				ar.add_theme_font_size_override("font_size", UITheme.fs(26))
+				ar.add_theme_font_size_override("font_size", UITheme.fs(24))
 				ar.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
 				ar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				_units_body.add_child(ar)
@@ -406,7 +406,7 @@ func _unit_card(g, u: Dictionary, no: int) -> Control:
 		b.icon = UITheme.icon("lock", 16, UITheme.TEXT_DIM)
 		b.disabled = true
 		UITheme.tight(b, 4)
-		b.add_theme_font_size_override("font_size", UITheme.fs(16))
+		b.add_theme_font_size_override("font_size", UITheme.fs(15))
 	v.add_child(b)
 	return p
 
@@ -475,7 +475,7 @@ func _refresh_review() -> void:
 	var foot := Label.new()
 	foot.text = "已掌握 %d ／ %d 個觀念　·　待加強 %d 個" % [solid, total, weak]
 	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	foot.add_theme_font_size_override("font_size", UITheme.fs(16))
+	foot.add_theme_font_size_override("font_size", UITheme.fs(15))
 	foot.add_theme_color_override("font_color", UITheme.TEXT)
 	lcol.add_child(foot)
 	var legend := Label.new()
@@ -504,7 +504,7 @@ func _refresh_review() -> void:
 	if items.is_empty():
 		var empty := Label.new()
 		empty.text = "還沒有可以複習的題目。\n先去「世界地圖」闖幾段旅程吧！答錯的觀念會自動收進這裡。"
-		empty.add_theme_font_size_override("font_size", UITheme.fs(16))
+		empty.add_theme_font_size_override("font_size", UITheme.fs(15))
 		empty.add_theme_color_override("font_color", UITheme.TEXT)
 		dcol.add_child(empty)
 		var go := Button.new()
@@ -523,7 +523,7 @@ func _refresh_review() -> void:
 		var note := Label.new()
 		var n_weak := items.filter(func(it): return not it.get("refresh", false)).size()
 		note.text = "%d 題弱點題%s，約 5 分鐘。" % [n_weak, "＋%d 題回鍋複習" % (items.size() - n_weak) if items.size() > n_weak else ""]
-		note.add_theme_font_size_override("font_size", UITheme.fs(14))
+		note.add_theme_font_size_override("font_size", UITheme.fs(15))
 		note.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		dcol.add_child(note)
 		var go2 := Button.new()
@@ -649,12 +649,12 @@ func _daily_chip(it: Dictionary, res: int, is_next: bool) -> PanelContainer:
 	nm.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	nm.custom_minimum_size = Vector2(86, 22)
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nm.add_theme_font_size_override("font_size", UITheme.fs(14))
+	nm.add_theme_font_size_override("font_size", UITheme.fs(15))
 	nm.add_theme_color_override("font_color", UITheme.TEXT)
 	v.add_child(nm)
 	var st := Label.new()
 	st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	st.add_theme_font_size_override("font_size", UITheme.fs(14))
+	st.add_theme_font_size_override("font_size", UITheme.fs(15))
 	if res < 0:
 		st.text = "▶ 下一題" if is_next else ("回鍋" if it.get("refresh", false) else "弱點")
 		st.add_theme_color_override("font_color", UITheme.ACCENT if is_next else UITheme.TEXT_DIM)
@@ -686,7 +686,7 @@ func _weak_row(tag: String, k: float) -> HBoxContainer:
 	nm.text = Center.tag_name(tag)
 	nm.clip_text = true
 	nm.custom_minimum_size = Vector2(300, 0)
-	nm.add_theme_font_size_override("font_size", UITheme.fs(16))
+	nm.add_theme_font_size_override("font_size", UITheme.fs(15))
 	nm.add_theme_color_override("font_color", UITheme.TEXT)
 	v.add_child(nm)
 	var meta := HBoxContainer.new()
@@ -709,7 +709,7 @@ func _weak_row(tag: String, k: float) -> HBoxContainer:
 	var b := Button.new()
 	b.text = "練一題"
 	b.custom_minimum_size = Vector2(92, 38)
-	b.add_theme_font_size_override("font_size", UITheme.fs(16))
+	b.add_theme_font_size_override("font_size", UITheme.fs(15))
 	b.pressed.connect(func():
 		var it: Dictionary = Center.pick_for(g, tag)
 		if not it.is_empty():
@@ -761,7 +761,7 @@ func _show_summary(results: Array, kind: String) -> void:
 	msg.text = ("%d 個觀念變強了！" % better if better > 0 else "這次比較難，沒關係，明天再來練。") \
 		+ ("\n已經累積修煉 %d 天，明天見！" % g.review_days.size() if done_today else "")
 	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	msg.add_theme_font_size_override("font_size", UITheme.fs(16))
+	msg.add_theme_font_size_override("font_size", UITheme.fs(15))
 	msg.add_theme_color_override("font_color", UITheme.TEXT)
 	col.add_child(msg)
 	var ok := Button.new()
@@ -832,7 +832,7 @@ func _open_unit_picker(tower: bool) -> void:
 		var h := Label.new()
 		h.text = term
 		h.add_theme_font_override("font", UITheme.bold_font())
-		h.add_theme_font_size_override("font_size", UITheme.fs(16))
+		h.add_theme_font_size_override("font_size", UITheme.fs(15))
 		h.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		col.add_child(h)
 		var grid := GridContainer.new()
@@ -849,7 +849,7 @@ func _open_unit_picker(tower: bool) -> void:
 			b.custom_minimum_size = Vector2(260, 50)
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.text = "  %s%s" % [u.title, "　✓ 目前" if cur else ("" if ok else ("　即將開放" if not Units.is_open(u) else "　還沒有塔"))]
-			b.add_theme_font_size_override("font_size", UITheme.fs(16))
+			b.add_theme_font_size_override("font_size", UITheme.fs(15))
 			var edge := UITheme.ACCENT if cur else Color(c.r, c.g, c.b, 0.5 if ok else 0.12)
 			b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.12 if ok else 0.03), 12, edge, 2 if cur else 1, 8))
 			b.add_theme_stylebox_override("hover", UITheme.box(Color(c.r, c.g, c.b, 0.22), 12, c, 2, 8))
@@ -896,7 +896,7 @@ func _refresh_tower() -> void:
 		c.queue_free()
 	var g = Game.of(self)
 	var tname := String(Units.unit(g.cur_unit).get("tower_name", ""))
-	var title := UITheme.title_label(tname if tname != "" else "終焉之塔", 32, Color("ff8fa0"))
+	var title := UITheme.title_label(tname if tname != "" else "終焉之塔", 32, UITheme.ROSE)
 	title.position = Vector2(0, 4)
 	title.size = Vector2(1152, 44)
 	_tower_body.add_child(title)
@@ -917,7 +917,7 @@ func _refresh_tower() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	p.add_child(col)
-	col.add_child(_h("挑戰規則", Color("ff8fa0")))
+	col.add_child(_h("挑戰規則", UITheme.ROSE))
 	for rule in [["▲", "共 %d 層，每層一題，段考題型與八大關混合" % Center.tower_top()],
 			["◷", "每層限時，從 260 秒開始越來越短"],
 			["♥", "只有三顆心：答錯、超時扣一顆（真假審判錯 2 張以上才扣）"],
@@ -929,8 +929,8 @@ func _refresh_tower() -> void:
 		ic.text = rule[0]
 		ic.custom_minimum_size = Vector2(26, 0)
 		ic.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		ic.add_theme_font_size_override("font_size", UITheme.fs(18))
-		ic.add_theme_color_override("font_color", Color("ff8fa0"))
+		ic.add_theme_font_size_override("font_size", UITheme.fs(17))
+		ic.add_theme_color_override("font_color", UITheme.ROSE)
 		row.add_child(ic)
 		var tx := Label.new()
 		tx.text = rule[1]
@@ -948,12 +948,12 @@ func _refresh_tower() -> void:
 		var v := VBoxContainer.new()
 		var l1 := Label.new()
 		l1.text = pair[0]
-		l1.add_theme_font_size_override("font_size", UITheme.fs(14))
+		l1.add_theme_font_size_override("font_size", UITheme.fs(15))
 		l1.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		v.add_child(l1)
 		var l2 := Label.new()
 		l2.text = pair[1]
-		l2.add_theme_font_size_override("font_size", UITheme.fs(26))
+		l2.add_theme_font_size_override("font_size", UITheme.fs(24))
 		l2.add_theme_color_override("font_color", UITheme.ACCENT)
 		v.add_child(l2)
 		rec.add_child(v)
@@ -964,7 +964,7 @@ func _refresh_tower() -> void:
 	tip.text = "題型改編自各校段考。卡住就去世界地圖或修煉之間練習！"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(520, 0)
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	col.add_child(tip)
 	var go := Button.new()
@@ -977,12 +977,12 @@ func _refresh_tower() -> void:
 
 ## 攀登結束：這次爬到第幾層、是不是新紀錄、每一層的結果
 func _show_tower_result(res: Dictionary) -> void:
-	var o := UITheme.modal(self, Color("ff8fa0"), 520)
+	var o := UITheme.modal(self, UITheme.ROSE, 520)
 	var layer: Control = o[0]
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 10)
 	var summit: bool = res.get("summit", false)
-	col.add_child(UITheme.title_label("登頂成功！" if summit else "攀登結束", 28, Color("ff8fa0")))
+	col.add_child(UITheme.title_label("登頂成功！" if summit else "攀登結束", 28, UITheme.ROSE))
 	var floors := int(res.floors)
 	col.add_child(UITheme.title_label(("爬完全部 %d 層，終焉之塔被你征服了！" % floors) if summit else ("這次爬到第 %d 層" % floors if floors > 0 else "還沒爬上第 1 層"), 26 if not summit else 22, UITheme.ACCENT))
 	if summit:
@@ -1008,7 +1008,7 @@ func _show_tower_result(res: Dictionary) -> void:
 	elif floors > 0:
 		tl.text = "今天第 1～%d 層的星塵已經領過了，爬得更高才有新的星塵" % int(rw.get("paid", floors))
 		tl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		tl.add_theme_font_size_override("font_size", UITheme.fs(14))
+		tl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	else:
 		ic.visible = false
 	rl.add_child(tl)
@@ -1097,7 +1097,7 @@ func _quest_chip(parent: Control, pos: Vector2) -> Button:
 	b.custom_minimum_size = Vector2(140, 44)
 	b.position = pos
 	b.add_theme_font_override("font", UITheme.bold_font())
-	b.add_theme_font_size_override("font_size", UITheme.fs(16))
+	b.add_theme_font_size_override("font_size", UITheme.fs(15))
 	b.add_theme_constant_override("h_separation", 8)
 	var face := Color(0.07, 0.08, 0.19, 0.88)
 	b.add_theme_stylebox_override("normal", UITheme.box(face, 12, Color(1, 1, 1, 0.14), 1, 10))
@@ -1135,7 +1135,7 @@ func _gacha_chip(parent: Control, pos: Vector2) -> Button:
 	var b := _quest_chip(parent, pos)
 	_quest_chips.erase(b)
 	b.text = "光靈扭蛋"
-	b.icon = UITheme.icon("capsule", 20, Color("ff8fc0"))
+	b.icon = UITheme.icon("capsule", 20, UITheme.PINK_LIGHT)
 	for c in b.pressed.get_connections():
 		b.pressed.disconnect(c.callable)
 	b.pressed.connect(_open_gacha)
@@ -1148,7 +1148,7 @@ func _wardrobe_chip(parent: Control, pos: Vector2) -> Button:
 	var b := _quest_chip(parent, pos)
 	_quest_chips.erase(b)
 	b.text = "光靈衣櫃"
-	b.icon = UITheme.icon("hanger", 20, Color("8fe0ff"))
+	b.icon = UITheme.icon("hanger", 20, UITheme.CYAN_LIGHT)
 	for c in b.pressed.get_connections():
 		b.pressed.disconnect(c.callable)
 	b.pressed.connect(_open_wardrobe)
@@ -1427,8 +1427,8 @@ void fragment() {
 		sh.code = FACE_SHADER
 		var mat := ShaderMaterial.new()
 		mat.shader = sh
-		mat.set_shader_parameter("top_col", Color("fff3b0"))
-		mat.set_shader_parameter("bot_col", Color("ffae2b"))
+		mat.set_shader_parameter("top_col", UITheme.GOLD_PALE)
+		mat.set_shader_parameter("bot_col", UITheme.ORANGE_DEEP)
 		_face.material = mat
 		_face.draw.connect(_draw_face)
 		add_child(_face)
@@ -1507,7 +1507,7 @@ class Radar extends Control:
 			UITheme.dot(self, p, 5.0 + 1.0 * sin(t * 3.0 + i), a.color)
 			var lp: Vector2 = c + dir.call(i) * (R + 30.0)
 			var txt: String = a.name
-			draw_string(font, lp + Vector2(-60, 0), txt, HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(14), a.color)
+			draw_string(font, lp + Vector2(-60, 0), txt, HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(15), a.color)
 			draw_string(font, lp + Vector2(-60, 17), "%d%%" % roundi(100.0 * a.v), HORIZONTAL_ALIGNMENT_CENTER, 120, UITheme.fs(13),
 				Color(1, 1, 1, 0.7))
 

@@ -12,7 +12,7 @@ const Game := preload("game.gd")
 const DQ := preload("daily_quests.gd")
 
 const W := 820.0
-const GREEN := Color("6ee7a0")
+const GREEN := UITheme.GOOD
 const GREEN_FACE := Color("4fd18b")
 const GREEN_LIP := Color("2a8a57")
 
@@ -228,7 +228,7 @@ func _row(it: Dictionary) -> Control:
 	tr.add_child(pl)
 	var dl := Label.new()
 	dl.text = it.desc
-	dl.add_theme_font_size_override("font_size", UITheme.fs(14))
+	dl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	dl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	tv.add_child(dl)
 	# 右邊的按鈕：領取／已領取／前往
@@ -369,8 +369,8 @@ class TierStrip extends Control:
 				ii.modulate = Color(1, 1, 1, 0.35)
 				var ck := Label.new()
 				ck.text = "✓"
-				ck.add_theme_font_size_override("font_size", UITheme.fs(22))
-				ck.add_theme_color_override("font_color", Color("6ee7a0"))
+				ck.add_theme_font_size_override("font_size", UITheme.fs(24))
+				ck.add_theme_color_override("font_color", UITheme.GOOD)
 				ck.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				ck.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 				ck.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -411,7 +411,7 @@ class TierStrip extends Control:
 			var on: bool = done_n >= int(n)
 			UITheme.dot(self, c, 13.0 if big else 6.0, UITheme.ACCENT if on else Color("2a3058"))
 			if big:
-				draw_string(font, c + Vector2(-12, 6), str(n), HORIZONTAL_ALIGNMENT_CENTER, 24, UITheme.fs(14),
+				draw_string(font, c + Vector2(-12, 6), str(n), HORIZONTAL_ALIGNMENT_CENTER, 24, UITheme.fs(15),
 					Color("2a1a04") if on else UITheme.TEXT)
 
 
@@ -434,16 +434,16 @@ class ItemIcon extends Control:
 			"chest":
 				_chest(c, s * 0.36)
 			"shard":
-				_gem(c, s * 0.30, Color("7fe3ff"), 4)
+				_gem(c, s * 0.30, UITheme.CYAN_LIGHT, 4)
 			"crystal":
-				_gem(c, s * 0.38, Color("8f7bff"), 6)
+				_gem(c, s * 0.38, UITheme.VIOLET_DEEP, 6)
 
 	## 星塵：金色圓幣，中間一顆星
 	func _coin(c: Vector2, r: float) -> void:
 		UITheme.dot(self, c + Vector2(0, r * 0.12), r, Color("a86a12"))
-		UITheme.dot(self, c, r, Color("ffcf5a"))
-		UITheme.dot(self, c, r * 0.78, Color("f4b532"))
-		_star(c, r * 0.55, Color("fff3c4"))
+		UITheme.dot(self, c, r, UITheme.GOLD)
+		UITheme.dot(self, c, r * 0.78, UITheme.GOLD_DEEP)
+		_star(c, r * 0.55, UITheme.GOLD_PALE)
 		UITheme.dot(self, c + Vector2(-r * 0.45, -r * 0.45), r * 0.14, Color(1, 1, 1, 0.7))
 
 	## 寶箱：木箱＋金邊＋鎖
@@ -453,10 +453,10 @@ class ItemIcon extends Control:
 			Vector2(c.x + r * 0.85, c.y - r * 0.75), Vector2(c.x + r, c.y - r * 0.15)])
 		draw_colored_polygon(lid, Color("a0582a"))
 		draw_rect(body, Color("8a4520"))
-		draw_rect(Rect2(body.position.x, body.position.y, body.size.x, r * 0.16), Color("ffcf5a"))
-		draw_rect(Rect2(c.x - r * 0.62, c.y - r * 0.75, r * 0.16, r * 1.55), Color("e8b040"))
-		draw_rect(Rect2(c.x + r * 0.46, c.y - r * 0.75, r * 0.16, r * 1.55), Color("e8b040"))
-		draw_rect(Rect2(c.x - r * 0.17, c.y - r * 0.28, r * 0.34, r * 0.42), Color("ffe08a"))
+		draw_rect(Rect2(body.position.x, body.position.y, body.size.x, r * 0.16), UITheme.GOLD)
+		draw_rect(Rect2(c.x - r * 0.62, c.y - r * 0.75, r * 0.16, r * 1.55), UITheme.GOLD_DEEP)
+		draw_rect(Rect2(c.x + r * 0.46, c.y - r * 0.75, r * 0.16, r * 1.55), UITheme.GOLD_DEEP)
+		draw_rect(Rect2(c.x - r * 0.17, c.y - r * 0.28, r * 0.34, r * 0.42), UITheme.GOLD_LIGHT)
 		UITheme.dot(self, c + Vector2(0, -r * 0.05), r * 0.07, Color("5a2c10"))
 
 	## 寶石：多邊形＋亮面
