@@ -90,7 +90,7 @@ static func build() -> void:
 static func _collect(v, out: Dictionary) -> void:
 	if v is Dictionary:
 		for k in v:
-			if k == "tag" and v[k] is String and v[k] != "":
+			if k is String and k == "tag" and v[k] is String and v[k] != "":
 				out[v[k]] = true
 			elif v[k] is Dictionary or v[k] is Array:
 				_collect(v[k], out)
