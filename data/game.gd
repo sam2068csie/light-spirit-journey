@@ -550,7 +550,7 @@ func mark_story(key: String) -> void:
 
 const DQ := preload("daily_quests.gd")
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.10.29-b"
+const BUILD := "2026.10.29-c"
 
 
 ## 讀取各單元的資料；舊存檔（還沒有單元的版本）的今日修煉、終焉之塔紀錄搬到「指數與對數」
