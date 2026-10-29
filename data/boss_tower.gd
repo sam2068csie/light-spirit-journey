@@ -561,9 +561,11 @@ func _build_judge(s: Dictionary) -> void:
 		var c: Dictionary = cards[i]
 		var panel := PanelContainer.new()
 		panel.add_theme_stylebox_override("panel", UITheme.box(Color(1, 1, 1, 0.04), 12, Color(1, 1, 1, 0.08), 1, 4))
+		panel.mouse_filter = Control.MOUSE_FILTER_PASS      # 手指按在卡片上也能上下拖動捲動（理由展開後常超出畫面）
 		widget_box.add_child(panel)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		panel.add_child(row)
 		var lt := Label.new()
 		lt.text = letters[i]
@@ -581,12 +583,15 @@ func _build_judge(s: Dictionary) -> void:
 		st.font_size = UITheme.fs(17)
 		st.max_width = INNER_W - 18 - 2 * 58 - 50
 		st.text = c.s
+		st.mouse_filter = Control.MOUSE_FILTER_PASS
+		mid.mouse_filter = Control.MOUSE_FILTER_PASS
 		mid.add_child(st)
 		var why := MathLabel.new()
 		why.font_size = UITheme.fs(14)
 		why.max_width = st.max_width
 		why.color = UITheme.TEXT_DIM
 		why.visible = false
+		why.mouse_filter = Control.MOUSE_FILTER_PASS
 		mid.add_child(why)
 		var btns := []
 		for v in [true, false]:
@@ -650,16 +655,16 @@ func _check_judge() -> void:
 				b.modulate.a = 0.35
 	if wrong == 0:
 		Game.of(self).sfx("correct")
-		_hint("全部判斷正確！", "good")
+		_hint("全部判斷正確！（理由可以上下滑動查看）", "good")
 	elif wrong == 1:
 		penalty += 1
 		Game.of(self).sfx("tick")
-		_hint("錯了 1 張，不扣心。看一下紅色那張的理由。", "info")
+		_hint("錯了 1 張，不扣心。看一下紅色那張的理由（可以上下滑動）。", "info")
 	else:
 		_lose_heart()
 		if _out_of_hearts():
 			return
-		_hint("錯了 %d 張，扣一顆心。每張卡片下面都有理由。" % wrong, "bad")
+		_hint("錯了 %d 張，扣一顆心。每張卡片下面都有理由（可以上下滑動）。" % wrong, "bad")
 	_wait_continue()
 
 
