@@ -655,16 +655,16 @@ func _check_judge() -> void:
 				b.modulate.a = 0.35
 	if wrong == 0:
 		Game.of(self).sfx("correct")
-		_hint("全部判斷正確！（理由可以上下滑動查看）", "good")
+		_hint("全部判斷正確！", "good")
 	elif wrong == 1:
 		penalty += 1
 		Game.of(self).sfx("tick")
-		_hint("錯了 1 張，不扣心。看一下紅色那張的理由（可以上下滑動）。", "info")
+		_hint("錯了 1 張，不扣心。看一下紅色那張的理由。", "info")
 	else:
 		_lose_heart()
 		if _out_of_hearts():
 			return
-		_hint("錯了 %d 張，扣一顆心。每張卡片下面都有理由（可以上下滑動）。" % wrong, "bad")
+		_hint("錯了 %d 張，扣一顆心。每張卡片下面都有理由。" % wrong, "bad")
 	_wait_continue()
 
 
