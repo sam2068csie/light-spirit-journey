@@ -195,7 +195,7 @@ func _tile(it: Dictionary, g) -> Control:
 	nl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(nl)
 	var sub := Label.new()
-	sub.text = ("穿著中" if worn else Cos.RARITY[r].name + ("  ×%d" % int(g.owned[it.id]) if int(g.owned.get(it.id, 0)) > 1 else "")) if own \
+	sub.text = ("穿著中" if worn else Cos.RARITY[r].name) if own \
 		else ("簽到限定" if it.has("how") else Cos.RARITY[r].name)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.position = Vector2(0, 108)
