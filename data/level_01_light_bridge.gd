@@ -3472,7 +3472,7 @@ class Stage extends Control:
 	var sky_bot := Color("0b2a3f")
 	var scenery := "mountains"    # 遠景："mountains" 山、"towers" 水晶塔、"lake" 水晶塔＋湖面倒影
 	var ambient := ""             # 會動的氣氛層（每關不同）："aurora" 極光、"embers" 火星、"dust" 金塵、
-	                              # "motes" 魔法泡泡、"fireflies" 螢火蟲、"currents" 海風、"meteors" 流星、"moonsea" 月海
+								  # "motes" 魔法泡泡、"fireflies" 螢火蟲、"currents" 海風、"meteors" 流星、"moonsea" 月海
 	var mirror := false           # 畫出鏡子 y = x
 	var ghost_on := false         # 分身只在預言答完後出現（免得預言時提示和題目不符）
 	var ghost := ""               # 鏡中分身："inverse" 對 y = x（反函數）、"x_axis" 對 x 軸；"" 不畫
