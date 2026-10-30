@@ -93,6 +93,8 @@ var _pool: Array = []
 var _pool_i := 0
 var _snd := {}
 var _fade: ColorRect
+var fx: Control                 # 回饋特效層（fx_layer.gd）：答對星星、答錯晃動、過關紙花
+var _last_press := Vector2(-1, -1)    # 最後一次按下的位置：答對的星星從這裡炸開
 var _changing := false
 var _last_tick := 0
 var _duck_tween: Tween
@@ -131,6 +133,11 @@ func _init() -> void:
 		p.bus = "SFX"
 		add_child(p)
 		_pool.append(p)
+	var fxl := CanvasLayer.new()
+	fxl.layer = 90
+	add_child(fxl)
+	fx = preload("fx_layer.gd").new()
+	fxl.add_child(fx)
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)
@@ -143,6 +150,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	get_tree().set_quit_on_go_back(false)   # 手機的「返回鍵」交給各畫面自己處理
+	get_tree().node_added.connect(_on_node_added)
+	for b in get_tree().root.find_children("*", "BaseButton", true, false):
+		_on_node_added(b)
 	if OS.has_feature("mobile"):
 		# 手機常是 90／120 Hz 螢幕：鎖在 60 幀，節奏穩定不忽快忽慢，也比較不會發熱降頻
 		Engine.max_fps = FPS_ACTIVE
@@ -550,7 +560,7 @@ func mark_story(key: String) -> void:
 
 const DQ := preload("daily_quests.gd")
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.10.30-a"
+const BUILD := "2026.10.30-b"
 
 
 ## 讀取各單元的資料；舊存檔（還沒有單元的版本）的今日修煉、終焉之塔紀錄搬到「指數與對數」
@@ -1123,6 +1133,15 @@ func goto(script_file: String, with_args: Dictionary = {}) -> void:
 	get_tree().change_scene_to_packed(ps)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# 新畫面從稍微放大、偏下的位置滑進來，配合黑幕淡出
+	var sc := get_tree().current_scene as Control
+	if sc != null:
+		sc.pivot_offset = sc.size / 2.0
+		sc.scale = Vector2(1.03, 1.03)
+		sc.position = Vector2(0, 10)
+		var tw3 := sc.create_tween().set_parallel()
+		tw3.tween_property(sc, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw3.tween_property(sc, "position", Vector2.ZERO, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var tw2 := create_tween()
 	tw2.tween_property(_fade, "color:a", 0.0, 0.3)
 	await tw2.finished
@@ -1178,6 +1197,8 @@ func set_power_save(on: bool) -> void:
 
 ## 碰螢幕、滑鼠、鍵盤：回到 60 幀
 func _input(e: InputEvent) -> void:
+	if (e is InputEventMouseButton and e.pressed) or (e is InputEventScreenTouch and e.pressed):
+		_last_press = e.position
 	if e is InputEventScreenTouch or e is InputEventScreenDrag or e is InputEventMouseButton or e is InputEventKey \
 			or (e is InputEventMouseMotion and e.button_mask != 0):
 		wake()
@@ -1199,9 +1220,12 @@ func sfx(kind: String, i: int = 0) -> void:
 			play("bell", semi(-5), -15.0)
 			play("bell", semi(2), -17.0, 0.05)
 		"correct":
+			_fx_good()
 			play("bell", semi(7), -5.0)
 			play("bell", semi(12), -3.0, 0.08)
 		"wrong":
+			if fx:
+				fx.bad()
 			play("bonk", 1.0, -4.0)
 		"gem":
 			play("bell", semi(scale_semi(5 + i)), -4.0)
@@ -1217,14 +1241,49 @@ func sfx(kind: String, i: int = 0) -> void:
 		"count":
 			play("bell", semi(scale_semi(2 + 2 * i)), -12.0)
 		"success":
+			_fx_good()
 			for k in 5:
 				play("bell", semi(scale_semi(k + 3)), -6.0 + k, 0.065 * k)
 		"fanfare":
+			if fx:
+				fx.big(fx.size / 2.0)
 			var seq := [0, 2, 4, 5, 7, 10]
 			for k in seq.size():
 				play("bell", semi(scale_semi(seq[k])), -5.0, 0.11 * k)
 			play("bell", semi(-12), -8.0, 0.66)
 			play("bell", semi(scale_semi(10)), -2.0, 0.66)
+
+
+func _fx_good() -> void:
+	if fx == null:
+		return
+	var p := _last_press
+	if p.x < 0.0 or not fx.get_rect().has_point(p):
+		p = fx.size / 2.0
+	fx.good(p)
+
+
+## 按鈕按下去縮一下、放開彈回來（全遊戲的 Button 自動套用）
+func _on_node_added(n: Node) -> void:
+	if n is BaseButton and not n.has_meta("no_bounce"):
+		n.button_down.connect(_btn_bounce.bind(n, true))
+		n.button_up.connect(_btn_bounce.bind(n, false))
+
+
+func _btn_bounce(b: BaseButton, down: bool) -> void:
+	if not is_instance_valid(b) or b.disabled or b.size.x > 700.0:
+		return
+	b.pivot_offset = b.size / 2.0
+	if b.has_meta("_bt"):
+		var old: Tween = b.get_meta("_bt")
+		if old and old.is_valid():
+			old.kill()
+	var tw := b.create_tween()
+	if down:
+		tw.tween_property(b, "scale", Vector2(0.94, 0.94), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	else:
+		tw.tween_property(b, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	b.set_meta("_bt", tw)
 
 
 ## 光靈奔跑時的音：t 為 0（畫面底部）～1（畫面頂端），對應五聲音階
