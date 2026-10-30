@@ -291,6 +291,29 @@ static func wave_edge(a: float, b: float, side: float, pad: float = 0.0) -> Pack
 	return pts
 
 
+## 海岸一段的色塊（上下緣圍成的多邊形）；落在圓環裡的點推到圓環外緣上，接縫就會貼齊圓環
+static func coast_band(a: float, b: float, half: float) -> PackedVector2Array:
+	var top := PackedVector2Array()
+	var bot := PackedVector2Array()
+	var x := a
+	while x < b + 0.01:
+		var c := wave_p(minf(x, b))
+		var n := wave_n(minf(x, b))
+		top.append(_outside_ring(c + n * half))
+		bot.append(_outside_ring(c - n * half))
+		x += 4.0
+	bot.reverse()
+	top.append_array(bot)
+	return top
+
+
+static func _outside_ring(p: Vector2) -> Vector2:
+	var rr := R + RW / 2.0
+	if p.distance_to(O) < rr:
+		return O + (p - O).normalized() * rr
+	return p
+
+
 static func arc_pts(a0: float, a1: float, r: float, n: int = 0) -> PackedVector2Array:
 	if n <= 0:
 		n = maxi(6, int(absf(a1 - a0) * r / 6.0))
@@ -686,9 +709,14 @@ func _draw_region_fill(L: CanvasItem, i: int) -> void:
 			L.draw_arc(O, R, -st.a.y, -st.a.x, 64, c1, RW, true)
 			L.draw_arc(O, R, -st.a.y, -st.a.x, 64, c2, RW - 18.0, true)
 		"coast":
-			var pts := wave_pts(maxf(st.x.x, WX0 + 20.0), minf(st.x.y, X_END))
-			L.draw_polyline(pts, c1, CW, false)
-			L.draw_polyline(pts, c2, CW - 18.0, false)
+			if float(st.x.x) <= WX0 + 1.0:
+				# 從圓環接出來的那一段：沿著圓環外緣切齊，不留縫
+				L.draw_colored_polygon(coast_band(WX0, minf(st.x.y, X_END), CW / 2.0), c1)
+				L.draw_colored_polygon(coast_band(WX0, minf(st.x.y, X_END), CW / 2.0 - 9.0), c2)
+			else:
+				var pts := wave_pts(st.x.x, minf(st.x.y, X_END))
+				L.draw_polyline(pts, c1, CW, false)
+				L.draw_polyline(pts, c2, CW - 18.0, false)
 		"dial":
 			L.draw_colored_polygon(dial_half(st.side), c1)
 			L.draw_colored_polygon(dial_half(st.side, DR - 9.0), c2)
@@ -711,13 +739,11 @@ func _draw_region_ring(i: int) -> void:
 			lines.append(arc_pts(st.a.x, st.a.y, R - RW / 2.0))
 		"coast":
 			var x0 := float(st.x.x)
-			if i == 2:
-				x0 = WX0 + 22.0      # 從圓環外面開始
 			for side in [1.0, -1.0]:
-				# 伸進羅盤礁的部分不畫
+				# 伸進羅盤礁、圓環的部分不畫
 				var cur := PackedVector2Array()
 				for q in wave_edge(x0, minf(st.x.y, X_END), side):
-					if q.distance_to(CP) < DR:
+					if q.distance_to(CP) < DR or q.distance_to(O) < R + RW / 2.0:
 						if cur.size() > 1:
 							lines.append(cur)
 						cur = PackedVector2Array()
