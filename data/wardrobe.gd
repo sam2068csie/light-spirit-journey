@@ -147,7 +147,7 @@ func _refresh() -> void:
 	# 格子
 	for c in _grid.get_children():
 		c.queue_free()
-	for it in Cos.items_of(_cat):
+	for it in Cos.by_rarity(Cos.items_of(_cat)):      # 依稀有度排：普通 → 傳說
 		_grid.add_child(_tile(it, g))
 	# 說明
 	var show_id := _sel

@@ -105,6 +105,19 @@ static func item(id: String) -> Dictionary:
 	return {}
 
 
+## 依稀有度排序（普通 → 傳說）；同稀有度保持原本順序
+static func by_rarity(list: Array) -> Array:
+	var idx := {}
+	for i in ITEMS.size():
+		idx[ITEMS[i].id] = i
+	var out := list.duplicate()
+	out.sort_custom(func(a, b):
+		if int(a.r) != int(b.r):
+			return int(a.r) < int(b.r)
+		return int(idx.get(a.id, 0)) < int(idx.get(b.id, 0)))
+	return out
+
+
 static func items_of(cat: String) -> Array:
 	return ITEMS.filter(func(it): return it.cat == cat)
 

@@ -165,7 +165,7 @@ func _refresh() -> void:
 	for c in _grid.get_children():
 		c.queue_free()
 	var list := Cos.items_of(_cat).filter(func(x): return x.get("pool", true))   # 簽到限定的換不到
-	list.sort_custom(func(a, b): return int(a.r) < int(b.r))
+	list = Cos.by_rarity(list)
 	if _sel == "":
 		for it in list:
 			if not g.owned.has(it.id):
