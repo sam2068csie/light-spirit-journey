@@ -10,6 +10,14 @@
 /export/
 /build/
 
+# iOS 匯出的 Xcode 專案（很大，而且每次匯出都會重新產生）
+/ios export/
+/ios/
+*.ipa
+*.xcframework/
+*.pck
+*.mobileprovision
+
 # 簽章金鑰：絕對不要上傳！
 *.keystore
 *.jks
