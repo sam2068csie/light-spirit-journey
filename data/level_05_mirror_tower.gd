@@ -31,7 +31,7 @@ func bank_slots() -> Array:
 	return Bank5.slots()
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("26113f"), "sky_bot": Color("0d2035"), "scenery": "towers"}
+	return {"sky_top": Color("26113f"), "sky_bot": Color("0d2035"), "scenery": "lake"}
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．交點之鏡", "button": "進入交點之鏡  ▶",

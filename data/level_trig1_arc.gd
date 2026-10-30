@@ -40,7 +40,7 @@ func step_color() -> Color:
 	return MOON
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0c1a3a"), "sky_bot": Color("08142b"), "scenery": "none"}
+	return {"sky_top": Color("0c1a3a"), "sky_bot": Color("08142b"), "scenery": "none", "ambient": "moonsea"}
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．月光刻度", "button": "進入月光刻度  ▶",

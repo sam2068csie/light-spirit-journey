@@ -139,7 +139,7 @@ func _build_ui() -> void:
 	stage_panel.custom_minimum_size = Vector2(STAGE_W, STAGE_H)
 	stage_panel.size = Vector2(STAGE_W, STAGE_H)
 	stage_panel.clip_contents = true
-	var sb := UITheme.box(Color(0.07, 0.08, 0.18, 0.94), 18, Color(kind_col.r, kind_col.g, kind_col.b, 0.35), 1, 24)
+	var sb := UITheme.box(Color(0.07, 0.05, 0.16, 0.8), 18, Color(kind_col.r, kind_col.g, kind_col.b, 0.35), 1, 24)
 	stage_panel.add_theme_stylebox_override("panel", sb)
 	add_child(stage_panel)
 	var scol := VBoxContainer.new()
@@ -202,6 +202,7 @@ func _build_ui() -> void:
 	var card := PanelContainer.new()
 	card.position = Vector2(744, 70)
 	card.custom_minimum_size = Vector2(384, STAGE_H)
+	card.add_theme_stylebox_override("panel", UITheme.box(Color(UITheme.PANEL.r, UITheme.PANEL.g, UITheme.PANEL.b, 0.86), 18, Color(1, 1, 1, 0.07), 1, 18))
 	add_child(card)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
@@ -779,6 +780,7 @@ func _check_line() -> void:
 
 ## 背景：深色夜空＋塔磚的淡紋
 class TowerBg extends Control:
+	const Ambient := preload("ambient.gd")
 	var t := 0.0
 	var stars: Array = []
 
@@ -793,13 +795,19 @@ class TowerBg extends Control:
 		queue_redraw()
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("0b0d20"))
+		# 紅紫色的天空：上深紫、下暗紅
+		var w := size.x
+		var hh := size.y
+		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, hh), Vector2(0, hh)]),
+			PackedColorArray([Color("140a26"), Color("140a26"), Color("2e0f24"), Color("2e0f24")]))
 		for s in stars:
 			UITheme.dot(self, s.p, s.s, Color(1, 0.85, 0.9, 0.12 + 0.12 * sin(t * 1.3 + s.ph)))
 		# 底部一點點暖色的光
 		for i in 6:
-			var a := 0.03 - i * 0.004
-			draw_rect(Rect2(0, size.y - 40 - i * 20, size.x, 40 + i * 20), Color(1, 0.5, 0.6, maxf(a, 0.0)))
+			var a := 0.035 - i * 0.004
+			draw_rect(Rect2(0, hh - 40 - i * 20, w, 40 + i * 20), Color(1, 0.35, 0.5, maxf(a, 0.0)))
+		# 浮空石塊與往上飄的紅紫光屑
+		Ambient.paint(self, "rocks", size, t)
 
 
 ## 劃掉的那條斜線

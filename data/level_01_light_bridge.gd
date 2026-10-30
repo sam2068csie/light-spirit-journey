@@ -25,6 +25,7 @@ const PauseMenu := preload("pause_menu.gd")
 const Concepts := preload("concept_cards.gd")
 const ConceptDeck := preload("concept_deck.gd")
 const Buddy := preload("buddy.gd")
+const Ambient := preload("ambient.gd")
 const QP := preload("quest_panel.gd")       # 物品圖示（星塵、寶箱…）
 const QUAD_COL := UITheme.ORANGE
 
@@ -175,7 +176,7 @@ func _custom_formula() -> String:
 
 ## 舞台外觀（天空顏色、遠景）
 func stage_style() -> Dictionary:
-	return {}
+	return {"ambient": "aurora"}     # 光之橋：極光
 
 ## 進入第二章時跳出的說明卡
 func chapter_card() -> Dictionary:
@@ -3469,7 +3470,9 @@ class Stage extends Control:
 	var plain := false            # true：只畫天空和遠景，內容交給子節點（例如鍛造台）
 	var sky_top := Color("1b1650")
 	var sky_bot := Color("0b2a3f")
-	var scenery := "mountains"    # 遠景："mountains" 山、"towers" 水晶塔
+	var scenery := "mountains"    # 遠景："mountains" 山、"towers" 水晶塔、"lake" 水晶塔＋湖面倒影
+	var ambient := ""             # 會動的氣氛層（每關不同）："aurora" 極光、"embers" 火星、"dust" 金塵、
+	                              # "motes" 魔法泡泡、"fireflies" 螢火蟲、"currents" 海風、"meteors" 流星、"moonsea" 月海
 	var mirror := false           # 畫出鏡子 y = x
 	var ghost_on := false         # 分身只在預言答完後出現（免得預言時提示和題目不符）
 	var ghost := ""               # 鏡中分身："inverse" 對 y = x（反函數）、"x_axis" 對 x 軸；"" 不畫
@@ -3581,13 +3584,13 @@ class Stage extends Control:
 				layer.painter = painter
 				add_child(layer, false, Node.INTERNAL_MODE_FRONT)
 				_bg_layers.append(layer)
-		var key := [size, sky_top, sky_bot, scenery]
+		var key := [size, sky_top, sky_bot, scenery, ambient]
 		if key != _bg_key:
 			_bg_key = key
 			for i in [0, 2, 4]:
 				_bg_layers[i].queue_redraw()
 		_bg_layers[1].queue_redraw()
-		if scenery == "towers":
+		if scenery == "towers" or scenery == "lake":
 			_bg_layers[3].queue_redraw()
 
 	func _paint_sky(ci: CanvasItem) -> void:
@@ -3600,10 +3603,14 @@ class Stage extends Control:
 		for s in sky_stars:
 			var alpha: float = 0.35 + 0.35 * sin(t * 1.6 + s.ph)
 			UITheme.dot(ci, Vector2(s.p.x * size.x, s.p.y * size.y), s.s, Color(1, 1, 1, alpha))
+		if ambient != "":
+			Ambient.paint(ci, ambient, size, t)
 
 	func _paint_back(ci: CanvasItem) -> void:
 		if scenery == "towers":
 			_tower_row(ci, 0, "shape")
+		elif scenery == "lake":
+			_tower_row(ci, 0, "shape", LAKE_H)
 		elif scenery == "mountains":
 			_mountain_on(ci, size.y - 70, 40.0, 0.010, Color(0.12, 0.13, 0.30, 0.9))
 			_mountain_on(ci, size.y - 30, 26.0, 0.018, Color(0.06, 0.08, 0.18, 1.0))
@@ -3611,10 +3618,47 @@ class Stage extends Control:
 	func _paint_glow(ci: CanvasItem) -> void:
 		if scenery == "towers":
 			_tower_row(ci, 0, "glow")
+		elif scenery == "lake":
+			_tower_row(ci, 0, "glow", LAKE_H)
+			_lake(ci)
 
 	func _paint_front(ci: CanvasItem) -> void:
 		if scenery == "towers":
 			_tower_row(ci, 1, "shape")
+		elif scenery == "lake":
+			_tower_row(ci, 1, "shape", LAKE_H)
+
+	## 鏡像之塔的湖：水晶塔倒映在水面上（呼應 y = x 的鏡射），水波會慢慢晃
+	const LAKE_H := 40.0
+	func _lake(ci: CanvasItem) -> void:
+		var hh := size.y
+		var wl := hh - LAKE_H
+		ci.draw_rect(Rect2(0, wl, size.x, LAKE_H), Color(0.07, 0.09, 0.22, 0.9))
+		# 倒影：兩排塔對水面翻下來，越下面越淡、左右輕輕扭動
+		for row in 2:
+			var c := Color(0.55, 0.38, 0.9, 0.26) if row == 0 else Color(0.4, 0.28, 0.7, 0.34)
+			var x := -20.0 + row * 37.0
+			var i := 0
+			while x < size.x + 40.0:
+				var w := 26.0 + 18.0 * fposmod(i * 0.618 + row * 0.3, 1.0)
+				var tall := (62.0 if row == 0 else 30.0) * (0.55 + 0.75 * fposmod(i * 0.437 + row * 0.21, 1.0))
+				var base := wl
+				var k := 0.55          # 倒影壓扁一點
+				var sway := 2.0 * sin(t * 1.4 + i)
+				var bot := base + (tall + (8.0 if row == 1 else 16.0)) * k
+				ci.draw_colored_polygon(PackedVector2Array([Vector2(x, base), Vector2(x + sway, bot),
+					Vector2(x + w / 2.0 + sway * 1.5, minf(bot + w * 0.8 * k, hh)), Vector2(x + w + sway, bot), Vector2(x + w, base)]), c)
+				x += w + 12.0 + 20.0 * fposmod(i * 0.29, 1.0)
+				i += 1
+		# 水面亮線與水波
+		ci.draw_line(Vector2(0, wl), Vector2(size.x, wl), Color(0.75, 0.6, 1.0, 0.35), 1.5)
+		for j in 7:
+			var yy := wl + 6.0 + j * 5.0
+			var off := fmod(t * (14.0 + j * 3.0) + j * 97.0, 160.0)
+			var xx := -160.0 + off
+			while xx < size.x:
+				ci.draw_line(Vector2(xx, yy), Vector2(xx + 26.0 + 10.0 * (j % 3), yy), Color(0.8, 0.7, 1.0, 0.10 - j * 0.01), 1.2)
+				xx += 160.0
 
 	func setup(rd: Dictionary) -> void:
 		type = rd.type
@@ -5541,8 +5585,8 @@ class Stage extends Control:
 
 	## 遠景的水晶塔：兩排剪影，塔尖有一點微光
 	##   part = "shape"：塔身（不會動）；"glow"：後排塔尖的微光（會閃）
-	func _tower_row(ci: CanvasItem, row: int, part: String) -> void:
-		var hh := size.y
+	func _tower_row(ci: CanvasItem, row: int, part: String, lift: float = 0.0) -> void:
+		var hh := size.y - lift
 		var c := Color(0.17, 0.10, 0.33, 0.45) if row == 0 else Color(0.08, 0.05, 0.18, 0.8)
 		var x := -20.0 + row * 37.0
 		var i := 0

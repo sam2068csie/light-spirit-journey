@@ -1429,6 +1429,7 @@ class LogDrag extends Control:
 
 class ForgeView extends Control:
 	const UITheme := preload("game_theme.gd")
+	const Ambient := preload("ambient.gd")
 	const MathLabel := preload("math_text.gd")
 	const FIRE := UITheme.ORANGE
 	const GOLD := UITheme.GOLD
@@ -1837,6 +1838,10 @@ class ForgeView extends Control:
 	func _draw() -> void:
 		var font := get_theme_default_font()
 		_draw_forge_bg()
+		# 每關自己的氣氛粒子（stage_style 的 ambient，存在外層舞台上）
+		var amb = get_parent().get("ambient") if get_parent() != null else null
+		if amb is String and amb != "":
+			Ambient.paint(self, amb, size, t)
 		match kind:
 			"forge":
 				_draw_log(font)

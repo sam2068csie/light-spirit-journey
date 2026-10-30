@@ -37,6 +37,11 @@ func level_subtitle() -> String:
 func level_chapters() -> Array:
 	return CHAPTERS3
 
+## 天秤神殿：暖金色的神殿夜空，空中飄著金色微塵
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("231a3a"), "sky_bot": Color("2a1d14"), "scenery": "none", "ambient": "dust"}
+
+
 func bank_slots() -> Array:
 	return Bank3.slots()
 

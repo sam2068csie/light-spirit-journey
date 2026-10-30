@@ -36,7 +36,7 @@ func bank_slots() -> Array:
 	return Bank8.slots()
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0b1230"), "sky_bot": Color("0a1a24"), "scenery": "none"}
+	return {"sky_top": Color("0b1230"), "sky_bot": Color("0a1a24"), "scenery": "none", "ambient": "meteors"}
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．成長與衰退", "button": "進入成長與衰退  ▶",

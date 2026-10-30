@@ -31,7 +31,7 @@ func bank_slots() -> Array:
 	return Bank2.slots()
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("24121f"), "sky_bot": Color("3a1b10"), "scenery": "none"}
+	return {"sky_top": Color("24121f"), "sky_bot": Color("3a1b10"), "scenery": "none"}     # 爐火的火星已經畫在鍛造台背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．大師工坊", "button": "進入大師工坊  ▶",

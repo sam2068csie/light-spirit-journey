@@ -43,7 +43,7 @@ func bank_slots() -> Array:
 	return Bank4.slots()
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("1c1233"), "sky_bot": Color("0f1a2e"), "scenery": "none"}
+	return {"sky_top": Color("1c1233"), "sky_bot": Color("0f1a2e"), "scenery": "none", "ambient": "motes"}
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．大師的配方", "button": "進入大師的配方  ▶",

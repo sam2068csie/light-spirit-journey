@@ -34,7 +34,7 @@ func bank_slots() -> Array:
 	return Bank7.slots()
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0b1f2a"), "sky_bot": Color("0a1420"), "scenery": "none"}
+	return {"sky_top": Color("0b1f2a"), "sky_bot": Color("0a1420"), "scenery": "none", "ambient": "currents"}
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．極值羅盤", "button": "進入極值羅盤  ▶",
