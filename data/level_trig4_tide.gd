@@ -284,6 +284,13 @@ static func _knob_vals(k: Dictionary) -> Array:
 
 
 func _knob_text(k: Dictionary, real: float) -> String:
+	if k.has("names"):
+		# 指定了每一格要顯示的字（例如斜率 1/π）
+		var vals: Array = k.vals
+		var mul: float = PI if String(k.get("unit", "")) == "pi" else 1.0
+		for i in vals.size():
+			if absf(float(vals[i]) * mul - real) < 1e-9:
+				return String(k.names[i])
 	if String(k.get("unit", "")) == "pi":
 		return TideView.pi_text(real)
 	if String(k.get("fmt", "dec")) == "frac":
@@ -366,7 +373,9 @@ func _build_dial(st: Dictionary) -> void:
 	tv.task_q = String(st.q)
 	tv.matched = false
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if _knobs.size() < 3:
+	if st.get("hide_target", false) and not st.has("dots"):
+		_tip("沒有目標可以對：自己判斷旋鈕要調到多少，畫好了按「確定」。")
+	elif _knobs.size() < 3:
 		_tip("拖動旋鈕（或按 ‹ › 微調），讓你的波和金色的目標重合。")
 	_refresh_dial()
 
@@ -379,14 +388,29 @@ func _refresh_dial() -> void:
 	var fn := String(st.get("fn", "sin"))
 	var v := String(st.get("var", "x"))
 	var c: Dictionary = tv.cur
-	dial_fx.text = TideView.ftext(fn, c.a, c.b, c.c, c.d, v)
-	dial_sub.text = TideView.decomp(fn, c.a, c.b, c.c, c.d)
+	if fn == "line":
+		dial_fx.text = TideView.ltext(c.a, c.d, String(st.get("slope_txt", "")), _slope_name(st, c.a))
+		dial_sub.text = "斜率 %s　y 截距 %s" % [_slope_name(st, c.a), TideView.dec(c.d)]
+	else:
+		dial_fx.text = TideView.ftext(fn, c.a, c.b, c.c, c.d, v)
+		dial_sub.text = TideView.decomp(fn, c.a, c.b, c.c, c.d)
 	tv.matched = _dial_match(st, c)
 	tv.queue_redraw()
 
 
+## 直線斜率旋鈕的顯示文字
+func _slope_name(st: Dictionary, m: float) -> String:
+	for k in st.knobs:
+		if String(k.p) == "a":
+			return _knob_text(k, m)
+	return TideView.dec(m)
+
+
 func _dial_match(st: Dictionary, c: Dictionary) -> bool:
 	var fn := String(st.get("fn", "sin"))
+	if fn == "line":
+		var tl: Dictionary = st.target
+		return absf(float(c.a) - float(tl.a)) < 1e-9 and absf(float(c.d) - float(tl.d)) < 1e-9
 	if st.has("dots"):
 		var u := 1.0 if String(st.view.get("xu", "pi")) == "num" else PI
 		var cv := {"f": fn, "a": c.a, "b": c.b, "c": c.c, "d": c.d}
@@ -415,6 +439,8 @@ func _dial_submit() -> void:
 		if not st.get("no_keep", false):
 			var cv := {"f": String(st.get("fn", "sin")), "a": tg.a, "b": tg.b, "c": tg.c, "d": tg.d,
 				"col": TIDE, "label": TideView.ftext(String(st.get("fn", "sin")), tg.a, tg.b, tg.c, tg.d, String(st.get("var", "x")))}
+			if String(st.get("fn", "")) == "line":
+				cv = {"f": "line", "m": tg.a, "k": tg.d, "col": UITheme.PINK_LIGHT, "label": String(st.get("line_label", ""))}
 			keep = st.view.duplicate()
 			keep["kind"] = "tide"
 			keep["curves"] = [cv]
@@ -448,6 +474,12 @@ func _dial_diag(st: Dictionary, c: Dictionary) -> Array:
 	for k in st.knobs:
 		active[k.p] = true
 	var fn := String(st.get("fn", "sin"))
+	if fn == "line":
+		if absf(float(c.a) - float(tg.a)) > 1e-9:
+			out.append("斜率不對：直線每往右走一格，要升高多少？")
+		if active.has("d") and absf(float(c.d) - float(tg.d)) > 1e-9:
+			out.append("高度不對：直線和 y 軸交在哪裡？")
+		return out
 	if active.has("a"):
 		if absf(absf(float(c.a)) - absf(float(tg.a))) > 1e-6:
 			out.append("高低（振幅）還不對：你的波比目標%s。" % ("矮" if absf(float(c.a)) < absf(float(tg.a)) else "高"))
@@ -1019,6 +1051,27 @@ class TideView extends MoonView:
 			s += (" + " if d > 0.0 else " − ") + dec(absf(d))
 		return s
 
+	## 直線 y = mx + k 的文字；mt 是斜率的寫法（例如 1/π）
+	static func ltext(m: float, k: float, _unused: String, mt: String) -> String:
+		var s := "y = "
+		if absf(m) < 1e-12:
+			return s + dec(k)
+		if mt == "1":
+			s += "x"
+		elif mt == "−1":
+			s += "−x"
+		elif mt.contains("/"):
+			var neg := mt.begins_with("−")
+			var core := mt.substr(1) if neg else mt
+			var parts := core.split("/")
+			var num := "x" if parts[0] == "1" else parts[0] + "x"
+			s += ("−" if neg else "") + num + "/" + parts[1]
+		else:
+			s += mt + "x"
+		if absf(k) > 1e-12:
+			s += (" + " if k > 0.0 else " − ") + dec(absf(k))
+		return s
+
 	## 「振幅、週期、平移、中線」四個數字（一行）
 	static func decomp(fn: String, a: float, b: float, c: float, d: float) -> String:
 		var per := (PI if fn == "tan" else TAU) / absf(b)
@@ -1257,6 +1310,11 @@ class TideView extends MoonView:
 		if spec.get("base", false):
 			curves.append({"f": fn, "a": 1.0, "b": 1.0, "c": 0.0, "d": 0.0, "col": Color(1, 1, 1, 0.3)})
 			legend.append(["y = %s x" % fn, Color(1, 1, 1, 0.5)])
+		# 同一張圖上先前畫好的曲線（作圖求解：先畫三角函數，再在同一張圖上畫直線）
+		for uc in spec.get("under", []):
+			curves.append(uc)
+			if String(uc.get("label", "")) != "":
+				legend.append([String(uc.label), uc.col])
 		if spec.has("target") and not spec.get("hide_target", false) and not spec.has("dots"):
 			var tc: Dictionary = spec.target.duplicate()
 			tc["f"] = fn
@@ -1268,8 +1326,10 @@ class TideView extends MoonView:
 		pc["f"] = fn
 		pc["col"] = UITheme.GOOD if matched else (UITheme.CYAN if fn == "sin" else UITheme.VIOLET_LIGHT)
 		pc["aid"] = spec.get("aid", true)
+		if fn == "line":
+			pc = {"f": "line", "m": cur.a, "k": cur.d, "col": UITheme.GOOD if matched else UITheme.PINK_LIGHT}
 		curves.append(pc)
-		legend.append(["你的波", pc.col])
+		legend.append(["你的直線" if fn == "line" else "你的波", pc.col])
 		var g: Dictionary = spec.view.duplicate()
 		g["curves"] = curves
 		g["legend"] = legend
