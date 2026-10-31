@@ -506,8 +506,21 @@ func _tiles_submit() -> void:
 
 # ================= lines：兩直線夾角 =================
 
+## 鉛直線（斜率不存在）用一個很大的數代表
+const VERT := 1.0e6
+
+static func is_vert(m: float) -> bool:
+	return absf(m) >= VERT * 0.5
+
+
+static func slope_txt(m: float) -> String:
+	return "不存在" if is_vert(m) else TideView.fr(m)
+
+
 static func line_theta(m1: float, m2: float) -> float:
-	var t := absf(atan(m1) - atan(m2))
+	var a1 := PI / 2.0 if is_vert(m1) else atan(m1)
+	var a2 := PI / 2.0 if is_vert(m2) else atan(m2)
+	var t := absf(a1 - a2)
 	if t > PI / 2.0:
 		t = PI - t
 	return t
@@ -553,12 +566,12 @@ func _build_lines(st: Dictionary) -> void:
 	vl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	vl.add_theme_color_override("font_color", UITheme.PINK_LIGHT)
 	row.add_child(vl)
-	vl.text = TideView.fr(float(vals[i0]))
+	vl.text = slope_txt(float(vals[i0]))
 	s.value_changed.connect(func(v: float):
 		if busy:
 			return
 		_cv2().line_m = float(vals[int(v)])
-		vl.text = TideView.fr(float(vals[int(v)]))
+		vl.text = slope_txt(float(vals[int(v)]))
 		MoonView.dragged_ever = true
 		Game.of(self).play("blip", 0.8 + 0.03 * v, -18.0)
 		_refresh_lines())
@@ -584,6 +597,10 @@ func _refresh_lines() -> void:
 	var found := "　已找到 %d／%d 條" % [tv.found.size(), n] if n > 1 else ""
 	if absf(m1 - m2) < 1e-9:
 		lines_info.text = "L₂ 和 L₁ 重合（夾角 0）%s" % found
+	elif is_vert(m2):
+		# 鉛直線：斜率不存在，不能代公式；夾角 = 90° − L₁ 的傾斜角，tan θ = 1 ÷ |m₁|
+		var tv2 := "不存在（θ = 90°）" if absf(m1) < 1e-9 else TideView.fr(1.0 / absf(m1))
+		lines_info.text = "L₂ 是鉛直線（斜率不存在）\ntan θ = 1 ÷ |%s| = %s%s" % [TideView.fr(m1), tv2, found]
 	else:
 		var den := 1.0 + m1 * m2
 		var t := absf((m2 - m1) / den) if absf(den) > 1e-9 else INF
@@ -602,11 +619,11 @@ func _lines_submit() -> void:
 	var th := line_theta(m1, m2)
 	var want := atan(float(st.tan))
 	if absf(m1 - m2) < 1e-9 or absf(th - want) > 1e-6:
-		var shown := "重合" if absf(m1 - m2) < 1e-9 else "tan θ = %s" % TideView.fr(tan(th))
+		var shown := "重合" if absf(m1 - m2) < 1e-9 else ("θ = 90°" if absf(th - PI / 2.0) < 1e-9 else "tan θ = %s" % TideView.fr(tan(th)))
 		_wrong(st, "這條直線的夾角不對（%s），目標是 tan θ = %s。提示：%s" % [shown, TideView.fr(float(st.tan)), String(st.nudge)])
 		return
 	for f in tv.found:
-		if absf(float(f) - m2) < 1e-9:
+		if absf(float(f) - m2) < 1e-9 or (is_vert(float(f)) and is_vert(m2)):
 			_hint("這條已經找到了，再找找另一條！", "info")
 			return
 	tv.found.append(m2)
@@ -915,14 +932,18 @@ class CompassView extends TideView:
 		var g := {"x": [px - 4.0, px + 4.0], "y": [py - 4.0, py + 4.0], "xu": "num", "xt": 1.0, "yt": 1.0, "area": area, "curves": []}
 		var same := absf(m1 - m2) < 1e-9
 		g.curves.append({"f": "line", "m": m1, "k": py - m1 * px, "col": UITheme.CYAN})
-		if not same:
+		var vert := absf(m2) >= 5.0e5
+		if not same and not vert:
 			g.curves.append({"f": "line", "m": m2, "k": py - m2 * px, "col": UITheme.PINK_LIGHT})
 		_plot(font, rc, g, true)
 		var p := _map(area, g, px, py)
+		if vert:
+			# 鉛直線：x = px
+			draw_line(Vector2(p.x, area.position.y), Vector2(p.x, area.end.y), UITheme.PINK_LIGHT, 2.5, true)
 		# 夾角的弧（x、y 的比例一樣，所以看到的角度就是真的角度）
 		if not same:
 			var u1 := Vector2(1.0, -m1).normalized()
-			var u2 := Vector2(1.0, -m2).normalized()
+			var u2 := Vector2(0.0, -1.0) if vert else Vector2(1.0, -m2).normalized()
 			if u1.dot(u2) < 0.0:
 				u2 = -u2
 			var s1 := atan2(u1.y, u1.x)
@@ -933,7 +954,7 @@ class CompassView extends TideView:
 				pts.append(p + Vector2(cos(a), sin(a)) * 38.0)
 			draw_polyline(pts, Color(1, 0.85, 0.35, 0.35), 7.0, true)
 			draw_polyline(pts, UITheme.GOLD, 2.5, true)
-			var th := absf(rad_to_deg(atan(m1) - atan(m2)))
+			var th := absf(rad_to_deg(atan(m1) - (PI / 2.0 if vert else atan(m2))))
 			if th > 90.0:
 				th = 180.0 - th
 			var am := s1 + dl / 2.0
@@ -945,7 +966,7 @@ class CompassView extends TideView:
 		var x0 := rc.position.x + 310.0
 		var y := rc.position.y + 70.0
 		MathLabel.draw_on(self, font, x0 + 100.0, y, "L₁：斜率 %s" % fr(m1), UITheme.fs(17), UITheme.CYAN)
-		MathLabel.draw_on(self, font, x0 + 100.0, y + 34.0, "L₂：斜率 %s" % fr(m2), UITheme.fs(17), UITheme.PINK_LIGHT)
+		MathLabel.draw_on(self, font, x0 + 100.0, y + 34.0, "L₂：斜率 %s" % ("不存在" if vert else fr(m2)), UITheme.fs(17), UITheme.PINK_LIGHT)
 		MathLabel.draw_on(self, font, x0 + 150.0, y + 76.0, "目標：tan θ = %s" % fr(float(spec.tan)), UITheme.fs(17), UITheme.GOLD)
 		for i in found.size():
-			MathLabel.draw_on(self, font, x0 + 120.0, y + 116.0 + 30.0 * i, "✓ 找到：斜率 %s" % fr(float(found[i])), UITheme.fs(15), UITheme.GOOD)
+			MathLabel.draw_on(self, font, x0 + 120.0, y + 116.0 + 30.0 * i, "✓ 找到：" + ("鉛直線（斜率不存在）" if absf(float(found[i])) >= 5.0e5 else "斜率 %s" % fr(float(found[i]))), UITheme.fs(15), UITheme.GOOD)
