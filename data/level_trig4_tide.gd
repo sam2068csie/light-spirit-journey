@@ -731,6 +731,7 @@ func _build_ride(st: Dictionary) -> void:
 		MoonView.dragged_ever = true
 		_refresh_ride())
 	rank_box.add_child(ride_btn)
+	ride_btn.visible = false          # 不需要自動播放：學生自己拖時間找答案
 	_tip("拖動時間（或直接拖右邊的圖），找到了就按「確定」。")
 	tv.mode = "ride"
 	tv.spec = st
