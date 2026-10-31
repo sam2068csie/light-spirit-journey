@@ -623,6 +623,8 @@ func _fit_side() -> void:
 
 ## 右邊卡片捲到看得見這個元件（版面要等一個畫格才量好）
 func _scroll_to(c: Control) -> void:
+	if not is_inside_tree():
+		return          # 換畫面的瞬間：已經離開場景，不用捲了
 	await get_tree().process_frame
 	if is_instance_valid(side_scroll) and is_instance_valid(c) and c.is_visible_in_tree():
 		side_scroll.ensure_control_visible(c)

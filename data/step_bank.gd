@@ -166,5 +166,21 @@ static func root_markup(s: String) -> String:
 		_re_paren.compile("√\\(([^()]*)\\)")
 		_re_num = RegEx.new()
 		_re_num.compile("√(\\d+)")
-	s = _re_paren.sub(s, "√{$1}", true)
+	# √( … ) 裡面可以再有括號（例如 √((1 + cos θ) ÷ 2)）：找配對的右括號
+	var i := s.find("√(")
+	while i >= 0:
+		var d := 0
+		var j := i + 1
+		while j < s.length():
+			if s[j] == "(":
+				d += 1
+			elif s[j] == ")":
+				d -= 1
+				if d == 0:
+					break
+			j += 1
+		if j >= s.length():
+			break
+		s = s.substr(0, i) + "√{" + s.substr(i + 2, j - i - 2) + "}" + s.substr(j + 1)
+		i = s.find("√(", i + 1)
 	return _re_num.sub(s, "√{$1}", true)

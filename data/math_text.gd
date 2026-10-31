@@ -1036,6 +1036,12 @@ static func _tok_fwd(s: String, k: int) -> int:
 	elif _is_tok(c):
 		while e < s.length() and _is_tok(s[e]):
 			e += 1
+		# 函數名稱後面緊接著括號：sin(θ/2) ÷ cos(θ/2) 的分母是整個 cos(θ/2)
+		var word := s.substr(k, e - k)
+		if word in ["sin", "cos", "tan", "cot", "sec", "csc"] and e < s.length() and s[e] == "(":
+			var mf := _match_fwd(s, e)
+			if mf > 0:
+				e = mf + 1
 	else:
 		return k
 	# 後面接著的上下標也算進來：x^{2}、x_{1}
@@ -1070,12 +1076,18 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 		var sz: float = o.size
 		var base: float = o.pos.y + off.y
 		var top := base - sz * 0.86
+		var low := sz * 0.06
 		var x_end: float = o.pos.x + off.x + o.w
 		for g in glyphs:
 			if not g.rads.has(rid):
 				continue
 			x_end = maxf(x_end, g.pos.x + off.x + g.w)
 			top = minf(top, g.pos.y + off.y - g.size * 0.86)
+			if g.has("frac"):
+				# 根號裡面是直式分數：槓要畫在分子上面，勾要伸到分母下面
+				var fe := frac_extent(g.frac, g.size)
+				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.1)
+				low = maxf(low, fe.y)
 			if g.rad >= 0 and bar_y.has(g.rad):
 				top = minf(top, bar_y[g.rad] - maxf(4.0, sz * 0.18))
 		bar_y[rid] = top
@@ -1089,7 +1101,7 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 		var pts := PackedVector2Array([
 			Vector2(x0 + w * 0.04, base - sz * 0.30),
 			Vector2(x0 + w * 0.24, base - sz * 0.38),
-			Vector2(x0 + w * 0.50, base + sz * 0.06),
+			Vector2(x0 + w * 0.50, base + low),
 			Vector2(x0 + w * 0.88, top),
 			Vector2(x_end + sz * 0.05, top)])
 		ci.draw_polyline(pts, o.color, lw, true)

@@ -1601,6 +1601,8 @@ class ForgeView extends Control:
 			var e := _extra(eql[k], _eq_fs(eql[k]))
 			if k > 0:
 				y += 38.0 + _extra(eql[k - 1], _eq_fs(eql[k - 1])).y
+				if eql[k].begins_with("表|") and not eql[k - 1].begins_with("表|"):
+					y += 8.0          # 表格和上面的標題空一點
 			y += e.x
 		return y
 
@@ -1875,6 +1877,40 @@ class ForgeView extends Control:
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
 
+	## 表格的一列：題目裡寫成「表|標題|值1|值2…」，連續幾行就是一張表（第一列的標題格比較亮）
+	const TABLE_ROW_H := 38.0
+	func _draw_table_row(font: Font, i: int, rev: float) -> void:
+		var eql := _eq_lines()
+		var cells := eql[i].substr(2).split("|")
+		var first := i == 0 or not eql[i - 1].begins_with("表|")
+		var n := cells.size() - 1
+		var x0 := 26.0
+		var w_all := size.x - 52.0
+		var head_w := minf(130.0, w_all * 0.24)
+		var cw := (w_all - head_w) / maxf(1.0, float(n))
+		var top := _eq_y(i) - 27.0
+		var fs := UITheme.fs(17)
+		var a := 1.0 if rev < 0.0 else clampf(rev / 4.0, 0.0, 1.0)
+		var line_c := Color(1, 0.85, 0.6, 0.35 * a)
+		draw_rect(Rect2(x0, top, head_w, TABLE_ROW_H), Color(1, 0.8, 0.5, 0.12 * a))
+		if first:
+			draw_line(Vector2(x0, top), Vector2(x0 + w_all, top), line_c, 1.0)
+		draw_line(Vector2(x0, top + TABLE_ROW_H), Vector2(x0 + w_all, top + TABLE_ROW_H), line_c, 1.0)
+		for k in n + 2:
+			var x := x0 if k == 0 else x0 + head_w + cw * (k - 1)
+			draw_line(Vector2(x, top), Vector2(x, top + TABLE_ROW_H), line_c, 1.0)
+		var base := top + TABLE_ROW_H / 2.0 + fs * 0.36
+		MathLabel.draw_on(self, font, x0 + head_w / 2.0, base, cells[0], _fit_cell(font, cells[0], fs, head_w - 8.0), Color(1, 0.9, 0.7, a))
+		for k in n:
+			MathLabel.draw_on(self, font, x0 + head_w + cw * (k + 0.5), base, cells[k + 1], _fit_cell(font, cells[k + 1], fs, cw - 6.0),
+				Color(GOLD.r, GOLD.g, GOLD.b, a))
+
+	func _fit_cell(font: Font, markup: String, fs: int, room: float) -> int:
+		var w := _mw(font, markup, fs)
+		if w <= room or w <= 0.0:
+			return fs
+		return maxi(UITheme.fs(11), int(floor(fs * room / w)))
+
 	## 鍛造紀錄：原方程式＋每一步寫下的算式
 	func _draw_log(font: Font) -> void:
 		var cx := size.x / 2.0
@@ -1887,6 +1923,10 @@ class ForgeView extends Control:
 			acc += MathLabel.glyph_count(eql[i])
 			if intro >= 0.0 and rev <= 0.0:
 				break
+			# 「表|標題|值|值…」開頭的行畫成表格的一列（例如潮汐表）
+			if eql[i].begins_with("表|"):
+				_draw_table_row(font, i, rev)
+				continue
 			# 括號開頭的那一行是給的數值（例如 log 2 ≈ 0.3010）：字小一點、顏色淡一點
 			var given := eql[i].begins_with("（")
 			MathLabel.draw_on(self, font, cx, _eq_y(i) - (4.0 if given else 0.0), eql[i],
@@ -2160,10 +2200,17 @@ class ForgeView extends Control:
 		var pop := clampf(1.0 - (t - hit_t) / 0.3, 0.0, 1.0)
 		var y := size.y * 0.42
 		draw_string(font, Vector2(0, y - 70), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
-		MathLabel.draw_on(self, font, cx + shake, y, sp_eq, _fit_fs(font, sp_eq, UITheme.fs(40)), Color(1, 0.97, 0.9))
+		# 題目可以有兩行：第一行是式子（大字），第二行是問句（小一點）
+		var sl := sp_eq.split("\n")
+		MathLabel.draw_on(self, font, cx + shake, y, sl[0], _fit_fs(font, sl[0], UITheme.fs(40)), Color(1, 0.97, 0.9))
+		var y_after := y + 70.0
+		if sl.size() > 1:
+			var q2 := "\n".join(sl.slice(1))
+			MathLabel.draw_on(self, font, cx + shake, y + 62.0, q2, _fit_fs(font, q2, UITheme.fs(24)), Color(1, 0.92, 0.75))
+			y_after = y + 120.0
 		if streak >= 2:
 			var fc := GOLD if streak >= 4 else FIRE
-			draw_string(font, Vector2(0, y + 70), "連對 ×%d" % streak, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(24 + 8 * pop),
+			draw_string(font, Vector2(0, y_after), "連對 ×%d" % streak, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(24 + 8 * pop),
 				Color(fc.r, fc.g, fc.b, 0.9))
 
 	## 參數調頻：大張的 t 平面

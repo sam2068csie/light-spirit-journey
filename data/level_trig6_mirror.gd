@@ -587,10 +587,10 @@ class MirrorView extends CompassView:
 			y = _line_text(font, x0, y, w, "= %s − %s = %s" % [dec3(cp * cp), dec3(sp * sp), dec3(cos(th))], 15, gold)
 		else:
 			y = _line_text(font, x0, y, w, "θ = 2φ = %s°" % dec(phd * 2.0), 16, gold)
-			y = _line_text(font, x0, y, w, "sin²φ = ½(1 − cos θ)", 15, Color(0.9, 0.95, 1.0))
-			y = _line_text(font, x0, y, w, "= ½(1 − %s) = %s" % [pn(cos(th)), dec3(sp * sp)], 15, gold)
-			y = _line_text(font, x0, y + 2.0, w, "cos²φ = ½(1 + cos θ)", 15, Color(0.9, 0.95, 1.0))
-			y = _line_text(font, x0, y, w, "= ½(1 + %s) = %s" % [pn(cos(th)), dec3(cp * cp)], 15, gold)
+			y = _line_text(font, x0, y, w, "sin²φ = \\frac{1}{2}(1 − cos θ)", 15, Color(0.9, 0.95, 1.0))
+			y = _line_text(font, x0, y, w, "= \\frac{1}{2}(1 − %s) = %s" % [pn(cos(th)), dec3(sp * sp)], 15, gold)
+			y = _line_text(font, x0, y + 2.0, w, "cos²φ = \\frac{1}{2}(1 + cos θ)", 15, Color(0.9, 0.95, 1.0))
+			y = _line_text(font, x0, y, w, "= \\frac{1}{2}(1 + %s) = %s" % [pn(cos(th)), dec3(cp * cp)], 15, gold)
 		# 接近度：離目標還差多少
 		if spec.has("target"):
 			var d := absf(fposmod(deg_to_rad(float(spec.target)) - th + PI, TAU) - PI)

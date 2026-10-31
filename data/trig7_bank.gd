@@ -289,9 +289,9 @@ static func _slots() -> Array:
 			 "steps": [
 				_f("求 r", "r = √(a² + b²)。", "r = [0]", ["25"],
 					"r = √(49 + 576) = 25", "7² + 24² = 625。", T_NONSP),
-				_f("cos φ、sin φ", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = [0]，sin φ = [1]", ["7/25", "24/25"],
+				_f("cos φ、sin φ", "疊合成 f(x) = 25 sin(x + φ)，其中 cos φ = a ÷ r、sin φ = b ÷ r。", "cos φ = [0]，sin φ = [1]", ["7/25", "24/25"],
 					"cos φ = 7/25、sin φ = 24/25（φ 在第一象限）", "7 ÷ 25、24 ÷ 25。", T_NONSP),
-				_f("最亮的時候", "x + φ = 90°，所以 sin x = cos φ，cos x = sin φ。", "最大值 = [0]，sin x = [1]，cos x = [2]",
+				_f("最亮的時候", "sin(x + φ) = 1 時最大：取 x + φ = 90°，x = 90° − φ，所以 sin x = cos φ，cos x = sin φ。", "最大值 = [0]，sin x = [1]，cos x = [2]",
 					["25", "7/25", "24/25"], "最大值 25；sin x = 7/25、cos x = 24/25", "sin(90° − φ) = cos φ。", T_NONSP),
 			 ]},
 			{"eq": "f(x) = 8 cos x − 15 sin x\n求最大值，並求最大時的 sin x、cos x",

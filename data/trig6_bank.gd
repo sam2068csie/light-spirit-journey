@@ -191,8 +191,8 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "合併、求值：\nsin 15°cos 15° 等",
 			 "steps": [
-				_f("sin 的合併", "sin 15°cos 15° = ½ × 2 sin 15°cos 15° = ½ sin 30°。", "sin 15°cos 15° = [0]", ["1/4"],
-					"= ½ sin 30° = 1/4", "½ × ½。", T_MERGE2),
+				_f("sin 的合併", "sin 15°cos 15° = \\frac{1}{2} × 2 sin 15°cos 15° = \\frac{1}{2} sin 30°。", "sin 15°cos 15° = [0]", ["1/4"],
+					"= \\frac{1}{2} sin 30° = 1/4", "\\frac{1}{2} × \\frac{1}{2}。", T_MERGE2),
 				_f("cos 的合併", "cos²15° − sin²15° = cos 30°。", "cos²15° − sin²15° = [0]", ["√3/2"],
 					"= cos 30° = √3/2", "cos 30° = √3/2。", T_MERGE2),
 				_f("降冪合併", "2cos²22.5° − 1 = cos 45°。", "2cos²22.5° − 1 = [0]", ["√2/2"],
@@ -214,7 +214,7 @@ static func _slots() -> Array:
 				_f("cos 的合併", "cos²75° − sin²75° = cos 150°。", "cos²75° − sin²75° = [0]", ["-√3/2"],
 					"= cos 150° = −√3/2", "cos 150° = −√3/2。", T_MERGE2),
 				_f("sin 的合併", "4 sin 15°cos 15° = 2 sin 30°。", "4 sin 15°cos 15° = [0]", ["1"],
-					"= 2 sin 30° = 1", "2 × ½。", T_MERGE2),
+					"= 2 sin 30° = 1", "2 × \\frac{1}{2}。", T_MERGE2),
 			 ]},
 		 ]},
 
@@ -242,8 +242,8 @@ static func _slots() -> Array:
 					"tan 2θ = 2 tan θ ÷ (1 − tan θ tan θ)", "(2 × tan θ) ÷ (1 − tan θ × tan θ)。", T_DBL),
 				_f("tan 2θ", "tan θ = 1/2：", "tan 2θ = [0]", ["4/3"],
 					"(2 × 1/2) ÷ (1 − 1/4) = 1 ÷ (3/4) = 4/3", "1 − 1/4 = 3/4。", T_DBL),
-				_f("合併", "sin 15°cos 15° = ½ sin 30°。", "sin 15°cos 15° = [0]", ["1/4"],
-					"= ½ sin 30° = 1/4", "½ × ½。", T_MERGE2),
+				_f("合併", "sin 15°cos 15° = \\frac{1}{2} sin 30°。", "sin 15°cos 15° = [0]", ["1/4"],
+					"= \\frac{1}{2} sin 30° = 1/4", "\\frac{1}{2} × \\frac{1}{2}。", T_MERGE2),
 			 ]},
 		 ]},
 
@@ -291,7 +291,7 @@ static func _slots() -> Array:
 
 		{"id": "halfq", "chapter": 2, "type": "forge", "title": "半角的象限",
 		 "story": "半角公式開根號要選正負。θ 在哪個範圍，θ/2 就在哪個範圍的一半——拖動 θ 看看 θ/2 掉在哪裡。",
-		 "insight": "先把 θ 的範圍除以 2，得到 θ/2 的範圍（在哪個象限），再決定 sin(θ/2)、cos(θ/2)、tan(θ/2) 的正負；大小用 |sin(θ/2)| = \\sqrt{\\frac{1 − cos θ}{2}}、|cos(θ/2)| = \\sqrt{\\frac{1 + cos θ}{2}}。同樣的 cos θ，θ 的象限不同，θ/2 的正負也會不同。",
+		 "insight": "先把 θ 的範圍除以 2，得到 θ/2 的範圍（在哪個象限），再決定 sin(θ/2)、cos(θ/2)、tan(θ/2) 的正負；大小用 |sin(θ/2)| = √{\\frac{1 − cos θ}{2}}、|cos(θ/2)| = √{\\frac{1 + cos θ}{2}}。同樣的 cos θ，θ 的象限不同，θ/2 的正負也會不同。",
 		 "variants": [
 			{"eq": "cos θ = −7/25（180° < θ < 270°），\n求 sin(θ/2)、cos(θ/2)、tan(θ/2)",
 			 "steps": [
@@ -336,7 +336,7 @@ static func _slots() -> Array:
 
 		{"id": "deg", "chapter": 2, "type": "forge", "title": "根號化簡",
 		 "story": "1 + sin 2θ 其實是一個完全平方：(sin θ + cos θ)²。開根號時，要看絕對值裡面是正還是負。",
-		 "insight": "1 + sin 2θ = (sin θ + cos θ)²、1 − sin 2θ = (sin θ − cos θ)²，所以 \\sqrt{1 ± sin 2θ} = |sin θ ± cos θ|。去絕對值要判斷範圍內的正負；半角的 \\sqrt{\\frac{1 + cos θ}{2}} = |cos \\frac{θ}{2}|。",
+		 "insight": "1 + sin 2θ = (sin θ + cos θ)²、1 − sin 2θ = (sin θ − cos θ)²，所以 √{1 ± sin 2θ} = |sin θ ± cos θ|。去絕對值要判斷範圍內的正負；半角的 √{\\frac{1 + cos θ}{2}} = |cos \\frac{θ}{2}|。",
 		 "variants": [
 			{"eq": "90° < θ < 135°，化簡\n√(1 + sin 2θ) + √(1 − sin 2θ)",
 			 "steps": [
@@ -409,31 +409,31 @@ static func _slots() -> Array:
 
 		{"id": "prod", "chapter": 2, "type": "forge", "title": "連乘積",
 		 "story": "cos 20° cos 40° cos 80° 怎麼算？乘上一個 sin 20°，就能一路用二倍角公式合併下去。",
-		 "insight": "連乘積的招式：乘上最小那個角的 sin，反覆用 sin θ cos θ = ½ sin 2θ，最後出現 sin 20° 就能和開頭消掉。最後別忘了把乘上的 sin 除回去。",
+		 "insight": "連乘積的招式：乘上最小那個角的 sin，反覆用 sin θ cos θ = \\frac{1}{2} sin 2θ，最後出現 sin 20° 就能和開頭消掉。最後別忘了把乘上的 sin 除回去。",
 		 "variants": [
 			{"eq": "求 cos 36° cos 72°",
 			 "steps": [
-				_f("第一次合併", "兩邊乘 sin 36°：sin 36° cos 36° = ½ sin 72°。", "sin 36°cos 36° = ½ sin [0]°", ["72"],
-					"sin 36° cos 36° = ½ sin 72°", "2 × 36°。", T_PROD),
-				_f("第二次合併", "再接著：sin 72° cos 72° = ½ sin 144°。", "sin 72°cos 72° = ½ sin [0]°", ["144"],
-					"sin 72° cos 72° = ½ sin 144°", "2 × 72°。", T_PROD),
+				_f("第一次合併", "兩邊乘 sin 36°：sin 36° cos 36° = \\frac{1}{2} sin 72°。", "sin 36°cos 36° = \\frac{1}{2} sin [0]°", ["72"],
+					"sin 36° cos 36° = \\frac{1}{2} sin 72°", "2 × 36°。", T_PROD),
+				_f("第二次合併", "再接著：sin 72° cos 72° = \\frac{1}{2} sin 144°。", "sin 72°cos 72° = \\frac{1}{2} sin [0]°", ["144"],
+					"sin 72° cos 72° = \\frac{1}{2} sin 144°", "2 × 72°。", T_PROD),
 				_f("轉回 36°", "sin 144° = sin(180° − 36°)。", "sin 144° = sin [0]°", ["36"],
 					"sin 144° = sin 36°", "180° − 144°。", T_PROD),
-				_f("結果", "sin 36° × (cos 36° cos 72°) = ½ × ½ sin 144° = ¼ sin 36°，兩邊同除 sin 36°。", "cos 36° cos 72° = [0]", ["1/4"],
-					"cos 36° cos 72° = 1/4", "¼ sin 36° ÷ sin 36°。", T_PROD),
+				_f("結果", "sin 36° × (cos 36° cos 72°) = \\frac{1}{2} × \\frac{1}{2} sin 144° = \\frac{1}{4} sin 36°，兩邊同除 sin 36°。", "cos 36° cos 72° = [0]", ["1/4"],
+					"cos 36° cos 72° = 1/4", "\\frac{1}{4} sin 36° ÷ sin 36°。", T_PROD),
 			 ]},
 			{"eq": "求 cos 20° cos 40° cos 80°",
 			 "steps": [
-				_f("第一次", "兩邊乘 sin 20°：sin 20° cos 20° = ½ sin ？", "sin 20°cos 20° = ½ sin [0]°", ["40"],
-					"= ½ sin 40°", "2 × 20°。", T_PROD),
-				_f("第二次", "sin 40° cos 40° = ½ sin ？", "sin 40°cos 40° = ½ sin [0]°", ["80"],
-					"= ½ sin 80°", "2 × 40°。", T_PROD),
-				_f("第三次", "sin 80° cos 80° = ½ sin ？", "sin 80°cos 80° = ½ sin [0]°", ["160"],
-					"= ½ sin 160°", "2 × 80°。", T_PROD),
+				_f("第一次", "兩邊乘 sin 20°：sin 20° cos 20° = \\frac{1}{2} sin ？", "sin 20°cos 20° = \\frac{1}{2} sin [0]°", ["40"],
+					"= \\frac{1}{2} sin 40°", "2 × 20°。", T_PROD),
+				_f("第二次", "sin 40° cos 40° = \\frac{1}{2} sin ？", "sin 40°cos 40° = \\frac{1}{2} sin [0]°", ["80"],
+					"= \\frac{1}{2} sin 80°", "2 × 40°。", T_PROD),
+				_f("第三次", "sin 80° cos 80° = \\frac{1}{2} sin ？", "sin 80°cos 80° = \\frac{1}{2} sin [0]°", ["160"],
+					"= \\frac{1}{2} sin 160°", "2 × 80°。", T_PROD),
 				_f("轉回 20°", "sin 160° = sin(180° − 160°)。", "sin 160° = sin [0]°", ["20"],
 					"sin 160° = sin 20°", "180° − 160°。", T_PROD),
 				_f("結果", "sin 20° × (cos 20° cos 40° cos 80°) = ⅛ sin 20°。", "cos 20° cos 40° cos 80° = [0]", ["1/8"],
-					"= 1/8", "½ × ½ × ½。", T_PROD),
+					"= 1/8", "\\frac{1}{2} × \\frac{1}{2} × \\frac{1}{2}。", T_PROD),
 			 ]},
 			{"eq": "求 sin 10° sin 50° sin 70°",
 			 "steps": [
@@ -501,7 +501,7 @@ static func _slots() -> Array:
 
 		{"id": "boss2", "chapter": 2, "type": "forge", "title": "大師試煉", "time": 300.0,
 		 "story": "限時 300 秒！掃範圍、定正負、以切表弦，把半角和倍角全部用上。",
-		 "insight": "半角：先看 θ/2 的象限定正負，再用 \\sqrt{\\frac{1 ± cos θ}{2}} 求大小；只知道 tan：以切表弦。",
+		 "insight": "半角：先看 θ/2 的象限定正負，再用 √{\\frac{1 ± cos θ}{2}} 求大小；只知道 tan：以切表弦。",
 		 "variants": [
 			{"eq": "cos θ = 7/25（270° < θ < 360°），\n求 sin(θ/2) 與 tan(θ/2)",
 			 "steps": [

@@ -273,7 +273,11 @@ func _rot_submit() -> void:
 	var diff: bool = String(st.mode) == "diff"
 	var res: float = tv.rot_a - tv.rot_b if diff else tv.rot_a + tv.rot_b
 	var sym := "α − β" if diff else "α + β"
-	if absf(fposmod(res - float(st.target) + 180.0, 360.0) - 180.0) > 1e-6:
+	var off := absf(fposmod(res - float(st.target) + 180.0, 360.0) - 180.0)
+	if st.get("abs", false):
+		# ∠AOB 是兩根指針夾的角：α − β = −90° 和 90° 是同一個角
+		off = minf(off, absf(fposmod(-res - float(st.target) + 180.0, 360.0) - 180.0))
+	if off > 1e-6:
 		_wrong(st, "現在 %s = %s°，目標是 %d°。提示：%s" % [sym, _dg(res), roundi(float(st.target)), String(st.nudge)])
 		return
 	var al: Array = st.get("alphas", [])
@@ -589,7 +593,7 @@ static func _gen_compass() -> Dictionary:
 		for sg in [1.0, -1.0]:
 			if absf(_trig(f, deg_to_rad(res)) - sg * float(cand[0])) < 1e-6:
 				ans = ("−" if sg < 0.0 and cand[1] != "0" else "") + String(cand[1])
-	return {"eq": e, "q": "合併成一個角，求值。", "template": "[0]", "ans": ans,
+	return {"eq": e, "q": "合併成一個角，求值。", "template": "原式 = [0]", "ans": ans,
 		"nudge": "看符號和順序：合併成 %s(%s)。" % [f, ("%d° %s %d°" % [a, "+" if kind % 2 == 0 else "−", b])],
 		"tag": BankG5.T_MERGE}
 

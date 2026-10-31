@@ -887,8 +887,11 @@ static func _gen_tide() -> Dictionary:
 	var b: Array = bs.pick_random()
 	var a: int = [1, 2, 3, 4, 5, -1, -2, -3].pick_random()
 	var d: int = randi_range(-3, 4)
-	var cn: int = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5].pick_random()
-	var cd: int = [2, 3, 4, 6].pick_random()
+	# c 只用最簡分數、−π < c < π（不會出現 −2π 這種等於沒平移的寫法）
+	var cs := [[1, 6], [1, 4], [1, 3], [1, 2], [2, 3], [3, 4], [5, 6]]
+	var cp: Array = cs.pick_random()
+	var cn: int = int(cp[0]) * (1 if randf() < 0.5 else -1)
+	var cd: int = int(cp[1])
 	var bv := float(b[0]) / float(b[1])
 	var cv := PI * float(cn) / float(cd)
 	var eq := TideView.ftext(fn, float(a), bv, cv, float(d), "x")
@@ -899,7 +902,9 @@ static func _gen_tide() -> Dictionary:
 				"nudge": "2π ÷ x 的係數 b；平移和高低都不影響週期。", "tag": BankG4.T_FREQ}
 		1:
 			# 向右平移量 = −c/b（π 的倍數）
-			return {"eq": eq + " 的圖形，比 y = %s bx 向右平移多少？" % fn,
+			# 寫出「沒有平移」的那一條（同樣的 a、b、d），比較清楚是跟誰比
+			var base := TideView.ftext(fn, float(a), bv, 0.0, float(d), "x")
+			return {"eq": eq + "\n的圖形，比 " + base + " 的圖形向右平移多少？",
 				"q": "平移量（向右為正、向左為負）。", "template": "平移 = [0]π",
 				"ans": _frac(-cn * int(b[1]), cd * int(b[0])),
 				"nudge": "先把括號提出 b：sin(bx + c) = sin b(x + c/b)，平移量是 −c/b。", "tag": BankG4.T_SHIFT}
@@ -1007,6 +1012,8 @@ class TideView extends MoonView:
 		if absf(c) > 1e-9:
 			arg += (" + " if c > 0.0 else " − ") + pi_text(absf(c))
 		var s := "y = %s%s(%s)" % [co, fn, arg]
+		if absf(c) < 1e-9 and not arg.contains("/"):
+			s = "y = %s%s %s" % [co, fn, arg]       # 沒有平移：sin 2x 不用括號
 		if absf(d) > 1e-9:
 			s += (" + " if d > 0.0 else " − ") + dec(absf(d))
 		return s
@@ -1535,9 +1542,14 @@ class TideView extends MoonView:
 			var ly := area.position.y + 14.0
 			for lg in g.get("legend", []):
 				var lc: Color = lg[1]
+				var lab := String(lg[0])
+				var lfs := UITheme.fs(13)
+				var ext := MathLabel.line_extent(lab, lfs)      # 有分數（直式）的圖例會比較高
+				ly += maxf(0.0, ext.x - lfs * 0.78)
 				draw_line(Vector2(area.position.x + 10.0, ly - 4.0), Vector2(area.position.x + 28.0, ly - 4.0), lc, 3.0)
-				draw_string(font, Vector2(area.position.x + 34.0, ly), String(lg[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(lc.r, lc.g, lc.b, 0.95))
-				ly += 18.0
+				var lw := MathLabel.text_width(font, lab, lfs)
+				MathLabel.draw_on(self, font, area.position.x + 34.0 + lw / 2.0, ly, lab, lfs, Color(lc.r, lc.g, lc.b, 0.95))
+				ly += 18.0 + maxf(0.0, ext.y - lfs * 0.22)
 		else:
 			var lx := rc.position.x + rc.size.x * 0.865
 			var ly2 := rc.position.y + 36.0

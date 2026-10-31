@@ -184,7 +184,7 @@ static func cards(level: String) -> Array:
 				 "pre": [[], [0], [1], [2], [3]],
 				 "done": "完全平方 → 絕對值 → 判斷正負 → 去絕對值。"},
 				{"title": "連乘積與最大最小", "tag": "第二章", "glyph": "∏",
-				 "formulas": ["sin θ cos θ = ?{½ sin 2θ}", "含 cos 2θ 的式子：換成 ?{sin θ（或 cos θ）的二次式}，再配方"],
+				 "formulas": ["sin θ cos θ = ?{\\frac{1}{2} sin 2θ}", "含 cos 2θ 的式子：換成 ?{sin θ（或 cos θ）的二次式}，再配方"],
 				 "notes": ["連乘積：乘上 ?{最小角的 sin}，反覆合併", "t = sin θ（或 cos θ）的範圍：?{−1 ≤ t ≤ 1}"],
 				 "check": {"q": "cos 2θ + 4 sin θ 的最大值？", "opts": ["3", "5", "4"], "a": 0,
 					"why": "1 − 2t² + 4t = −2(t − 1)² + 3，t = 1 時最大 3。", "hint": "令 t = sin θ，cos 2θ = 1 − 2t²。"}},
