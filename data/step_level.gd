@@ -974,6 +974,7 @@ func _filter_submit() -> void:
 
 ## 步驟答錯：扣能量、記錄錯題（有 tag 才記）、鍛造台抖一下
 func _wrong(st: Dictionary, msg: String) -> void:
+	msg = preload("step_bank.gd").root_markup(msg)     # 程式組出來的 √3、√(a² + b²) 也要有橫線
 	mistakes += 1
 	Game.of(self).sfx("wrong")
 	if st.has("tag"):
@@ -1100,6 +1101,10 @@ func _order_submit() -> void:
 
 func _speed_begin() -> void:
 	problems = _speed_gen(r.gen, int(r.count))
+	# 產生器寫的 √3、√(a² + b²) 改成排版用的 √{…}，上面才有橫線（答案 ans 不動）
+	for pb in problems:
+		if pb is Dictionary:
+			preload("step_bank.gd").fix_roots(pb)
 	sp_i = 0
 	sp_wrong = 0
 	streak = 0

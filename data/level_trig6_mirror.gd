@@ -550,6 +550,7 @@ class MirrorView extends CompassView:
 		return "(%s)" % t if v < -0.0005 else t
 
 	func _line_text(font: Font, x0: float, y: float, w: float, s: String, fs0: int, col: Color) -> float:
+		s = preload("step_bank.gd").root_markup(s)     # √3 → √{3}：上面要有橫線
 		var fs := UITheme.fs(fs0)
 		var tw := MathLabel.text_width(font, s, fs)
 		while fs > UITheme.fs(11) and tw > w:
