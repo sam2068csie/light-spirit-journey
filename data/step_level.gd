@@ -589,7 +589,27 @@ func _refresh_fill() -> void:
 	for i in slot_btns.size():
 		var b: Button = slot_btns[i]
 		# 用 ①②③ 標格子（字放大後「第 1 格：…」兩個並排就放不下）
-		b.text = "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], slot_vals[i] if slot_vals[i] != "" else "＿"]
+		var stxt := "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], slot_vals[i] if slot_vals[i] != "" else "＿"]
+		var bm = b.get_node_or_null("Math")
+		if slot_vals[i].contains("√"):
+			# 有根號：用數學排版畫（根號上面有橫線）
+			if bm == null:
+				bm = MathLabel.new()
+				bm.name = "Math"
+				bm.align_center = true
+				bm.valign_center = true
+				bm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				bm.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				b.add_child(bm)
+			bm.font_size = UITheme.fs(17)
+			bm.color = UITheme.TEXT
+			bm.text = "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], rad_markup(slot_vals[i])]
+			bm.visible = true
+			b.text = ""
+		else:
+			if bm != null:
+				bm.visible = false
+			b.text = stxt
 		var c := UITheme.BAD if slot_bad[i] else (UITheme.ACCENT if i == cur_slot else Color(1, 1, 1, 0.15))
 		b.add_theme_stylebox_override("normal", UITheme.box(UITheme.PANEL_LIGHT, 10, c, 2 if i == cur_slot or slot_bad[i] else 1, 6))
 		b.add_theme_stylebox_override("hover", UITheme.box(UITheme.PANEL_LIGHT.lightened(0.08), 10, c, 2, 6))
@@ -1782,12 +1802,39 @@ class ForgeView extends Control:
 		if live_fill == "":
 			return 40.0
 		var font := get_theme_default_font()
-		var he := _extra(_live_head(), UITheme.fs(15))
-		var h := 40.0 + he.x + he.y + (6.0 if he.x > 0.0 else 0.0)
+		var h := 18.0
+		var hl := _head_lines(font, size.x - 80.0 - 24.0)
+		for head in hl[1]:
+			var he := _extra(head, hl[0])
+			h += 22.0 + he.x + he.y + (6.0 if he.x > 0.0 else 0.0)
 		for ln in live_fill.split("\n"):
 			var e := _extra(ln, _fit_fs(font, ln, UITheme.fs(24)))
 			h += 40.0 + e.x + e.y
 		return h
+
+	## 填答框的標題（題目）：太長就縮小一點，再不行就從「：」或「，」斷成兩行
+	## 回傳 [字級, [第一行, 第二行…]]
+	func _head_lines(font: Font, room: float) -> Array:
+		var head := _live_head()
+		var hfs := UITheme.fs(15)
+		while hfs > UITheme.fs(13) and _mw(font, head, hfs) > room:
+			hfs -= 1
+		if _mw(font, head, hfs) <= room:
+			return [hfs, [head]]
+		# 找最靠近中間的斷點
+		var best := -1
+		var mid := head.length() / 2
+		for i in head.length():
+			if head[i] in ["：", "，", "。", "、", "；"] and i < head.length() - 2:
+				if best < 0 or absi(i - mid) < absi(best - mid):
+					best = i
+		if best < 0:
+			best = mid
+		var a := head.substr(0, best + 1)
+		var b := "　" + head.substr(best + 1).strip_edges()
+		while hfs > UITheme.fs(11) and maxf(_mw(font, a, hfs), _mw(font, b, hfs)) > room:
+			hfs -= 1
+		return [hfs, [a, b]]
 
 	func _live_head() -> String:
 		return "✎ " + (live_q if live_q != "" else cur_name)
@@ -1995,17 +2042,18 @@ class ForgeView extends Control:
 		var box := Rect2(40, y_top - 20, size.x - 80, h)     # 上緣離分隔線留一點空隙
 		var pulse := 0.55 + 0.3 * sin(t * 4.0)
 		draw_style_box(UITheme.boxc(Color(FIRE.r, FIRE.g, FIRE.b, 0.10), 12, Color(FIRE.r, FIRE.g, FIRE.b, pulse), 2, 0), box)
-		var head := _live_head()
-		var hfs := UITheme.fs(15)
-		while hfs > UITheme.fs(12) and _mw(font, head, hfs) > box.size.x - 24.0:
-			hfs -= 1
-		# 標題裡有分數時（例如 log (1/3^{20})）往下多留空間，免得和框線、下面的算式疊在一起
-		var he := _extra(head, UITheme.fs(15))
-		if he.x > 0.0:
-			he.x += 6.0
-		MathLabel.draw_on(self, font, box.position.x + 12.0 + _mw(font, head, hfs) / 2.0, box.position.y + 20.0 + he.x, head, hfs,
-			Color(1, 0.85, 0.6, 0.95))
-		var y := box.position.y + 30.0 + he.x + he.y
+		var hl := _head_lines(font, box.size.x - 24.0)
+		var hfs: int = hl[0]
+		var y := box.position.y
+		for head in hl[1]:
+			# 標題裡有分數時（例如 log (1/3^{20})）往下多留空間，免得和框線、下面的算式疊在一起
+			var he := _extra(head, hfs)
+			if he.x > 0.0:
+				he.x += 6.0
+			MathLabel.draw_on(self, font, box.position.x + 12.0 + _mw(font, head, hfs) / 2.0, y + 20.0 + he.x, head, hfs,
+				Color(1, 0.85, 0.6, 0.95))
+			y += 22.0 + he.x + he.y
+		y += 8.0
 		for ln in rows:
 			# 字級要以「框的寬度」為準縮小（不是整個畫面的寬度），長的算式才不會超出框線
 			var fs := UITheme.fs(24)
