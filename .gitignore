@@ -17,6 +17,11 @@
 *.xcframework/
 *.pck
 *.mobileprovision
+/lightspiritjourney/
+/lightspiritjourney.xcodeproj/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
 
 # 簽章金鑰：絕對不要上傳！
 *.keystore
