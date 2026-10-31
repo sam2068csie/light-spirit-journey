@@ -19,6 +19,8 @@ const CHAPTERS_G6 := [
 	{"ch": 2, "name": "第二章．半角與化簡", "topic": "半角公式與象限、根號化簡、以切表弦、連乘積、極值", "color": UITheme.GOLD_LIGHT},
 ]
 
+var mir_pick := -1               # 掃過範圍時同時要選的答案（−1：還沒選）
+var mir_pick_btns: Array = []
 var mir_info: MathLabel
 var _pulse_tw: Tween
 var _pulse_ctl: Control
@@ -199,6 +201,33 @@ func _build_mirror(st: Dictionary) -> void:
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_attract(row)
 	tv.guide_text = "① 拖動右邊的滑桿" if not sweep else "① 拖動右邊的 θ 滑桿"
+	# 掃過範圍的同時回答問題（例如 θ/2 在第幾象限）
+	mir_pick = -1
+	mir_pick_btns = []
+	if st.has("ask"):
+		var ask: Dictionary = st.ask
+		var ql := _math_label(16, 330, 30, UITheme.ACCENT)
+		ql.text = String(ask.get("question", ask.get("q", "")))
+		rank_box.add_child(ql)
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
+		rank_box.add_child(grid)
+		var opts: Array = ask.get("options", [])
+		for i in opts.size():
+			var b := MathLabel.make_button(String(opts[i]), 16, Vector2(0, 40))
+			b.toggle_mode = true
+			b.focus_mode = Control.FOCUS_NONE
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var ii: int = i
+			b.pressed.connect(func():
+				mir_pick = ii
+				for k2 in mir_pick_btns.size():
+					(mir_pick_btns[k2] as Button).set_pressed_no_signal(k2 == ii)
+				Game.of(self).sfx("click"))
+			grid.add_child(b)
+			mir_pick_btns.append(b)
 	_refresh_mirror()
 
 
@@ -225,6 +254,14 @@ func _mirror_submit() -> void:
 			var need := "θ 拖到 %s°（最小那頭）" % TideView.dec(lo) if tv.mir_lo > lo + 1e-6 else "θ 拖到 %s°（最大那頭）" % TideView.dec(hi)
 			_hint("還沒有走完整個範圍：把 %s，看看 θ/2 會走到哪裡。" % need, "info")
 			return
+		if st.has("ask"):
+			var ask: Dictionary = st.ask
+			if mir_pick < 0:
+				_hint("範圍走完了！再從下面選出答案。", "info")
+				return
+			if mir_pick != int(ask.get("correct", 0)):
+				_wrong(st, "選錯了。提示：" + String(ask.get("nudge", st.nudge)))
+				return
 		Game.of(self).sfx("correct")
 		tv.burst_center()
 		_interact_done(st, {})

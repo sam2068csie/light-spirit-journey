@@ -53,9 +53,13 @@ static func _mirror(name: String, q: String, mode: String, target: float, line: 
 
 
 ## 掃過 θ 的範圍（band 是 θ 的範圍，滑桿只能在範圍裡面走）
-static func _sweep(name: String, q: String, lo: float, hi: float, line: String, nudge: String) -> Dictionary:
-	return {"kind": "mirror", "name": name, "q": q, "mode": "sweep", "band": [lo, hi], "range": [lo + 15.0, hi - 15.0],
+## 掃過範圍；ask = {question, options, correct, nudge}：掃的同時回答（例如 θ/2 在第幾象限）
+static func _sweep(name: String, q: String, lo: float, hi: float, line: String, nudge: String, ask := {}) -> Dictionary:
+	var d := {"kind": "mirror", "name": name, "q": q, "mode": "sweep", "band": [lo, hi], "range": [lo + 15.0, hi - 15.0],
 		"step": 15.0, "start": (lo + hi) / 2.0, "line": line, "nudge": nudge, "tag": T_HALFQ}
+	if not ask.is_empty():
+		d["ask"] = ask
+	return d
 
 
 static func _eq(name: String, q: String, expr: String, target: String, tokens: Array, line: String, nudge: String,
@@ -70,6 +74,18 @@ static func slots() -> Array:
 		slot["plain"] = true
 		slot["params"] = slot.get("params", [])
 		SB.fix_roots(slot)
+		# 半角的象限：「掃過範圍」和下一題「θ/2 在第幾象限」合成一步（一邊拖滑桿一邊選答案）
+		for v in slot.variants:
+			var stp: Array = v.get("steps", [])
+			var k := 0
+			while k < stp.size() - 1:
+				if String(stp[k].kind) == "mirror" and String(stp[k].get("mode", "")) == "sweep" and String(stp[k + 1].kind) == "choice":
+					var ch: Dictionary = stp[k + 1]
+					stp[k]["ask"] = ch
+					stp[k]["line"] = String(ch.line)
+					stp[k]["name"] = String(stp[k].name) + "、" + String(ch.name)
+					stp.remove_at(k + 1)
+				k += 1
 		# 有分數的積木（÷）：改成「分數」模式，分子、分母各一格，不用打括號
 		for v in slot.variants:
 			for st in v.get("steps", []):
@@ -316,10 +332,8 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "cos θ = −7/25（180° < θ < 270°），\n求 sin(θ/2)、cos(θ/2)、tan(θ/2)",
 			 "steps": [
-				_sweep("掃過範圍", "拖動 θ，從 195° 走到 255°，觀察 θ/2 落在哪裡。", 180.0, 270.0,
-					"180° < θ < 270° ⇒ 90° < θ/2 < 135°：第二象限", "滑桿的兩端都要走到。"),
-				_c("θ/2 的象限", "θ/2 在第幾象限？", ["第二象限", "第一象限", "第三象限", "第四象限"], 0,
-					"90° < θ/2 < 135°：第二象限（sin 正、cos 負）。", "把 180° 和 270° 各除以 2。", "θ/2 在第二象限：sin > 0、cos < 0、tan < 0", T_HALFQ),
+				_sweep("掃過範圍", "拖動 θ 掃過整個範圍，同時看 θ/2 落在哪裡，再從下面選出答案。", 180.0, 270.0,
+					"θ/2 在第二象限：sin > 0、cos < 0、tan < 0", "把 180° 和 270° 各除以 2。", {"question": "θ/2 在第幾象限？", "options": ["第二象限", "第一象限", "第三象限", "第四象限"], "correct": 0, "nudge": "把 180° 和 270° 各除以 2。"}),
 				_f("cos(θ/2)", "|cos(θ/2)| = √((1 + cos θ) ÷ 2) = √(9/25)。第二象限 cos 是負的。", "cos(θ/2) = [0]", ["-3/5"],
 					"cos(θ/2) = −3/5", "(1 − 7/25) ÷ 2 = 9/25。", T_HALFQ),
 				_f("sin(θ/2)", "|sin(θ/2)| = √((1 − cos θ) ÷ 2) = √(16/25)。第二象限 sin 是正的。", "sin(θ/2) = [0]", ["4/5"],
@@ -329,10 +343,8 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "cos θ = 7/25（270° < θ < 360°），\n求 sin(θ/2)、cos(θ/2)、tan(θ/2)",
 			 "steps": [
-				_sweep("掃過範圍", "拖動 θ，從 285° 走到 345°，觀察 θ/2 落在哪裡。", 270.0, 360.0,
-					"270° < θ < 360° ⇒ 135° < θ/2 < 180°：第二象限", "滑桿的兩端都要走到。"),
-				_c("θ/2 的象限", "θ/2 在第幾象限？", ["第二象限", "第一象限", "第三象限", "第四象限"], 0,
-					"135° < θ/2 < 180°：第二象限。", "270° ÷ 2 = 135°、360° ÷ 2 = 180°。", "θ/2 在第二象限：sin > 0、cos < 0", T_HALFQ),
+				_sweep("掃過範圍", "拖動 θ 掃過整個範圍，同時看 θ/2 落在哪裡，再從下面選出答案。", 270.0, 360.0,
+					"θ/2 在第二象限：sin > 0、cos < 0", "270° ÷ 2 = 135°、360° ÷ 2 = 180°。", {"question": "θ/2 在第幾象限？", "options": ["第二象限", "第一象限", "第三象限", "第四象限"], "correct": 0, "nudge": "270° ÷ 2 = 135°、360° ÷ 2 = 180°。"}),
 				_f("cos(θ/2)", "|cos(θ/2)| = √((1 + 7/25) ÷ 2) = √(16/25)，第二象限 cos 為負。", "cos(θ/2) = [0]", ["-4/5"],
 					"cos(θ/2) = −4/5", "(1 + 7/25) ÷ 2 = 16/25。", T_HALFQ),
 				_f("sin(θ/2)", "|sin(θ/2)| = √((1 − 7/25) ÷ 2) = √(9/25)，第二象限 sin 為正。", "sin(θ/2) = [0]", ["3/5"],
@@ -342,10 +354,8 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "cos θ = −7/25（90° < θ < 180°），\n求 sin(θ/2)、cos(θ/2)、tan(θ/2)",
 			 "steps": [
-				_sweep("掃過範圍", "拖動 θ，從 105° 走到 165°，觀察 θ/2 落在哪裡。", 90.0, 180.0,
-					"90° < θ < 180° ⇒ 45° < θ/2 < 90°：第一象限", "滑桿的兩端都要走到。"),
-				_c("θ/2 的象限", "θ/2 在第幾象限？", ["第一象限", "第二象限", "第三象限", "第四象限"], 0,
-					"45° < θ/2 < 90°：第一象限，sin、cos、tan 都是正的。", "90° ÷ 2 = 45°、180° ÷ 2 = 90°。", "θ/2 在第一象限：全部為正", T_HALFQ),
+				_sweep("掃過範圍", "拖動 θ 掃過整個範圍，同時看 θ/2 落在哪裡，再從下面選出答案。", 90.0, 180.0,
+					"θ/2 在第一象限：全部為正", "90° ÷ 2 = 45°、180° ÷ 2 = 90°。", {"question": "θ/2 在第幾象限？", "options": ["第一象限", "第二象限", "第三象限", "第四象限"], "correct": 0, "nudge": "90° ÷ 2 = 45°、180° ÷ 2 = 90°。"}),
 				_f("cos(θ/2)", "|cos(θ/2)| = √((1 − 7/25) ÷ 2) = √(9/25)，第一象限為正。", "cos(θ/2) = [0]", ["3/5"],
 					"cos(θ/2) = 3/5", "(1 − 7/25) ÷ 2 = 9/25。", T_HALFQ),
 				_f("sin(θ/2)", "|sin(θ/2)| = √((1 + 7/25) ÷ 2) = √(16/25)，第一象限為正。", "sin(θ/2) = [0]", ["4/5"],
@@ -529,8 +539,9 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "cos θ = 7/25（270° < θ < 360°），\n求 sin(θ/2) 與 tan(θ/2)",
 			 "steps": [
-				_sweep("掃過範圍", "拖動 θ，從 285° 走到 345°，觀察 θ/2 落在哪裡。", 270.0, 360.0,
-					"135° < θ/2 < 180°：第二象限", "滑桿的兩端都要走到。"),
+				_sweep("掃過範圍", "拖動 θ 掃過整個範圍，同時看 θ/2 落在哪裡，再從下面選出答案。", 270.0, 360.0,
+					"135° < θ/2 < 180°：第二象限", "270° ÷ 2 = 135°、360° ÷ 2 = 180°。",
+					{"question": "θ/2 在第幾象限？", "options": ["第二象限", "第一象限", "第三象限", "第四象限"], "correct": 0, "nudge": "270° ÷ 2 = 135°、360° ÷ 2 = 180°。"}),
 				_f("sin(θ/2)", "第二象限 sin 為正：√((1 − 7/25) ÷ 2)。", "sin(θ/2) = [0]", ["3/5"],
 					"sin(θ/2) = 3/5", "(1 − 7/25) ÷ 2 = 9/25。", T_HALFQ),
 				_f("tan(θ/2)", "cos(θ/2) = −4/5（第二象限為負）。", "tan(θ/2) = [0]", ["-3/4"],
