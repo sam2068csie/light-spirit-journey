@@ -248,14 +248,12 @@ static func _slots() -> Array:
 		 "story": "限時 300 秒！拼公式、拆角、合併，一口氣算完。",
 		 "insight": "和差角公式正著用（拆成特殊角）、倒著用（合併成一個角）。tan(α ± β) = \\frac{tan α ± tan β}{1 ∓ tan α tan β}。",
 		 "variants": [
-			{"eq": "拼 cos 的和角公式，\n再求 cos 75° 與合併",
+			{"eq": "拼 cos 的和角公式，\n再求 cos 75°",
 			 "steps": [
 				_tiles("cos 和角", "拼出 cos(α + β)。", "cos(α + β)", "cos_sum", TK_SC,
 					"cos(α + β) = cos α cos β − sin α sin β", "cos 和角：中間是「−」。", T_SUMF),
 				_f("cos 75°", "cos 75° = cos(45° + 30°)。", "cos 75° = (√6 − √2) ÷ [0]", ["4"],
 					"cos 75° = (√6 − √2)/4", "√6/4 − √2/4。", T_SUMF),
-				_f("合併", "cos 75° cos 15° − sin 75° sin 15° = cos(75° + 15°)。", "cos 75° cos 15° − sin 75° sin 15° = [0]", ["0"],
-					"= cos 90° = 0", "cos 90° = 0。", T_MERGE),
 			 ]},
 			{"eq": "拼 tan 的和角公式，\n再求 tan 105°，最後倒過來合併",
 			 "steps": [
