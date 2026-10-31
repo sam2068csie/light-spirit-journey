@@ -416,8 +416,19 @@ static func _gen_mirror() -> Dictionary:
 		_:
 			gtext = "tan θ = %s" % _frac(sa * sb * a, b)
 	var ask: String = ["sin", "cos", "tan"].pick_random()
-	if ask == "tan" and a == b:
-		ask = "sin"
+	if ask == "tan" and c != 5:
+		# 求 tan 2θ 只用 3-4-5（5-12-13 的分母 119 太難算）
+		var sw := a > b if a != b else false
+		a = 4 if sw else 3
+		b = 3 if sw else 4
+		c = 5
+		match given:
+			"sin":
+				gtext = "sin θ = %s" % _frac(sa * a, c)
+			"cos":
+				gtext = "cos θ = %s" % _frac(sb * b, c)
+			_:
+				gtext = "tan θ = %s" % _frac(sa * sb * a, b)
 	var ans := ""
 	var hint := ""
 	match ask:
