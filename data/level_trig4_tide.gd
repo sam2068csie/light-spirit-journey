@@ -1328,6 +1328,12 @@ class TideView extends MoonView:
 			draw_line(Vector2(o2.x, rect.position.y + 6.0), Vector2(o2.x, rect.end.y - 6.0), Color(1, 1, 1, 0.3), 1.2)
 			MathLabel.draw_on(self, font, rect.end.x - 12.0, o2.y - 6.0, "x", UITheme.fs(12), dim)
 			MathLabel.draw_on(self, font, o2.x + 10.0, rect.position.y + 16.0, "y", UITheme.fs(12), dim)
+		# 塗色的多邊形（例如以切表弦的三角形）
+		if f.has("fill"):
+			var fp := PackedVector2Array()
+			for k in f.fill:
+				fp.append(P[k])
+			draw_colored_polygon(fp, Color(UITheme.PINK.r, UITheme.PINK.g, UITheme.PINK.b, 0.55))
 		# 圓弧
 		for ca in f.get("carcs", []):
 			var cc: Vector2 = P[ca[0]]
@@ -1357,7 +1363,7 @@ class TideView extends MoonView:
 				var nrm: Vector2 = Vector2(-(b - a).y, (b - a).x).normalized()
 				if nrm.dot(m - cen) < 0.0:
 					nrm = -nrm
-				MathLabel.draw_on(self, font, m.x + nrm.x * 14.0, m.y + nrm.y * 14.0 + 5.0, String(sg[2]), UITheme.fs(13), UITheme.CYAN_LIGHT)
+				MathLabel.draw_on(self, font, m.x + nrm.x * 14.0, m.y + nrm.y * 14.0 + 5.0 + maxf(nrm.y, 0.0) * 8.0, String(sg[2]), UITheme.fs(13), UITheme.CYAN_LIGHT)
 		# 直角記號
 		for rt in f.get("right", []):
 			var v2: Vector2 = P[rt[0]]
@@ -1367,6 +1373,8 @@ class TideView extends MoonView:
 		# 點與名稱
 		var hide: Array = f.get("hide", [])
 		for k in pts:
+			if k in f.get("ghost", []):     # 只用來撐開版面的點：不畫
+				continue
 			var q: Vector2 = P[k]
 			UITheme.dot(self, q, 3.5, UITheme.GOLD)
 			if k in hide:

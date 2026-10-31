@@ -1277,6 +1277,25 @@ class ConceptPlot extends Control:
 	##   "cone"  左邊是扇形、右邊是捲好的圓錐：扇形半徑 ↔ 斜高 ℓ（白）、弧長 ↔ 底圓周長（藍，一起閃）
 	func _draw_shape(font: Font, kind: String) -> void:
 		match kind:
+			"tantri":
+				# 以切表弦的直角三角形：底 1 − t²、高 2t、斜邊 1 + t²，左下角 2θ
+				var w := size.x
+				var h := _ph
+				var A := Vector2(w * 0.14, h * 0.78)
+				var B := Vector2(w * 0.74, h * 0.78)
+				var C := Vector2(w * 0.74, h * 0.22)
+				draw_colored_polygon(PackedVector2Array([A, B, C]), _col(UITheme.PINK, 0.85))
+				draw_polyline(PackedVector2Array([A, B, C, A]), _col(Color(1, 1, 1), 0.9), 2.0, true)
+				var q := 12.0
+				draw_polyline(PackedVector2Array([B + Vector2(-q, 0), B + Vector2(-q, -q), B + Vector2(0, -q)]), _col(Color(1, 1, 1), 0.8), 1.5)
+				var ang := (C - A).angle()
+				draw_arc(A, 34.0, ang, 0.0, 20, _col(UITheme.GOLD_LIGHT), 2.0, true)
+				var yl := _col(UITheme.GOLD_LIGHT)
+				var fz := UITheme.fs(17)
+				MathLabel.draw_on(self, font, A.x + 58.0, A.y - 8.0, "2θ", UITheme.fs(15), yl)
+				MathLabel.draw_on(self, font, (A.x + B.x) / 2.0, B.y + 26.0, "1 − t²", fz, yl)
+				MathLabel.draw_on(self, font, B.x + 30.0, (B.y + C.y) / 2.0 + 6.0, "2t", fz, yl)
+				MathLabel.draw_on(self, font, (A.x + C.x) / 2.0 - 22.0, (A.y + C.y) / 2.0 - 14.0, "1 + t²", fz, yl)
 			"cone":
 				var amber := UITheme.ORANGE
 				var cyan := UITheme.CYAN

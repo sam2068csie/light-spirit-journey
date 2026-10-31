@@ -170,6 +170,7 @@ static func cards(level: String) -> Array:
 					"why": "90° < θ/2 < 135°：第二象限，cos 是負的，所以 cos \\frac{θ}{2} = −√{\\frac{1 + cos θ}{2}}。", "hint": "先把範圍除以 2。"}},
 				{"title": "以切表弦", "tag": "技巧", "glyph": "tan",
 				 "formulas": ["t = tan θ：sin 2θ = ?{\\frac{2t}{1 + t²}}", "cos 2θ = ?{\\frac{1 − t²}{1 + t²}}"],
+				 "plot": {"shape": "tantri", "caption": "tan θ = t 時，2θ 的直角三角形"},
 				 "notes": ["二次齊次式同除以 ?{cos²θ}，變成 t 的二次方程式", "tan 的根與係數 → ?{tan(α + β)} → 再換成 sin 2θ、cos 2θ"],
 				 "check": {"q": "t = tan θ，下列哪一個正確？", "opts": ["sin 2θ = \\frac{2t}{1 + t²}", "sin 2θ = \\frac{2t}{1 − t²}", "cos 2θ = \\frac{1 + t²}{1 − t²}"], "a": 0,
 					"why": "sin 2θ、cos 2θ 的分母都是 1 + t²；分母 1 − t² 的是 tan 2θ。", "hint": "sin、cos 的分母一樣。"}},
