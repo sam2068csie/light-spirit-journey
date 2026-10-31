@@ -1008,6 +1008,15 @@ static func _tok_back(s: String, j: int) -> int:
 			var lg2 := _log_before(s, start - 1)
 			if lg2 >= 0:
 				start = lg2
+	# 前面緊接著三角函數名稱（中間一個空白）：sin 2θ ÷ cos 2θ 的分子是整個 sin 2θ
+	if start >= 4 and s[start - 1] == " " and s.substr(start - 4, 3) in ["sin", "cos", "tan", "cot", "sec", "csc"] \
+			and (start - 4 == 0 or not _is_tok(s[start - 5])):
+		start -= 4
+		# 前面還有係數：2 tan θ ÷ (1 − tan²θ) 的分子是 2 tan θ
+		if start >= 2 and s[start - 1] == " " and s[start - 2].is_valid_int():
+			start -= 1
+			while start - 1 >= 0 and s[start - 1].is_valid_int():
+				start -= 1
 	return start
 
 
@@ -1050,6 +1059,11 @@ static func _tok_fwd(s: String, k: int) -> int:
 			var mf := _match_fwd(s, e)
 			if mf > 0:
 				e = mf + 1
+		elif word in ["sin", "cos", "tan", "cot", "sec", "csc"] and e + 1 < s.length() and s[e] == " " and _is_tok(s[e + 1]):
+			# cos 2θ：函數名稱、空白、角度一起當分母
+			e += 1
+			while e < s.length() and _is_tok(s[e]):
+				e += 1
 	else:
 		return k
 	# 後面接著的上下標也算進來：x^{2}、x_{1}
