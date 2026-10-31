@@ -22,6 +22,7 @@
 *.xcodeproj/
 *.xcworkspace/
 xcuserdata/
+*.xcprivacy
 
 # 簽章金鑰：絕對不要上傳！
 *.keystore
