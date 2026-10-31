@@ -89,6 +89,8 @@ func _on_tide_changed() -> void:
 			_refresh_peak()
 		"wave":
 			_refresh_wave()
+		"spin":
+			_refresh_spin()
 		_:
 			super()
 
@@ -105,6 +107,8 @@ func _forge_step() -> void:
 			_build_peak(st)
 		"wave":
 			_build_wave(st)
+		"spin":
+			_build_spin(st)
 
 
 func _custom_go() -> void:
@@ -115,6 +119,9 @@ func _custom_go() -> void:
 				return
 			"peak":
 				_peak_submit()
+				return
+			"spin":
+				_spin_submit()
 				return
 			"wave":
 				_wave_submit()
@@ -165,6 +172,8 @@ func _refresh_cur() -> void:
 			_refresh_phasor()
 		"peak":
 			_refresh_peak()
+		"spin":
+			_refresh_spin()
 
 
 # ================= phasor：相位指針 =================
@@ -293,6 +302,88 @@ func _peak_submit() -> void:
 		var x := deg_to_rad(tv.pk_x)
 		var f := float(st.a) * sin(x) + float(st.b) * cos(x)
 		_wrong(st, "現在 f(x) = %s，還不是%s的位置。提示：%s" % [CompassView.dec3(f), String(st.word), String(st.nudge)])
+		return
+	Game.of(self).sfx("correct")
+	tv.burst_center()
+	_interact_done(st, {})
+
+
+# ================= spin：在單位圓上轉 x + φ，找限制範圍內的最大最小 =================
+
+func _build_spin(st: Dictionary) -> void:
+	_prep_panel(st)
+	var tv := _lv()
+	var card := _info_card(LAMP)
+	lh_info = _math_label(16, 330, 76, UITheme.TEXT)
+	card.add_child(lh_info)
+	var lo := float(st.lo)
+	var n := int(round((float(st.hi) - lo) / 15.0))
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 6)
+	rank_box.add_child(vb)
+	tv.sp_u = lo
+	tv.sp_show = lo
+	tv.sp_max = NAN
+	tv.sp_min = NAN
+	_slider_row(vb, "x + φ", n, 0, func(i: int, _first: bool):
+		var d := lo + 15.0 * i
+		_lv().sp_u = d
+		return "%s°" % TideView.dec(d))
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	vb.add_child(hb)
+	for k in [["max", "標成最大 ▲", UITheme.GOLD], ["min", "標成最小 ▼", UITheme.CYAN]]:
+		var b := MathLabel.make_button(String(k[1]), 16, Vector2(0, 44))
+		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var which: String = k[0]
+		b.pressed.connect(func():
+			if busy:
+				return
+			if which == "max":
+				_lv().sp_max = _lv().sp_u
+			else:
+				_lv().sp_min = _lv().sp_u
+			Game.of(self).play("blip", 1.2, -12.0)
+			_refresh_spin())
+		hb.add_child(b)
+	tv.mode = "spin"
+	tv.spec = st
+	tv.circ = {}
+	tv.task_q = String(st.q)
+	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_attract(vb)
+	tv.guide_text = "① 拖動 x + φ 滑桿，在範圍裡轉一圈"
+	_refresh_spin()
+
+
+static func _spin_val(st: Dictionary, u: float) -> float:
+	return float(st.r) * sin(deg_to_rad(u))
+
+
+func _refresh_spin() -> void:
+	if lh_info == null or not is_instance_valid(lh_info) or si >= steps.size():
+		return
+	var st: Dictionary = steps[si]
+	var tv := _lv()
+	var mk := func(v: float) -> String:
+		return "—" if is_nan(v) else "%s°" % TideView.dec(v)
+	lh_info.text = "x + φ = %s°，%s sin(x + φ) = %s\n最大標在 %s　最小標在 %s" % [TideView.dec(tv.sp_u),
+		SBk.root_markup(String(st.rtxt)), CompassView.dec3(_spin_val(st, tv.sp_u)), mk.call(tv.sp_max), mk.call(tv.sp_min)]
+	tv.queue_redraw()
+
+
+func _spin_submit() -> void:
+	var st: Dictionary = steps[si]
+	var tv := _lv()
+	if is_nan(tv.sp_max) or is_nan(tv.sp_min):
+		_wrong(st, "最大和最小都要標：轉到那個角度，再按「標成最大」或「標成最小」。")
+		return
+	var okM := absf(tv.sp_max - float(st.umax)) < 1e-6
+	var okm := absf(tv.sp_min - float(st.umin)) < 1e-6
+	if not (okM and okm):
+		var which := "最大" if not okM else "最小"
+		_wrong(st, "%s標的位置不對。提示：%s" % [which, String(st.nudge)])
 		return
 	Game.of(self).sfx("correct")
 	tv.burst_center()
@@ -448,6 +539,10 @@ class LightView extends MirrorView:
 	var ph_sa := 0.0
 	var pk_x := 0.0
 	var pk_show := 0.0
+	var sp_u := 0.0
+	var sp_show := 0.0
+	var sp_max := NAN
+	var sp_min := NAN
 
 	func ph_tip(form: String) -> Vector2:
 		var d := deg_to_rad(ph_ang)
@@ -461,10 +556,12 @@ class LightView extends MirrorView:
 			ph_sa = lerpf(ph_sa, ph_ang, 1.0 - exp(-12.0 * delta))
 		elif mode == "peak":
 			pk_show = lerpf(pk_show, pk_x, 1.0 - exp(-14.0 * delta))
+		elif mode == "spin":
+			sp_show = lerpf(sp_show, sp_u, 1.0 - exp(-14.0 * delta))
 		super(delta)
 
 	func _draw_mode(font: Font) -> void:
-		if mode != "phasor" and mode != "peak" and mode != "wave":
+		if mode != "phasor" and mode != "peak" and mode != "wave" and mode != "spin":
 			super(font)
 			return
 		var rc := _spin_rect()
@@ -475,6 +572,8 @@ class LightView extends MirrorView:
 				_draw_phasor(font, rc)
 			"peak":
 				_draw_peak(font, rc)
+			"spin":
+				_draw_spinrng(font, rc)
 			_:
 				_draw_wave(font, rc)
 		_draw_guide(font, rc)
@@ -625,6 +724,57 @@ class LightView extends MirrorView:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * k, bar.size.y)), UITheme.GOOD if hit else Color(1, 0.75, 0.4))
 		var msg := "就是這裡！按「確定」" if hit else String(word)
 		_line_text(font, rc.position.x + 14.0, rc.position.y + 208.0, rc.size.x - 28.0, msg, 13, UITheme.GOOD if hit else Color(1, 0.92, 0.7))
+
+	# --- spin ---
+	func _draw_spinrng(font: Font, rc: Rect2) -> void:
+		var lo := float(spec.lo)
+		var hi := float(spec.hi)
+		var R0 := minf(rc.size.y * 0.24, 76.0)
+		var c := Vector2(rc.position.x + rc.size.x * 0.32, rc.position.y + rc.size.y * 0.50)
+		var dim := Color(1, 1, 1, 0.35)
+		draw_line(c - Vector2(R0 + 18, 0), c + Vector2(R0 + 18, 0), dim, 1.2)
+		draw_line(c - Vector2(0, R0 + 18), c + Vector2(0, R0 + 18), dim, 1.2)
+		draw_arc(c, R0, 0, TAU, 72, Color(1, 1, 1, 0.4), 1.6, true)
+		# 允許的範圍（扇形）
+		var pts := PackedVector2Array([c])
+		var nseg := 40
+		for i in nseg + 1:
+			var a := deg_to_rad(lo + (hi - lo) * i / nseg)
+			pts.append(c + Vector2(cos(a), -sin(a)) * R0)
+		draw_colored_polygon(pts, Color(1, 0.6, 0.8, 0.18))
+		draw_arc(c, R0, -deg_to_rad(hi), -deg_to_rad(lo), 48, Color(1, 0.6, 0.8, 0.95), 5.0, true)
+		for e in [lo, hi]:
+			var ea := deg_to_rad(e)
+			var ep := c + Vector2(cos(ea), -sin(ea)) * (R0 + 22.0)
+			MathLabel.draw_on(self, font, ep.x, ep.y + 5.0, "%s°" % TideView.dec(e), UITheme.fs(12), Color(1, 0.75, 0.88))
+		MathLabel.draw_on(self, font, c.x, c.y - R0 - 26.0, "90°", UITheme.fs(11), dim)
+		MathLabel.draw_on(self, font, c.x, c.y + R0 + 34.0, "270°", UITheme.fs(11), dim)
+		# 標記
+		for mk in [[sp_max, UITheme.GOLD, "最大"], [sp_min, UITheme.CYAN, "最小"]]:
+			var v: float = mk[0]
+			if is_nan(v):
+				continue
+			var ma := deg_to_rad(v)
+			var mp := c + Vector2(cos(ma), -sin(ma)) * R0
+			UITheme.dot(self, mp, 9.0, Color(mk[1].r, mk[1].g, mk[1].b, 0.35))
+			draw_line(mp, Vector2(mp.x, c.y), Color(mk[1].r, mk[1].g, mk[1].b, 0.6), 2.0)
+		# 目前的角度
+		var ua := deg_to_rad(sp_show)
+		var p := c + Vector2(cos(ua), -sin(ua)) * R0
+		draw_line(c, p, UITheme.GOLD_LIGHT, 2.5, true)
+		draw_line(p, Vector2(p.x, c.y), UITheme.GOOD, 3.0, true)
+		UITheme.dot(self, p, 7.0, UITheme.GOLD)
+		UITheme.dot(self, p, 3.0, Color.WHITE)
+		# 右邊說明
+		var x0 := rc.position.x + rc.size.x * 0.62
+		var w := rc.end.x - x0 - 12.0
+		var y := rc.position.y + 96.0
+		y = _line_text(font, x0, y, w, "粉紅弧：x + φ 能走的範圍", 13, Color(1, 0.75, 0.88))
+		y = _line_text(font, x0, y + 4.0, w, "綠線：sin(x + φ) 的高度", 13, UITheme.GOOD)
+		y = _line_text(font, x0, y + 10.0, w, "sin(%s°) = %s" % [TideView.dec(sp_u), dec3(sin(deg_to_rad(sp_u)))], 15, Color(1, 0.95, 0.8))
+		var sv := sin(deg_to_rad(sp_u))
+		var st2 := dec3(sv) if sv >= -1e-9 else "(%s)" % dec3(sv)
+		_line_text(font, x0, y + 4.0, w, "f = %s × %s = %s" % [String(spec.rtxt), st2, dec3(float(spec.r) * sv)], 15, UITheme.GOLD)
 
 	# --- wave ---
 
