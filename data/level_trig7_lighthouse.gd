@@ -13,6 +13,7 @@ extends "level_trig6_mirror.gd"
 ##                  用 5 個 x 檢查你拼出的式子和目標的 a sin x + b cos x 一不一樣，畫面上兩條曲線也會重合。
 ##   速算：已知 a sin x ± b cos x，說出最大值或最小值
 
+const SBk := preload("step_bank.gd")
 const BankG7 := preload("trig7_bank.gd")
 const LAMP := UITheme.GOLD_LIGHT
 
@@ -143,17 +144,14 @@ func _slider_row(parent: Control, name: String, n: int, i0: int, on_change: Call
 	UITheme.tint_slider(s, UITheme.CYAN)
 	row.add_child(s)
 	UITheme.add_step_buttons(s, UITheme.CYAN)
-	var vl := Label.new()
-	vl.custom_minimum_size = Vector2(62, 0)
-	vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	vl.add_theme_font_size_override("font_size", UITheme.fs(15))
-	vl.add_theme_color_override("font_color", UITheme.CYAN)
+	var vl := _math_label(15, 62, 30, UITheme.CYAN)     # 數學字：√2 上面才有橫線
+	vl.custom_minimum_size = Vector2(62, 30)
 	row.add_child(vl)
-	vl.text = String(on_change.call(i0, true))
+	vl.text = SBk.root_markup(String(on_change.call(i0, true)))
 	s.value_changed.connect(func(v: float):
 		if busy:
 			return
-		vl.text = String(on_change.call(int(v), false))
+		vl.text = SBk.root_markup(String(on_change.call(int(v), false)))
 		MoonView.dragged_ever = true
 		_stop_attract()
 		Game.of(self).play("blip", 0.8 + 0.03 * v, -18.0)
@@ -219,7 +217,7 @@ func _refresh_phasor() -> void:
 	var tip := tv.ph_tip(String(st.get("form", "sin")))
 	var rok := absf(tip.length() - Vector2(a, b).length()) < 1e-4
 	var aok := tip.distance_to(Vector2(a, b)) < 1e-4
-	lh_info.text = "r = %s%s\n%s = %s°%s" % [tv.ph_rt, "  ✓" if rok else "",
+	lh_info.text = "r = %s%s\n%s = %s°%s" % [SBk.root_markup(tv.ph_rt), "  ✓" if rok else "",
 		"θ" if String(st.get("form", "sin")) == "cos" else "φ", TideView.dec(tv.ph_ang), "  ✓" if aok else ""]
 	tv.queue_redraw()
 
@@ -342,7 +340,7 @@ func _refresh_wave() -> void:
 	tv.tiles_rows = rows
 	tv.matched = all_ok
 	var body := " ".join(tv.tiles_seq) if not tv.tiles_seq.is_empty() else "（還沒有積木）"
-	tiles_fx.text = "%s =\n%s" % [String(st.expr), body]
+	tiles_fx.text = SBk.root_markup("%s =\n%s" % [String(st.expr), body])
 	tv.queue_redraw()
 
 
@@ -430,7 +428,7 @@ static func _gen_light() -> Dictionary:
 				tb = _coef(k, "")
 				rmax = "%d√2" % k if k > 1 else "√2"
 				hint = "a² + b² = %d + %d = %d，開根號。" % [k * k, k * k, 2 * k * k]
-	var f := "%s sin x %s %s cos x" % [ta, "+" if sb > 0 else "−", tb]
+	var f := "%ssin x %s %scos x" % ["" if ta == "1" else ta + " ", "+" if sb > 0 else "−", "" if tb == "1" else tb + " "]     # 係數 1 不寫
 	if sa < 0:
 		f = "−" + f
 	var ask_max := randi() % 2 == 0
