@@ -4,7 +4,7 @@ extends "level_trig6_mirror.gd"
 ## 繼承第六關（夜海背景、積木面板、引導閃動），題庫在 trig7_bank.gd。
 ##
 ## 這一關多了三種「動手」的步驟：
-##   phasor 相位指針：平面上金色的點是 (a, b)。拖動 r（箭頭長度）和 φ（箭頭角度），讓箭頭尖端壓在目標點上；
+##   phasor 相位指針：拖動 r 和 φ，讓藍色光線 r sin(x + φ) 和金色光線重合；
 ##                  同時右邊兩條波（目標 a sin x + b cos x 和你的 r sin(x + φ)）也會跟著重合。
 ##                  form "sin"：r sin(x + φ)　form "cos"：r cos(x − θ)
 ##   peak   找亮點：拖動 x，看 a sin x、b cos x 和合成後的光束亮度 f(x)，找最亮（max）、最暗（min）或熄滅（zero）的位置。
@@ -217,14 +217,10 @@ func _refresh_phasor() -> void:
 	var a := float(st.a)
 	var b := float(st.b)
 	var tip := tv.ph_tip(String(st.get("form", "sin")))
-	var okx := absf(tip.x - a) < 1e-4
-	var oky := absf(tip.y - b) < 1e-4
-	if String(st.get("form", "sin")) == "cos":
-		lh_info.text = "r sin θ = %s　（a = %s）%s\nr cos θ = %s　（b = %s）%s" % [
-			CompassView.dec3(tip.x), String(st.a_txt), "  ✓" if okx else "", CompassView.dec3(tip.y), String(st.b_txt), "  ✓" if oky else ""]
-	else:
-		lh_info.text = "r cos φ = %s　（a = %s）%s\nr sin φ = %s　（b = %s）%s" % [
-			CompassView.dec3(tip.x), String(st.a_txt), "  ✓" if okx else "", CompassView.dec3(tip.y), String(st.b_txt), "  ✓" if oky else ""]
+	var rok := absf(tip.length() - Vector2(a, b).length()) < 1e-4
+	var aok := tip.distance_to(Vector2(a, b)) < 1e-4
+	lh_info.text = "r = %s%s\n%s = %s°%s" % [tv.ph_rt, "  ✓" if rok else "",
+		"θ" if String(st.get("form", "sin")) == "cos" else "φ", TideView.dec(tv.ph_ang), "  ✓" if aok else ""]
 	tv.queue_redraw()
 
 
@@ -235,12 +231,11 @@ func _phasor_submit() -> void:
 	var a := float(st.a)
 	var b := float(st.b)
 	if tip.distance_to(Vector2(a, b)) > 1e-4:
-		var msg := "箭頭尖端在 (%s, %s)，目標點在 (%s, %s)。" % [CompassView.dec3(tip.x), CompassView.dec3(tip.y),
-			CompassView.dec3(a), CompassView.dec3(b)]
+		var msg := "藍色光線和金色光線還沒重合。"
 		if absf(tip.length() - Vector2(a, b).length()) > 1e-4:
-			msg += "長度還不對：目標點離原點 √(a² + b²)。"
+			msg += "r 還不對：r = √(a² + b²)。"
 		else:
-			msg += "長度對了，轉一轉角度。"
+			msg += "r 對了，再調 φ。"
 		_wrong(st, msg + "提示：" + String(st.nudge))
 		return
 	Game.of(self).sfx("correct")
@@ -550,49 +545,14 @@ class LightView extends MirrorView:
 		var cosf := String(spec.get("form", "sin")) == "cos"
 		var rmax := float(spec.get("rmax", 4.5))
 		var cyan := UITheme.CYAN
-		var pink := Color(1, 0.6, 0.8)
-		var c := Vector2(rc.position.x + 128.0, rc.position.y + 168.0)
-		var sc := 88.0 / rmax
-		draw_line(c - Vector2(106, 0), c + Vector2(106, 0), Color(1, 1, 1, 0.35), 1.4)
-		draw_line(c - Vector2(0, 106), c + Vector2(0, 106), Color(1, 1, 1, 0.35), 1.4)
-		for i in range(1, int(rmax) + 1):
-			for sg in [-1.0, 1.0]:
-				var o: float = sg * i * sc
-				draw_line(c + Vector2(o, -3), c + Vector2(o, 3), Color(1, 1, 1, 0.45), 1.2)
-				draw_line(c + Vector2(-3, o), c + Vector2(3, o), Color(1, 1, 1, 0.45), 1.2)
-		MathLabel.draw_on(self, font, c.x + 100.0, c.y + 18.0, "a", UITheme.fs(15), UITheme.CYAN)
-		MathLabel.draw_on(self, font, c.x - 12.0, c.y - 100.0, "b", UITheme.fs(15), UITheme.ORANGE)
-		# 目標點
-		var tp := c + Vector2(a * sc, -b * sc)
-		draw_dashed_line(c, tp, Color(pink.r, pink.g, pink.b, 0.8), 2.0, 6.0)
-		UITheme.dot(self, tp, 10.0, Color(pink.r, pink.g, pink.b, 0.35))
-		UITheme.dot(self, tp, 5.0, pink)
-		var lab := "(%s, %s)" % [String(spec.a_txt), String(spec.b_txt)]
-		var lw := MathLabel.text_width(font, lab, UITheme.fs(13))
-		var lx := clampf(tp.x + (18.0 + lw / 2.0) * (1.0 if a >= 0.0 else -1.0), rc.position.x + 6.0 + lw / 2.0, rc.position.x + 252.0 - lw / 2.0)
-		var ly := tp.y + (-14.0 if b >= 0.0 else 22.0)
-		MathLabel.draw_on(self, font, lx, ly, lab, UITheme.fs(13), Color(1, 0.8, 0.9))
-		# 你的箭頭
 		var d := deg_to_rad(ph_sa)
 		var tipv := Vector2(ph_sr * sin(d), ph_sr * cos(d)) if cosf else Vector2(ph_sr * cos(d), ph_sr * sin(d))
-		var P := c + Vector2(tipv.x * sc, -tipv.y * sc)
-		draw_arc(c, ph_sr * sc, 0, TAU, 64, Color(cyan.r, cyan.g, cyan.b, 0.22), 1.4, true)
-		var ok := P.distance_to(tp) < 0.6
-		if cosf:
-			_arc_between(c, 30.0, PI / 2.0, PI / 2.0 - d, cyan, 2.2)
-			MathLabel.draw_on(self, font, c.x + 18.0 * sin(d / 2.0) + 6.0, c.y - 40.0 * cos(d / 2.0) - 2.0, "θ", UITheme.fs(13), cyan)
-		else:
-			_arc_between(c, 30.0, 0.0, d, cyan, 2.2)
-			MathLabel.draw_on(self, font, c.x + 44.0 * cos(d / 2.0), c.y - 44.0 * sin(d / 2.0) + 4.0, "φ", UITheme.fs(13), cyan)
-		draw_line(c, P, UITheme.GOOD if ok else cyan, 3.5, true)
-		UITheme.dot(self, P, 8.0, UITheme.GOOD if ok else cyan)
-		UITheme.dot(self, P, 3.5, Color.WHITE)
 		# 右邊：兩條波
-		var x0 := rc.position.x + 264.0
+		var x0 := rc.position.x + 24.0
 		var w := rc.end.x - x0 - 14.0
 		var y := rc.position.y + 66.0
 		y = _line_text(font, x0, y, w, "金色：目標　藍色：你的", 12, Color(1, 1, 1, 0.65))
-		var area := Rect2(x0, y - 6.0, w, 74.0)
+		var area := Rect2(x0, y - 6.0, w, 96.0)
 		_plot_box(font, area, 0.0, 360.0, rmax, 90.0)
 		_curve(area, 0.0, 360.0, rmax, func(xd: float): return fab(a, b, xd), UITheme.GOLD, 3.2)
 		var rr := ph_sr
@@ -610,10 +570,10 @@ class LightView extends MirrorView:
 		var dd := (Vector2(tipv.x, tipv.y) - Vector2(a, b)).length() / maxf(Vector2(a, b).length(), 0.001)
 		var k := clampf(1.0 - dd, 0.0, 1.0)
 		var done := dd * Vector2(a, b).length() < 1e-4
-		var bar := Rect2(x0, rc.end.y - 84.0, w, 9.0)
+		var bar := Rect2(x0 + w * 0.5, y - 30.0, w * 0.5, 9.0)
 		draw_rect(bar, Color(1, 1, 1, 0.1))
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * k, bar.size.y)), UITheme.GOOD if done else Color(1, 0.75, 0.4))
-		_line_text(font, x0, rc.end.y - 70.0, w, "重合了！按「確定」" if done else "箭頭尖端離目標點還有距離", 14,
+		_line_text(font, x0 + w * 0.5, y - 16.0, w * 0.5, "重合了！按「確定」" if done else "兩條光線還沒重合", 14,
 			UITheme.GOOD if done else Color(1, 0.92, 0.7))
 
 	# --- peak ---
