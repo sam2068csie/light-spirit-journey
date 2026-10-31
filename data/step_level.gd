@@ -1552,7 +1552,8 @@ class ForgeView extends Control:
 
 	func push_line(text: String) -> void:
 		scroll_rows = 0          # 有新的一行：自動回到最下面
-		lines.append({"text": text, "born": t})
+		for part in text.split("\n"):     # 太長的一行可以用 \n 拆成兩行
+			lines.append({"text": part, "born": t})
 		_burst(Vector2(size.x / 2.0, _line_y(lines.size() - 1)), FIRE, 18)
 
 	func finish() -> void:
