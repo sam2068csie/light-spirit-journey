@@ -1108,7 +1108,7 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			if g.has("frac"):
 				# 根號裡面是直式分數：槓要畫在分子上面，勾要伸到分母下面
 				var fe := frac_extent(g.frac, g.size)
-				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.1)
+				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.22)
 				low = maxf(low, fe.y)
 			if g.rad >= 0 and bar_y.has(g.rad):
 				top = minf(top, bar_y[g.rad] - maxf(4.0, sz * 0.18))

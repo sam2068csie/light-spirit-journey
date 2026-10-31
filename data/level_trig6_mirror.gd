@@ -16,7 +16,7 @@ const POOL := UITheme.GOLD
 
 const CHAPTERS_G6 := [
 	{"ch": 1, "name": "第一章．鏡面倍角", "topic": "二倍角公式、cos 2θ 的三種樣子、求值與合併", "color": UITheme.GOLD},
-	{"ch": 2, "name": "第二章．半角與化簡", "topic": "半角公式與象限、根號化簡、以切表弦、連乘積、極值", "color": UITheme.GOLD_LIGHT},
+	{"ch": 2, "name": "第二章．半角與化簡", "topic": "半角公式與象限、四大天王、以切表弦、連乘積、極值", "color": UITheme.GOLD_LIGHT},
 ]
 
 var mir_pick := -1               # 掃過範圍時同時要選的答案（−1：還沒選）

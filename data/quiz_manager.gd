@@ -131,7 +131,7 @@ const MISTAKE_INFO := {
 	"trig_dblmerge":         {"name": "二倍角公式合併（2 sin cos、cos² − sin²、降冪）", "level": 1},
 	"trig_half":             {"name": "半角公式（sin²、cos²、tan 的 θ/2）", "level": 1},
 	"trig_halfquad":         {"name": "半角的象限與正負號（θ/2 的範圍）", "level": 1},
-	"trig_sqrtsimp":         {"name": "根號化簡（1 ± sin 2θ 是完全平方、去絕對值）", "level": 1},
+	"trig_sqrtsimp":         {"name": "四大天王（1 ± sin、1 ± cos 化成完全平方、去絕對值）", "level": 1},
 	"trig_tanrep":           {"name": "以切表弦（t = tan θ 求 sin 2θ、cos 2θ）", "level": 1},
 	"trig_product":          {"name": "連乘積（乘 sin 後反覆二倍角）", "level": 1},
 	"trig_dblextreme":       {"name": "含 cos 2θ 的最大最小值（換成二次函數）", "level": 1},
