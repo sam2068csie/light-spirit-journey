@@ -629,8 +629,11 @@ static func draw_on(ci: CanvasItem, font: Font, center_x: float, baseline_y: flo
 				run_mf = mf
 				run_solo = solo
 			run_next = i + 1
-		gl.append({"ch": ch.ch, "pos": pos, "size": int(round(fs * ch.scale)), "color": c, "w": ws[i],
-			"rad": ch.get("rad", -1), "idx": ch.get("idx", ""), "rads": ch.rads})
+		var gg := {"ch": ch.ch, "pos": pos, "size": int(round(fs * ch.scale)), "color": c, "w": ws[i],
+			"rad": ch.get("rad", -1), "idx": ch.get("idx", ""), "rads": ch.rads}
+		if ch.has("frac"):
+			gg["frac"] = ch.frac
+		gl.append(gg)
 		x += ws[i]
 	if run != "":
 		ci.draw_string(font_for(font, run_mf), run_pos, run, HORIZONTAL_ALIGNMENT_LEFT, -1, _msize(run_fs, run_mf), run_col)
@@ -706,8 +709,11 @@ static func _line_ops(font: Font, markup: String, fs: int, col: Color) -> Dictio
 				runs.append([ch.ch, pos + Vector2(gfs * SIDE_PAD.get(ch.ch, 0.0), 0), gfs, c, i + 1, mf, _msize(gfs, mf), solo])
 		if ch.get("rad", -1) >= 0:
 			rad = true
-		gl.append({"ch": ch.ch, "pos": pos, "size": gfs, "color": c, "w": ws[i],
-			"rad": ch.get("rad", -1), "idx": ch.get("idx", ""), "rads": ch.rads})
+		var gg := {"ch": ch.ch, "pos": pos, "size": gfs, "color": c, "w": ws[i],
+			"rad": ch.get("rad", -1), "idx": ch.get("idx", ""), "rads": ch.rads}
+		if ch.has("frac"):
+			gg["frac"] = ch.frac
+		gl.append(gg)
 		x += ws[i]
 	var res := {"runs": runs, "fracs": fracs, "gl": gl, "rad": rad}
 	_ops_cache[key] = res
@@ -810,8 +816,11 @@ static func frac_extent(fr: Dictionary, fs: float) -> Vector2:
 	var axis := fs * FRAC_AXIS
 	var gap := fs * FRAC_GAP
 	var top := 0.0
+	var num_desc := 0.0
 	for ch in fr.num:
-		top = maxf(top, -ch.dy * fs + ch.scale * fs * 0.78 * _hk(ch))
+		top = maxf(top, -ch.dy * fs + ch.scale * fs * (0.92 if ch.has("rads") and not ch.rads.is_empty() else 0.78) * _hk(ch))
+		num_desc = maxf(num_desc, ch.dy * fs + ch.scale * fs * 0.2 * _hk(ch))
+	top += num_desc
 	var bot := 0.0
 	for ch in fr.den:
 		bot = maxf(bot, ch.dy * fs + ch.scale * fs * 0.22 * _hk(ch))
@@ -1108,7 +1117,7 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			if g.has("frac"):
 				# 根號裡面是直式分數：槓要畫在分子上面，勾要伸到分母下面
 				var fe := frac_extent(g.frac, g.size)
-				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.22)
+				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.1)
 				low = maxf(low, fe.y)
 			if g.rad >= 0 and bar_y.has(g.rad):
 				top = minf(top, bar_y[g.rad] - maxf(4.0, sz * 0.18))
