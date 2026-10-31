@@ -2898,7 +2898,7 @@ func _report_context() -> String:
 		parts.append("第 %d 步" % (int(st) + 1))
 	if tower_mode:
 		parts.append("終焉之塔第 %d 層" % tower_floor)
-	var eq := String(r.get("eq", "")).replace("\n", " ")
+	var eq := String(r.get("eq", "")).replace("\n", " ").replace("表|", "").replace("|", " ")     # 表格寫法換成一般文字
 	if eq != "":
 		parts.append("題目：" + eq.left(80))
 	return "，".join(parts)
