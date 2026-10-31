@@ -144,7 +144,7 @@ static func _check_step(st: Dictionary, where: String) -> Array:
 static func fix_roots(x, key := ""):
 	if x is Dictionary:
 		for k in x.keys():
-			if String(k) in ["answers", "cands", "keep", "ans"]:
+			if String(k) in ["answers", "cands", "keep", "ans", "tokens"]:
 				continue
 			x[k] = fix_roots(x[k], String(k))
 	elif x is Array:

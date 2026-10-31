@@ -75,7 +75,7 @@ const STORY := {
 		{"text": "每 2π 就重複一次，這就是週期！海浪一階一階的，好像在跳舞～", "who": "光靈", "cam": "site", "site": 3, "zoom": 1.4, "spirit": 3},
 	],
 	"G4": [
-		{"text": "調音台的旋鈕轉回原位：拉高、壓扁、左右平移，海浪又聽話了。", "cam": "site", "site": 3, "zoom": 1.8, "light": 3},
+		{"text": "調音盤的旋鈕轉回原位：拉高、壓扁、左右平移，海浪又聽話了。", "cam": "site", "site": 3, "zoom": 1.8, "light": 3},
 		{"text": "a 管高低、b 管快慢……先伸縮再平移，不要搞混！前面有個好大的羅盤耶！", "who": "光靈", "cam": "site", "site": 4, "zoom": 1.4, "spirit": 4},
 	],
 	"G5": [
@@ -98,7 +98,7 @@ const STORY := {
 }
 
 const STORY_TITLES := {"prologue": "序章．月光下的島", "G1": "第一幕．弧之渡口", "G2": "第二幕．扇形潟湖",
-	"G3": "第三幕．浪之階梯", "G4": "第四幕．潮汐調音台", "G5": "第五幕．和角羅盤", "G6": "第六幕．倍角鏡池",
+	"G3": "第三幕．浪之階梯", "G4": "第四幕．潮汐調音盤", "G5": "第五幕．和角羅盤", "G6": "第六幕．倍角鏡池",
 	"G7": "第七幕．疊合燈塔", "epilogue": "終章．月與浪"}
 
 signal enter_level(file: String)
@@ -998,7 +998,7 @@ func _draw_landmark(i: int) -> void:
 			if gl > 0.05:
 				var u := fposmod(t * 0.35, 1.0)
 				UITheme.dot(T, p + Vector2(-24.0 + 48.0 * u, -20.0 - 16.0 * sin(PI * u)), 3.5, Color(1, 1, 0.85, gl))
-		3:   # 潮汐調音台：台座、上面的波形螢幕、兩個旋鈕
+		3:   # 潮汐調音盤：台座、上面的波形螢幕、兩個旋鈕
 			T.draw_rect(Rect2(p + Vector2(-22, -14), Vector2(44, 14)), base)
 			T.draw_rect(Rect2(p + Vector2(-26, -44), Vector2(52, 28)), dark.lightened(0.1))
 			T.draw_rect(Rect2(p + Vector2(-26, -44), Vector2(52, 28)), base.lightened(0.2), false, 2.0)
