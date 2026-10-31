@@ -34,7 +34,7 @@ const CW := 46.0                  # 海岸陸地的寬度
 const X_END := 1210.0
 ## 羅盤礁：海岸往上爬的地方（一個週期的位置）鼓起來的圓形礁石，上面是兩層轉盤
 const CP := Vector2(WX0 + PER, WY)
-const DR := 62.0
+const DR := 70.0
 
 ## 七座聖地。kind：ring（圓環上，角度範圍 a）、coast（海岸上，x 範圍）、dial（羅盤礁的左半／右半＋那一段海岸）
 const SITES := [
@@ -42,8 +42,8 @@ const SITES := [
 	{"id": "G2", "kind": "ring", "a": Vector2(-PI / 2.0, PI / 2.0), "at": 0.85, "lab": Vector2(0, -86)},
 	{"id": "G3", "kind": "coast", "x": Vector2(WX0, 640.0), "at": WX0 + PER * 0.25, "lab": Vector2(0, -86)},
 	{"id": "G4", "kind": "coast", "x": Vector2(640.0, 845.0), "at": WX0 + PER * 0.75, "lab": Vector2(0, -86)},
-	{"id": "G5", "kind": "dial", "side": -1.0, "x": Vector2(845.0, CP.x), "off": Vector2(-34, 20), "lab": Vector2(-96, -62)},
-	{"id": "G6", "kind": "dial", "side": 1.0, "x": Vector2(CP.x, 905.0), "off": Vector2(34, -14), "lab": Vector2(96, 74)},
+	{"id": "G5", "kind": "dial", "side": -1.0, "x": Vector2(845.0, CP.x), "off": Vector2(-38, 22), "lab": Vector2(-10, -132)},
+	{"id": "G6", "kind": "dial", "side": 1.0, "x": Vector2(CP.x, 905.0), "off": Vector2(38, -16), "lab": Vector2(104, 84)},
 	{"id": "G7", "kind": "coast", "x": Vector2(905.0, X_END), "at": WX0 + PER * 1.25, "lab": Vector2(0, -112)},
 ]
 
