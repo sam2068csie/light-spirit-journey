@@ -1281,7 +1281,7 @@ class TideView extends MoonView:
 			UITheme.dot(self, p, 11.0 + 1.5 * sin(t * 4.0), Color(col.r, col.g, col.b, 0.25))
 			UITheme.dot(self, p, 6.0, col)
 		if matched:
-			MathLabel.draw_on(self, font, area.end.x - 50.0, area.position.y + 16.0, "✓ 吻合！按確定", UITheme.fs(16), UITheme.GOOD)
+			MathLabel.draw_on(self, font, area.end.x - MathLabel.text_width(font, "✓ 吻合！按確定", UITheme.fs(15)) / 2.0, area.position.y - 9.0, "✓ 吻合！按確定", UITheme.fs(15), UITheme.GOOD)
 
 	# --- chain ---
 
@@ -1303,7 +1303,7 @@ class TideView extends MoonView:
 		g["legend"] = [["y = %s x" % fn, Color(1, 1, 1, 0.5)], ["目標", UITheme.GOLD], ["現在", cc.col]]
 		var area := _plot(font, rc, g, true)
 		if matched and ch_k >= 1.0:
-			MathLabel.draw_on(self, font, area.end.x - 50.0, area.position.y + 16.0, "✓ 吻合！按確定", UITheme.fs(16), UITheme.GOOD)
+			MathLabel.draw_on(self, font, area.end.x - MathLabel.text_width(font, "✓ 吻合！按確定", UITheme.fs(15)) / 2.0, area.position.y - 9.0, "✓ 吻合！按確定", UITheme.fs(15), UITheme.GOOD)
 
 	# --- ride ---
 
@@ -1412,7 +1412,8 @@ class TideView extends MoonView:
 				var col := Color(1, 0.45, 0.5, 0.9 * (1.0 - k))
 				draw_line(cx + Vector2(-8, -8), cx + Vector2(8, 8), col, 3.0)
 				draw_line(cx + Vector2(-8, 8), cx + Vector2(8, -8), col, 3.0)
-		MathLabel.draw_on(self, font, area.end.x - 56.0, area.position.y + 14.0, "已找到 %d 個" % found.size(), UITheme.fs(15), UITheme.GOLD)
+		var fstr := "已找到 %d 個" % found.size()
+		MathLabel.draw_on(self, font, area.end.x - MathLabel.text_width(font, fstr, UITheme.fs(15)) / 2.0, area.position.y - 9.0, fstr, UITheme.fs(15), UITheme.GOLD)
 
 	# ---------- 畫函數圖 ----------
 
@@ -1420,7 +1421,12 @@ class TideView extends MoonView:
 		if g.has("area"):
 			return g.area
 		if big:
-			return Rect2(rc.position.x + 52.0, rc.position.y + 54.0, rc.size.x - 52.0 - 18.0, rc.size.y - 54.0 - 38.0)
+			# 圖例在圖的上方；圖例有直式分數（比較高）就再往下讓一點
+			var top := 64.0
+			for lg in g.get("legend", []):
+				if String(lg[0]).contains("/"):
+					top = 78.0
+			return Rect2(rc.position.x + 52.0, rc.position.y + top, rc.size.x - 52.0 - 18.0, rc.size.y - top - 38.0)
 		return Rect2(rc.position.x + 34.0, rc.position.y + 10.0, rc.size.x * 0.68, rc.size.y - 34.0)
 
 	func _map(area: Rect2, g: Dictionary, xn: float, y: float) -> Vector2:
@@ -1463,7 +1469,14 @@ class TideView extends MoonView:
 			var p := _map(area, g, xv, y0)
 			draw_line(Vector2(p.x, area.position.y), Vector2(p.x, area.end.y), Color(1, 1, 1, 0.09 if k % 2 == 0 else 0.05), 1.0)
 			if k != 0 and k % every == 0:
-				MathLabel.draw_on(self, font, p.x, lab_y, _xlabel(g, xv), UITheme.fs(12), dim)
+				# 刻度數字（π/2 這種直式分數比較高）：整個放在 x 軸下面，後面墊一小塊底色，曲線經過也看得清楚
+				var xs := _xlabel(g, xv)
+				var tfs := UITheme.fs(12)
+				var te := MathLabel.line_extent(xs, tfs)
+				var tb := (ay + 5.0 + te.x) if ay < area.end.y - 14.0 else lab_y
+				var tw := MathLabel.text_width(font, xs, tfs)
+				draw_rect(Rect2(p.x - tw / 2.0 - 3.0, tb - te.x - 1.0, tw + 6.0, te.x + te.y + 2.0), Color(0.03, 0.05, 0.12, 0.75))
+				MathLabel.draw_on(self, font, p.x, tb, xs, tfs, dim)
 		var j0 := int(ceil(y0 / yt - 1e-9))
 		var j1 := int(floor(y1 / yt + 1e-9))
 		for j in range(j0, j1 + 1):
@@ -1480,7 +1493,8 @@ class TideView extends MoonView:
 		if String(g.get("xl", "")) != "":
 			MathLabel.draw_on(self, font, area.end.x - 30.0, lab_y + 15.0, String(g.xl), UITheme.fs(12), dim)
 		if String(g.get("yl", "")) != "":
-			MathLabel.draw_on(self, font, area.position.x + 40.0, area.position.y - 7.0, String(g.yl), UITheme.fs(12), dim)
+			var ylw := MathLabel.text_width(font, String(g.yl), UITheme.fs(12))
+			MathLabel.draw_on(self, font, area.position.x + 4.0 + ylw / 2.0, area.position.y - 9.0, String(g.yl), UITheme.fs(12), dim)
 		# 水平線、垂直線
 		for hl in g.get("hlines", []):
 			var hc: Color = hl[2] if hl.size() > 2 else Color(1, 0.6, 0.75)
@@ -1539,17 +1553,21 @@ class TideView extends MoonView:
 				MathLabel.draw_on(self, font, pp.x, pp.y - 12.0, String(pt[2]), UITheme.fs(12), UITheme.GOLD)
 		# 圖例或右邊的標籤
 		if big:
-			var ly := area.position.y + 14.0
+			# 圖例排成一列，放在圖的上方（不蓋住曲線）；左邊留給 y 軸的單位
+			var lfs := UITheme.fs(13)
+			var lx0 := area.position.x + 4.0
+			if String(g.get("yl", "")) != "":
+				lx0 += MathLabel.text_width(font, String(g.yl), UITheme.fs(12)) + 16.0
+			var ly := area.position.y - 9.0
 			for lg in g.get("legend", []):
+				if String(lg[0]).contains("/"):
+					ly = area.position.y - 12.0
 				var lc: Color = lg[1]
 				var lab := String(lg[0])
-				var lfs := UITheme.fs(13)
-				var ext := MathLabel.line_extent(lab, lfs)      # 有分數（直式）的圖例會比較高
-				ly += maxf(0.0, ext.x - lfs * 0.78)
-				draw_line(Vector2(area.position.x + 10.0, ly - 4.0), Vector2(area.position.x + 28.0, ly - 4.0), lc, 3.0)
 				var lw := MathLabel.text_width(font, lab, lfs)
-				MathLabel.draw_on(self, font, area.position.x + 34.0 + lw / 2.0, ly, lab, lfs, Color(lc.r, lc.g, lc.b, 0.95))
-				ly += 18.0 + maxf(0.0, ext.y - lfs * 0.22)
+				draw_line(Vector2(lx0, ly - 4.0), Vector2(lx0 + 16.0, ly - 4.0), lc, 3.0)
+				MathLabel.draw_on(self, font, lx0 + 21.0 + lw / 2.0, ly, lab, lfs, Color(lc.r, lc.g, lc.b, 0.95))
+				lx0 += 21.0 + lw + 16.0
 		else:
 			var lx := rc.position.x + rc.size.x * 0.865
 			var ly2 := rc.position.y + 36.0
