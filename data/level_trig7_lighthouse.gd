@@ -52,9 +52,9 @@ func step_color() -> Color:
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．疊合的變身", "button": "進入疊合的變身  ▶",
 		"text": "特殊角會合成了，接下來把燈塔搬到更多地方：\n\n" \
-			+ "・非特殊角：r 是整數，φ 只能用 cos φ、sin φ 表示\n" \
+			+ "・非特殊角\n" \
 			+ "・齊次型：先用倍角、降冪變成 sin 2x、cos 2x\n" \
-			+ "・參數型：令 k = sin x + cos x，變成二次函數\n" \
+			+ "・參數型：令 k = sin x + cos x\n" \
 			+ "・限制範圍：最大最小值可能在端點\n" \
 			+ "・生活應用：周長、長度的最大值\n\n" \
 			+ "光束再亮一點！"}
