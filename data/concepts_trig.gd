@@ -196,10 +196,11 @@ static func cards(level: String) -> Array:
 		"G7":
 			return [
 				{"title": "疊合公式", "tag": "公式", "glyph": "r",
-				 "formulas": ["a sin x + b cos x = ?{r sin(x + φ)}", "r = ?{√{a² + b²}}", "cos φ = ?{\\frac{a}{r}}，sin φ = ?{\\frac{b}{r}}"],
-				 "notes": ["點 (a, b) 到原點的距離是 r，方向角是 ?{φ}", "也可以寫成 r cos(x − θ)：cos θ = b/r、sin θ = ?{a/r}"],
-				 "check": {"q": "3 sin x + 4 cos x 的 r = ？", "opts": ["5", "7", "√{7}"], "a": 0,
-					"why": "√{9 + 16} = 5。", "hint": "r = √{a² + b²}，不是 a + b。"}},
+				 "formulas": ["a sin x + b cos x = ?{r sin(x + φ)}", "r = ?{√{a² + b²}}，0 ≤ φ < 2π",
+					"sin φ = ?{\\frac{b}{√{a² + b²}}}", "cos φ = ?{\\frac{a}{√{a² + b²}}}"],
+				 "notes": ["a、b 是不全為 0 的實數", "cos φ 配 ?{a}（sin x 的係數），sin φ 配 ?{b}（cos x 的係數）"],
+				 "check": {"q": "a sin x + b cos x = r sin(x + φ)，cos φ 是？", "opts": ["\\frac{a}{√{a² + b²}}", "\\frac{b}{√{a² + b²}}", "\\frac{a}{a² + b²}"], "a": 0,
+					"why": "cos φ 配 sin x 的係數 a，分母是 r = √{a² + b²}。", "hint": "展開 r sin(x + φ) = r cos φ sin x + r sin φ cos x，對照係數。"}},
 				{"title": "φ 在哪個象限", "tag": "陷阱", "glyph": "φ",
 				 "formulas": ["φ 的方向 = ?{點 (a, b) 的方向}", "cos φ 的正負看 ?{a}，sin φ 的正負看 ?{b}"],
 				 "notes": ["只算 tan φ = b/a 會差 ?{180°}，一定要同時看 cos φ 和 sin φ"],
