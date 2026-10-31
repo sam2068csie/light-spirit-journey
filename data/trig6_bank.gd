@@ -231,10 +231,10 @@ static func _slots() -> Array:
 			 ]},
 		 ]},
 
-		{"id": "speed", "chapter": 1, "type": "speed", "title": "速算鏡池", "time": 160.0,
+		{"id": "speed", "chapter": 1, "type": "speed", "title": "速算鏡池", "time": 190.0,
 		 "story": "已知一個函數值和象限，立刻說出二倍角的值！",
 		 "insight": "先用象限定正負，再 sin 2θ = 2 sin θ cos θ、cos 2θ = cos²θ − sin²θ；tan 2θ = sin 2θ ÷ cos 2θ。",
-		 "variants": [{"gen": "mirror", "count": 8}]},
+		 "variants": [{"gen": "mirror", "count": 6}]},
 
 		{"id": "boss1", "chapter": 1, "type": "forge", "title": "第一章試煉", "time": 300.0,
 		 "story": "限時 300 秒！轉鏡面、拼公式、求二倍角，一口氣算完。",
