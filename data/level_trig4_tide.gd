@@ -1281,11 +1281,99 @@ class TideView extends MoonView:
 			_draw_mode(get_theme_default_font())
 
 	func _draw_circ(font: Font, rect: Rect2) -> void:
+		if String(circ.get("kind", "")) == "fig":
+			draw_style_box(UITheme.boxc(Color(0.03, 0.06, 0.14, 0.55), 12, Color(0.78, 0.6, 1.0, 0.22), 1, 0), rect.grow(6))
+			_draw_fig(font, rect, circ)
+			return
 		if String(circ.get("kind", "")) != "tide":
 			super(font, rect)
 			return
 		draw_style_box(UITheme.boxc(Color(0.03, 0.06, 0.14, 0.55), 12, Color(0.78, 0.6, 1.0, 0.22), 1, 0), rect.grow(6))
 		_plot(font, rect, circ, false)
+
+	## 幾何示意圖（kind = "fig"）：
+	##   pts {名稱: [x, y]}、segs [[P, Q, 標籤]]、right [[頂點, P, Q]]（直角記號）、
+	##   angles [[頂點, P, Q, 標籤]]（角的小弧）、carcs [[圓心, P, Q]]（圓弧）、axes（畫坐標軸）、hide [不標名字的點]
+	func _draw_fig(font: Font, rect: Rect2, f: Dictionary) -> void:
+		var pts: Dictionary = f.get("pts", {})
+		if pts.is_empty():
+			return
+		var lo := Vector2(INF, INF)
+		var hi := Vector2(-INF, -INF)
+		for k in pts:
+			var v := Vector2(float(pts[k][0]), float(pts[k][1]))
+			lo = Vector2(minf(lo.x, v.x), minf(lo.y, v.y))
+			hi = Vector2(maxf(hi.x, v.x), maxf(hi.y, v.y))
+		var span := (hi - lo)
+		span = Vector2(maxf(span.x, 1e-6), maxf(span.y, 1e-6))
+		var pad := 26.0
+		# 下緣多留一點：光靈的對話泡泡在左下角，不要蓋到圖
+		var area := Rect2(rect.position, rect.size - Vector2(0, 30))
+		var sc := minf((area.size.x - 2.0 * pad) / span.x, (area.size.y - 2.0 * pad) / span.y)
+		var mid := (lo + hi) / 2.0
+		var c0 := area.get_center()
+		var to := func(v: Vector2) -> Vector2:
+			return Vector2(c0.x + (v.x - mid.x) * sc, c0.y - (v.y - mid.y) * sc)
+		var P := {}
+		var cen := Vector2.ZERO
+		for k in pts:
+			P[k] = to.call(Vector2(float(pts[k][0]), float(pts[k][1])))
+			cen += P[k]
+		cen /= float(pts.size())
+		var line_c := Color(0.85, 0.9, 1.0, 0.85)
+		var dim := Color(1, 1, 1, 0.5)
+		if f.get("axes", false):
+			var o2: Vector2 = to.call(Vector2.ZERO)
+			draw_line(Vector2(rect.position.x + 6.0, o2.y), Vector2(rect.end.x - 6.0, o2.y), Color(1, 1, 1, 0.3), 1.2)
+			draw_line(Vector2(o2.x, rect.position.y + 6.0), Vector2(o2.x, rect.end.y - 6.0), Color(1, 1, 1, 0.3), 1.2)
+			MathLabel.draw_on(self, font, rect.end.x - 12.0, o2.y - 6.0, "x", UITheme.fs(12), dim)
+			MathLabel.draw_on(self, font, o2.x + 10.0, rect.position.y + 16.0, "y", UITheme.fs(12), dim)
+		# 圓弧
+		for ca in f.get("carcs", []):
+			var cc: Vector2 = P[ca[0]]
+			var a1: float = (P[ca[1]] - cc).angle()
+			var a2: float = (P[ca[2]] - cc).angle()
+			var r: float = cc.distance_to(P[ca[1]])
+			var d: float = wrapf(a2 - a1, -PI, PI)
+			draw_arc(cc, r, a1, a1 + d, 48, Color(UITheme.ORANGE.r, UITheme.ORANGE.g, UITheme.ORANGE.b, 0.85), 2.0, true)
+		# 角的小弧
+		for an in f.get("angles", []):
+			var v: Vector2 = P[an[0]]
+			var b1: float = (P[an[1]] - v).angle()
+			var b2: float = (P[an[2]] - v).angle()
+			var dd: float = wrapf(b2 - b1, -PI, PI)
+			var ac: Color = UITheme.GOLD
+			draw_arc(v, 24.0, b1, b1 + dd, 24, ac, 2.0, true)
+			if an.size() > 3 and String(an[3]) != "":
+				var bm := b1 + dd / 2.0
+				MathLabel.draw_on(self, font, v.x + cos(bm) * 40.0, v.y + sin(bm) * 40.0 + 5.0, String(an[3]), UITheme.fs(13), ac)
+		# 線段與長度
+		for sg in f.get("segs", []):
+			var a: Vector2 = P[sg[0]]
+			var b: Vector2 = P[sg[1]]
+			draw_line(a, b, line_c, 2.0, true)
+			if sg.size() > 2 and String(sg[2]) != "":
+				var m: Vector2 = (a + b) / 2.0
+				var nrm: Vector2 = Vector2(-(b - a).y, (b - a).x).normalized()
+				if nrm.dot(m - cen) < 0.0:
+					nrm = -nrm
+				MathLabel.draw_on(self, font, m.x + nrm.x * 14.0, m.y + nrm.y * 14.0 + 5.0, String(sg[2]), UITheme.fs(13), UITheme.CYAN_LIGHT)
+		# 直角記號
+		for rt in f.get("right", []):
+			var v2: Vector2 = P[rt[0]]
+			var u1: Vector2 = (P[rt[1]] - v2).normalized() * 9.0
+			var u2: Vector2 = (P[rt[2]] - v2).normalized() * 9.0
+			draw_polyline(PackedVector2Array([v2 + u1, v2 + u1 + u2, v2 + u2]), Color(1, 1, 1, 0.75), 1.5, true)
+		# 點與名稱
+		var hide: Array = f.get("hide", [])
+		for k in pts:
+			var q: Vector2 = P[k]
+			UITheme.dot(self, q, 3.5, UITheme.GOLD)
+			if k in hide:
+				continue
+			var away: Vector2 = (q - cen)
+			away = away.normalized() if away.length() > 1.0 else Vector2(0, -1)
+			MathLabel.draw_on(self, font, q.x + away.x * 15.0, q.y + away.y * 15.0 + 5.0, String(k), UITheme.fs(14), UITheme.GOLD)
 
 	func _draw_mode(font: Font) -> void:
 		var rc := _spin_rect()
