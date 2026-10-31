@@ -18,6 +18,10 @@ const CHAPTERS_G5 := [
 
 var rot_info: MathLabel
 var tiles_fx: MathLabel
+var tiles_part := 0              # 分數模式：0 填分子、1 填分母
+var tiles_num: Array = []
+var tiles_den: Array = []
+var tiles_part_btns: Array = []
 var lines_info: MathLabel
 var _rot_sliders: Array = []
 
@@ -308,12 +312,37 @@ func _build_tiles(st: Dictionary) -> void:
 	var card := _info_card(COMPASS)
 	tiles_fx = _math_label(18, 330, 54, UITheme.TEXT)
 	card.add_child(tiles_fx)
+	# 分數模式（tan 的和差角）：分數線已經畫好，積木分別放進分子、分母，不用自己打括號
+	var frac: bool = st.get("frac", false)
+	tiles_part = 0
+	tiles_num = []
+	tiles_den = []
+	tiles_part_btns = []
+	if frac:
+		var prow := HBoxContainer.new()
+		prow.add_theme_constant_override("separation", 6)
+		rank_box.add_child(prow)
+		for pi in 2:
+			var pb := Button.new()
+			pb.text = "放進分子" if pi == 0 else "放進分母"
+			pb.toggle_mode = true
+			pb.custom_minimum_size = Vector2(0, 32)
+			pb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_tint_button(pb, UITheme.GOLD, 15)
+			var pk: int = pi
+			pb.pressed.connect(func():
+				tiles_part = pk
+				_refresh_tiles())
+			prow.add_child(pb)
+			tiles_part_btns.append(pb)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 5)
 	grid.add_theme_constant_override("v_separation", 5)
 	rank_box.add_child(grid)
 	var toks: Array = st.tokens
+	if frac:
+		toks = toks.filter(func(x): return not (String(x) in ["÷", "(", ")"]))
 	for t in toks:
 		var b := Button.new()
 		b.text = String(t)
@@ -362,7 +391,11 @@ func _tiles_add(t: String) -> void:
 		_hint("積木太多了，按「退一步」整理一下。", "info")
 		return
 	MoonView.dragged_ever = true
-	tv.tiles_seq.append(t)
+	if steps[si].get("frac", false):
+		(tiles_num if tiles_part == 0 else tiles_den).append(t)
+		tv.tiles_seq = _frac_seq()
+	else:
+		tv.tiles_seq.append(t)
 	Game.of(self).play("blip", 1.0 + 0.03 * tv.tiles_seq.size(), -14.0)
 	_refresh_tiles()
 
@@ -371,6 +404,20 @@ func _tiles_back(kind: int) -> void:
 	if busy:
 		return
 	var tv := _cv2()
+	if steps[si].get("frac", false):
+		if kind == 0:
+			var cur_a: Array = tiles_num if tiles_part == 0 else tiles_den
+			if cur_a.is_empty():
+				cur_a = tiles_den if tiles_part == 0 else tiles_num
+			if not cur_a.is_empty():
+				cur_a.pop_back()
+		else:
+			tiles_num = []
+			tiles_den = []
+		tv.tiles_seq = _frac_seq()
+		Game.of(self).play("blip", 0.8, -14.0)
+		_refresh_tiles()
+		return
 	if tv.tiles_seq.is_empty():
 		return
 	if kind == 0:
@@ -379,6 +426,18 @@ func _tiles_back(kind: int) -> void:
 		tv.tiles_seq = []
 	Game.of(self).play("blip", 0.8, -14.0)
 	_refresh_tiles()
+
+
+## 分數模式：分子、分母組成可以計算的積木序列 (分子) ÷ (分母)
+func _frac_seq() -> Array:
+	if tiles_num.is_empty() and tiles_den.is_empty():
+		return []
+	var out := ["("]
+	out.append_array(tiles_num)
+	out.append_array([")", "÷", "("])
+	out.append_array(tiles_den if not tiles_den.is_empty() else ["1"])
+	out.append(")")
+	return out
 
 
 const SAMPLES := [[30.0, 45.0], [110.0, 35.0], [60.0, 15.0], [20.0, 50.0]]
@@ -403,7 +462,22 @@ func _refresh_tiles() -> void:
 	tv.tiles_rows = rows
 	tv.matched = all_ok
 	var body := "  ".join(tv.tiles_seq) if not tv.tiles_seq.is_empty() else "（還沒有積木）"
-	tiles_fx.text = "%s =\n%s" % [String(st.expr), body]
+	if st.get("frac", false):
+		# 分數：正在填的那一格用金色標出來
+		var hi := "[color=#%s]" % UITheme.GOLD.to_html(false)
+		var nt := " ".join(tiles_num) if not tiles_num.is_empty() else "□"
+		var dt := " ".join(tiles_den) if not tiles_den.is_empty() else "□"
+		if tiles_part == 0:
+			nt = hi + nt + "[/color]"
+		else:
+			dt = hi + dt + "[/color]"
+		body = "\\frac{%s}{%s}" % [nt, dt]
+		for k in tiles_part_btns.size():
+			(tiles_part_btns[k] as Button).set_pressed_no_signal(k == tiles_part)
+		if tiles_den.is_empty():
+			all_ok = false
+			tv.matched = false
+	tiles_fx.text = "%s = %s" % [String(st.expr), body] if st.get("frac", false) else "%s =\n%s" % [String(st.expr), body]
 	tv.queue_redraw()
 
 

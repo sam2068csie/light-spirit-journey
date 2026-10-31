@@ -73,6 +73,12 @@ static func slots() -> Array:
 		slot["plain"] = true
 		slot["params"] = slot.get("params", [])
 		SB.fix_roots(slot)
+		# tan 的和差角：積木改成「分數」模式（分子、分母各一格，不用括號）
+		for v in slot.variants:
+			for st in v.get("steps", []):
+				if st.kind == "tiles" and String(st.target).begins_with("tan"):
+					st["frac"] = true
+					st["nudge"] = String(st.nudge).replace("別忘了括號：", "").replace("(分子) ÷ (分母)，", "").replace("(分子) ÷ (1 − 乘積)。", "分母是 1 − 乘積。")
 	return out
 
 
