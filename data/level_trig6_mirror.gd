@@ -244,7 +244,7 @@ func _mirror_submit() -> void:
 # ================= eq：拼公式（一個角 θ） =================
 
 const EQ_VARS := ["s", "c", "t"]
-const EQ_MAP := {"sin θ": "s", "cos θ": "c", "tan θ": "t", "sin² θ": "(s*s)", "cos² θ": "(c*c)",
+const EQ_MAP := {"sin θ": "s", "cos θ": "c", "tan θ": "t", "sin² θ": "(s*s)", "cos² θ": "(c*c)", "tan² θ": "(t*t)",
 	"+": "+", "−": "-", "×": "*", "÷": "/", "(": "(", ")": ")", "1": "1.0", "2": "2.0"}
 const EQ_SAMPLES := [30.0, 50.0, 110.0, 200.0]
 
@@ -329,7 +329,22 @@ func _refresh_eq() -> void:
 	tv.tiles_rows = rows
 	tv.matched = all_ok
 	var body := "  ".join(tv.tiles_seq) if not tv.tiles_seq.is_empty() else "（還沒有積木）"
-	tiles_fx.text = "%s =\n%s" % [String(st.expr), body]
+	if st.get("frac", false):
+		# 分數模式：分子、分母分開放積木，正在填的那一格用金色標出來
+		var hi := "[color=#%s]" % UITheme.GOLD.to_html(false)
+		var nt := " ".join(tiles_num) if not tiles_num.is_empty() else "□"
+		var dt := " ".join(tiles_den) if not tiles_den.is_empty() else "□"
+		if tiles_part == 0:
+			nt = hi + nt + "[/color]"
+		else:
+			dt = hi + dt + "[/color]"
+		for k in tiles_part_btns.size():
+			(tiles_part_btns[k] as Button).set_pressed_no_signal(k == tiles_part)
+		if tiles_den.is_empty():
+			tv.matched = false
+		tiles_fx.text = "%s = \\frac{%s}{%s}" % [String(st.expr), nt, dt]
+	else:
+		tiles_fx.text = "%s =\n%s" % [String(st.expr), body]
 	tv.queue_redraw()
 
 
@@ -374,7 +389,7 @@ func _speed_gen(kind: String, n: int) -> Array:
 	return out
 
 
-const TRIPLES := [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]]
+const TRIPLES := [[3, 4, 5], [5, 12, 13]]     # 速算只用好算的直角三角形
 const QNAME := ["第一", "第二", "第三", "第四"]
 
 
