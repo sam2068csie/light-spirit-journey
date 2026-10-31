@@ -2007,7 +2007,10 @@ class ForgeView extends Control:
 			Color(1, 0.85, 0.6, 0.95))
 		var y := box.position.y + 30.0 + he.x + he.y
 		for ln in rows:
-			var fs := _fit_fs(font, ln, UITheme.fs(24))
+			# 字級要以「框的寬度」為準縮小（不是整個畫面的寬度），長的算式才不會超出框線
+			var fs := UITheme.fs(24)
+			while fs > UITheme.fs(12) and _mw(font, ln, fs) > box.size.x - 28.0:
+				fs -= 1
 			var e := _extra(ln, fs)
 			y += e.x + 26.0
 			MathLabel.draw_on(self, font, cx, y, ln, fs, Color(1, 0.95, 0.85))
