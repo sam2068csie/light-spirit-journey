@@ -12,7 +12,7 @@ const BankG5 := preload("trig5_bank.gd")
 const COMPASS := UITheme.PINK
 
 const CHAPTERS_G5 := [
-	{"ch": 1, "name": "第一章．雙層轉盤", "topic": "差角、和角公式（sin、cos、tan）與合併", "color": UITheme.PINK},
+	{"ch": 1, "name": "第一章．雙層轉盤", "topic": "和角、差角公式（sin、cos、tan）與合併", "color": UITheme.PINK},
 	{"ch": 2, "name": "第二章．羅盤的應用", "topic": "象限與正負、求角度、三角形、兩直線夾角、幾何應用", "color": UITheme.PINK_LIGHT},
 ]
 
