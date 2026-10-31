@@ -184,6 +184,14 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				out.append({"ch": "", "frac": {"num": num, "den": den}, "scale": scale, "dy": dy,
 					"color": colors.back(), "glue": glue, "rads": rads})
 			continue
+		# 線段的上橫線：\ol{AB}（用根號的機制，只畫上面那條槓、不畫勾）
+		if c == "\\" and s.substr(i, 4) == "\\ol{":
+			var oid := out.size()
+			out.append({"ch": "", "scale": scale, "dy": dy, "color": colors.back(), "glue": glue, "rad": oid, "rads": rads, "idx": "ol"})
+			var inner_o := rads.duplicate()
+			inner_o.append(oid)
+			i = _parse_into(s, i + 4, scale, dy, colors, out, true, true, inner_o)
+			continue
 		# 根號：√{…}，裡面的字都記得自己在哪個根號底下
 		if (c == "√" or c == "∛" or c == "∜") and i + 1 < s.length() and s[i + 1] == "{":
 			var rid := out.size()
@@ -1091,6 +1099,12 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			if g.rad >= 0 and bar_y.has(g.rad):
 				top = minf(top, bar_y[g.rad] - maxf(4.0, sz * 0.18))
 		bar_y[rid] = top
+		if o.get("idx", "") == "ol":
+			# 線段符號：字的上方一條橫線
+			var olw := maxf(1.0, sz * 0.06)
+			var oy := top - sz * 0.02
+			ci.draw_line(Vector2(o.pos.x + off.x + sz * 0.04, oy), Vector2(x_end - sz * 0.02, oy), o.color, olw, true)
+			continue
 		var x0: float = o.pos.x + off.x
 		var w: float = o.w
 		var has_idx: bool = o.get("idx", "") != ""
