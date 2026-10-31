@@ -613,20 +613,20 @@ class MirrorView extends CompassView:
 			y = _line_text(font, x0, y, w, "= %s − %s = %s" % [dec3(cp * cp), dec3(sp * sp), dec3(cos(th))], 15, gold)
 		else:
 			y = _line_text(font, x0, y, w, "θ = 2φ = %s°" % dec(phd * 2.0), 16, gold)
-			y = _line_text(font, x0, y, w, "sin²φ = \\frac{1}{2}(1 − cos θ)", 15, Color(0.9, 0.95, 1.0))
-			y = _line_text(font, x0, y, w, "= \\frac{1}{2}(1 − %s) = %s" % [pn(cos(th)), dec3(sp * sp)], 15, gold)
-			y = _line_text(font, x0, y + 2.0, w, "cos²φ = \\frac{1}{2}(1 + cos θ)", 15, Color(0.9, 0.95, 1.0))
-			y = _line_text(font, x0, y, w, "= \\frac{1}{2}(1 + %s) = %s" % [pn(cos(th)), dec3(cp * cp)], 15, gold)
+			# 一個公式寫成一行（公式＝代入＝結果），才不會和下面的進度條疊在一起
+			y = _line_text(font, x0, y, w, "sin²φ = \\frac{1}{2}(1 − cos θ) = \\frac{1}{2}(1 − %s) = %s" % [pn(cos(th)), dec3(sp * sp)], 15, gold)
+			y = _line_text(font, x0, y + 2.0, w, "cos²φ = \\frac{1}{2}(1 + cos θ) = \\frac{1}{2}(1 + %s) = %s" % [pn(cos(th)), dec3(cp * cp)], 15, gold)
 		# 接近度：離目標還差多少
 		if spec.has("target"):
 			var d := absf(fposmod(deg_to_rad(float(spec.target)) - th + PI, TAU) - PI)
 			var k := clampf(1.0 - rad_to_deg(d) / 180.0, 0.0, 1.0)
-			var bar := Rect2(x0, rc.end.y - 84.0, w, 10.0)
+			var bar_y := maxf(rc.end.y - 84.0, y + 8.0)        # 放在文字下面，不要疊上去
+			var bar := Rect2(x0, bar_y, w, 10.0)
 			draw_rect(bar, Color(1, 1, 1, 0.1))
 			var ok := d < 1e-6
 			draw_rect(Rect2(bar.position, Vector2(bar.size.x * k, bar.size.y)), UITheme.GOOD if ok else Color(1, 0.75, 0.4))
 			var lab := "對準了！按「確定」" if ok else "反射線離目標還差 %s°" % dec(rad_to_deg(d))
-			_line_text(font, x0, rc.end.y - 70.0, w, lab, 14, UITheme.GOOD if ok else Color(1, 0.92, 0.7))
+			_line_text(font, x0, bar_y + 14.0, w, lab, 14, UITheme.GOOD if ok else Color(1, 0.92, 0.7))
 
 	# --- eq：拼公式（θ） ---
 
