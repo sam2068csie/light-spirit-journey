@@ -126,24 +126,18 @@ static func cards(level: String) -> Array:
 			]
 		"G5":
 			return [
-				{"title": "差角公式", "tag": "公式", "glyph": "α − β",
-				 "formulas": ["cos(α − β) = ?{cos α cos β + sin α sin β}", "來源：單位圓上 A、B 的弦長 AB² = ?{2 − 2cos(α − β)}"],
-				 "notes": ["cos 的差角公式：同名相乘（cos 配 cos、sin 配 sin），中間是 ?{＋}", "座標算出來的 AB² = (cos α − cos β)² + (sin α − sin β)²，展開就是 ?{2 − 2(cos α cos β + sin α sin β)}"],
-				 "example": "cos 15° = cos(60° − 45°) = (√{2} + √{6})/4",
-				 "check": {"q": "cos(α − β) 的展開，中間的符號是？", "opts": ["＋", "−", "×"], "a": 0,
-					"why": "cos(α − β) = cos α cos β + sin α sin β。", "hint": "差角的 cos，符號和中間的相反：差 → ＋。"}},
 				{"title": "sin、cos 的和差角", "tag": "公式", "glyph": "sin, cos",
 				 "formulas": ["sin(α ± β) = ?{sin α cos β ± cos α sin β}", "cos(α ± β) = ?{cos α cos β ∓ sin α sin β}"],
 				 "notes": ["sin：每一項「sin 配 cos」，符號 ?{照抄}", "cos：每一項「同名相乘」，符號 ?{相反}", "75° = 45° + 30°、15° = 45° − 30°、105° = 60° + 45°"],
-				 "example": "sin 75° = sin45°cos30° + cos45°sin30° = (√{6} + √{2})/4",
-				 "check": {"q": "sin 75° 是？", "opts": ["(√{6} + √{2})/4", "(√{6} − √{2})/4", "(√{3} + 1)/2"], "a": 0,
-					"why": "sin(45° + 30°) = (√2/2)(√3/2) + (√2/2)(1/2) = (√6 + √2)/4。", "hint": "sin 的和角，每一項 sin 配 cos，中間是 ＋。"}},
+				 "example": "sin 75° = sin 45° cos 30° + cos 45° sin 30° = (√{6} + √{2})/4",
+				 "check": {"q": "下列哪一個是 cos(α + β) 的正確展開？", "opts": ["cos α cos β − sin α sin β", "cos α cos β + sin α sin β", "sin α cos β + cos α sin β"], "a": 0,
+					"why": "cos 的和角：同名相乘，符號和角的相反（和 → −）。第三個是 sin(α + β)。", "hint": "cos 配 cos、sin 配 sin，再看符號。"}},
 				{"title": "tan 的和差角", "tag": "公式", "glyph": "tan",
 				 "formulas": ["tan(α ± β) = ?{\\frac{tan α ± tan β}{1 ∓ tan α tan β}}"],
 				 "notes": ["分母的符號和分子 ?{相反}", "tan α 或 tan β 不存在（90°）時，要 ?{直接用 sin、cos 算}", "tan 75° = ?{2 + √{3}}、tan 15° = ?{2 − √{3}}"],
 				 "trap": "tan(α + β) [b]不等於[/b] tan α + tan β，中間還有分母 1 − tan α tan β！",
-				 "check": {"q": "tan 15° = tan(45° − 30°) = ？", "opts": ["2 − √{3}", "2 + √{3}", "√{3} − 1"], "a": 0,
-					"why": "(1 − √3/3) ÷ (1 + √3/3) = (3 − √3) ÷ (3 + √3) = 2 − √3。", "hint": "分子 1 − √3/3，分母 1 + √3/3，再有理化。"}},
+				 "check": {"q": "tan(α − β) 的正確公式是？", "opts": ["\\frac{tan α − tan β}{1 + tan α tan β}", "\\frac{tan α − tan β}{1 − tan α tan β}", "tan α − tan β"], "a": 0,
+					"why": "分子照角的符號（−），分母和分子相反（+）。tan 不能直接相減。", "hint": "分母的符號和分子相反。"}},
 				{"kind": "order", "title": "拼出解題流程", "tag": "思考", "glyph": "→",
 				 "prompt": "sin α = 5/13（第二象限）、tan β = 3/4（第三象限），求 cos(α − β)",
 				 "steps": ["α 在第二象限：cos α < 0", "直角三角形 5、12、13：cos α = −12/13",
@@ -154,8 +148,8 @@ static func cards(level: String) -> Array:
 				{"title": "兩直線的夾角與應用", "tag": "第二章", "glyph": "θ",
 				 "formulas": ["兩直線夾角 θ：tan θ = ?{\\frac{|m₂ − m₁|}{|1 + m₁m₂|}}", "斜率 = ?{tan（傾斜角）}"],
 				 "notes": ["1 + m₁m₂ = 0：兩直線 ?{垂直（θ = 90°）}", "△ABC：tan C = ?{−tan(A + B)}", "tan α、tan β 是 x² + px + q = 0 的兩根：和 ?{−p}、積 ?{q}"],
-				 "check": {"q": "斜率 2 與斜率 3 的兩直線，夾角 tan θ = ？", "opts": ["1/7", "1", "5"], "a": 0,
-					"why": "|3 − 2| ÷ |1 + 6| = 1/7。", "hint": "tan θ = |m₂ − m₁| ÷ |1 + m₁m₂|。"}},
+				 "check": {"q": "斜率 m₁、m₂ 的兩直線互相垂直，條件是？", "opts": ["m₁m₂ = −1", "m₁ = m₂", "m₁ + m₂ = 0"], "a": 0,
+					"why": "垂直時 θ = 90°，夾角公式的分母 1 + m₁m₂ = 0，也就是 m₁m₂ = −1。m₁ = m₂ 是平行。", "hint": "夾角公式的分母什麼時候是 0？"}},
 			]
 		"G6":
 			return [
