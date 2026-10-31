@@ -78,9 +78,53 @@ static func _wave(name: String, q: String, expr: String, a: float, b: float, tok
 		"cols": cols, "line": line, "nudge": nudge, "tag": tag}
 
 
+## 疊合的標準步驟（一個「sup」佔位，slots() 會展開成 2 或 3 步）：
+##   ① 求 r　② 提出 r，選 cos φ、sin φ　③（特殊角才有）φ 是幾度，推導紀錄寫出合成結果
+## lhs：要疊合的式子；inner：提出 r 之後括號裡的樣子；v：角度變數（x 或 2x、θ）
+static func _sup(lhs: String, r2: String, r: String, inner: String, c: String, sn: String, tag: String,
+		phi := "", phis := "", result := "", v := "x") -> Dictionary:
+	return {"kind": "sup", "lhs": lhs, "r2": r2, "r": r, "inner": inner, "c": c, "sn": sn, "tag": tag,
+		"phi": phi, "phis": phis, "result": result, "v": v}
+
+
+static func _neg(t: String) -> String:
+	return t.substr(1) if t.begins_with("−") else "−" + t
+
+
+static func _sup_steps(d: Dictionary) -> Array:
+	var c: String = d.c
+	var sn: String = d.sn
+	var v: String = d.v
+	var ok := "cos φ = %s、sin φ = %s" % [c, sn]
+	var d1 := "cos φ = %s、sin φ = %s" % [sn, c] if c != sn else "cos φ = %s、sin φ = %s" % [c, _neg(sn)]
+	var d2 := "cos φ = %s、sin φ = %s" % [_neg(c), _neg(sn)]
+	var out := [
+		_f("求 r", "疊合成 r sin(%s + φ)，r = √(a² + b²)。" % v, "r = √(%s) = [0]" % d.r2, [d.r],
+			"r = √(%s) = %s" % [d.r2, d.r], "a² + b² 再開根號。", d.tag),
+		_c("cos φ、sin φ", ("r = 1，不用提出：%s。" % d.lhs if String(d.r) == "1" else "提出 r：%s = %s[%s]。" % [d.lhs, d.r, d.inner])
+			+ "對照 sin %s cos φ + cos %s sin φ，cos φ、sin φ 是？" % [v, v],
+			[ok, d1, d2], 0, "sin %s 的係數是 cos φ，cos %s 的係數是 sin φ（負號跟著）。" % [v, v], "cos φ = a ÷ r，sin φ = b ÷ r。",
+			"cos φ = %s、sin φ = %s" % [c, sn], d.tag),
+	]
+	if String(d.phi) != "":
+		out.append(_f("特殊角 φ", "cos φ = %s、sin φ = %s 的特殊角（−180° < φ ≤ 180°）。" % [c, sn], "φ = [0]°", [d.phi],
+			"φ = %s，%s = %s" % [d.phis, d.lhs, d.result], "先看 cos、sin 的正負決定象限。", d.tag))
+	return out
+
+
 static func slots() -> Array:
 	var out := _slots()
 	for slot in out:
+		for vv in slot.get("variants", []):
+			if not vv.has("steps"):
+				continue
+			var ex := []
+			for st in vv.steps:
+				if String(st.kind) == "sup":
+					ex.append_array(_sup_steps(st))
+				else:
+					ex.append(st)
+			vv["steps"] = ex
 		slot["plain"] = true
 		slot["params"] = slot.get("params", [])
 		SB.fix_roots(slot)
@@ -102,8 +146,8 @@ static func _slots() -> Array:
 					"sin(x + φ) = sin x cos φ + cos x sin φ：sin x 配 cos φ、cos x 配 sin φ。", "sin x 後面接的是 cos φ。", "sin x + √3 cos x = 2[(1/2) sin x + (√3/2) cos x]\n對照 sin(x + φ) = sin x cos φ + cos x sin φ", T_FORM),
 				_c("cos φ、sin φ", "對照 sin x cos φ + cos x sin φ，cos φ 和 sin φ 各是多少？", ["cos φ = 1/2、sin φ = √3/2", "cos φ = √3/2、sin φ = 1/2", "cos φ = 1、sin φ = √3"], 0,
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = 1/2、sin φ = √3/2", T_FORM),
-				_f("合成", "找出 φ，代回 r sin(x + φ)。", "sin x + √3 cos x = [0] sin(x + [1]°)", ["2", "60"],
-					"sin x + √3 cos x = 2 sin(x + 60°)", "cos φ = 1/2、sin φ = √3/2 的角。", T_FORM),
+				_f("特殊角 φ", "cos φ = 1/2、sin φ = √3/2 的特殊角。", "φ = [0]°", ["60"],
+					"φ = 60°，sin x + √3 cos x = 2 sin(x + 60°)", "先看 cos、sin 的正負決定象限。", T_FORM),
 				_phasor("相位指針", "最後用燈塔驗證：把 r 和 φ 調成算出來的值，讓藍色光線和金色光線重合。", 1.0, S3, "1", "√3", "sin x + √3 cos x", 3.5,
 					"r = 2、φ = 60°", "r = 2，φ = 60°。", T_FORM),
 			 ]},
@@ -115,8 +159,8 @@ static func _slots() -> Array:
 					"sin(x + φ) = sin x cos φ + cos x sin φ：sin x 配 cos φ、cos x 配 sin φ。", "sin x 後面接的是 cos φ。", "√3 sin x − cos x = 2[(√3/2) sin x − (1/2) cos x]\n對照 sin(x + φ) = sin x cos φ + cos x sin φ", T_FORM),
 				_c("cos φ、sin φ", "對照 sin x cos φ + cos x sin φ，cos φ 和 sin φ 各是多少？", ["cos φ = √3/2、sin φ = −1/2", "cos φ = −1/2、sin φ = √3/2", "cos φ = √3/2、sin φ = 1/2"], 0,
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = √3/2、sin φ = −1/2", T_FORM),
-				_f("合成", "找出 φ，代回 r sin(x + φ)。", "√3 sin x − cos x = [0] sin(x − [1]°)", ["2", "30"],
-					"√3 sin x − cos x = 2 sin(x − 30°)", "cos φ = √3/2、sin φ = −1/2 的角。", T_FORM),
+				_f("特殊角 φ", "cos φ = √3/2、sin φ = −1/2 的特殊角。", "φ = [0]°", ["-30"],
+					"φ = −30°，√3 sin x − cos x = 2 sin(x − 30°)", "先看 cos、sin 的正負決定象限。", T_FORM),
 				_phasor("相位指針", "最後用燈塔驗證：把 r 和 φ 調成算出來的值，讓藍色光線和金色光線重合。", S3, -1.0, "√3", "−1", "√3 sin x − cos x", 3.5,
 					"r = 2、φ = −30°", "r = 2，φ = −30°。", T_FORM),
 			 ]},
@@ -128,8 +172,8 @@ static func _slots() -> Array:
 					"sin(x + φ) = sin x cos φ + cos x sin φ：sin x 配 cos φ、cos x 配 sin φ。", "sin x 後面接的是 cos φ。", "2 sin x + 2 cos x = 2√2[(√2/2) sin x + (√2/2) cos x]\n對照 sin(x + φ) = sin x cos φ + cos x sin φ", T_FORM),
 				_c("cos φ、sin φ", "對照 sin x cos φ + cos x sin φ，cos φ 和 sin φ 各是多少？", ["cos φ = √2/2、sin φ = √2/2", "cos φ = 1/2、sin φ = 1/2", "cos φ = 2、sin φ = 2"], 0,
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = √2/2、sin φ = √2/2", T_FORM),
-				_f("合成", "找出 φ，代回 r sin(x + φ)。", "2 sin x + 2 cos x = [0] sin(x + [1]°)", ["2√2", "45"],
-					"2 sin x + 2 cos x = 2√2 sin(x + 45°)", "cos φ = √2/2、sin φ = √2/2 的角。", T_FORM),
+				_f("特殊角 φ", "cos φ = √2/2、sin φ = √2/2 的特殊角。", "φ = [0]°", ["45"],
+					"φ = 45°，2 sin x + 2 cos x = 2√2 sin(x + 45°)", "先看 cos、sin 的正負決定象限。", T_FORM),
 				_phasor("相位指針", "最後用燈塔驗證：把 r 和 φ 調成算出來的值，讓藍色光線和金色光線重合。", 2.0, 2.0, "2", "2", "2 sin x + 2 cos x", 3.5,
 					"r = 2√2、φ = 45°", "r = 2√2，φ = 45°。", T_FORM),
 			 ]},
@@ -141,30 +185,21 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "把 sin x + cos x\n合成一個 sin",
 			 "steps": [
-				_f("求 r", "合成 sin x + cos x：r = √(a² + b²)。", "r = √(1² + 1²) = [0]", ["√2"],
-					"sin x + cos x：r = √2", "a² + b² 再開根號。", T_EXPAND),
-				_f("求 φ", "cos φ = a ÷ r = √2/2，sin φ = b ÷ r = √2/2。", "φ = [0]°", ["45"],
-					"cos φ = √2/2、sin φ = √2/2，φ = 45°", "哪個角的 cos 是 √2/2、sin 是 √2/2？", T_EXPAND),
+				_sup("sin x + cos x", "1² + 1²", "√2", "(√2/2) sin x + (√2/2) cos x", "√2/2", "√2/2", T_EXPAND, "45", "45°", "√2 sin(x + 45°)"),
 				_wave("拼合成", "用剛剛算好的 r 和 φ，把它拼成一個 sin，看兩條光線有沒有重合。", "sin x + cos x", 1.0, 1.0,
 					["√2", "2", "sin(x+45°)", "sin(x−45°)", "cos(x+45°)", "×", "+"],
 					"sin x + cos x = √2 sin(x + 45°)", "r = √2；角度是 45° 還是 −45°？看畫面哪一條藍線重合。", T_EXPAND),
 			 ]},
 			{"eq": "把 √3 sin x + cos x\n合成一個 sin",
 			 "steps": [
-				_f("求 r", "合成 √3 sin x + cos x：r = √(a² + b²)。", "r = √((√3)² + 1²) = [0]", ["2"],
-					"√3 sin x + cos x：r = 2", "a² + b² 再開根號。", T_EXPAND),
-				_f("求 φ", "cos φ = a ÷ r = √3/2，sin φ = b ÷ r = 1/2。", "φ = [0]°", ["30"],
-					"cos φ = √3/2、sin φ = 1/2，φ = 30°", "哪個角的 cos 是 √3/2、sin 是 1/2？", T_EXPAND),
+				_sup("√3 sin x + cos x", "(√3)² + 1²", "2", "(√3/2) sin x + (1/2) cos x", "√3/2", "1/2", T_EXPAND, "30", "30°", "2 sin(x + 30°)"),
 				_wave("拼合成", "用剛剛算好的 r 和 φ，把它拼成一個 sin，看兩條光線有沒有重合。", "√3 sin x + cos x", S3, 1.0,
 					["2", "sin(x+30°)", "sin(x+60°)", "sin(x−30°)", "cos(x−30°)", "×", "+"],
 					"√3 sin x + cos x = 2 sin(x + 30°)", "r = 2；cos φ = √3/2。", T_EXPAND),
 			 ]},
 			{"eq": "把 3 sin x − 3 cos x\n合成一個 sin",
 			 "steps": [
-				_f("求 r", "合成 3 sin x − 3 cos x：r = √(a² + b²)。", "r = √(3² + (−3)²) = [0]", ["3√2"],
-					"3 sin x − 3 cos x：r = 3√2", "a² + b² 再開根號。", T_EXPAND),
-				_f("求 φ", "cos φ = a ÷ r = √2/2，sin φ = b ÷ r = −√2/2。", "φ = [0]°", ["-45"],
-					"cos φ = √2/2、sin φ = −√2/2，φ = −45°", "哪個角的 cos 是 √2/2、sin 是 −√2/2？", T_EXPAND),
+				_sup("3 sin x − 3 cos x", "3² + (−3)²", "3√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_EXPAND, "-45", "−45°", "3√2 sin(x − 45°)"),
 				_wave("拼合成", "用剛剛算好的 r 和 φ，把它拼成一個 sin，看兩條光線有沒有重合。", "3 sin x − 3 cos x", 3.0, -3.0,
 					["3", "√2", "sin(x−45°)", "sin(x+45°)", "cos(x−45°)", "×", "+"],
 					"3 sin x − 3 cos x = 3√2 sin(x − 45°)", "r = 3√2；cos φ = √2/2、sin φ = −√2/2，φ = −45°。", T_EXPAND),
@@ -183,10 +218,8 @@ static func _slots() -> Array:
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ，負號要跟著。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = −1/2、sin φ = √3/2", T_PHASE),
 				_c("φ 的象限", "cos φ = −1/2、sin φ = √3/2，φ 在第幾象限？", ["第二象限", "第一象限", "第三象限", "第四象限"], 0,
 					"看 cos、sin 的正負：cos 正在右半邊、sin 正在上半邊。", "cos 的正負決定左右，sin 的正負決定上下。", "φ 在第二象限", T_PHASE),
-				_c("求 φ", "第二象限裡，cos φ = −1/2、sin φ = √3/2 的角是？", ["120°", "60°", "−60°", "150°"], 0,
-					"參考角 60°，在第二象限：180° − 60° = 120°。", "先找參考角，再放進正確的象限。", "φ = 120°", T_PHASE),
-				_f("合成", "代回 r sin(x + φ)。", "−sin x + √3 cos x = [0] sin(x + [1]°)", ["2", "120"],
-					"−sin x + √3 cos x = 2 sin(x + 120°)", "r 和 φ 都算好了，直接代入。", T_PHASE),
+				_f("特殊角 φ", "第二象限裡，cos φ = −1/2、sin φ = √3/2 的特殊角（−180° < φ ≤ 180°）。", "φ = [0]°", ["120"],
+					"φ = 120°，−sin x + √3 cos x = 2 sin(x + 120°)", "先找參考角，再放進第二象限。", T_PHASE),
 			 ]},
 			{"eq": "把 −√3 sin x − cos x\n化成 r sin(x + φ)",
 			 "steps": [
@@ -196,10 +229,8 @@ static func _slots() -> Array:
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ，負號要跟著。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = −√3/2、sin φ = −1/2", T_PHASE),
 				_c("φ 的象限", "cos φ = −√3/2、sin φ = −1/2，φ 在第幾象限？", ["第三象限", "第一象限", "第二象限", "第四象限"], 0,
 					"看 cos、sin 的正負：cos 正在右半邊、sin 正在上半邊。", "cos 的正負決定左右，sin 的正負決定上下。", "φ 在第三象限", T_PHASE),
-				_c("求 φ", "第三象限裡，cos φ = −√3/2、sin φ = −1/2 的角是？", ["−150°（也就是 210°）", "30°", "150°", "−30°"], 0,
-					"參考角 30°，在第三象限：180° + 30° = 210°，也可以寫成 −150°。只看 tan φ = 1/√3 會誤以為是 30°。", "先找參考角，再放進正確的象限。", "φ = −150°（也就是 210°）", T_PHASE),
-				_f("合成", "代回 r sin(x + φ)。", "−√3 sin x − cos x = [0] sin(x − [1]°)", ["2", "150"],
-					"−√3 sin x − cos x = 2 sin(x − 150°)", "r 和 φ 都算好了，直接代入。", T_PHASE),
+				_f("特殊角 φ", "第三象限裡，cos φ = −√3/2、sin φ = −1/2 的特殊角（−180° < φ ≤ 180°）。", "φ = [0]°", ["-150"],
+					"φ = −150°，−√3 sin x − cos x = 2 sin(x − 150°)", "先找參考角，再放進第三象限。", T_PHASE),
 			 ]},
 			{"eq": "把 2 sin x − 2√3 cos x\n化成 r sin(x + φ)",
 			 "steps": [
@@ -209,10 +240,8 @@ static func _slots() -> Array:
 					"sin x 的係數是 cos φ，cos x 的係數是 sin φ，負號要跟著。", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = 1/2、sin φ = −√3/2", T_PHASE),
 				_c("φ 的象限", "cos φ = 1/2、sin φ = −√3/2，φ 在第幾象限？", ["第四象限", "第一象限", "第二象限", "第三象限"], 0,
 					"看 cos、sin 的正負：cos 正在右半邊、sin 正在上半邊。", "cos 的正負決定左右，sin 的正負決定上下。", "φ 在第四象限", T_PHASE),
-				_c("求 φ", "第四象限裡，cos φ = 1/2、sin φ = −√3/2 的角是？", ["−60°", "60°", "120°", "−30°"], 0,
-					"參考角 60°，在第四象限：−60°。", "先找參考角，再放進正確的象限。", "φ = −60°", T_PHASE),
-				_f("合成", "代回 r sin(x + φ)。", "2 sin x − 2√3 cos x = [0] sin(x − [1]°)", ["4", "60"],
-					"2 sin x − 2√3 cos x = 4 sin(x − 60°)", "r 和 φ 都算好了，直接代入。", T_PHASE),
+				_f("特殊角 φ", "第四象限裡，cos φ = 1/2、sin φ = −√3/2 的特殊角（−180° < φ ≤ 180°）。", "φ = [0]°", ["-60"],
+					"φ = −60°，2 sin x − 2√3 cos x = 4 sin(x − 60°)", "先找參考角，再放進第四象限。", T_PHASE),
 			 ]},
 		 ]},
 
@@ -222,6 +251,7 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "f(x) = sin x + √3 cos x\n求最大值、最小值",
 			 "steps": [
+				_sup("sin x + √3 cos x", "1² + (√3)²", "2", "(1/2) sin x + (√3/2) cos x", "1/2", "√3/2", T_PEAK, "60", "60°", "2 sin(x + 60°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。（f(x) 最大）", 1.0, S3, "max", [30.0],
 					"x = 30° 時最亮", "最亮時 x + 60° = 90°。", T_PEAK),
 				_f("最大值", "f(x) = 2 sin(x + 60°)，最亮的時候 x + 60° = 90°。", "最大值 = [0]，x = [1]°", ["2", "30"],
@@ -233,6 +263,7 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "f(x) = √3 sin x − cos x\n求零點與最大值",
 			 "steps": [
+				_sup("√3 sin x − cos x", "(√3)² + (−1)²", "2", "(√3/2) sin x − (1/2) cos x", "√3/2", "−1/2", T_PEAK, "-30", "−30°", "2 sin(x − 30°)"),
 				_peak("找熄滅", "拖動 x，讓光束熄滅。（f(x) = 0，有兩個位置，找到一個就好）", S3, -1.0, "zero", [30.0, 210.0],
 					"x = 30° 或 210° 時 f = 0", "f(x) = 2 sin(x − 30°)，x − 30° = 0 或 180°。", T_PEAK),
 				_f("零點", "f(x) = 2 sin(x − 30°) = 0，x − 30° = 0° 或 180°（0° ≤ x < 360°）。", "x = [0]° 或 [1]°", ["30", "210"],
@@ -244,6 +275,7 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "f(x) = sin x − cos x\n求最大值與週期",
 			 "steps": [
+				_sup("sin x − cos x", "1² + (−1)²", "√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_PEAK, "-45", "−45°", "√2 sin(x − 45°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。", 1.0, -1.0, "max", [135.0],
 					"x = 135° 時最亮", "f(x) = √2 sin(x − 45°)，x − 45° = 90°。", T_PEAK),
 				_f("最大值", "f(x) = √2 sin(x − 45°)。", "最大值 = [0]，x = [1]°", ["√2", "135"],
@@ -290,10 +322,7 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "f(x) = √3 sin x + 3 cos x\n合成並求最大值",
 			 "steps": [
-				_f("求 r", "r = √(a² + b²)。", "r = √((√3)² + 3²) = [0]", ["2√3"],
-					"r = √12 = 2√3", "3 + 9 = 12，√12 = 2√3。", T_FORM),
-				_f("合成", "cos φ = √3 ÷ 2√3 = 1/2，sin φ = 3 ÷ 2√3 = √3/2。", "f(x) = [0] sin(x + [1]°)", ["2√3", "60"],
-					"f(x) = 2√3 sin(x + 60°)", "r = 2√3。", T_FORM),
+				_sup("√3 sin x + 3 cos x", "(√3)² + 3²", "2√3", "(1/2) sin x + (√3/2) cos x", "1/2", "√3/2", T_FORM, "60", "60°", "2√3 sin(x + 60°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。", S3, 3.0, "max", [30.0],
 					"x = 30° 時最亮", "x + 60° = 90°。", T_PEAK),
 				_f("最大值", "最亮的時候 x = 30°。", "最大值 = [0]", ["2√3"],
@@ -301,7 +330,8 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "f(x) = 3 sin x − 3 cos x\n合成並求最小值",
 			 "steps": [
-				_wave("拼合成", "用積木把 3 sin x − 3 cos x 合成一個 sin。", "3 sin x − 3 cos x", 3.0, -3.0,
+				_sup("3 sin x − 3 cos x", "3² + (−3)²", "3√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_FORM, "-45", "−45°", "3√2 sin(x − 45°)"),
+				_wave("拼合成", "照算好的 r 和 φ，用積木把 3 sin x − 3 cos x 拼成一個 sin。", "3 sin x − 3 cos x", 3.0, -3.0,
 					["3", "√2", "sin(x−45°)", "sin(x+45°)", "cos(x−45°)", "×", "+"],
 					"f(x) = 3√2 sin(x − 45°)", "r = 3√2；cos φ = √2/2、sin φ = −√2/2，φ = −45°。", T_FORM),
 				_f("最大最小", "r = 3√2。", "最大值 = [0]，最小值 = [1]", ["3√2", "-3√2"],
@@ -318,10 +348,7 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "f(x) = 7 sin x + 24 cos x\n求最大值，並求最大時的 sin x、cos x",
 			 "steps": [
-				_f("求 r", "r = √(a² + b²)。", "r = [0]", ["25"],
-					"r = √(49 + 576) = 25", "7² + 24² = 625。", T_NONSP),
-				_f("cos φ、sin φ", "疊合成 f(x) = 25 sin(x + φ)，其中 cos φ = a ÷ r、sin φ = b ÷ r。", "cos φ = [0]，sin φ = [1]", ["7/25", "24/25"],
-					"cos φ = 7/25、sin φ = 24/25（φ 在第一象限）", "7 ÷ 25、24 ÷ 25。", T_NONSP),
+				_sup("7 sin x + 24 cos x", "7² + 24²", "25", "(7/25) sin x + (24/25) cos x", "7/25", "24/25", T_NONSP),
 				_c("換成 φ", "最大時 sin(x + φ) = 1，取 x + φ = 90°，x = 90° − φ。這時 sin x、cos x 等於 φ 的什麼三角函數？", ["sin x = cos φ、cos x = sin φ", "sin x = sin φ、cos x = cos φ", "sin x = −cos φ、cos x = −sin φ", "sin x = −sin φ、cos x = cos φ"], 0,
 					"sin(90° − φ) = cos φ，cos(90° − φ) = sin φ。", "90° − φ：sin、cos 互換，都是正的。", "x = 90° − φ：sin x = cos φ，cos x = sin φ", T_NONSP),
 				_f("最亮的時候", "代入 cos φ、sin φ 的值。", "最大值 = [0]，sin x = [1]，cos x = [2]",
@@ -331,8 +358,7 @@ static func _slots() -> Array:
 			 "steps": [
 				_f("整理", "排成 a sin x + b cos x 的樣子。", "f(x) = [0] sin x + [1] cos x", ["-15", "8"],
 					"a = −15、b = 8", "sin x 的係數在前面。", T_NONSP),
-				_f("求 r、cos φ、sin φ", "r = √(a² + b²)。", "r = [0]，cos φ = [1]，sin φ = [2]", ["17", "-15/17", "8/17"],
-					"r = 17，cos φ = −15/17，sin φ = 8/17", "15² + 8² = 289。", T_NONSP),
+				_sup("−15 sin x + 8 cos x", "(−15)² + 8²", "17", "(−15/17) sin x + (8/17) cos x", "−15/17", "8/17", T_NONSP),
 				_c("φ 的象限", "cos φ < 0、sin φ > 0，φ 在第幾象限？", ["第二象限", "第一象限", "第三象限", "第四象限"], 0,
 					"cos 負、sin 正：第二象限。", "cos 管左右，sin 管上下。", "φ 在第二象限", T_NONSP),
 				_c("換成 φ", "最大時 sin(x + φ) = 1，取 x + φ = 90°，x = 90° − φ。這時 sin x、cos x 等於 φ 的什麼三角函數？", ["sin x = cos φ、cos x = sin φ", "sin x = sin φ、cos x = cos φ", "sin x = −cos φ、cos x = −sin φ", "sin x = −sin φ、cos x = cos φ"], 0,
@@ -342,10 +368,7 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "f(x) = 5 sin x − 12 cos x\n求最大值、最小值，並求最小時的 sin x、cos x",
 			 "steps": [
-				_f("求 r", "a = 5、b = −12。", "r = [0]", ["13"],
-					"r = √(25 + 144) = 13", "5² + 12² = 169。", T_NONSP),
-				_f("cos φ、sin φ", "cos φ = a ÷ r，sin φ = b ÷ r。", "cos φ = [0]，sin φ = [1]", ["5/13", "-12/13"],
-					"cos φ = 5/13、sin φ = −12/13（φ 在第四象限）", "b 是負的。", T_NONSP),
+				_sup("5 sin x − 12 cos x", "5² + (−12)²", "13", "(5/13) sin x − (12/13) cos x", "5/13", "−12/13", T_NONSP),
 				_f("最大最小", "最大值 r，最小值 −r。", "最大值 = [0]，最小值 = [1]", ["13", "-13"],
 					"M = 13，m = −13", "−r。", T_NONSP),
 				_c("換成 φ", "最小時 sin(x + φ) = −1，取 x + φ = 270°，x = 270° − φ。這時 sin x、cos x 等於 φ 的什麼三角函數？", ["sin x = −cos φ、cos x = −sin φ", "sin x = cos φ、cos x = sin φ", "sin x = −sin φ、cos x = −cos φ", "sin x = sin φ、cos x = −cos φ"], 0,
@@ -416,8 +439,7 @@ static func _slots() -> Array:
 					"2 sin x cos x = sin 2x；2cos²x − 1 = cos 2x", "兩個都是 2x。", T_HOMOG),
 				_f("改寫", "f(x) = √3 × (2 sin x cos x) + (2cos²x − 1)。", "f(x) = [0] sin 2x + [1] cos 2x", ["√3", "1"],
 					"f(x) = √3 sin 2x + cos 2x", "√3 乘 sin 2x，加 cos 2x。", T_HOMOG),
-				_f("疊合", "r = √(3 + 1) = 2，cos φ = √3/2，sin φ = 1/2。", "f(x) = [0] sin(2x + [1]°)", ["2", "30"],
-					"f(x) = 2 sin(2x + 30°)", "φ = 30°。", T_HOMOG),
+				_sup("√3 sin 2x + cos 2x", "(√3)² + 1²", "2", "(√3/2) sin 2x + (1/2) cos 2x", "√3/2", "1/2", T_HOMOG, "30", "30°", "2 sin(2x + 30°)", "2x"),
 				_f("最大最小與週期", "sin 的係數是 2。", "M = [0]，m = [1]，週期 = [2]π", ["2", "-2", "1"],
 					"M = 2，m = −2，週期 2π ÷ 2 = π", "週期 2π ÷ 2。", T_HOMOG),
 			 ]},
@@ -427,8 +449,9 @@ static func _slots() -> Array:
 					"角度都是 2x", "降冪和倍角都是 2x。", T_HOMOG),
 				_f("改寫", "f(x) = (1 − cos 2x) ÷ 2 + (√3 sin 2x) ÷ 2。", "f(x) = 1/2 + [0] sin 2x − [1] cos 2x", ["√3/2", "1/2"],
 					"f(x) = 1/2 + (√3/2) sin 2x − (1/2) cos 2x", "各項除以 2。", T_HOMOG),
-				_f("疊合", "(√3/2) sin 2x − (1/2) cos 2x 的 r = 1，cos φ = √3/2，sin φ = −1/2。", "f(x) = 1/2 + [0] sin(2x − [1]°)", ["1", "30"],
-					"f(x) = 1/2 + sin(2x − 30°)", "φ = −30°。", T_HOMOG),
+				_sup("(√3/2) sin 2x − (1/2) cos 2x", "(√3/2)² + (−1/2)²", "1", "(√3/2) sin 2x − (1/2) cos 2x", "√3/2", "−1/2", T_HOMOG, "-30", "−30°", "sin(2x − 30°)", "2x"),
+				_f("寫回 f", "把 sin(2x − 30°) 放回 f(x)。", "f(x) = 1/2 + [0] sin(2x − [1]°)", ["1", "30"],
+					"f(x) = 1/2 + sin(2x − 30°)", "r = 1，φ = −30°。", T_HOMOG),
 				_f("最大最小", "sin 的範圍是 −1 ～ 1。", "M = [0]，m = [1]", ["3/2", "-1/2"],
 					"M = 1/2 + 1 = 3/2，m = 1/2 − 1 = −1/2", "1/2 ± 1。", T_HOMOG),
 			 ]},
@@ -438,9 +461,10 @@ static func _slots() -> Array:
 					"角度都是 2x", "降冪和倍角都是 2x。", T_HOMOG),
 				_f("改寫", "f(x) = (1 + cos 2x) ÷ 2 − (√3 sin 2x) ÷ 2。", "f(x) = 1/2 + (1/2) cos 2x − [0] sin 2x", ["√3/2"],
 					"f(x) = 1/2 + (1/2) cos 2x − (√3/2) sin 2x", "√3 ÷ 2。", T_HOMOG),
-				_f("疊合", "(1/2) cos 2x − (√3/2) sin 2x = cos(2x + 60°)。", "f(x) = 1/2 + [0] cos(2x + [1]°)", ["1", "60"],
-					"f(x) = 1/2 + cos(2x + 60°)", "cos 60° = 1/2，sin 60° = √3/2。", T_HOMOG),
-				_f("最大最小", "cos 的範圍是 −1 ～ 1。", "M = [0]，m = [1]", ["3/2", "-1/2"],
+				_sup("−(√3/2) sin 2x + (1/2) cos 2x", "(−√3/2)² + (1/2)²", "1", "(−√3/2) sin 2x + (1/2) cos 2x", "−√3/2", "1/2", T_HOMOG, "150", "150°", "sin(2x + 150°)", "2x"),
+				_f("寫回 f", "把 sin(2x + 150°) 放回 f(x)。", "f(x) = 1/2 + [0] sin(2x + [1]°)", ["1", "150"],
+					"f(x) = 1/2 + sin(2x + 150°)", "r = 1，φ = 150°。", T_HOMOG),
+				_f("最大最小", "sin 的範圍是 −1 ～ 1。", "M = [0]，m = [1]", ["3/2", "-1/2"],
 					"M = 3/2，m = −1/2", "1/2 ± 1。", T_HOMOG),
 			 ]},
 		 ]},
@@ -451,6 +475,7 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "f(x) = sin x − cos x + sin 2x\n令 k = sin x − cos x，求最大最小值",
 			 "steps": [
+				_sup("sin x − cos x", "1² + (−1)²", "√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_PARAM, "-45", "−45°", "√2 sin(x − 45°)"),
 				_f("k 的範圍", "k = sin x − cos x = √2 sin(x − 45°)。", "−[0] ≤ k ≤ [1]", ["√2", "√2"],
 					"−√2 ≤ k ≤ √2", "疊合的 r = √2。", T_PARAM),
 				_f("平方", "k² = sin²x − 2 sin x cos x + cos²x = 1 − sin 2x。", "sin 2x = [0] − k²", ["1"],
@@ -464,6 +489,7 @@ static func _slots() -> Array:
 			 ]},
 			{"eq": "f(x) = 2 sin x cos x − 3(sin x + cos x)\n令 k = sin x + cos x，求最大最小值",
 			 "steps": [
+				_sup("sin x + cos x", "1² + 1²", "√2", "(√2/2) sin x + (√2/2) cos x", "√2/2", "√2/2", T_PARAM, "45", "45°", "√2 sin(x + 45°)"),
 				_f("k 的範圍", "k = sin x + cos x = √2 sin(x + 45°)。", "−[0] ≤ k ≤ [1]", ["√2", "√2"],
 					"−√2 ≤ k ≤ √2", "疊合的 r = √2。", T_PARAM),
 				_f("平方", "k² = 1 + 2 sin x cos x。", "2 sin x cos x = k² − [0]", ["1"],
@@ -488,8 +514,7 @@ static func _slots() -> Array:
 					"cos(x + 60°) = (1/2) cos x − (√3/2) sin x", "cos 60° = 1/2，sin 60° = √3/2。", T_COMBO),
 				_f("合併", "f = √3 sin x + (1/2) cos x − (√3/2) sin x。", "f(x) = [0] sin x + [1] cos x", ["√3/2", "1/2"],
 					"f(x) = (√3/2) sin x + (1/2) cos x", "√3 − √3/2 = √3/2。", T_COMBO),
-				_f("疊合", "r = √(3/4 + 1/4) = 1，cos φ = √3/2，sin φ = 1/2。", "f(x) = [0] sin(x + [1]°)", ["1", "30"],
-					"f(x) = sin(x + 30°)", "r = 1，φ = 30°。", T_COMBO),
+				_sup("(√3/2) sin x + (1/2) cos x", "(√3/2)² + (1/2)²", "1", "(√3/2) sin x + (1/2) cos x", "√3/2", "1/2", T_COMBO, "30", "30°", "sin(x + 30°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。", S3 / 2.0, 0.5, "max", [60.0],
 					"x = 60° 時最亮，M = 1", "x + 30° = 90°。", T_COMBO),
 			 ]},
@@ -499,10 +524,7 @@ static func _slots() -> Array:
 					"2 sin(x − 60°) = sin x − √3 cos x", "2 × 1/2 = 1；2 × √3/2 = √3。", T_COMBO),
 				_f("合併", "f = 2 sin x + sin x − √3 cos x。", "f(x) = [0] sin x − [1] cos x", ["3", "√3"],
 					"f(x) = 3 sin x − √3 cos x", "2 + 1 = 3。", T_COMBO),
-				_f("求 r", "f(x) = 3 sin x − √3 cos x，r = √(a² + b²)。", "r = √(3² + (√3)²) = [0]", ["2√3"],
-					"r = √12 = 2√3", "9 + 3 = 12，√12 = 2√3。", T_COMBO),
-				_f("求 φ", "cos φ = 3 ÷ 2√3 = √3/2，sin φ = −√3 ÷ 2√3 = −1/2。", "φ = [0]°", ["-30"],
-					"φ = −30°", "cos 正、sin 負：第四象限。", T_COMBO),
+				_sup("3 sin x − √3 cos x", "3² + (√3)²", "2√3", "(√3/2) sin x − (1/2) cos x", "√3/2", "−1/2", T_COMBO, "-30", "−30°", "2√3 sin(x − 30°)"),
 				_f("最大最小", "f(x) = 2√3 sin(x − 30°)。", "M = [0]，m = [1]", ["2√3", "-2√3"],
 					"M = 2√3，m = −2√3", "最大值 r，最小值 −r。", T_COMBO),
 			 ]},
@@ -512,10 +534,7 @@ static func _slots() -> Array:
 					"2 cos(x − 30°) = √3 cos x + sin x", "2 × √3/2 = √3；2 × 1/2 = 1。", T_COMBO),
 				_f("合併", "f = 2 sin x + √3 cos x + sin x。", "f(x) = [0] sin x + [1] cos x", ["3", "√3"],
 					"f(x) = 3 sin x + √3 cos x", "2 + 1 = 3。", T_COMBO),
-				_f("求 r", "f(x) = 3 sin x + √3 cos x，r = √(a² + b²)。", "r = √(3² + (√3)²) = [0]", ["2√3"],
-					"r = √12 = 2√3", "9 + 3 = 12，√12 = 2√3。", T_COMBO),
-				_f("求 φ", "cos φ = 3 ÷ 2√3 = √3/2，sin φ = √3 ÷ 2√3 = 1/2。", "φ = [0]°", ["30"],
-					"φ = 30°", "cos √3/2、sin 1/2 的角。", T_COMBO),
+				_sup("3 sin x + √3 cos x", "3² + (√3)²", "2√3", "(√3/2) sin x + (1/2) cos x", "√3/2", "1/2", T_COMBO, "30", "30°", "2√3 sin(x + 30°)"),
 				_f("最大值", "f(x) = 2√3 sin(x + 30°)。", "M = [0]", ["2√3"],
 					"M = 2√3", "最大值就是 r。", T_COMBO),
 			 ]},
@@ -531,8 +550,7 @@ static func _slots() -> Array:
 					"長 = 60 cos θ，寬 = 60 sin θ", "直角三角形：斜邊 60。", T_APPLY),
 				_f("周長", "周長 L = 2 × (長 + 寬)。", "L = [0] sin θ + [1] cos θ", ["120", "120"],
 					"L = 120 sin θ + 120 cos θ", "2 × 60 = 120。", T_APPLY),
-				_f("疊合", "r = √(120² + 120²) = 120√2，φ = 45°。", "L = [0]√2 sin(θ + [1]°)", ["120", "45"],
-					"L = 120√2 sin(θ + 45°)", "a = b：φ = 45°。", T_APPLY),
+				_sup("120 sin θ + 120 cos θ", "120² + 120²", "120√2", "(√2/2) sin θ + (√2/2) cos θ", "√2/2", "√2/2", T_APPLY, "45", "45°", "120√2 sin(θ + 45°)", "θ"),
 				_c("取得到嗎", "最大值發生在 θ + 45° = 90°，也就是 θ = 45°。0° < θ < 90°，取得到嗎？",
 					["取得到，θ = 45°（正方形）", "取不到", "只能取端點"], 0,
 					"45° 在範圍內：最大周長 120√2，此時長方形是正方形。", "45° 在 0° 和 90° 中間。", "θ = 45° 在範圍內", T_APPLY),
@@ -545,10 +563,11 @@ static func _slots() -> Array:
 					"底 = 50 cos θ，高 = 25 sin θ", "底是一半的兩倍。", T_APPLY),
 				_f("周長", "周長 P = 2 × (底 + 高)。", "P = [0] cos θ + [1] sin θ", ["100", "50"],
 					"P = 100 cos θ + 50 sin θ", "2 × 50、2 × 25。", T_APPLY),
-				_f("最大周長", "P = 50 × (2 cos θ + sin θ)，r = √(2² + 1²)。", "最大周長 = [0]√5", ["50"],
-					"最大周長 = 50√5 公尺", "a² + b² = 100² + 50² = 12500 = 2500 × 5。", T_APPLY),
-				_f("取最大時", "最大時 (cos θ, sin θ) 和 (2, 1) 同方向，除以 √5。", "cos θ = [0]", ["2√5/5"],
-					"cos θ = 2/√5 = 2√5/5", "2 ÷ √5。", T_APPLY),
+				_sup("50 sin θ + 100 cos θ", "50² + 100²", "50√5", "(√5/5) sin θ + (\\frac{2√5}{5}) cos θ", "√5/5", "\\frac{2√5}{5}", T_APPLY, "", "", "", "θ"),
+				_f("最大周長", "P = 50√5 sin(θ + φ)，最大值就是 r。", "最大周長 = [0]√5", ["50"],
+					"最大周長 = 50√5 公尺", "r = 50√5。", T_APPLY),
+				_f("取最大時", "最大時 θ + φ = 90°，θ = 90° − φ，所以 cos θ = sin φ。", "cos θ = [0]", ["2√5/5"],
+					"cos θ = sin φ = \\frac{2√5}{5}", "cos(90° − φ) = sin φ。", T_APPLY),
 			 ]},
 		 ]},
 
@@ -580,10 +599,7 @@ static func _slots() -> Array:
 		 "variants": [
 			{"eq": "f(x) = 3√3 sin x − 3 cos x，\n0° ≤ x ≤ 180°，求最大最小值",
 			 "steps": [
-				_f("求 r", "r = √(a² + b²)。", "r = √((3√3)² + (−3)²) = [0]", ["6"],
-					"r = √36 = 6", "27 + 9 = 36。", T_FORM),
-				_f("合成", "cos φ = 3√3 ÷ 6 = √3/2，sin φ = −3 ÷ 6 = −1/2。", "f(x) = [0] sin(x − [1]°)", ["6", "30"],
-					"f(x) = 6 sin(x − 30°)", "φ = −30°。", T_FORM),
+				_sup("3√3 sin x − 3 cos x", "(3√3)² + (−3)²", "6", "(√3/2) sin x − (1/2) cos x", "√3/2", "−1/2", T_FORM, "-30", "−30°", "6 sin(x − 30°)"),
 				_peak("找最亮", "拖動 x（0° ～ 180°），讓光束最亮。", 3.0 * S3, -3.0, "max", [120.0],
 					"x = 120° 時最亮", "x − 30° = 90°。", T_RANGE, [0.0, 180.0]),
 				_peak("找最暗", "再拖動 x，讓光束最暗。（最暗卡在端點）", 3.0 * S3, -3.0, "min", [0.0],
@@ -595,8 +611,9 @@ static func _slots() -> Array:
 			 "steps": [
 				_f("降冪、倍角", "cos²x = (1 + cos 2x) ÷ 2；sin x cos x = (sin 2x) ÷ 2。", "f(x) = 1/2 + [0] cos 2x + [1] sin 2x", ["1/2", "√3/2"],
 					"f(x) = 1/2 + (1/2) cos 2x + (√3/2) sin 2x", "√3 × (1/2) = √3/2。", T_HOMOG),
-				_f("疊合", "(√3/2) sin 2x + (1/2) cos 2x 的 r = 1，φ = 30°。", "f(x) = 1/2 + [0] sin(2x + [1]°)", ["1", "30"],
-					"f(x) = 1/2 + sin(2x + 30°)", "cos φ = √3/2，sin φ = 1/2。", T_HOMOG),
+				_sup("(√3/2) sin 2x + (1/2) cos 2x", "(√3/2)² + (1/2)²", "1", "(√3/2) sin 2x + (1/2) cos 2x", "√3/2", "1/2", T_HOMOG, "30", "30°", "sin(2x + 30°)", "2x"),
+				_f("寫回 f", "把 sin(2x + 30°) 放回 f(x)。", "f(x) = 1/2 + [0] sin(2x + [1]°)", ["1", "30"],
+					"f(x) = 1/2 + sin(2x + 30°)", "r = 1，φ = 30°。", T_HOMOG),
 				_f("最大最小", "sin 的範圍是 −1 ～ 1。", "M = [0]，m = [1]", ["3/2", "-1/2"],
 					"M = 3/2，m = −1/2", "1/2 ± 1。", T_HOMOG),
 				_f("發生的位置", "最大時 2x + 30° = 90°（0° ≤ x < 180° 的第一個）。", "x = [0]°", ["30"],
