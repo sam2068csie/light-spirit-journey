@@ -513,8 +513,12 @@ static func _slots() -> Array:
 			 "steps": [
 				_f("化成 cos", "sin x = cos(90° − x)。", "sin 10° = cos [0]°、sin 50° = cos [1]°、sin 70° = cos [2]°", ["80", "40", "20"],
 					"sin 10° = cos 80°、sin 50° = cos 40°、sin 70° = cos 20°", "90° − 10°、90° − 50°、90° − 70°。", T_PROD),
-				_f("同一種連乘", "所以 sin 10° sin 50° sin 70° = cos 20° cos 40° cos 80°（上一題的算法）。", "sin 10° sin 50° sin 70° = [0]", ["1/8"],
-					"= 1/8", "乘 sin 20°，連續用二倍角。", T_PROD),
+				_f("乘 sin 20°", "令 P = cos 20° cos 40° cos 80°。兩邊乘上最小角的 sin 20°，用 sin 20° cos 20° = (1/2) sin 40°：", "P × sin 20° = [0] sin 40° cos 40° cos 80°", ["1/2"],
+					"P × sin 20° = (1/2) sin 40° cos 40° cos 80°", "sin x cos x = (1/2) sin 2x。", T_PROD),
+				_f("一路合併", "再用兩次二倍角：sin 40° cos 40° = (1/2) sin 80°，sin 80° cos 80° = (1/2) sin 160°。", "P × sin 20° = [0] sin 80° cos 80° = [1] sin 160°", ["1/4", "1/8"],
+					"P × sin 20° = (1/4) sin 80° cos 80° = (1/8) sin 160°", "每合併一次，前面多乘 1/2。", T_PROD),
+				_f("約掉 sin 20°", "sin 160° = sin(180° − 20°) = sin 20°，兩邊的 sin 20° 約掉。", "sin 10° sin 50° sin 70° = P = [0]", ["1/8"],
+					"P × sin 20° = (1/8) sin 20°，所以 P = 1/8", "sin 160° = sin 20°。", T_PROD),
 			 ]},
 		 ]},
 
