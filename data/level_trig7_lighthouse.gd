@@ -23,6 +23,8 @@ const CHAPTERS_G7 := [
 ]
 
 ## r 滑桿的選項（值，顯示的文字），由小到大
+## 速算光束用的整數畢氏三角形（最大值是整數）
+const LIGHT_TRIPLES := [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [10, 24, 26], [9, 40, 41]]
 const R_LIST := [[1.0, "1"], [1.4142135623730951, "√2"], [1.7320508075688772, "√3"], [2.0, "2"],
 	[2.8284271247461903, "2√2"], [3.0, "3"], [3.4641016151377544, "2√3"], [4.0, "4"],
 	[4.242640687119285, "3√2"], [5.0, "5"], [5.196152422706632, "3√3"], [6.0, "6"]]
@@ -490,7 +492,7 @@ static func _gen_light() -> Dictionary:
 	var rmax := ""
 	var hint := ""
 	if randi() % 2 == 0:
-		var tr: Array = TRIPLES.pick_random()
+		var tr: Array = LIGHT_TRIPLES.pick_random()
 		var p: int = tr[0]
 		var q: int = tr[1]
 		if randi() % 2 == 0:
@@ -524,7 +526,7 @@ static func _gen_light() -> Dictionary:
 		f = "−" + f
 	var ask_max := randi() % 2 == 0
 	var ans := rmax if ask_max else "-" + rmax
-	return {"eq": "f(x) = %s" % f, "q": "求 f(x) 的%s。" % ("最大值" if ask_max else "最小值"),
+	return {"eq": "f(x) = %s\n求%s" % [f, "最大值" if ask_max else "最小值"], "q": "求 f(x) 的%s。" % ("最大值" if ask_max else "最小值"),
 		"template": "%s = [0]" % ("最大值" if ask_max else "最小值"), "ans": ans,
 		"nudge": hint + "最大值是 r，最小值是 −r。", "tag": BankG7.T_LIGHT}
 

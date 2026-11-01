@@ -313,7 +313,7 @@ static func _slots() -> Array:
 
 		{"id": "speed", "chapter": 1, "type": "speed", "title": "速算光束", "time": 160.0,
 		 "story": "看到 a sin x ± b cos x，立刻說出最大值或最小值！",
-		 "insight": "最大值 √(a² + b²)，最小值 −√(a² + b²)。常見的：3、4、5；5、12、13；8、15、17；1、√3、2；1、1、√2。",
+		 "insight": "最大值 √(a² + b²)，最小值 −√(a² + b²)。常見的：3、4、5；6、8、10；5、12、13；8、15、17；10、24、26；9、40、41；1、√3、2；1、1、√2。",
 		 "variants": [{"gen": "light", "count": 8}]},
 
 		{"id": "boss1", "chapter": 1, "type": "forge", "title": "第一章試煉", "time": 300.0,
