@@ -50,7 +50,7 @@ const UNITS := [
 		{"id": "G7", "name": "疊合燈塔", "topic": "正餘弦函數的疊合", "file": "level_trig7_lighthouse.gd", "bank": "trig7_bank.gd", "color": UITheme.GOOD},
 	 ]},
 	{"id": "exp", "term": "高二上", "title": "指數與對數", "exam": "高二上・第二次段考", "color": UITheme.GOLD, "open": true,
-	 "world": "光靈的旅程：指數島與對數島", "map": "world_map.gd", "tower": "tower_bank.gd", "tower_name": "終焉之塔",
+	 "world": "光靈的旅程：指數島與對數島", "map": "exp_map.gd", "tower": "tower_bank.gd", "tower_name": "終焉之塔",
 	 "concepts": "concepts_exp.gd",
 	 "levels": [
 		{"id": "L1", "name": "光之橋", "topic": "指數函數的圖形", "file": "level_01_light_bridge.gd", "bank": "level01_bank.gd", "color": UITheme.CYAN},

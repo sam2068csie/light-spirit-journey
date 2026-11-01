@@ -11,7 +11,8 @@ const Units := preload("units.gd")
 const Center := preload("review_center.gd")
 const SL := preload("spirit_look.gd")
 const TM := preload("trig_map.gd")     # 月輪島：照單元地圖的形狀縮小畫（圓環＋正弦海岸＋羅盤礁）
-const WM := preload("world_map.gd")    # 指數島、對數島：照單元地圖的海岸線縮小畫
+const WM := preload("world_map.gd")
+const EM := preload("exp_map.gd")     # 指數島、對數島（幾何版）    # 指數島、對數島：照單元地圖的海岸線縮小畫
 
 signal pick_unit(uid: String)
 
@@ -571,7 +572,7 @@ func _make_shape(isl: Dictionary) -> Dictionary:
 			return {"kind": "trig", "k": k, "o": tf.call(TM.O), "r": TM.R * k, "rw": TM.RW * k, "wave": wave,
 				"cw": TM.CW * k, "cp": tf.call(TM.CP), "dr": TM.DR * k, "sites": sites}
 		"exp":
-			var polys := [WM.island_poly(0), WM.island_poly(1)]
+			var polys := [EM.island_poly(0), EM.island_poly(1)]
 			var lo := Vector2(INF, INF)
 			var hi := Vector2(-INF, -INF)
 			for poly in polys:
@@ -588,7 +589,7 @@ func _make_shape(isl: Dictionary) -> Dictionary:
 				out.append(pp)
 			var sites := []
 			for j in 8:
-				sites.append(isl.c + (WM.site_point(j) - mid) * k)
+				sites.append(isl.c + (EM.site_point(j) - mid) * k)
 			return {"kind": "exp", "k": k, "polys": out, "sites": sites}
 	return {}
 
