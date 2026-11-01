@@ -308,13 +308,33 @@ func _refresh_units() -> void:
 		tabs.add_child(tb)
 
 
-## 換年級（分頁、或在地圖上搭船到另一個年級）
+## 換年級（分頁、或在地圖上搭船到另一個年級）：舊地圖往旁邊滑出、淡出，新地圖從另一邊滑進來
 func _set_grade(gr: String) -> void:
-	if gr == _grade:
+	if gr == _grade or _grade_anim:
 		return
+	var dir := 1.0 if gr == "高二" else -1.0     # 高一 → 高二：往左滑（高二在右邊）
+	var old: Array = _units_body.get_children()
 	_grade = gr
 	Game.of(self).sfx("click")
+	_grade_anim = true
+	var tw := create_tween().set_parallel()
+	for c in old:
+		if c is Control and c.has_method("close_overlay"):
+			tw.tween_property(c, "position:x", -dir * 260.0, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+			tw.tween_property(c, "modulate:a", 0.0, 0.3)
+	await tw.finished
 	_refresh_units()
+	for c in _units_body.get_children():
+		if c is Control and c.has_method("close_overlay"):
+			c.position.x = dir * 260.0
+			c.modulate.a = 0.0
+			var tw2 := c.create_tween().set_parallel()
+			tw2.tween_property(c, "position:x", 0.0, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw2.tween_property(c, "modulate:a", 1.0, 0.35)
+	_grade_anim = false
+
+
+var _grade_anim := false
 
 
 const UNIT_CARD := Vector2(228, 240)

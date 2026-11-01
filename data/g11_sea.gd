@@ -153,7 +153,7 @@ func _exit_tree() -> void:
 
 func _build_ui() -> void:
 	var tp := Button.new()
-	tp.text = "◆ 航行到…（M）"
+	tp.text = "☰ 單元列表（M）"
 	tp.focus_mode = Control.FOCUS_NONE
 	tp.custom_minimum_size = Vector2(160, 44)
 	tp.position = Vector2(16, 70)
@@ -201,7 +201,7 @@ func _build_ui() -> void:
 	_card_btn.pressed.connect(_interact)
 	hb.add_child(_card_btn)
 	var tip := Label.new()
-	tip.text = "方向鍵／WASD 划船，或按住畫面往那裡划　·　Enter 上岸　·　M 航行到…"
+	tip.text = "方向鍵／WASD 划船，或按住畫面往那裡划　·　Enter 上岸　·　M 單元列表"
 	tip.position = Vector2(18, H - 34)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
@@ -341,33 +341,31 @@ func _land(i: int) -> void:
 	pick_unit.emit(uid)
 
 
-## 航行到…：去過的碼頭可以直接開過去
+## 單元列表：不想划船，直接選一座島上岸
 func _open_sail_menu() -> void:
 	if is_instance_valid(_overlay) or _busy:
 		return
 	Game.of(self).sfx("click")
-	var o := UITheme.modal(self, Color("5fd4ff"), 560)
+	var o := UITheme.modal(self, UITheme.ACCENT, 560)
 	_overlay = o[0]
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 8)
-	col.add_child(UITheme.title_label("◆ 航行到…", 26, Color("c8f0ff")))
-	var rows := [{"name": "晨曦港", "sub": "起點", "on": true, "to": SPAWN}]
+	col.add_child(UITheme.title_label("☰ 單元列表", 26, UITheme.ACCENT))
 	for i in ISLANDS.size():
 		var isl: Dictionary = ISLANDS[i]
-		rows.append({"name": "%d　%s" % [isl.n, isl.name], "sub": Units.unit(isl.unit).title, "on": _has("visited", isl.unit), "to": _docks[i]})
-	for r in rows:
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 10)
 		col.add_child(hb)
 		var nm := Label.new()
-		nm.text = r.name
-		nm.custom_minimum_size = Vector2(180, 0)
+		nm.text = "%d　%s" % [isl.n, Units.unit(isl.unit).title]
+		nm.custom_minimum_size = Vector2(250, 0)
 		nm.add_theme_font_override("font", UITheme.bold_font())
 		nm.add_theme_font_size_override("font_size", UITheme.fs(16))
-		nm.add_theme_color_override("font_color", Color("c8f0ff") if r.on else UITheme.TEXT_DIM)
+		var ok := _open(i)
+		nm.add_theme_color_override("font_color", (isl.col as Color).lightened(0.3) if ok else UITheme.TEXT_DIM)
 		hb.add_child(nm)
 		var sb := Label.new()
-		sb.text = r.sub
+		sb.text = isl.name
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sb.add_theme_font_size_override("font_size", UITheme.fs(14))
 		sb.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -375,17 +373,16 @@ func _open_sail_menu() -> void:
 		var go := Button.new()
 		go.focus_mode = Control.FOCUS_NONE
 		go.custom_minimum_size = Vector2(110, 38)
-		go.text = "開過去" if r.on else "還沒去過"
-		go.disabled = not r.on
+		go.text = "上岸 ▶" if ok else "建造中"
+		go.disabled = not ok
 		UITheme.button_3d(go, Color("2a6f9e"), Color("17405e"), Color("e6f7ff"), 14, 4, 12, 3)
-		var dest: Vector2 = r.to
+		var ii: int = i
 		go.pressed.connect(func():
 			close_overlay()
-			pos = dest
+			pos = _docks[ii]
 			vel = Vector2.ZERO
 			cam = _cam_target()
-			Game.of(self).sfx("success")
-			_save())
+			_land(ii))
 		hb.add_child(go)
 	var cb := Button.new()
 	cb.text = "關閉"

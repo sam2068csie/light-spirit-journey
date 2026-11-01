@@ -2,7 +2,7 @@ extends Control
 ## 高一世界地圖「曦光大陸」：可以自由走動的 2D 地圖（比螢幕大，鏡頭跟著光靈）。
 ##   ・方向鍵／WASD 移動；手機或滑鼠：按住畫面，光靈往手指的方向走
 ##   ・走到地區入口（拱門）會跳出卡片，Enter／點按鈕進入
-##   ・每個地區入口旁有傳送石，碰過一次就能從「傳送」選單直接過去；不想跑圖也能「直接開關卡」
+##   ・不想跑圖：左上「單元列表」直接選單元進入
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
 ## 左岸「秋晨之地」是高一上四區，晨昏之橋過去是右岸「星夜之地」高一下五區。地區的題目之後再放（現在進去會顯示「準備中」）。
 ## 存檔放在 Game.world10：{stones: [], visited: [], eggs: [], pos: [x, y]}
@@ -36,7 +36,7 @@ const RIGHT_SPAWN := Vector2(2200, 1530)   # 從「星夜之地」進來時站�
 const SPAWN := Vector2(470, 1960)
 const HOUSE := Vector2(360, 1930)
 
-## 四個地區：center 地區中心、gate 入口（站在這裡進入）、stone 傳送石
+## 四個地區：center 地區中心、gate 入口（站在這裡進入）
 const ZONES := [
 	{"id": "num", "unit": "h1num", "name": "數之原野", "chapter": "數與式", "center": Vector2(540, 1470), "gate": Vector2(760, 1660),
 	 "stone": Vector2(860, 1660), "color": Color("f5c84c")},
@@ -269,7 +269,7 @@ func _exit_tree() -> void:
 func _build_ui() -> void:
 	# 傳送鍵（左上，主選單的按鈕下面）
 	_tp_btn = Button.new()
-	_tp_btn.text = "◆ 傳送（M）"
+	_tp_btn.text = "☰ 單元列表（M）"
 	_tp_btn.focus_mode = Control.FOCUS_NONE
 	_tp_btn.custom_minimum_size = Vector2(140, 44)
 	_tp_btn.position = Vector2(16, 70)
@@ -306,7 +306,7 @@ func _build_ui() -> void:
 	hb.add_child(_card_btn)
 	# 提示文字（畫面左下）
 	var tip := Label.new()
-	tip.text = "方向鍵／WASD 移動，或按住畫面往那裡走　·　Enter 進入　·　M 傳送"
+	tip.text = "方向鍵／WASD 移動，或按住畫面往那裡走　·　Enter 進入　·　M 單元列表"
 	tip.position = Vector2(18, H - 34)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
@@ -427,28 +427,20 @@ func _close_button(txt: String) -> Button:
 	return b
 
 
-## 傳送選單：碰過傳送石的地區可以直接傳送；每一區都能「直接開關卡」
+## 單元列表：不想跑圖，直接選一個單元進去（左欄高一上、右欄高一下）
 func _open_teleport() -> void:
-	if is_instance_valid(_overlay):
+	if is_instance_valid(_overlay) or _busy:
 		return
 	Game.of(self).sfx("click")
-	var o := UITheme.modal(self, Color("5fd4ff"), 1000)
+	var o := UITheme.modal(self, UITheme.ACCENT, 860)
 	_overlay = o[0]
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 10)
-	col.add_child(UITheme.title_label("◆ 傳送石", 26, Color("c8f0ff")))
-	var tip := Label.new()
-	tip.text = "碰過傳送石的地區可以直接傳送過去；不想跑圖也能「直接開關卡」。"
-	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
-	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	col.add_child(tip)
-	# 左欄高一上、右欄高一下
+	col.add_child(UITheme.title_label("☰ 單元列表", 26, UITheme.ACCENT))
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 24)
 	col.add_child(cols)
-	var sides := [["秋晨之地 · 高一上", Color("d9b8ff"), {"name": "光靈的小屋", "to": SPAWN}, range(0, LEFT_ZONES)],
-		["星夜之地 · 高一下", Color("9fd8ff"), {"name": "晨昏之橋東岸", "to": RIGHT_SPAWN}, range(LEFT_ZONES, ZONES.size())]]
+	var sides := [["秋晨之地 · 高一上", Color("d9b8ff"), range(0, LEFT_ZONES)], ["星夜之地 · 高一下", Color("9fd8ff"), range(LEFT_ZONES, ZONES.size())]]
 	for sd in sides:
 		var vb := VBoxContainer.new()
 		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -460,17 +452,14 @@ func _open_teleport() -> void:
 		hd.add_theme_font_size_override("font_size", UITheme.fs(16))
 		hd.add_theme_color_override("font_color", sd[1])
 		vb.add_child(hd)
-		var rows: Array = [{"name": sd[2].name, "chapter": "起點", "on": true, "to": sd[2].to, "zone": -1}]
-		for zi in sd[3]:
-			var z: Dictionary = ZONES[zi]
-			rows.append({"name": z.name, "chapter": z.chapter, "on": _has("stones", z.id), "to": z.stone + Vector2(0, 50), "zone": zi})
-		for r in rows:
-			vb.add_child(_tp_row(r))
+		for zi in sd[2]:
+			vb.add_child(_tp_row(zi))
 	col.add_child(_close_button("關閉"))
 
 
-## 傳送選單的一列：名字＋章節、傳送、直接開關卡
-func _tp_row(r: Dictionary) -> Control:
+## 單元列表的一列：地區名＋章節、進入
+func _tp_row(zi: int) -> Control:
+	var z: Dictionary = ZONES[zi]
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 8)
 	var nv := VBoxContainer.new()
@@ -478,40 +467,29 @@ func _tp_row(r: Dictionary) -> Control:
 	nv.add_theme_constant_override("separation", 0)
 	hb.add_child(nv)
 	var nm := Label.new()
-	nm.text = "%s %s" % ["◆" if r.on else "◇", r.name]
+	nm.text = z.chapter
 	nm.add_theme_font_override("font", UITheme.bold_font())
 	nm.add_theme_font_size_override("font_size", UITheme.fs(16))
-	nm.add_theme_color_override("font_color", Color("c8f0ff") if r.on else UITheme.TEXT_DIM)
+	nm.add_theme_color_override("font_color", (z.color as Color).lightened(0.3))
 	nv.add_child(nm)
 	var ch := Label.new()
-	ch.text = r.chapter
+	ch.text = z.name
 	ch.add_theme_font_size_override("font_size", UITheme.fs(12))
 	ch.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	nv.add_child(ch)
 	var go := Button.new()
 	go.focus_mode = Control.FOCUS_NONE
-	go.custom_minimum_size = Vector2(92, 40)
-	go.text = "傳送" if r.on else "還沒碰過"
-	go.disabled = not r.on
-	UITheme.button_3d(go, Color("2a6f9e"), Color("17405e"), Color("e6f7ff"), 14, 4, 12, 3)
-	var dest: Vector2 = r.to
-	go.pressed.connect(func(): _teleport(dest))
+	go.custom_minimum_size = Vector2(100, 40)
+	var u: Dictionary = Units.unit(z.unit)
+	var ok: bool = u.id == z.unit and Units.is_open(u)
+	go.text = "進入 ▶" if ok else "準備中"
+	UITheme.button_3d(go, Color("2a6f9e") if ok else Color("3a3360"), Color("17405e") if ok else Color("231e40"), Color("e6f7ff"), 14, 4, 12, 3)
+	go.pressed.connect(func():
+		close_overlay()
+		pos = z.gate + Vector2(0, 40)
+		cam = _cam_target()
+		_open_zone(zi))
 	hb.add_child(go)
-	var zi: int = r.zone
-	if zi >= 0:
-		var lv := Button.new()
-		lv.focus_mode = Control.FOCUS_NONE
-		lv.custom_minimum_size = Vector2(104, 40)
-		lv.text = "直接開關卡"
-		UITheme.button_3d(lv, Color("3a3360"), Color("231e40"), UITheme.TEXT, 14, 4, 12, 3)
-		lv.pressed.connect(func():
-			close_overlay()
-			_open_zone(zi))
-		hb.add_child(lv)
-	else:
-		var sp := Control.new()
-		sp.custom_minimum_size = Vector2(104, 0)
-		hb.add_child(sp)
 	return hb
 
 
@@ -761,10 +739,6 @@ func _check_world(delta: float) -> void:
 		if pos.distance_to(z.center) < 380.0 and not _has("visited", z.id):
 			_add("visited", z.id)
 			_show_toast("發現新地區：%s" % z.name)
-		if pos.distance_to(z.stone) < 56.0 and not _has("stones", z.id):
-			_add("stones", z.id)
-			Game.of(self).sfx("success")
-			_show_toast("◆ 傳送石啟用：%s" % z.name)
 
 	# 彩蛋一：數字石
 	_egg_cool = maxf(0.0, _egg_cool - delta)
@@ -1084,16 +1058,6 @@ func _draw_gate(font: Font, z: Dictionary) -> void:
 	var tw := font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
 	draw_rect(Rect2(g + Vector2(-tw / 2.0 - 12, -118), Vector2(tw + 24, 34)), Color(col.r, col.g, col.b, 0.92))
 	draw_string(font, g + Vector2(-tw / 2.0, -93), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("1a1530"))
-	# 傳送石（菱形）
-	var s: Vector2 = z.stone
-	var on := _has("stones", z.id)
-	var dz := PackedVector2Array([s + Vector2(0, -22), s + Vector2(16, 0), s + Vector2(0, 22), s + Vector2(-16, 0)])
-	if on:
-		UITheme.dot(self, s, 30.0, Color(0.37, 0.83, 1.0, 0.2 + 0.1 * sin(t * 2.5)))
-	draw_colored_polygon(dz, Color("5fd4ff") if on else Color("2a3360"))
-	var dz2 := dz.duplicate()
-	dz2.append(dz[0])
-	draw_polyline(dz2, Color("c8f0ff") if on else Color("6a76a8"), 2.0, true)
 
 
 func _draw_spirit() -> void:
@@ -1126,8 +1090,6 @@ func _draw_minimap(font: Font) -> void:
 	draw_colored_polygon(rp, Color("223a58"))
 	for z in ZONES:
 		UITheme.dot(self, o + z.center * k, 4.0, z.color if _has("visited", z.id) else Color(0.6, 0.62, 0.75))
-		if _has("stones", z.id):
-			UITheme.dot(self, o + z.stone * k, 2.5, Color("5fd4ff"))
 	# 鏡頭框
 	draw_rect(Rect2(o + cam * k, Vector2(W, H) * k), Color(1, 1, 1, 0.5), false, 1.0)
 	UITheme.dot(self, o + pos * k, 3.5 + sin(t * 4.0), Color("fff3c4"))
