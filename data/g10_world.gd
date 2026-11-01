@@ -342,6 +342,10 @@ func _update_card() -> void:
 	if not _card.visible:
 		return
 	match k:
+		"house":
+			_card_title.text = "光靈的小屋"
+			_card_sub.text = "回家休息、擺家具、看紀念品"
+			_card_btn.text = "進屋 ▶"
 		"ferry":
 			_card_title.text = "渡口"
 			_card_sub.text = "搭船到高二的光潮群島"
@@ -373,6 +377,10 @@ func _interact() -> void:
 		return
 	Game.of(self).sfx("click")
 	match k:
+		"house":
+			var g = Game.of(self)
+			g.set_meta("house_from", "units")
+			g.goto("house.gd")
 		"ferry":
 			var mm := get_parent()
 			while mm != null and not mm.has_method("_set_grade"):
@@ -768,6 +776,8 @@ func _check_world(delta: float) -> void:
 		_near = {"kind": "dice"}
 	if pos.distance_to(EXIT_SIGN) < 110.0:
 		_near = {"kind": "ferry"}
+	if pos.distance_to(HOUSE) < 130.0:
+		_near = {"kind": "house"}
 	if _egg_seq.size() == EGG_STONES.size() and not _has("eggs", "stones") and pos.distance_to(CHEST) < 70.0:
 		_near = {"kind": "chest"}
 
