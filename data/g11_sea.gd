@@ -9,6 +9,8 @@ const UITheme := preload("game_theme.gd")
 const Game := preload("game.gd")
 const Units := preload("units.gd")
 const Center := preload("review_center.gd")
+const TM := preload("trig_map.gd")     # 月輪島：照單元地圖的形狀縮小畫（圓環＋正弦海岸＋羅盤礁）
+const WM := preload("world_map.gd")    # 指數島、對數島：照單元地圖的海岸線縮小畫
 
 signal pick_unit(uid: String)
 
@@ -44,6 +46,7 @@ var playing := false
 var _hold := false
 var _hold_pt := Vector2.ZERO
 var _polys: Array = []
+var _shape: Array = []        # 有單元地圖的島：縮小後的真實形狀 {kind, k, off, …}
 var _docks: Array = []
 var _wake: Array = []
 var _sparks: Array = []
@@ -76,9 +79,21 @@ func _ready() -> void:
 			var wob := 1.0 + 0.07 * sin(a * 3.0 + isl.n) + 0.04 * sin(a * 7.0 + isl.n * 2.0)
 			poly.append(isl.c + Vector2(cos(a) * isl.r.x, sin(a) * isl.r.y) * wob)
 		_polys.append(poly)
+		_shape.append(_make_shape(isl))
+	# 碼頭：從島中心往海中央走，第一個船能停的地方再往外一點
+	for i in ISLANDS.size():
+		var isl: Dictionary = ISLANDS[i]
 		var dir: Vector2 = (SEA_C - isl.c).normalized()
-		var edge: Vector2 = isl.c + Vector2(dir.x * isl.r.x, dir.y * isl.r.y) * 1.08
-		_docks.append(edge + dir * 70.0)
+		var q: Vector2 = isl.c
+		var hit := false      # 先碰到陸地（月輪島中間是潟湖），再找到外面的海
+		for k in 500:
+			q += dir * 8.0
+			var fr := _free_island(q, i, 30.0)
+			if not fr:
+				hit = true
+			elif hit:
+				break
+		_docks.append(q + dir * 30.0)
 	for i in 40:
 		_sparks.append({"p": Vector2(rng.randf() * W, rng.randf() * H), "ph": rng.randf() * TAU, "s": rng.randf_range(0.6, 1.4)})
 	_build_ui()
@@ -493,12 +508,78 @@ func _free(p: Vector2) -> bool:
 	if p.distance_to(HARBOR) < 150.0 + R_BOAT:
 		return false
 	for i in _polys.size():
-		var isl: Dictionary = ISLANDS[i]
-		var d: Vector2 = (p - isl.c)
-		var e := Vector2(d.x / (isl.r.x * 1.1 + R_BOAT), d.y / (isl.r.y * 1.1 + R_BOAT))
-		if e.length() < 1.0:
+		if not _free_island(p, i, R_BOAT):
 			return false
 	return true
+
+
+## 這一點離第 i 座島夠不夠遠（m：船身的寬度）
+func _free_island(p: Vector2, i: int, m: float) -> bool:
+	var isl: Dictionary = ISLANDS[i]
+	var sh: Dictionary = _shape[i]
+	match String(sh.get("kind", "")):
+		"trig":
+			if absf(p.distance_to(sh.o) - sh.r) < sh.rw / 2.0 + m:
+				return false
+			if p.distance_to(sh.cp) < sh.dr + m:
+				return false
+			var wv: PackedVector2Array = sh.wave
+			for k in range(0, wv.size() - 1, 2):
+				if Geometry2D.get_closest_point_to_segment(p, wv[k], wv[mini(k + 2, wv.size() - 1)]).distance_to(p) < sh.cw / 2.0 + m:
+					return false
+			return true
+		"exp":
+			for poly in sh.polys:
+				if Geometry2D.is_point_in_polygon(p, poly):
+					return false
+				var pp: PackedVector2Array = poly
+				for k in range(0, pp.size(), 3):
+					if pp[k].distance_to(p) < m + 6.0:
+						return false
+			return true
+	var d: Vector2 = (p - isl.c)
+	var e := Vector2(d.x / (isl.r.x * 1.1 + m), d.y / (isl.r.y * 1.1 + m))
+	return e.length() >= 1.0
+
+
+## 有單元地圖的島：把單元地圖（1152×648 的座標）縮放、搬到這座島的位置
+func _make_shape(isl: Dictionary) -> Dictionary:
+	match String(isl.unit):
+		"trig":
+			var lo := Vector2(TM.O.x - TM.R - TM.RW, TM.WY - TM.R - TM.RW)
+			var hi := Vector2(TM.X_END, TM.WY + TM.R + TM.RW)
+			var k: float = minf(2.0 * isl.r.x / (hi.x - lo.x), 2.0 * isl.r.y / (hi.y - lo.y)) * 1.15
+			var mid := (lo + hi) / 2.0
+			var tf := func(q: Vector2) -> Vector2: return isl.c + (q - mid) * k
+			var wave := PackedVector2Array()
+			for q in TM.wave_pts(TM.WX0, TM.X_END, 10.0):
+				wave.append(tf.call(q))
+			var sites := []
+			for j in TM.SITES.size():
+				sites.append(tf.call(TM.site_point(j)))
+			return {"kind": "trig", "k": k, "o": tf.call(TM.O), "r": TM.R * k, "rw": TM.RW * k, "wave": wave,
+				"cw": TM.CW * k, "cp": tf.call(TM.CP), "dr": TM.DR * k, "sites": sites}
+		"exp":
+			var polys := [WM.island_poly(0), WM.island_poly(1)]
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			for poly in polys:
+				for q in poly:
+					lo = Vector2(minf(lo.x, q.x), minf(lo.y, q.y))
+					hi = Vector2(maxf(hi.x, q.x), maxf(hi.y, q.y))
+			var k: float = minf(2.0 * isl.r.x / (hi.x - lo.x), 2.0 * isl.r.y / (hi.y - lo.y)) * 1.2
+			var mid := (lo + hi) / 2.0
+			var out := []
+			for poly in polys:
+				var pp := PackedVector2Array()
+				for q in poly:
+					pp.append(isl.c + (q - mid) * k)
+				out.append(pp)
+			var sites := []
+			for j in 8:
+				sites.append(isl.c + (WM.site_point(j) - mid) * k)
+			return {"kind": "exp", "k": k, "polys": out, "sites": sites}
+	return {}
 
 
 func _cam_target() -> Vector2:
@@ -624,7 +705,7 @@ func _draw() -> void:
 	for s in _sparks:
 		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, 0.12 + 0.12 * sin(t * s.s + s.ph)))
 	_draw_minimap()
-	draw_string(font, Vector2(194, 100), "光潮群島 · 高二", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
+	draw_string(font, Vector2(20, 142), "光潮群島 · 高二", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
 
 
 func _draw_island(font: Font, i: int) -> void:
@@ -633,19 +714,23 @@ func _draw_island(font: Font, i: int) -> void:
 	var poly: PackedVector2Array = _polys[i]
 	var col: Color = isl.col
 	var land: Color = isl.land if open else Color("1c2a52")
-	# 淺灘
-	var shoal := PackedVector2Array()
-	for p in poly:
-		shoal.append(isl.c + (p - isl.c) * 1.08)
-	draw_colored_polygon(shoal, Color(0.3, 0.5, 0.8, 0.25))
-	draw_colored_polygon(poly, land)
-	var outl := poly.duplicate()
-	outl.append(poly[0])
-	draw_polyline(outl, col if open else Color("3a4f86"), 5.0, true)
 	var c: Vector2 = isl.c
-	if open:
-		_draw_landmark(i, c, col)
+	var sh: Dictionary = _shape[i]
+	if not sh.is_empty():
+		_draw_real(i, sh, open)
 	else:
+		# 淺灘
+		var shoal := PackedVector2Array()
+		for p in poly:
+			shoal.append(isl.c + (p - isl.c) * 1.08)
+		draw_colored_polygon(shoal, Color(0.3, 0.5, 0.8, 0.25))
+		draw_colored_polygon(poly, land)
+		var outl := poly.duplicate()
+		outl.append(poly[0])
+		draw_polyline(outl, col if open else Color("3a4f86"), 5.0, true)
+	if open and sh.is_empty():
+		_draw_landmark(i, c, col)
+	elif not open:
 		for k in 5:
 			var o := Vector2(cos(k * 1.3 + t * 0.2), sin(k * 1.3 + t * 0.17)) * Vector2(isl.r.x, isl.r.y) * 0.45
 			UITheme.dot(self, c + o, 150.0, Color(0.8, 0.84, 0.98, 0.10))
@@ -653,17 +738,20 @@ func _draw_island(font: Font, i: int) -> void:
 	var nm: String = isl.name
 	var fs := 40
 	var tw := font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string_outline(font, c + Vector2(-tw / 2.0, -10), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 10, Color(0.03, 0.06, 0.15, 0.85))
 	draw_string(font, c + Vector2(-tw / 2.0, -10), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("fff3d6") if open else Color(0.78, 0.8, 0.9, 0.7))
 	var u: Dictionary = Units.unit(isl.unit)
 	var sub := String(u.title) if u.id == isl.unit else ""
 	if not open:
 		sub += "（建造中）"
 	var sw := font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+	draw_string_outline(font, c + Vector2(-sw / 2.0, 26), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 8, Color(0.03, 0.06, 0.15, 0.85))
 	draw_string(font, c + Vector2(-sw / 2.0, 26), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.85, 0.88, 1.0, 0.85 if open else 0.5))
 	if open:
 		var pr := _progress(isl.unit)
 		var ps := "世界之光 %d／%d" % [pr.lit, pr.n]
 		var pw := font.get_string_size(ps, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+		draw_string_outline(font, c + Vector2(-pw / 2.0, 58), ps, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, 8, Color(0.03, 0.06, 0.15, 0.85))
 		draw_string(font, c + Vector2(-pw / 2.0, 58), ps, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f5c84c"))
 	# 碼頭＋浮標
 	var d: Vector2 = _docks[i]
@@ -678,6 +766,60 @@ func _draw_island(font: Font, i: int) -> void:
 	var ns := str(isl.n)
 	var nw := font.get_string_size(ns, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
 	draw_string(font, bp + Vector2(-nw / 2.0, 9), ns, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("2a2440"))
+
+
+## 有單元地圖的島：照單元地圖的形狀畫（淺灘、陸地、內陸、聖地的點）
+func _draw_real(i: int, sh: Dictionary, open: bool) -> void:
+	var isl: Dictionary = ISLANDS[i]
+	var col: Color = isl.col
+	var land := Color("2f5a4a") if open else Color("24304f")
+	var high := Color("3f7458") if open else Color("2c3a5c")
+	var sand := Color("d8c08a") if open else Color("5a6488")
+	var shallow := Color(0.35, 0.7, 0.95, 0.12)
+	match String(sh.kind):
+		"trig":
+			draw_arc(sh.o, sh.r, 0, TAU, 96, shallow, sh.rw + 50.0, true)
+			draw_polyline(sh.wave, shallow, sh.cw + 50.0, true)
+			UITheme.dot(self, sh.cp, sh.dr + 25.0, shallow)
+			UITheme.dot(self, sh.o, sh.r - sh.rw / 2.0, Color("12355e"))      # 潟湖
+			for pass_ in [[sand, 0.0], [land, 8.0], [high, 26.0]]:
+				var cc: Color = pass_[0]
+				var sh_in: float = pass_[1]
+				draw_arc(sh.o, sh.r, 0, TAU, 128, cc, sh.rw - sh_in, true)
+				draw_polyline(sh.wave, cc, sh.cw - sh_in, true)
+				UITheme.dot(self, sh.cp, sh.dr - sh_in / 2.0, cc)
+			# 羅盤礁的刻紋、圓環刻度
+			draw_arc(sh.cp, sh.dr * 0.7, 0, TAU, 48, Color(1, 0.85, 0.45, 0.4), 3.0, true)
+			for k in 4:
+				var a := k * PI / 2.0
+				draw_line(sh.o + Vector2(cos(a), -sin(a)) * (sh.r - 16.0), sh.o + Vector2(cos(a), -sin(a)) * (sh.r + 16.0), Color(1, 1, 1, 0.35), 3.0)
+			# 終焉之塔在潟湖中間
+			draw_rect(Rect2(sh.o + Vector2(-9, -44), Vector2(18, 44)), Color("c4b0ff"))
+		"exp":
+			for poly in sh.polys:
+				var pp: PackedVector2Array = poly
+				var sp := Geometry2D.offset_polygon(pp, 26.0, Geometry2D.JOIN_ROUND)
+				for q in sp:
+					draw_colored_polygon(q, shallow)
+				draw_colored_polygon(pp, sand)
+				for q in Geometry2D.offset_polygon(pp, -8.0, Geometry2D.JOIN_ROUND):
+					draw_colored_polygon(q, land)
+				for q in Geometry2D.offset_polygon(pp, -24.0, Geometry2D.JOIN_ROUND):
+					draw_colored_polygon(q, high)
+	# 聖地：小小的點，點亮的發光
+	var u: Dictionary = Units.unit(isl.unit)
+	var g = Game.of(self)
+	var sites: Array = sh.sites
+	for j in sites.size():
+		var lit := false
+		if j < u.levels.size():
+			lit = Center.level_progress(g, u.levels[j].id) >= 0.999
+		var sp2: Vector2 = sites[j]
+		var lc: Color = u.levels[j].color if j < u.levels.size() else col
+		if lit:
+			UITheme.dot(self, sp2, 26.0, Color(lc.r, lc.g, lc.b, 0.3 + 0.1 * sin(t * 2.0 + j)))
+		UITheme.dot(self, sp2, 11.0, lc if (lit and open) else Color(0.6, 0.64, 0.8, 0.8))
+		draw_arc(sp2, 11.0, 0, TAU, 20, Color(1, 1, 1, 0.7), 2.0, true)
 
 
 ## 開放的島：簡單的地標
@@ -735,9 +877,26 @@ func _draw_minimap() -> void:
 	draw_rect(Rect2(o - Vector2(4, 4), Vector2(mw + 8, mh + 8)), Color(1, 1, 1, 0.2), false, 1.0)
 	UITheme.dot(self, o + HARBOR * k, 150.0 * k, Color("4a3f6e"))
 	for i in ISLANDS.size():
-		var pp := PackedVector2Array()
-		for q in _polys[i]:
-			pp.append(o + q * k)
-		draw_colored_polygon(pp, (ISLANDS[i].col as Color).darkened(0.35) if _open(i) else Color("2a3a66"))
+		var mc: Color = (ISLANDS[i].col as Color).darkened(0.35) if _open(i) else Color("2a3a66")
+		var sh: Dictionary = _shape[i]
+		match String(sh.get("kind", "")):
+			"trig":
+				draw_arc(o + sh.o * k, sh.r * k, 0, TAU, 32, mc, maxf(1.5, sh.rw * k), true)
+				var wv := PackedVector2Array()
+				for q in sh.wave:
+					wv.append(o + q * k)
+				draw_polyline(wv, mc, maxf(1.5, sh.cw * k), true)
+				UITheme.dot(self, o + sh.cp * k, sh.dr * k, mc)
+			"exp":
+				for poly in sh.polys:
+					var pq := PackedVector2Array()
+					for q in poly:
+						pq.append(o + q * k)
+					draw_colored_polygon(pq, mc)
+			_:
+				var pp := PackedVector2Array()
+				for q in _polys[i]:
+					pp.append(o + q * k)
+				draw_colored_polygon(pp, mc)
 	draw_rect(Rect2(o + cam * k, Vector2(W, H) * k / zoom), Color(1, 1, 1, 0.5), false, 1.0)
 	UITheme.dot(self, o + pos * k, 3.5 + sin(t * 4.0), Color("fff3c4"))

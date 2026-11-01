@@ -861,9 +861,9 @@ func _draw() -> void:
 		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, a))
 	_draw_minimap(font)
 	if pos.x < 1900.0:
-		draw_string(font, Vector2(170, 100), "曦光大陸 · 秋晨之地（高一上）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("d9b8ff"))
+		draw_string(font, Vector2(20, 142), "曦光大陸 · 秋晨之地（高一上）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("d9b8ff"))
 	else:
-		draw_string(font, Vector2(170, 100), "曦光大陸 · 星夜之地（高一下）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
+		draw_string(font, Vector2(20, 142), "曦光大陸 · 星夜之地（高一下）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
 
 
 func _outline(poly: PackedVector2Array, c: Color, w: float) -> void:
