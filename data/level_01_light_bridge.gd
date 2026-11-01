@@ -3273,6 +3273,9 @@ class ChestFx extends Control:
 			var a := TAU * k / 32.0
 			sh.append(Vector2(10 + cos(a) * (hw + 26), CH + 4 + sin(a) * 12))
 		draw_colored_polygon(sh, Color(0, 0, 0, 0.32))
+		# 打開的蓋子在箱子後面：先畫
+		if lid >= 0.3:
+			_draw_lid_open(P, (lid - 0.3) / 0.7)
 		# ---- 箱身右側面 ----
 		_grad_quad(Vector2(hw, 0), Vector2(hw, 0) + DEP, Vector2(hw, CH) + DEP, Vector2(hw, CH), P.side, P.side.darkened(0.35))
 		for k in 3:
@@ -3314,8 +3317,6 @@ class ChestFx extends Control:
 		if lid < 0.3:
 			lift = lid / 0.3 * 10.0
 			_draw_lid_closed(P, lift)
-		else:
-			_draw_lid_open(P, (lid - 0.3) / 0.7)
 		# ---- 鎖 ----
 		if lid < 0.5:
 			var lc := Vector2(0, 6 - lift)
@@ -3381,29 +3382,73 @@ class ChestFx extends Control:
 		if lift > 0.0:
 			draw_rect(Rect2(-hw + 6, -lift, CW - 12, lift), Color(1, 0.95, 0.7, 0.9))
 
-	## 打開的蓋子：往後翻起來，看得到裡面那一面
+	## 打開的蓋子：把關著的弧形蓋子，繞著後緣的鉸鏈往後轉 φ（立體地算，再投影到畫面）
+	##   截面座標：z 往後（鉸鏈在 z = DEPTH）、y 往上；x 沿寬
+	const DEPTH := 70.0     # 實際的深度（畫面上斜斜地縮成 DEP）
+
+	func _lid3(x: float, th: float, phi: float, r_scale := 1.0) -> Vector2:
+		var z := DEPTH * (1.0 - cos(th)) / 2.0
+		var y := LH * sin(th) * r_scale
+		var zr := z - DEPTH
+		var z2 := zr * cos(phi) + y * sin(phi) + DEPTH
+		var y2 := -zr * sin(phi) + y * cos(phi)
+		return Vector2(x, 0) + DEP * (z2 / DEPTH) + Vector2(0, -y2)
+
 	func _draw_lid_open(P: Dictionary, k: float) -> void:
 		var hw := CW / 2.0
-		var hinge := DEP
-		var hgt := LH * 1.9 * clampf(k, 0.0, 1.0) + 10.0
-		var back := Vector2(10, -hgt)
-		var pts := PackedVector2Array()
-		for j in 17:
-			var x := -hw + CW * j / 16.0
-			var bulge := sin(PI * j / 16.0) * 10.0
-			pts.append(hinge + back + Vector2(x, -bulge * k))
-		var poly := PackedVector2Array([hinge + Vector2(-hw, 0)])
-		poly.append_array(pts)
-		poly.append(hinge + Vector2(hw, 0))
-		var cols := PackedColorArray([P["in"].darkened(0.2)])
-		for j in pts.size():
-			cols.append(P["in"].lightened(0.25))
-		cols.append(P["in"].darkened(0.2))
-		draw_polygon(poly, cols)
-		draw_polyline(pts, P.band, 6.0, true)
+		var phi := deg_to_rad(15.0 + 85.0 * clampf(k, 0.0, 1.0))
+		var N := 14
+		# 外殼的厚度：先畫一層稍微大一點的外殼（看起來是蓋子的木頭邊）
+		var outer := PackedVector2Array()
+		for j in N + 1:
+			outer.append(_lid3(-hw, PI * j / N, phi, 1.0))
+		# 裡面那一面（凹進去，看得到）：一條一條，靠近開口比較亮
+		for j in N:
+			var t0 := PI * j / N
+			var t1 := PI * (j + 1) / N
+			var shade := 0.25 + 0.5 * sin(lerpf(t0, t1, 0.5))
+			var c: Color = P["in"].lerp(P.side, shade)
+			draw_colored_polygon(PackedVector2Array([_lid3(-hw, t0, phi), _lid3(hw, t0, phi), _lid3(hw, t1, phi), _lid3(-hw, t1, phi)]), c)
+			if j % 3 == 1:
+				draw_line(_lid3(-hw + 3, t1, phi), _lid3(hw - 3, t1, phi), P.grain, 1.2)
+		# 寶物的光映在蓋子裡面
+		var glow_c := _lid3(0, PI * 0.5, phi)
+		UITheme.dot(self, glow_c, 40.0, Color(1, 0.85, 0.4, 0.10 * k))
+		# 左右兩片端蓋（有厚度）：左邊那片被擋住一部分，只畫邊；右邊那片看得到
+		var capL := PackedVector2Array()
+		var capR := PackedVector2Array()
+		for j in N + 1:
+			capL.append(_lid3(-hw, PI * j / N, phi))
+			capR.append(_lid3(hw, PI * j / N, phi))
+		draw_polyline(capL, P.band_lo, 5.0, true)
+		var capR_o := PackedVector2Array()
+		for q in capR:
+			capR_o.append(q + Vector2(5, 0))
+		var thick := PackedVector2Array(capR)
+		var rev := capR_o.duplicate()
+		rev.reverse()
+		thick.append_array(rev)
+		draw_colored_polygon(thick, P.side.darkened(0.15))
+		draw_colored_polygon(capR_o, P.side)
+		draw_polyline(capR_o, P.band_lo, 4.0, true)
+		# 蓋子的邊緣（關著時的下緣，現在翻到最上面）：金屬條＋厚度
+		var rim0 := _lid3(-hw, 0.0, phi)
+		var rim1 := _lid3(hw, 0.0, phi)
+		var up := (_lid3(0, 0.0, phi) - _lid3(0, 0.25, phi)).normalized() * 7.0
+		draw_colored_polygon(PackedVector2Array([rim0, rim1, rim1 + up, rim0 + up]), P.lo)
+		_band(rim0 + up * 0.5, rim1 + up * 0.5, 8.0, P)
+		# 外側的金屬帶從邊緣繞過去（看得到一小截）
 		for bx in [-hw * 0.62, hw * 0.62]:
-			draw_line(hinge + Vector2(bx, 0), hinge + back + Vector2(bx, -sin(PI * (bx + hw) / CW) * 10.0 * k), P.band_lo, 8.0)
-		draw_line(hinge + Vector2(-hw, 0), hinge + Vector2(hw, 0), P.band_lo, 5.0)
+			var a1 := _lid3(bx, 0.0, phi)
+			draw_line(a1, a1 + up * 1.4, P.band, 10.0)
+		# 鉸鏈
+		var h0 := _lid3(-hw, PI, phi)
+		var h1 := _lid3(hw, PI, phi)
+		draw_line(h0, h1, P.band_lo, 6.0)
+		for hx in [-hw * 0.62, hw * 0.62]:
+			var hp := _lid3(hx, PI, phi)
+			draw_rect(Rect2(hp - Vector2(7, 4), Vector2(14, 8)), P.band)
+			_rivet(hp, P)
 
 	func _star(c: Vector2, r: float, col: Color) -> void:
 		var pts := PackedVector2Array()
