@@ -344,8 +344,13 @@ func _build_tiles(st: Dictionary) -> void:
 	if frac:
 		toks = toks.filter(func(x): return not (String(x) in ["÷", "(", ")"]))
 	for t in toks:
-		var b := Button.new()
-		b.text = String(t)
+		var b: Button
+		if String(t).contains("√"):
+			# 有根號的積木用數學字畫，√ 上面的橫線才會蓋住整個根號內容
+			b = MathLabel.make_button(preload("step_bank.gd").root_markup(String(t)), 16, Vector2(0, 32))
+		else:
+			b = Button.new()
+			b.text = String(t)
 		b.custom_minimum_size = Vector2(0, 32)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var col: Color = UITheme.TEXT_SOFT
@@ -356,6 +361,8 @@ func _build_tiles(st: Dictionary) -> void:
 		elif String(t).begins_with("tan"):
 			col = UITheme.LIME
 		_tint_button(b, col, 16)
+		if b.has_node("Math"):
+			b.get_node("Math").color = col
 		var tt: String = t
 		b.pressed.connect(func():
 			_tiles_add(tt))
