@@ -329,8 +329,8 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "boss1", "chapter": 1, "type": "fit", "title": "第一章試煉", "form": "exp",
-		 "params": ["a", "h", "k"], "live": false, "time": 105.0,
-		 "story": "限時 105 秒！依序求出 a、k、h，再調滑桿點亮光橋。",
+		 "params": ["a", "h", "k"], "live": false, "time": 180.0,
+		 "story": "限時 180 秒！依序求出 a、k、h，再調滑桿點亮光橋。",
 		 "insight": "反推：y − k 每格乘 a；y − k = 1 的寶石，x 就是 h。",
 		 "variants": [
 			{"answer": {"a": 0.5, "h": -1.0, "k": 2.0}, "xs": [-3, -2, -1, 0],
@@ -512,8 +512,8 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "boss2", "chapter": 2, "type": "fit", "title": "鏡之試煉", "form": "abs_in",
-		 "params": ["a", "h", "k"], "live": false, "time": 130.0,
-		 "story": "限時 130 秒！三個參數全開。先用一樣高的寶石找出對稱軸。",
+		 "params": ["a", "h", "k"], "live": false, "time": 210.0,
+		 "story": "限時 210 秒！三個參數全開。先用一樣高的寶石找出對稱軸。",
 		 "predicts": [
 			{"q": "y = a^{|x − h|} + k 的圖形以哪條直線為對稱軸？",
 			 "options": ["x = 0", "x = h", "y = k", "x = −h"], "correct": 1,

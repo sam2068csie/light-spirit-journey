@@ -277,9 +277,9 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "boss1", "choices": BASES, "chapter": 1, "type": "fit", "title": "第一章試煉", "form": "log",
-		 "params": ["a", "h", "k"], "live": false, "time": 130.0,
+		 "params": ["a", "h", "k"], "live": false, "time": 210.0,
 		 "view": {"x": Vector2(-2.0, 7.0), "y": Vector2(-3.0, 3.5)},
-		 "story": "限時 130 秒！先找鉛直雷射牆和恆過點，再往上 1 格找底數。",
+		 "story": "限時 210 秒！先找鉛直雷射牆和恆過點，再往上 1 格找底數。",
 		 "predicts": [
 			{"q": "y = log_{a}(x − h) + k 一定通過哪一點？",
 			 "options": ["(1 + h, k)", "(h, k)", "(1, 0)", "(h, 1 + k)"], "correct": 0,
@@ -415,9 +415,9 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "boss2", "choices": BASES, "chapter": 2, "type": "fit", "title": "鏡之試煉", "form": "log_abs_in",
-		 "params": ["a", "h", "k"], "live": false, "time": 130.0,
+		 "params": ["a", "h", "k"], "live": false, "time": 210.0,
 		 "view": {"x": Vector2(-5.0, 5.0), "y": Vector2(-3.0, 3.0)},
-		 "story": "限時 130 秒！先用等高的寶石找出對稱軸。",
+		 "story": "限時 210 秒！先用等高的寶石找出對稱軸。",
 		 "predicts": [
 			{"q": "y = log_{a}|x − h| + k 的圖形以哪條直線為對稱軸？",
 			 "options": ["x = h", "x = −h", "y = k", "y = x"], "correct": 0,

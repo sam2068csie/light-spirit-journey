@@ -2186,6 +2186,8 @@ func _reveal(msg: String) -> void:
 			_end_round()
 			_abs_demo(true)
 		"fit":
+			predicting = false
+			_clear(predict_box)
 			for p in r.params:
 				set_param(p, r.answer[p])
 			_hint(msg + " 看光靈示範正確的光橋…", "bad")
@@ -2380,8 +2382,8 @@ func _process(delta: float) -> void:
 		var none: bool = stage.mark_sel.is_empty()
 		if go_btn.disabled != none:
 			go_btn.disabled = none
-	# 終焉之塔：連預言題也在計時
-	if r.is_empty() or not r.has("time") or busy or (predicting and not _custom_type(r.type) and not tower_mode):
+	# 限時題：一進入題目就開始倒數（預言、推理步驟也算在內）
+	if r.is_empty() or not r.has("time") or busy:
 		return
 	time_left -= delta
 	_update_hud()
