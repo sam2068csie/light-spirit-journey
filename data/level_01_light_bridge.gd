@@ -1742,7 +1742,7 @@ func _mark_ui(what: String) -> void:
 	stage.draw_on = false
 	if r.type == "draw":
 		step_label.text = UITheme.step_bar(_steps(), 0)
-	task_label.text = "先在左圖點出%s經過的整數點，再按「確認整數點」。" % what
+	task_label.text = "先在左圖點出%s經過的整數點（共 %d 個），再按「確認整數點」。" % [what, stage.mark_targets.size()]
 	go_btn.text = "確認整數點"
 	go_btn.visible = true
 	go_btn.disabled = true      # 至少點選一個整數點才能確認（見 _process）
@@ -4282,7 +4282,7 @@ class Stage extends Control:
 			if dist[i] > 26.0:
 				bad.append(st[i])
 		# 整體形狀不夠準、但沒有哪一點偏超過 26：改標「偏最多的那一成」，紅色提示才看得到
-		if bad.is_empty() and (mean > 12.0 or p90 > 24.0):
+		if bad.is_empty() and mean > 16.0:
 			var cut := maxf(10.0, float(sorted_d[int(0.88 * (sorted_d.size() - 1))]))
 			for i in st.size():
 				if dist[i] >= cut:
@@ -4334,8 +4334,8 @@ class Stage extends Control:
 		if coverage < 0.85:
 			res.reason = "還有一段沒畫到：要畫滿整個畫面。"
 			return res
-		# 5. 形狀
-		if mean > 12.0 or p90 > 24.0:
+		# 5. 形狀：吻合度 60 分以上就算畫對
+		if res.score < 60:
 			res.reason = "紅色部分偏差最大。每往右一格，y 怎麼變？"
 			return res
 		res.ok = true
