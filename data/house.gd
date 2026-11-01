@@ -213,6 +213,9 @@ func _talk(s: String) -> void:
 func _back() -> void:
 	if is_instance_valid(_quest_panel):
 		return
+	if deco and is_instance_valid(_drawer) and not _drawer.is_queued_for_deletion():
+		_close_drawer()
+		return
 	if close_overlay():
 		return
 	if deco:
@@ -303,6 +306,13 @@ func _placed(i: int) -> String:
 
 # ================= 擺設模式 =================
 
+func _close_drawer() -> void:
+	if is_instance_valid(_drawer):
+		_drawer.queue_free()
+	sel_slot = -1
+	queue_redraw()
+
+
 func _toggle_deco() -> void:
 	deco = not deco
 	sel_slot = -1
@@ -332,7 +342,37 @@ func _pick_slot(i: int) -> void:
 	hd.add_theme_font_override("font", UITheme.bold_font())
 	hd.add_theme_font_size_override("font_size", UITheme.fs(15))
 	hd.add_theme_color_override("font_color", UITheme.ACCENT)
-	vb.add_child(hd)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 6)
+	vb.add_child(top)
+	top.add_child(hd)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(sp)
+	# 換格位：抽屜可能蓋住別的格位，直接在這裡切換
+	var sw := Label.new()
+	sw.text = "換格位"
+	sw.add_theme_font_size_override("font_size", UITheme.fs(13))
+	sw.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	top.add_child(sw)
+	for k in SLOTS.size():
+		var cb := Button.new()
+		cb.text = str(k + 1)
+		cb.focus_mode = Control.FOCUS_NONE
+		cb.custom_minimum_size = Vector2(34, 30)
+		var on := k == i
+		UITheme.button_3d(cb, UITheme.ACCENT if on else Color("3a3360"), UITheme.ACCENT_LIP if on else Color("231e40"), UITheme.GOLD_INK if on else UITheme.TEXT, 13, 2, 4, 1)
+		cb.tooltip_text = KIND_NAME[SLOTS[k].kind]
+		var kk := k
+		cb.pressed.connect(func(): _pick_slot(kk))
+		top.add_child(cb)
+	var xb := Button.new()
+	xb.text = "✕ 收起"
+	xb.focus_mode = Control.FOCUS_NONE
+	xb.custom_minimum_size = Vector2(70, 30)
+	UITheme.button_3d(xb, Color("5a3a4a"), Color("2e1e28"), UITheme.TEXT, 13, 2, 6, 1)
+	xb.pressed.connect(_close_drawer)
+	top.add_child(xb)
 	var sc := ScrollContainer.new()
 	sc.custom_minimum_size = Vector2(0, 120)
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
