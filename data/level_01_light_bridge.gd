@@ -3232,38 +3232,7 @@ class ChestFx extends Control:
 			for rr in [70.0, 48.0, 28.0]:
 				UITheme.dot(self, m, rr * (0.6 + 0.4 * k), Color(1, 0.92, 0.6, 0.12 * k))
 		draw_set_transform(off + m, rot, Vector2.ONE)
-		var o := Vector2.ZERO
-		# 箱身
-		var body := Rect2(o.x - W / 2.0, o.y, W, 66)
-		draw_rect(Rect2(body.position + Vector2(4, 6), body.size), Color(0, 0, 0, 0.25))
-		var trim: Color = Color("fff3c4") if gold else UITheme.GOLD_DEEP
-		draw_rect(body, Color("d9a52a") if gold else Color("7a3d1c"))
-		draw_rect(Rect2(body.position, Vector2(W, 10)), trim)
-		draw_rect(Rect2(body.position.x + W * 0.17, body.position.y, 12, 66), trim)
-		draw_rect(Rect2(body.position.x + W * 0.83 - 12, body.position.y, 12, 66), trim)
-		# 開口的光
-		if lid > 0.0:
-			draw_rect(Rect2(o.x - W / 2.0 + 6, o.y - 4, W - 12, 10), Color(1, 0.95, 0.7, 0.9 * lid))
-		# 蓋子：關著時是正面（往下蓋），打開時往後翻、看到裡面（比較暗）
-		var lh := 40.0
-		var front := lh * (1.0 - lid)
-		if front > 0.5:
-			var lp := PackedVector2Array([Vector2(o.x - W / 2.0, o.y), Vector2(o.x - W / 2.0 + 8, o.y - front),
-				Vector2(o.x + W / 2.0 - 8, o.y - front), Vector2(o.x + W / 2.0, o.y)])
-			draw_colored_polygon(lp, Color("f0c040") if gold else Color("9a5228"))
-			draw_rect(Rect2(o.x - W / 2.0, o.y - 6, W, 6), trim)
-			draw_rect(Rect2(o.x - W * 0.33, o.y - front, 12, front), trim)
-			draw_rect(Rect2(o.x + W * 0.33 - 12, o.y - front, 12, front), trim)
-		if lid > 0.0:
-			var back := lh * 1.1 * lid
-			var ip := PackedVector2Array([Vector2(o.x - W / 2.0 + 4, o.y - 2), Vector2(o.x - W / 2.0 + 12, o.y - 2 - back),
-				Vector2(o.x + W / 2.0 - 12, o.y - 2 - back), Vector2(o.x + W / 2.0 - 4, o.y - 2)])
-			draw_colored_polygon(ip, Color("8a6018") if gold else Color("4e2410"))
-			draw_rect(Rect2(o.x - W / 2.0 + 12, o.y - 2 - back, W - 24, 6), trim)
-		# 鎖
-		if lid < 0.5:
-			draw_rect(Rect2(o.x - 11, o.y - 8, 22, 26), UITheme.GOLD_LIGHT)
-			UITheme.dot(self, o + Vector2(0, 4), 3.5, Color("5a2c10"))
+		_draw_chest()
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if gold and phase < 2:
 			for i in 4:
@@ -3273,6 +3242,168 @@ class ChestFx extends Control:
 		for p in parts:
 			var a: float = clampf(p.life, 0.0, 1.0)
 			_star(p.p, p.r * (0.6 + 0.4 * a), Color(p.c.r, p.c.g, p.c.b, a))
+
+
+	## 寶箱本體（3/4 視角）：正面＋右側面、木紋、金屬包角和鉚釘、弧形的蓋子
+	const CW := 130.0      # 正面寬
+	const CH := 62.0       # 箱身高
+	const LH := 34.0       # 蓋子的弧高
+	const DEP := Vector2(26, -16)    # 往後（右上）的深度
+
+	func _pal() -> Dictionary:
+		if gold:
+			return {"wood": Color("d9a52a"), "hi": Color("f7dc8a"), "lo": Color("9a6a14"), "side": Color("a8781c"),
+				"in": Color("6a4410"), "band": Color("fff6d6"), "band_lo": Color("d8c48e"), "rivet": Color("ffffff"), "grain": Color(0.45, 0.28, 0.02, 0.35)}
+		return {"wood": Color("8a4a22"), "hi": Color("b8703a"), "lo": Color("552810"), "side": Color("63321a"),
+			"in": Color("2e1408"), "band": Color("f0c050"), "band_lo": Color("a8761c"), "rivet": Color("fff0b8"), "grain": Color(0.2, 0.08, 0.02, 0.45)}
+
+	## 蓋子弧面上的點：x 沿寬，th 從正面下緣（0）繞到後面（π）
+	func _lid_p(x: float, th: float, lift: float) -> Vector2:
+		return Vector2(x, -lift) + DEP * (1.0 - cos(th)) / 2.0 + Vector2(0, -LH * sin(th))
+
+	func _grad_quad(a: Vector2, b: Vector2, c: Vector2, d: Vector2, top: Color, bot: Color) -> void:
+		draw_polygon(PackedVector2Array([a, b, c, d]), PackedColorArray([top, top, bot, bot]))
+
+	func _draw_chest() -> void:
+		var P := _pal()
+		var hw := CW / 2.0
+		# 地上的影子
+		var sh := PackedVector2Array()
+		for k in 33:
+			var a := TAU * k / 32.0
+			sh.append(Vector2(10 + cos(a) * (hw + 26), CH + 4 + sin(a) * 12))
+		draw_colored_polygon(sh, Color(0, 0, 0, 0.32))
+		# ---- 箱身右側面 ----
+		_grad_quad(Vector2(hw, 0), Vector2(hw, 0) + DEP, Vector2(hw, CH) + DEP, Vector2(hw, CH), P.side, P.side.darkened(0.35))
+		for k in 3:
+			var y := 16.0 + k * 16.0
+			draw_line(Vector2(hw, y), Vector2(hw, y) + DEP, P.grain, 1.5)
+		draw_line(Vector2(hw + 3, 2), Vector2(hw + 3, CH - 2), P.band_lo, 5.0)          # 側面的包角
+		draw_line(Vector2(hw, 0) + DEP + Vector2(-3, 2), Vector2(hw, CH) + DEP + Vector2(-3, -2), P.band_lo.darkened(0.2), 5.0)
+		# ---- 打開時：箱子裡面（暗色＋發光的寶物）----
+		if lid > 0.0:
+			var top := PackedVector2Array([Vector2(-hw, 0), Vector2(hw, 0), Vector2(hw, 0) + DEP, Vector2(-hw, 0) + DEP])
+			draw_colored_polygon(top, P["in"])
+			var gc := DEP / 2.0 + Vector2(0, 2)
+			for r in [52.0, 36.0, 22.0]:
+				UITheme.dot(self, gc, r * (0.4 + 0.6 * lid), Color(1, 0.88, 0.45, 0.18 * lid))
+			for k in 7:
+				var cp := gc + Vector2(-42 + k * 14, (k % 2) * 3 - 2)
+				UITheme.dot(self, cp, 6.0, Color(1, 0.82, 0.3, lid))
+				UITheme.dot(self, cp + Vector2(-1.5, -1.5), 2.5, Color(1, 1, 0.85, lid))
+		# ---- 箱身正面：上亮下暗＋木板紋 ----
+		_grad_quad(Vector2(-hw, 0), Vector2(hw, 0), Vector2(hw, CH), Vector2(-hw, CH), P.hi, P.lo)
+		for k in 3:
+			var y := 16.0 + k * 16.0
+			draw_line(Vector2(-hw + 2, y), Vector2(hw - 2, y), P.grain, 2.0)
+			draw_line(Vector2(-hw + 2, y + 2), Vector2(hw - 2, y + 2), Color(1, 1, 1, 0.06), 1.0)
+		draw_line(Vector2(-hw, CH - 1), Vector2(hw, CH - 1), Color(0, 0, 0, 0.35), 3.0)
+		# 金屬：上緣、底緣、兩條直帶、四個包角、鉚釘
+		_band(Vector2(-hw, -1), Vector2(hw, -1), 7.0, P)
+		_band(Vector2(-hw, CH - 4), Vector2(hw, CH - 4), 7.0, P)
+		for bx in [-hw * 0.62, hw * 0.62]:
+			_band(Vector2(bx, 0), Vector2(bx, CH), 12.0, P)
+			for ry in [10.0, 30.0, 50.0]:
+				_rivet(Vector2(bx, ry), P)
+		for cx in [-hw, hw]:
+			var sx := 1.0 if cx < 0 else -1.0
+			draw_colored_polygon(PackedVector2Array([Vector2(cx, 0), Vector2(cx + sx * 16, 0), Vector2(cx, 16)]), P.band)
+			draw_colored_polygon(PackedVector2Array([Vector2(cx, CH), Vector2(cx + sx * 16, CH), Vector2(cx, CH - 16)]), P.band_lo)
+		# ---- 蓋子 ----
+		var lift := 0.0
+		if lid < 0.3:
+			lift = lid / 0.3 * 10.0
+			_draw_lid_closed(P, lift)
+		else:
+			_draw_lid_open(P, (lid - 0.3) / 0.7)
+		# ---- 鎖 ----
+		if lid < 0.5:
+			var lc := Vector2(0, 6 - lift)
+			var plate := PackedVector2Array([lc + Vector2(-13, -12), lc + Vector2(13, -12), lc + Vector2(13, 8), lc + Vector2(0, 18), lc + Vector2(-13, 8)])
+			draw_colored_polygon(plate, P.band_lo.darkened(0.15))
+			var inner := PackedVector2Array()
+			for q in plate:
+				inner.append(lc + (q - lc) * 0.82 + Vector2(0, -1))
+			draw_colored_polygon(inner, P.band)
+			draw_line(lc + Vector2(-9, -9), lc + Vector2(9, -9), Color(1, 1, 1, 0.55), 1.5)
+			if gold:
+				draw_colored_polygon(PackedVector2Array([lc + Vector2(0, -6), lc + Vector2(6, 0), lc + Vector2(0, 6), lc + Vector2(-6, 0)]), Color("5fd4ff"))
+				draw_line(lc + Vector2(-2, -3), lc + Vector2(1, -5), Color(1, 1, 1, 0.8), 1.5)
+			else:
+				UITheme.dot(self, lc + Vector2(0, -1), 3.2, Color("3a1a08"))
+				draw_colored_polygon(PackedVector2Array([lc + Vector2(-2, 0), lc + Vector2(2, 0), lc + Vector2(3, 8), lc + Vector2(-3, 8)]), Color("3a1a08"))
+
+	func _band(a: Vector2, b: Vector2, w: float, P: Dictionary) -> void:
+		var d := (b - a).normalized()
+		var n := d.orthogonal() * w / 2.0
+		draw_polygon(PackedVector2Array([a + n, b + n, b - n, a - n]), PackedColorArray([P.band, P.band, P.band_lo, P.band_lo]))
+		draw_line(a + n * 0.8, b + n * 0.8, Color(1, 1, 1, 0.35), 1.0)
+
+	func _rivet(c: Vector2, P: Dictionary) -> void:
+		UITheme.dot(self, c + Vector2(0.8, 1), 2.6, Color(0, 0, 0, 0.35))
+		UITheme.dot(self, c, 2.4, P.band_lo)
+		UITheme.dot(self, c + Vector2(-0.7, -0.7), 1.2, P.rivet)
+
+	## 關著（或剛要打開、往上抬一點）的弧形蓋子
+	func _draw_lid_closed(P: Dictionary, lift: float) -> void:
+		var hw := CW / 2.0
+		var N := 14
+		var TH_MAX := PI * 0.82
+		# 右邊的端蓋
+		var cap := PackedVector2Array()
+		for k in N + 1:
+			cap.append(_lid_p(hw, PI * k / N, lift))
+		draw_colored_polygon(cap, P.side.darkened(0.1))
+		draw_polyline(cap, P.band_lo, 4.0, true)
+		# 弧面：一條一條，越往上越亮
+		for k in N:
+			var t0 := TH_MAX * k / N
+			var t1 := TH_MAX * (k + 1) / N
+			var shade := 0.5 + 0.5 * sin(lerpf(t0, t1, 0.5) + 0.3)
+			var c0: Color = P.lo.lerp(P.hi, shade)
+			draw_colored_polygon(PackedVector2Array([_lid_p(-hw, t0, lift), _lid_p(hw, t0, lift), _lid_p(hw, t1, lift), _lid_p(-hw, t1, lift)]), c0)
+			if k % 3 == 2:
+				draw_line(_lid_p(-hw + 2, t1, lift), _lid_p(hw - 2, t1, lift), P.grain, 1.5)
+		# 金屬帶沿著弧面
+		for bx in [-hw * 0.62, hw * 0.62]:
+			var pts := PackedVector2Array()
+			for k in N + 1:
+				pts.append(_lid_p(bx, PI * 0.56 * k / N, lift))     # 只畫到弧面的最高點（後面那段被擋住）
+			draw_polyline(pts, P.band_lo, 13.0, true)
+			draw_polyline(pts, P.band, 9.0, true)
+			_rivet(_lid_p(bx, TH_MAX * 0.45, lift), P)
+		var edge := PackedVector2Array()
+		for k in N + 1:
+			edge.append(_lid_p(hw, PI * k / N, lift))
+		_band(Vector2(-hw, -lift - 2), Vector2(hw, -lift - 2), 8.0, P)
+		var ridge := PackedVector2Array([_lid_p(-hw, TH_MAX, lift), _lid_p(hw, TH_MAX, lift)])
+		draw_line(ridge[0], ridge[1], Color(1, 1, 1, 0.18), 2.0)
+		if lift > 0.0:
+			draw_rect(Rect2(-hw + 6, -lift, CW - 12, lift), Color(1, 0.95, 0.7, 0.9))
+
+	## 打開的蓋子：往後翻起來，看得到裡面那一面
+	func _draw_lid_open(P: Dictionary, k: float) -> void:
+		var hw := CW / 2.0
+		var hinge := DEP
+		var hgt := LH * 1.9 * clampf(k, 0.0, 1.0) + 10.0
+		var back := Vector2(10, -hgt)
+		var pts := PackedVector2Array()
+		for j in 17:
+			var x := -hw + CW * j / 16.0
+			var bulge := sin(PI * j / 16.0) * 10.0
+			pts.append(hinge + back + Vector2(x, -bulge * k))
+		var poly := PackedVector2Array([hinge + Vector2(-hw, 0)])
+		poly.append_array(pts)
+		poly.append(hinge + Vector2(hw, 0))
+		var cols := PackedColorArray([P["in"].darkened(0.2)])
+		for j in pts.size():
+			cols.append(P["in"].lightened(0.25))
+		cols.append(P["in"].darkened(0.2))
+		draw_polygon(poly, cols)
+		draw_polyline(pts, P.band, 6.0, true)
+		for bx in [-hw * 0.62, hw * 0.62]:
+			draw_line(hinge + Vector2(bx, 0), hinge + back + Vector2(bx, -sin(PI * (bx + hw) / CW) * 10.0 * k), P.band_lo, 8.0)
+		draw_line(hinge + Vector2(-hw, 0), hinge + Vector2(hw, 0), P.band_lo, 5.0)
 
 	func _star(c: Vector2, r: float, col: Color) -> void:
 		var pts := PackedVector2Array()
