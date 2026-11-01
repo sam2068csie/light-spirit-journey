@@ -249,12 +249,14 @@ func _forge_step() -> void:
 	match st.kind:
 		"choice":
 			rank_box.visible = false
+			go_btn.visible = false     # 上一步（例如排序）的按鈕不要留著
 			_show_question(shuffle_q({"q": st.q, "options": st.options, "correct": st.correct,
 				"why": st.why, "nudge": st.nudge, "tag": st.tag}))
 			_step_text()          # 步驟多的時候用精簡的進度列，免得換行
 		"fill":
 			_clear(predict_box)
 			predicting = false
+			go_btn.visible = false     # 填空用鍵盤的「送出」；上一步的「確認順序」不要留著
 			_build_fill(st)
 		"filter":
 			_build_filter(st)
