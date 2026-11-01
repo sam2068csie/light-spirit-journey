@@ -645,7 +645,7 @@ func _hint(text: String, kind: String = "info") -> void:
 	hint_panel.add_theme_stylebox_override("panel",
 		UITheme.box(Color(c.r, c.g, c.b, 0.10), 12, Color(c.r, c.g, c.b, 0.55), 1, 12))
 	hint_label.font_size = UITheme.fs(15)
-	hint_label.text = text
+	hint_label.text = preload("step_bank.gd").root_markup(text)     # √3、√(a² + b²) 上面都要有橫線
 	_fit_hint.call_deferred()
 
 
