@@ -117,6 +117,12 @@ func _go(k: int) -> void:
 	view.target_hole = hr.grow(8) if has else Rect2(W / 2.0, H / 2.0, 0, 0)
 	view.has_hole = has
 	text_l.text = String(st.text)
+	# 自動換行的 Label 量不準高度：自己估行數，對話框才不會把字切掉
+	var fnt := text_l.get_theme_font("font")
+	var fsz := text_l.get_theme_font_size("font_size")
+	var lines := ceili(fnt.get_string_size(text_l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz).x / (BUB_W - 44.0))
+	text_l.custom_minimum_size.y = maxi(1, lines) * (fnt.get_height(fsz) + 4.0)
+	bubble.size = Vector2.ZERO
 	text_l.visible_ratio = 0.0
 	view.typing = 0.0
 	count_l.text = "%d／%d" % [k + 1, steps.size()]

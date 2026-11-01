@@ -62,6 +62,7 @@ var _toast: Label
 var _toast_t := 0.0
 var _fade: ColorRect
 var _busy := false
+var _tp: Button
 var _whirl_spin := 0.0
 
 
@@ -119,6 +120,8 @@ func _ready() -> void:
 		tw.tween_property(_fade, "color:a", 0.0, 0.6)
 		vel = Vector2.from_angle(heading) * 160.0
 	cam = _cam_target()
+	_refresh_goal()
+	_story_check.call_deferred()
 
 
 func _state() -> Dictionary:
@@ -168,6 +171,7 @@ func _exit_tree() -> void:
 
 func _build_ui() -> void:
 	var tp := Button.new()
+	_tp = tp
 	tp.text = "☰ 單元列表（M）"
 	tp.focus_mode = Control.FOCUS_NONE
 	tp.custom_minimum_size = Vector2(160, 44)
@@ -270,7 +274,7 @@ func _open(i: int) -> bool:
 
 func _update_card() -> void:
 	var k := String(_near.get("kind", ""))
-	_card.visible = k != "" and not is_instance_valid(_overlay) and not _busy
+	_card.visible = k != "" and not is_instance_valid(_overlay) and not _busy and not playing
 	if not _card.visible:
 		return
 	match k:
@@ -468,6 +472,8 @@ func _open_egg(id: String) -> void:
 # ================= 輸入、移動 =================
 
 func _gui_input(e: InputEvent) -> void:
+	if playing:
+		return
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		_hold = e.pressed
 		_hold_pt = e.position
@@ -476,6 +482,8 @@ func _gui_input(e: InputEvent) -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if playing:
+		return
 	if not is_visible_in_tree() or is_instance_valid(_overlay) or _busy:
 		return
 	if e is InputEventKey and e.pressed and not e.echo:
@@ -583,13 +591,17 @@ func _make_shape(isl: Dictionary) -> Dictionary:
 
 
 func _cam_target() -> Vector2:
-	var c := pos - Vector2(W, H) / 2.0
+	var c := (story_focus if story_focus.x >= 0.0 else pos) - Vector2(W, H) / 2.0
 	return Vector2(clampf(c.x, 0.0, WORLD.x - W), clampf(c.y, 0.0, WORLD.y - H))
 
 
 func _process(delta: float) -> void:
 	t += delta
-	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy
+	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy and not playing
+	_goal_t -= delta
+	if _goal_t <= 0.0:
+		_goal_t = 1.0
+		_refresh_goal()
 	var dir := _key_dir() if active else Vector2.ZERO
 	if dir == Vector2.ZERO and _hold and active:
 		var to := (_hold_pt - Vector2(W, H) / 2.0) / zoom + Vector2(W, H) / 2.0 + cam - pos
@@ -705,6 +717,7 @@ func _draw() -> void:
 	for s in _sparks:
 		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, 0.12 + 0.12 * sin(t * s.s + s.ph)))
 	_draw_minimap()
+	_draw_goal()
 	draw_string(font, Vector2(20, 142), "光潮群島 · 高二", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
 
 
@@ -900,3 +913,104 @@ func _draw_minimap() -> void:
 				draw_colored_polygon(pp, mc)
 	draw_rect(Rect2(o + cam * k, Vector2(W, H) * k / zoom), Color(1, 1, 1, 0.5), false, 1.0)
 	UITheme.dot(self, o + pos * k, 3.5 + sin(t * 4.0), Color("fff3c4"))
+
+
+# ================= 主線故事、教學引導 =================
+const KEY := "g11"
+const GRADE := "高二"
+const WS := preload("world_story.gd")
+const Tut := preload("tutorial.gd")
+var story_focus := Vector2(-1, -1)     # 劇情播放時鏡頭看的地方；(-1, -1) = 跟著玩家
+var _goal_text := ""
+var _goal_pt := Vector2(-1, -1)        # 主線目標在地圖上的位置
+var _goal_t := 0.0
+
+
+func _story_check() -> void:
+	await get_tree().create_timer(0.7).timeout
+	while is_inside_tree() and not is_visible_in_tree():
+		await get_tree().create_timer(0.3).timeout
+	if not is_inside_tree() or playing:
+		return
+	var g = Game.of(self)
+	if not WS.seen(g, KEY):
+		await WS.play(self, KEY, WS.STORY[KEY], WS.TITLES[KEY])
+		if is_inside_tree():
+			_refresh_goal()
+			await get_tree().create_timer(0.3).timeout
+			Tut.run(self, _tut_steps())
+		return
+	var su := WS.pending_souvenir(g, GRADE)
+	if su != "":
+		await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
+
+
+## 螢幕上的一塊（地圖座標 → 螢幕）；整塊不在畫面上就回傳空的（教學會跳過那一句）
+func _scr(p: Vector2, half: Vector2) -> Rect2:
+	var C := Vector2(W, H) / 2.0
+	var sp := C - (cam + C) * zoom + p * zoom
+	var r := Rect2(sp - half, half * 2.0)
+	return r if Rect2(0, 0, W, H).encloses(r) else Rect2()
+
+
+func _goal_rect() -> Rect2:
+	var font := UITheme.bold_font()
+	var tw := font.get_string_size(_goal_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+	return Rect2(Vector2((W - tw) / 2.0 - 16, 72), Vector2(tw + 32, 32))
+
+
+func _refresh_goal() -> void:
+	var g = Game.of(self)
+	_goal_text = WS.goal_text(g, GRADE)
+	_goal_pt = _goal_world(WS.next_goal(g))
+
+
+func _draw_goal() -> void:
+	if playing or _goal_text == "":
+		return
+	var tp := Vector2(-1, -1)
+	if _goal_pt.x >= 0.0:
+		var C := Vector2(W, H) / 2.0
+		tp = C - (cam + C) * zoom + _goal_pt * zoom
+	WS.draw_goal(self, _goal_text, tp, t)
+
+
+func focus_point(name: String, uid: String) -> Vector2:
+	match name:
+		"wide":
+			return Vector2(1350, 520)      # 月輪島和雙島之間：一次看到兩座島
+		"harbor":
+			return HARBOR + Vector2(300, 0)
+		"goal":
+			return _goal_pt if _goal_pt.x >= 0.0 else pos
+		"unit":
+			for i in ISLANDS.size():
+				if ISLANDS[i].unit == uid:
+					return ISLANDS[i].c
+	return Vector2(-1, -1)
+
+
+func _goal_world(gl: Dictionary) -> Vector2:
+	if gl.is_empty():
+		return Vector2(-1, -1)
+	if gl.grade != "高二":
+		return HARBOR
+	for i in ISLANDS.size():
+		if ISLANDS[i].unit == gl.uid:
+			return _docks[i]
+	return Vector2(-1, -1)
+
+
+func _tut_steps() -> Array:
+	return [
+		{"rect": func(): return _scr(pos, Vector2(50, 50)),
+		 "text": "這是我們的光舟！用方向鍵或 WASD 划船；也可以按住畫面，船會往那個方向開。"},
+		{"rect": func(): return _goal_rect(),
+		 "text": "上面的金色橫幅是「主線目標」；畫面邊緣的金色箭頭指著要去的島。"},
+		{"rect": func(): return _scr(_goal_pt, Vector2(60, 60)) if _goal_pt.x >= 0.0 else Rect2(),
+		 "text": "這是島的碼頭。船開到碼頭旁邊會跳出卡片，按 Enter 或「上岸」就能登島。"},
+		{"rect": func(): return _tp.get_global_rect(),
+		 "text": "想直接過去的話，按「單元列表」（M），選好島就會開船過去。"},
+		{"rect": func(): return Rect2(W - 18 - 200, 14, 200, 44),
+		 "text": "右上角可以切回高一的曦光大陸。出航吧！"},
+	]
