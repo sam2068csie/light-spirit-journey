@@ -4,7 +4,7 @@ extends Control
 ##   ・走到地區入口（拱門）會跳出卡片，Enter／點按鈕進入
 ##   ・每個地區入口旁有傳送石，碰過一次就能從「傳送」選單直接過去；不想跑圖也能「直接開關卡」
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
-## 目前只做高一上四區＋晨昏之橋；右岸（高一下）還在建造中。地區的題目之後再放（現在進去會顯示「準備中」）。
+## 左岸「秋晨之地」是高一上四區，晨昏之橋過去是右岸「星夜之地」高一下五區。地區的題目之後再放（現在進去會顯示「準備中」）。
 ## 存檔放在 Game.world10：{stones: [], visited: [], eggs: [], pos: [x, y]}
 const UITheme := preload("game_theme.gd")
 const Game := preload("game.gd")
@@ -23,13 +23,13 @@ const R_PLAYER := 16.0
 const LEFT := [Vector2(140, 2040), Vector2(80, 1640), Vector2(150, 1150), Vector2(110, 720), Vector2(240, 320),
 	Vector2(560, 150), Vector2(1080, 110), Vector2(1500, 170), Vector2(1760, 380), Vector2(1820, 820),
 	Vector2(1760, 1220), Vector2(1800, 1620), Vector2(1720, 1980), Vector2(1300, 2110), Vector2(700, 2140)]
-## 右岸（星夜之地・高一下）：還在建造中，只畫出來
+## 右岸（星夜之地・高一下）
 const RIGHT := [Vector2(2020, 300), Vector2(2320, 150), Vector2(2900, 120), Vector2(3400, 300), Vector2(3520, 900),
 	Vector2(3450, 1500), Vector2(3500, 2000), Vector2(3000, 2120), Vector2(2300, 2100), Vector2(2040, 1800),
 	Vector2(2010, 1200), Vector2(2060, 700)]
 const RIVER := [Vector2(1910, -60), Vector2(1880, 400), Vector2(1950, 900), Vector2(1890, 1400), Vector2(1930, 1900), Vector2(1900, 2300)]
-const BRIDGE := Rect2(1740, 1490, 300, 76)
-const BRIDGE_END := 2030.0          # 橋的盡頭（再過去是建造中的右岸）
+const BRIDGE := Rect2(1740, 1490, 350, 76)
+const RIGHT_SPAWN := Vector2(2200, 1530)   # 從「星夜之地」進來時站在橋的東岸
 
 const SPAWN := Vector2(470, 1960)
 const HOUSE := Vector2(360, 1930)
@@ -44,7 +44,30 @@ const ZONES := [
 	 "stone": Vector2(1350, 800), "color": Color("5fd4ff")},
 	{"id": "poly", "name": "根之洞窟", "chapter": "多項式", "center": Vector2(1380, 1300), "gate": Vector2(1380, 1520),
 	 "stone": Vector2(1480, 1520), "color": Color("c59bff")},
+	# ---- 星夜之地（高一下）----
+	{"id": "seq", "name": "階梯瀑布", "chapter": "數列與級數", "center": Vector2(2330, 1800), "gate": Vector2(2580, 1730),
+	 "stone": Vector2(2680, 1730), "color": Color("6ee7c0")},
+	{"id": "data", "name": "星點觀測台", "chapter": "數據分析", "center": Vector2(2450, 960), "gate": Vector2(2450, 1190),
+	 "stone": Vector2(2550, 1190), "color": Color("9fd8ff")},
+	{"id": "comb", "name": "排列花園", "chapter": "排列組合", "center": Vector2(2560, 420), "gate": Vector2(2780, 640),
+	 "stone": Vector2(2880, 640), "color": Color("ff9ad5")},
+	{"id": "prob", "name": "骰子市集", "chapter": "機率", "center": Vector2(3150, 760), "gate": Vector2(3150, 1010),
+	 "stone": Vector2(3250, 1010), "color": Color("ffb35a")},
+	{"id": "trig", "name": "三角燈塔", "chapter": "三角比", "center": Vector2(3230, 1620), "gate": Vector2(3040, 1780),
+	 "stone": Vector2(2940, 1780), "color": Color("f5e27a")},
 ]
+const LEFT_ZONES := 4                 # ZONES 前 4 個在左岸
+## 右岸的障礙物
+const DOME_C := Vector2(2450, 950)    # 觀測台
+const DOME_R := 105.0
+const TOWER_C := Vector2(3290, 1600)  # 燈塔
+const TOWER_R := 52.0
+const STALLS := [Vector2(3020, 690), Vector2(3160, 640), Vector2(3300, 700)]   # 市集攤位
+const HEDGES := [Rect2(2400, 300, 120, 34), Rect2(2580, 300, 120, 34), Rect2(2400, 420, 120, 34),
+	Rect2(2580, 420, 120, 34), Rect2(2400, 540, 120, 34), Rect2(2580, 540, 120, 34)]   # 花園的樹籬
+## 彩蛋三：骰子市集的攤販
+const DICE_NPC := Vector2(3420, 860)
+const EXIT_SIGN := Vector2(3400, 1960)
 const LAKE_C := Vector2(1250, 470)
 const LAKE_R := 230.0
 const MOUND_C := Vector2(1380, 1290)
@@ -101,15 +124,16 @@ func _ready() -> void:
 	rng.seed = 1010
 	# 樹（擋路）：散在左岸，避開地區、入口和小路
 	var tries := 0
-	while _trees.size() < 70 and tries < 4000:
+	while _trees.size() < 130 and tries < 8000:
 		tries += 1
-		var p := Vector2(rng.randf_range(150, 1750), rng.randf_range(200, 2060))
-		if not Geometry2D.is_point_in_polygon(p, _left_poly) or _near_feature(p, 150.0):
+		var p := Vector2(rng.randf_range(150, 3480), rng.randf_range(160, 2080))
+		var east := p.x > 1960.0
+		if not Geometry2D.is_point_in_polygon(p, _right_poly if east else _left_poly) or _near_feature(p, 150.0):
 			continue
-		_trees.append({"p": p, "r": rng.randf_range(20, 32), "k": rng.randf()})
-	for i in 140:
-		var p := Vector2(rng.randf_range(100, 1800), rng.randf_range(150, 2100))
-		if Geometry2D.is_point_in_polygon(p, _left_poly):
+		_trees.append({"p": p, "r": rng.randf_range(20, 32), "k": rng.randf(), "east": east})
+	for i in 280:
+		var p := Vector2(rng.randf_range(100, 3500), rng.randf_range(150, 2100))
+		if Geometry2D.is_point_in_polygon(p, _left_poly) or Geometry2D.is_point_in_polygon(p, _right_poly):
 			_grass.append({"p": p, "s": rng.randf_range(0.7, 1.3)})
 	for i in 40:
 		_sparks.append({"p": Vector2(rng.randf() * W, rng.randf() * H), "ph": rng.randf() * TAU, "s": rng.randf_range(0.6, 1.4)})
@@ -120,6 +144,12 @@ func _ready() -> void:
 		var p0 := Vector2(float(sp[0]), float(sp[1]))
 		if _free(p0):
 			pos = p0
+	# 從選擇冒險的「星夜之地」進來：光靈出現在右岸；從「曦光大陸」進來：出現在左岸
+	var east_unit := String(g.cur_unit) == "g10b"
+	if east_unit and pos.x < 1900.0:
+		pos = RIGHT_SPAWN
+	elif not east_unit and pos.x > 1900.0:
+		pos = SPAWN
 	cam = _cam_target()
 
 
@@ -133,6 +163,13 @@ func _near_feature(p: Vector2, d: float) -> bool:
 			return true
 	if p.distance_to(HOUSE) < 220.0 or p.distance_to(SPAWN) < 200.0 or p.distance_to(STELE) < 160.0:
 		return true
+	if p.distance_to(RIGHT_SPAWN) < 200.0 or p.distance_to(DICE_NPC) < 160.0 or p.distance_to(EXIT_SIGN) < 160.0:
+		return true
+	if p.distance_to(DOME_C) < 260.0 or p.distance_to(TOWER_C) < 260.0 or Rect2(2340, 240, 420, 380).has_point(p):
+		return true
+	for st in STALLS:
+		if p.distance_to(st) < 140.0:
+			return true
 	if BRIDGE.grow(120.0).has_point(p):
 		return true
 	# 小路附近不種
@@ -143,10 +180,11 @@ func _near_feature(p: Vector2, d: float) -> bool:
 	return false
 
 
-## 小路：小屋 → 數之原野 → 倍增峽谷 → 圓規湖 → 根之洞窟 → 橋（只是引導，不擋路）
+## 小路：小屋 → 高一上四區 → 橋 → 高一下五區（只是引導，不擋路）
 func _path_points() -> Array:
 	return [SPAWN, ZONES[0].gate, Vector2(480, 1200), ZONES[1].gate, Vector2(900, 860), ZONES[2].gate,
-		Vector2(1300, 1000), ZONES[3].gate, Vector2(1640, 1530), Vector2(BRIDGE.position.x + 60, BRIDGE.get_center().y)]
+		Vector2(1300, 1000), ZONES[3].gate, Vector2(1640, 1530), RIGHT_SPAWN, ZONES[4].gate, Vector2(2700, 1400),
+		ZONES[5].gate, Vector2(2300, 760), ZONES[6].gate, ZONES[7].gate, Vector2(3150, 1300), ZONES[8].gate]
 
 
 static func _smooth(pts: Array) -> PackedVector2Array:
@@ -297,6 +335,10 @@ func _update_card() -> void:
 			_card_title.text = "古老的石碑"
 			_card_sub.text = "上面刻著一串數字……" if not _has("eggs", "fib") else "石碑已經發出微光（解開了）"
 			_card_btn.text = "調查"
+		"dice":
+			_card_title.text = "擲骰子的攤販"
+			_card_sub.text = "「猜對機率就送你獎品！」" if not _has("eggs", "dice") else "「你已經是機率高手啦！」"
+			_card_btn.text = "聊聊"
 		"chest":
 			_card_title.text = "數字石的寶箱"
 			_card_sub.text = "四顆石頭都亮了，寶箱打開了！"
@@ -317,6 +359,8 @@ func _interact() -> void:
 			_open_stele()
 		"chest":
 			_open_chest()
+		"dice":
+			_open_dice()
 
 
 ## 進入地區：題目還沒放，先告訴玩家準備中
@@ -350,62 +394,87 @@ func _open_teleport() -> void:
 	if is_instance_valid(_overlay):
 		return
 	Game.of(self).sfx("click")
-	var o := UITheme.modal(self, Color("5fd4ff"), 620)
+	var o := UITheme.modal(self, Color("5fd4ff"), 1000)
 	_overlay = o[0]
 	var col: VBoxContainer = o[1]
+	col.add_theme_constant_override("separation", 10)
 	col.add_child(UITheme.title_label("◆ 傳送石", 26, Color("c8f0ff")))
 	var tip := Label.new()
 	tip.text = "碰過傳送石的地區可以直接傳送過去；不想跑圖也能「直接開關卡」。"
-	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	col.add_child(tip)
-	var rows: Array = [{"name": "光靈的小屋", "chapter": "起點", "on": true, "to": SPAWN, "zone": -1}]
-	for i in ZONES.size():
-		var z: Dictionary = ZONES[i]
-		rows.append({"name": z.name, "chapter": z.chapter, "on": _has("stones", z.id), "to": z.stone + Vector2(0, 50), "zone": i})
-	for r in rows:
-		var hb := HBoxContainer.new()
-		hb.add_theme_constant_override("separation", 10)
-		col.add_child(hb)
-		var nm := Label.new()
-		nm.text = "%s %s" % ["◆" if r.on else "◇", r.name]
-		nm.custom_minimum_size = Vector2(170, 0)
-		nm.add_theme_font_override("font", UITheme.bold_font())
-		nm.add_theme_font_size_override("font_size", UITheme.fs(17))
-		nm.add_theme_color_override("font_color", Color("c8f0ff") if r.on else UITheme.TEXT_DIM)
-		hb.add_child(nm)
-		var ch := Label.new()
-		ch.text = r.chapter
-		ch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ch.add_theme_font_size_override("font_size", UITheme.fs(14))
-		ch.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		hb.add_child(ch)
-		var go := Button.new()
-		go.focus_mode = Control.FOCUS_NONE
-		go.custom_minimum_size = Vector2(110, 42)
-		go.text = "傳送" if r.on else "還沒碰過"
-		go.disabled = not r.on
-		UITheme.button_3d(go, Color("2a6f9e"), Color("17405e"), Color("e6f7ff"), 15, 4, 12, 3)
-		var dest: Vector2 = r.to
-		go.pressed.connect(func(): _teleport(dest))
-		hb.add_child(go)
-		var zi: int = r.zone
-		if zi >= 0:
-			var lv := Button.new()
-			lv.focus_mode = Control.FOCUS_NONE
-			lv.custom_minimum_size = Vector2(120, 42)
-			lv.text = "直接開關卡"
-			UITheme.button_3d(lv, Color("3a3360"), Color("231e40"), UITheme.TEXT, 15, 4, 12, 3)
-			lv.pressed.connect(func():
-				close_overlay()
-				_open_zone(zi))
-			hb.add_child(lv)
-		else:
-			var sp := Control.new()
-			sp.custom_minimum_size = Vector2(120, 0)
-			hb.add_child(sp)
+	# 左欄高一上、右欄高一下
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 24)
+	col.add_child(cols)
+	var sides := [["秋晨之地 · 高一上", Color("d9b8ff"), {"name": "光靈的小屋", "to": SPAWN}, range(0, LEFT_ZONES)],
+		["星夜之地 · 高一下", Color("9fd8ff"), {"name": "晨昏之橋東岸", "to": RIGHT_SPAWN}, range(LEFT_ZONES, ZONES.size())]]
+	for sd in sides:
+		var vb := VBoxContainer.new()
+		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vb.add_theme_constant_override("separation", 8)
+		cols.add_child(vb)
+		var hd := Label.new()
+		hd.text = sd[0]
+		hd.add_theme_font_override("font", UITheme.bold_font())
+		hd.add_theme_font_size_override("font_size", UITheme.fs(16))
+		hd.add_theme_color_override("font_color", sd[1])
+		vb.add_child(hd)
+		var rows: Array = [{"name": sd[2].name, "chapter": "起點", "on": true, "to": sd[2].to, "zone": -1}]
+		for zi in sd[3]:
+			var z: Dictionary = ZONES[zi]
+			rows.append({"name": z.name, "chapter": z.chapter, "on": _has("stones", z.id), "to": z.stone + Vector2(0, 50), "zone": zi})
+		for r in rows:
+			vb.add_child(_tp_row(r))
 	col.add_child(_close_button("關閉"))
+
+
+## 傳送選單的一列：名字＋章節、傳送、直接開關卡
+func _tp_row(r: Dictionary) -> Control:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	var nv := VBoxContainer.new()
+	nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nv.add_theme_constant_override("separation", 0)
+	hb.add_child(nv)
+	var nm := Label.new()
+	nm.text = "%s %s" % ["◆" if r.on else "◇", r.name]
+	nm.add_theme_font_override("font", UITheme.bold_font())
+	nm.add_theme_font_size_override("font_size", UITheme.fs(16))
+	nm.add_theme_color_override("font_color", Color("c8f0ff") if r.on else UITheme.TEXT_DIM)
+	nv.add_child(nm)
+	var ch := Label.new()
+	ch.text = r.chapter
+	ch.add_theme_font_size_override("font_size", UITheme.fs(12))
+	ch.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	nv.add_child(ch)
+	var go := Button.new()
+	go.focus_mode = Control.FOCUS_NONE
+	go.custom_minimum_size = Vector2(92, 40)
+	go.text = "傳送" if r.on else "還沒碰過"
+	go.disabled = not r.on
+	UITheme.button_3d(go, Color("2a6f9e"), Color("17405e"), Color("e6f7ff"), 14, 4, 12, 3)
+	var dest: Vector2 = r.to
+	go.pressed.connect(func(): _teleport(dest))
+	hb.add_child(go)
+	var zi: int = r.zone
+	if zi >= 0:
+		var lv := Button.new()
+		lv.focus_mode = Control.FOCUS_NONE
+		lv.custom_minimum_size = Vector2(104, 40)
+		lv.text = "直接開關卡"
+		UITheme.button_3d(lv, Color("3a3360"), Color("231e40"), UITheme.TEXT, 14, 4, 12, 3)
+		lv.pressed.connect(func():
+			close_overlay()
+			_open_zone(zi))
+		hb.add_child(lv)
+	else:
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(104, 0)
+		hb.add_child(sp)
+	return hb
 
 
 func _teleport(dest: Vector2) -> void:
@@ -471,6 +540,57 @@ func _open_stele() -> void:
 	col.add_child(_close_button("離開"))
 
 
+## 彩蛋三：骰子攤販
+func _open_dice() -> void:
+	var o := UITheme.modal(self, Color("ffb35a"), 500)
+	_overlay = o[0]
+	var col: VBoxContainer = o[1]
+	col.add_child(UITheme.title_label("擲骰子的攤販", 26, Color("ffb35a")))
+	var l := Label.new()
+	l.text = "「同時擲兩顆公正的骰子，\n點數和是 7 的機率是多少？」"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", UITheme.fs(18))
+	l.add_theme_color_override("font_color", UITheme.TEXT)
+	col.add_child(l)
+	if _has("eggs", "dice"):
+		var d := Label.new()
+		d.text = "答案是 1/6：36 種結果裡，和是 7 的有 6 種。"
+		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		d.add_theme_font_size_override("font_size", UITheme.fs(15))
+		d.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+		col.add_child(d)
+		col.add_child(_close_button("關閉"))
+		return
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	col.add_child(grid)
+	var msg := Label.new()
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.add_theme_font_size_override("font_size", UITheme.fs(15))
+	msg.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	for v in ["7/36", "1/6", "1/12", "1/2"]:
+		var b := Button.new()
+		b.text = v
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(100, 48)
+		UITheme.button_3d(b, Color("3a3360"), Color("231e40"), UITheme.TEXT, 18, 4, 12, 3)
+		var vv: String = v
+		b.pressed.connect(func():
+			if vv == "1/6":
+				_add("eggs", "dice")
+				Game.of(self).inv["dust"] = int(Game.of(self).inv.get("dust", 0)) + 40
+				Game.of(self).sfx("success")
+				close_overlay()
+				_show_toast("攤販：「答對了！」獲得 星塵 ×40")
+			else:
+				Game.of(self).sfx("wrong")
+				msg.text = "「再想想～把 36 種結果裡和是 7 的數一數？」")
+		grid.add_child(b)
+	col.add_child(msg)
+	col.add_child(_close_button("離開"))
+
+
 ## 彩蛋一的寶箱
 func _open_chest() -> void:
 	if _has("eggs", "stones"):
@@ -520,17 +640,27 @@ func _key_dir() -> Vector2:
 
 # ================= 移動與碰撞 =================
 
-## 這個位置能不能站：在左岸或橋上，而且沒有撞到湖、土丘、樹
+## 這一點在陸地或橋上嗎
+func _ground(q: Vector2) -> bool:
+	return BRIDGE.has_point(q) or Geometry2D.is_point_in_polygon(q, _left_poly) or Geometry2D.is_point_in_polygon(q, _right_poly)
+
+
+## 這個位置能不能站：在陸地或橋上，而且沒有撞到湖、土丘、樹、建築
 func _free(p: Vector2) -> bool:
-	var on_bridge := BRIDGE.has_point(p) and p.x < BRIDGE_END
-	if not on_bridge:
-		if not Geometry2D.is_point_in_polygon(p, _left_poly):
+	if not _ground(p):
+		return false
+	# 離海岸太近也不行（光靈有身體）
+	for dv in [Vector2(R_PLAYER, 0), Vector2(-R_PLAYER, 0), Vector2(0, R_PLAYER), Vector2(0, -R_PLAYER)]:
+		if not _ground(p + dv):
 			return false
-		# 離海岸太近也不行（光靈有身體）
-		for dv in [Vector2(R_PLAYER, 0), Vector2(-R_PLAYER, 0), Vector2(0, R_PLAYER), Vector2(0, -R_PLAYER)]:
-			var q: Vector2 = p + dv
-			if not Geometry2D.is_point_in_polygon(q, _left_poly) and not (BRIDGE.has_point(q) and q.x < BRIDGE_END):
-				return false
+	if p.distance_to(DOME_C) < DOME_R + R_PLAYER or p.distance_to(TOWER_C) < TOWER_R + R_PLAYER:
+		return false
+	for st in STALLS:
+		if p.distance_to(st) < 46.0 + R_PLAYER:
+			return false
+	for hg in HEDGES:
+		if (hg as Rect2).grow(R_PLAYER).has_point(p):
+			return false
 	if p.distance_to(LAKE_C) < LAKE_R + R_PLAYER:
 		return false
 	if p.distance_to(MOUND_C) < MOUND_R + R_PLAYER:
@@ -597,8 +727,8 @@ func _check_world(delta: float) -> void:
 			_add("stones", z.id)
 			Game.of(self).sfx("success")
 			_show_toast("◆ 傳送石啟用：%s" % z.name)
-	if pos.distance_to(Vector2(BRIDGE_END - 30.0, BRIDGE.get_center().y)) < 60.0 and _toast_t <= 0.0:
-		_show_toast("對岸的星夜之地（高一下）還在建造中")
+	if pos.distance_to(EXIT_SIGN) < 90.0 and _toast_t <= 0.0:
+		_show_toast("渡海就是高二的三角函數群島（之後開放）")
 	# 彩蛋一：數字石
 	_egg_cool = maxf(0.0, _egg_cool - delta)
 	if not _has("eggs", "stones") and _egg_cool <= 0.0:
@@ -623,6 +753,8 @@ func _check_world(delta: float) -> void:
 			_near = {"kind": "zone", "i": i}
 	if pos.distance_to(STELE) < 90.0:
 		_near = {"kind": "stele"}
+	if pos.distance_to(DICE_NPC) < 90.0:
+		_near = {"kind": "dice"}
 	if _egg_seq.size() == EGG_STONES.size() and not _has("eggs", "stones") and pos.distance_to(CHEST) < 70.0:
 		_near = {"kind": "chest"}
 
@@ -647,14 +779,9 @@ func _draw() -> void:
 	draw_set_transform(-cam, 0.0, Vector2.ONE)
 	var view := Rect2(cam - Vector2(80, 80), Vector2(W, H) + Vector2(160, 160))
 	_draw_waves(view)
-	# 右岸（建造中：暗暗的，有霧）
-	draw_colored_polygon(_right_poly, Color("172b46"))
-	_outline(_right_poly, Color("3c6b8e"), 3.0)
-	for k in 9:
-		var fp := Vector2(2300 + (k % 3) * 420, 450 + (k / 3) * 520)
-		UITheme.dot(self, fp + Vector2(sin(t * 0.3 + k) * 20.0, 0), 210.0, Color(0.75, 0.82, 1.0, 0.08))
-	draw_string(font, Vector2(2420, 1100), "星夜之地 · 高一下", HORIZONTAL_ALIGNMENT_LEFT, -1, 46, Color(0.62, 0.85, 1.0, 0.55))
-	draw_string(font, Vector2(2520, 1170), "（建造中）", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color(0.62, 0.85, 1.0, 0.4))
+	# 右岸（星夜之地）
+	draw_colored_polygon(_right_poly, Color("1c3352"))
+	_outline(_right_poly, Color("4f86b0"), 4.0)
 	# 河
 	var rv := PackedVector2Array(RIVER)
 	draw_polyline(rv, Color("1f5a8e"), 150.0, true)
@@ -673,6 +800,7 @@ func _draw() -> void:
 			draw_line(gp, gp + Vector2(-4, -10) * s, Color("4f6a5c"), 2.0, true)
 			draw_line(gp + Vector2(4, 0), gp + Vector2(6, -12) * s + Vector2(4, 0), Color("4f6a5c"), 2.0, true)
 	_draw_zone_grounds(font)
+	_draw_east_grounds(font)
 	# 橋
 	draw_rect(BRIDGE, Color("8a6a3e"))
 	draw_rect(BRIDGE, Color("d6a660"), false, 3.0)
@@ -681,11 +809,11 @@ func _draw() -> void:
 		draw_line(Vector2(bx, BRIDGE.position.y), Vector2(bx, BRIDGE.end.y), Color("d6a660"), 2.0)
 		bx += 26.0
 	draw_string(font, Vector2(BRIDGE.position.x + 70, BRIDGE.position.y - 16), "晨昏之橋", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("f0d29a"))
-	# 橋盡頭的告示牌
-	var sg := Vector2(BRIDGE_END + 6, BRIDGE.position.y - 30)
-	draw_rect(Rect2(sg + Vector2(-4, 20), Vector2(8, 60)), Color("6b4f2e"))
-	draw_rect(Rect2(sg + Vector2(-60, -10), Vector2(120, 40)), Color("d6a660"))
-	draw_string(font, sg + Vector2(-52, 18), "建造中…", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("2a2440"))
+	# 往高二的渡口告示牌
+	var sg := EXIT_SIGN
+	draw_rect(Rect2(sg + Vector2(-4, 10), Vector2(8, 60)), Color("6b4f2e"))
+	draw_rect(Rect2(sg + Vector2(-90, -24), Vector2(180, 40)), Color("9fd8ff"))
+	draw_string(font, sg + Vector2(-80, 4), "渡海 → 高二群島", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("10223a"))
 	# 小屋
 	_draw_house(font)
 	# 彩蛋二：石碑
@@ -698,7 +826,7 @@ func _draw() -> void:
 	# 樹（依 y 排序：上面的先畫）
 	for tr in _trees:
 		if view.has_point(tr.p):
-			_draw_tree(tr.p, tr.r, tr.k)
+			_draw_tree(tr.p, tr.r, tr.k, bool(tr.get("east", false)))
 	# 霧：還沒去過的地區
 	for z in ZONES:
 		if not _has("visited", z.id):
@@ -718,7 +846,10 @@ func _draw() -> void:
 		var a := 0.15 + 0.15 * sin(t * s.s + s.ph)
 		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, a))
 	_draw_minimap(font)
-	draw_string(font, Vector2(170, 100), "曦光大陸 · 秋晨之地（高一上）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("d9b8ff"))
+	if pos.x < 1900.0:
+		draw_string(font, Vector2(170, 100), "曦光大陸 · 秋晨之地（高一上）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("d9b8ff"))
+	else:
+		draw_string(font, Vector2(170, 100), "曦光大陸 · 星夜之地（高一下）", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
 
 
 func _outline(poly: PackedVector2Array, c: Color, w: float) -> void:
@@ -758,10 +889,12 @@ func _draw_house(font: Font) -> void:
 	draw_string(font, h + Vector2(-56, 70), "光靈的小屋", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f0d29a"))
 
 
-func _draw_tree(p: Vector2, r: float, k: float) -> void:
+func _draw_tree(p: Vector2, r: float, k: float, east := false) -> void:
 	UITheme.dot(self, p + Vector2(0, r * 0.7), r * 0.8, Color(0, 0, 0, 0.18))
 	draw_rect(Rect2(p + Vector2(-4, 0), Vector2(8, r * 0.7)), Color("5a3f2e"))
 	var c := Color("3f6b52") if k < 0.5 else (Color("4d7a4a") if k < 0.8 else Color("8a5a6e"))
+	if east:
+		c = Color("2f5f72") if k < 0.5 else (Color("3d6e8a") if k < 0.8 else Color("5a5a9a"))
 	UITheme.dot(self, p + Vector2(0, -r * 0.3), r, c)
 	UITheme.dot(self, p + Vector2(-r * 0.3, -r * 0.6), r * 0.45, c.lightened(0.15))
 
@@ -807,6 +940,82 @@ func _draw_zone_grounds(font: Font) -> void:
 	draw_colored_polygon(_ellipse(MOUND_C + Vector2(0, -30), MOUND_R * 0.75, MOUND_R * 0.6), Color("5b4f72"))
 	draw_colored_polygon(_ellipse(MOUND_C + Vector2(0, MOUND_R - 40.0), 60.0, 46.0), Color("140f22"))
 	draw_string(font, MOUND_C + Vector2(-40, -40), "x² − 1", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.85, 0.75, 1.0, 0.6))
+
+
+## 星夜之地五區的地面景物
+func _draw_east_grounds(font: Font) -> void:
+	# 階梯瀑布：一階一階往下的瀑布（a₁、a₂、a₃…）
+	var sc: Vector2 = ZONES[4].center
+	for k in 5:
+		var r := Rect2(sc + Vector2(-200 + k * 70, -170 + k * 60), Vector2(150, 70))
+		draw_rect(r, Color(0.3 - k * 0.03, 0.42 - k * 0.04, 0.55 - k * 0.04))
+		draw_rect(Rect2(r.position + Vector2(20, 0), Vector2(60, 70)), Color(0.45, 0.75, 1.0, 0.75))
+		for q in 3:
+			var yy := fmod(t * 60.0 + q * 23.0, 70.0)
+			draw_line(r.position + Vector2(28 + q * 18, yy), r.position + Vector2(28 + q * 18, minf(70.0, yy + 14.0)), Color(0.9, 0.97, 1.0, 0.7), 2.0)
+		draw_string(font, r.position + Vector2(92, 44), "a%s" % ["₁", "₂", "₃", "₄", "₅"][k], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.8, 1.0, 0.92, 0.85))
+	# 星點觀測台：圓頂＋散布圖的星星＋迴歸線
+	var dc: Vector2 = DOME_C
+	var pts := [Vector2(-240, 150), Vector2(-190, 110), Vector2(-150, 120), Vector2(-100, 70), Vector2(-60, 80), Vector2(130, -60), Vector2(170, -40), Vector2(210, -110), Vector2(250, -90)]
+	draw_line(dc + Vector2(-270, 170), dc + Vector2(280, -130), Color(0.62, 0.85, 1.0, 0.35), 3.0, true)
+	for q in pts:
+		UITheme.dot(self, dc + q, 6.0 + sin(t * 2.0 + q.x) * 1.5, Color(0.8, 0.92, 1.0, 0.85))
+	UITheme.dot(self, dc + Vector2(0, 12), DOME_R + 8.0, Color(0, 0, 0, 0.2))
+	UITheme.dot(self, dc, DOME_R, Color("3a5878"))
+	draw_arc(dc, DOME_R, PI, TAU, 32, Color("9fd8ff"), 4.0, true)
+	draw_line(dc + Vector2(-20, -DOME_R + 8), dc + Vector2(60, -DOME_R - 40), Color("c8e6ff"), 10.0, true)
+	# 排列花園：樹籬＋三色花（3! = 6 種排法）
+	for hg in HEDGES:
+		draw_rect(hg, Color("2f6a52"))
+		draw_rect(hg, Color("4f9a7a"), false, 2.0)
+	var fl := [Color("ff9ad5"), Color("ffd36e"), Color("8fd0ff")]
+	for row in 3:
+		for k in 3:
+			UITheme.dot(self, Vector2(2420 + k * 34, 380 + row * 120), 9.0, fl[(k + row) % 3])
+			UITheme.dot(self, Vector2(2600 + k * 34, 380 + row * 120), 9.0, fl[(2 * k + row) % 3])
+	draw_string(font, ZONES[6].center + Vector2(-40, -150), "3! = 6", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(1.0, 0.75, 0.9, 0.8))
+	# 骰子市集：攤位（遮雨棚）＋骰子
+	for k in STALLS.size():
+		var st: Vector2 = STALLS[k]
+		draw_rect(Rect2(st + Vector2(-46, -10), Vector2(92, 46)), Color("6b4f2e"))
+		var aw := Color("ffb35a") if k % 2 == 0 else Color("ff7a7a")
+		for q in 4:
+			draw_rect(Rect2(st + Vector2(-50 + q * 25, -40), Vector2(25, 30)), aw if q % 2 == 0 else Color("fff0d8"))
+		_draw_die(st + Vector2(-14, 6), (k * 2 + int(t * 0.7)) % 6 + 1)
+		_draw_die(st + Vector2(16, 6), (k * 3 + 2 + int(t * 0.9)) % 6 + 1)
+	# 彩蛋三：攤販（一個小攤＋兩顆大骰子）
+	UITheme.dot(self, DICE_NPC + Vector2(0, -30), 18.0, Color("e8c8a0"))
+	draw_rect(Rect2(DICE_NPC + Vector2(-40, -10), Vector2(80, 40)), Color("8a5a3a"))
+	_draw_die(DICE_NPC + Vector2(-14, 4), 3)
+	_draw_die(DICE_NPC + Vector2(16, 4), 4)
+	if not _has("eggs", "dice"):
+		draw_string(font, DICE_NPC + Vector2(-8, -60), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color("ffb35a"))
+	# 三角燈塔：塔身＋旋轉的光束＋地上的直角三角形（tan θ = 高 ÷ 影長）
+	var tc: Vector2 = TOWER_C
+	var beam := t * 0.8
+	var tip := tc + Vector2(0, -150)
+	draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(cos(beam - 0.12), sin(beam - 0.12)) * 520.0,
+		tip + Vector2(cos(beam + 0.12), sin(beam + 0.12)) * 520.0]), Color(1.0, 0.95, 0.6, 0.12))
+	var base := tc + Vector2(0, 40)
+	draw_line(base, base + Vector2(-260, 0), Color(1, 1, 1, 0.35), 2.0, true)
+	draw_line(base + Vector2(-260, 0), tip, Color(1.0, 0.9, 0.5, 0.5), 2.0, true)
+	draw_string(font, base + Vector2(-150, 30), "影長", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.5))
+	draw_string(font, base + Vector2(-238, -8), "θ", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.9, 0.5, 0.8))
+	draw_colored_polygon(PackedVector2Array([base + Vector2(-34, 0), base + Vector2(34, 0), tip + Vector2(16, 20), tip + Vector2(-16, 20)]), Color("e8e0f0"))
+	for q in 3:
+		draw_rect(Rect2(base + Vector2(-30 + q * 3, -40 - q * 50), Vector2(60 - q * 6, 16)), Color("ff7a7a"))
+	UITheme.dot(self, tip, 22.0, Color(1.0, 0.95, 0.6, 0.6 + 0.3 * sin(t * 4.0)))
+
+
+func _draw_die(c: Vector2, n: int) -> void:
+	draw_rect(Rect2(c - Vector2(12, 12), Vector2(24, 24)), Color("fffaf0"))
+	draw_rect(Rect2(c - Vector2(12, 12), Vector2(24, 24)), Color("8a6a4a"), false, 1.5)
+	var pip := {1: [Vector2.ZERO], 2: [Vector2(-6, -6), Vector2(6, 6)], 3: [Vector2(-6, -6), Vector2.ZERO, Vector2(6, 6)],
+		4: [Vector2(-6, -6), Vector2(6, -6), Vector2(-6, 6), Vector2(6, 6)],
+		5: [Vector2(-6, -6), Vector2(6, -6), Vector2.ZERO, Vector2(-6, 6), Vector2(6, 6)],
+		6: [Vector2(-6, -7), Vector2(6, -7), Vector2(-6, 0), Vector2(6, 0), Vector2(-6, 7), Vector2(6, 7)]}
+	for q in pip[n]:
+		UITheme.dot(self, c + q, 2.3, Color("2a2440"))
 
 
 static func _ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
