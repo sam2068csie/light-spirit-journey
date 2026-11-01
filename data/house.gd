@@ -461,7 +461,7 @@ func _open_shop() -> void:
 	Game.of(self).sfx("click")
 	var vb := _modal(UITheme.ACCENT, 900, "家具商店")
 	var dl := Label.new()
-	dl.text = "持有星塵 ✦ %d　·　小家具每天都買得起，大家具要存一陣子" % int(Game.of(self).inv.get("dust", 0))
+	dl.text = "持有星塵 ✦ %d" % int(Game.of(self).inv.get("dust", 0))
 	dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dl.add_theme_font_size_override("font_size", UITheme.fs(14))
 	dl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -521,7 +521,7 @@ func _open_shelf() -> void:
 	Game.of(self).sfx("click")
 	var vb := _modal(Color("f0d29a"), 860, "紀念品櫃")
 	var tip := Label.new()
-	tip.text = "點亮一個單元的所有聖地，就會得到那個單元的紀念品"
+	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -605,7 +605,7 @@ func _open_upgrade() -> void:
 	var lit := lit_sites()
 	var cur := house_level()
 	var tip := Label.new()
-	tip.text = "目前點亮 %d 座聖地（高一、高二、高三都算）" % lit
+	tip.text = "目前總共點亮 %d 座聖地" % lit
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -636,7 +636,7 @@ func _open_upgrade() -> void:
 		need.add_theme_color_override("font_color", UITheme.GOOD if ok else UITheme.TEXT_DIM)
 		hb.add_child(need)
 	var note := Label.new()
-	note.text = "（閣樓、陽台、觀星塔的房間還在施工中，之後會開放）"
+	note.text = "（閣樓、陽台、觀星塔的房間還在施工中）"
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_size_override("font_size", UITheme.fs(13))
 	note.add_theme_color_override("font_color", UITheme.TEXT_DIM)
