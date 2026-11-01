@@ -828,6 +828,19 @@ func _draw_island(font: Font, i: int) -> void:
 
 
 ## 有單元地圖的島：照單元地圖的形狀畫（淺灘、陸地、內陸、聖地的點）
+## 正弦海岸最右端收成往外凸的半圓
+func _wave_cap(wave: PackedVector2Array, c: Color, r: float) -> void:
+	var n := wave.size()
+	var e := wave[n - 1]
+	var d := (e - wave[n - 2]).normalized()
+	var o := d.orthogonal()
+	var poly := PackedVector2Array()
+	for k in 17:
+		var a := PI * k / 16.0
+		poly.append(e + (o * cos(a) + d * sin(a)) * r)
+	draw_colored_polygon(poly, c)
+
+
 func _draw_real(i: int, sh: Dictionary, open: bool) -> void:
 	var isl: Dictionary = ISLANDS[i]
 	var col: Color = isl.col
@@ -839,6 +852,7 @@ func _draw_real(i: int, sh: Dictionary, open: bool) -> void:
 		"trig":
 			draw_arc(sh.o, sh.r, 0, TAU, 96, shallow, sh.rw + 50.0, true)
 			draw_polyline(sh.wave, shallow, sh.cw + 50.0, true)
+			_wave_cap(sh.wave, shallow, (sh.cw + 50.0) / 2.0)
 			UITheme.dot(self, sh.cp, sh.dr + 25.0, shallow)
 			UITheme.dot(self, sh.o, sh.r - sh.rw / 2.0, Color("12355e"))      # 潟湖
 			for pass_ in [[sand, 0.0], [land, 8.0], [high, 26.0]]:
@@ -846,6 +860,7 @@ func _draw_real(i: int, sh: Dictionary, open: bool) -> void:
 				var sh_in: float = pass_[1]
 				draw_arc(sh.o, sh.r, 0, TAU, 128, cc, sh.rw - sh_in, true)
 				draw_polyline(sh.wave, cc, sh.cw - sh_in, true)
+				_wave_cap(sh.wave, cc, (sh.cw - sh_in) / 2.0)
 				UITheme.dot(self, sh.cp, sh.dr - sh_in / 2.0, cc)
 			# 羅盤礁的刻紋、圓環刻度
 			draw_arc(sh.cp, sh.dr * 0.7, 0, TAU, 48, Color(1, 0.85, 0.45, 0.4), 3.0, true)
