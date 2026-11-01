@@ -22,6 +22,7 @@ const MathLabel := preload("math_text.gd")
 const Bank := preload("level01_bank.gd")
 const Game := preload("game.gd")
 const PauseMenu := preload("pause_menu.gd")
+const Tut := preload("tutorial.gd")
 const Concepts := preload("concept_cards.gd")
 const ConceptDeck := preload("concept_deck.gd")
 const Buddy := preload("buddy.gd")
@@ -210,6 +211,7 @@ func _ready() -> void:
 	pause_menu = PauseMenu.new()
 	pause_menu.list_action = _back_to_list
 	pause_menu.report_info = _report_context
+	pause_menu.help_action = func(): _tut_show(["basic", "type:" + _tut_kind()])
 	add_child(pause_menu)
 	stage.run_finished.connect(_on_run_finished)
 	stage.step_note.connect(func(t): Game.of(self).note(t))
@@ -901,6 +903,7 @@ func _start_round() -> void:
 		_show_question(r.predict)
 	if not journey_mode and not review_mode and r.chapter == 2 and (ri == 0 or rounds[ri - 1].chapter == 1):
 		_show_chapter_card()
+	_tut_check.call_deferred(round_gen)
 
 
 func _steps() -> Array:
@@ -5700,3 +5703,115 @@ class _BgLayer extends Control:
 
 	func _draw() -> void:
 		painter.call(self)
+
+
+# ================= 新手教學 =================
+## 第一次進關卡：介紹畫面（basic）；第一次遇到某一種題型：介紹那種題型的操作（type:xxx）
+## 看過的記在 Game.tut；暫停選單的「操作說明」可以再看一次。
+
+func _tut_kind() -> String:
+	return String(r.get("type", "")) if not r.is_empty() else ""
+
+
+func _tut_check(gen: int) -> void:
+	if tower_mode or r.is_empty():
+		return
+	var g = Game.of(self)
+	var keys := []
+	if not g.tut.get("basic", false):
+		keys.append("basic")
+	var tk := "type:" + _tut_kind()
+	if not _tut_steps(tk).is_empty() and not g.tut.get(tk, false):
+		keys.append(tk)
+	if keys.is_empty():
+		return
+	await get_tree().create_timer(0.8).timeout
+	# 推導題的開場（題目一個字一個字浮現）跑完再開始
+	while is_inside_tree() and get("intro_block") != null:
+		await get_tree().create_timer(0.2).timeout
+	if not is_inside_tree() or gen != round_gen:
+		return
+	await get_tree().create_timer(0.45).timeout
+	if not is_inside_tree() or gen != round_gen or get_tree().paused:
+		return
+	for k in keys:
+		g.tut[k] = true
+	g.save_review()
+	_tut_show(keys)
+
+
+func _tut_show(keys: Array) -> void:
+	var st := []
+	for k in keys:
+		st.append_array(_tut_steps(k))
+	if not st.is_empty():
+		Tut.run(self, st)
+
+
+func _grect(c: Control) -> Rect2:
+	return c.get_global_rect() if is_instance_valid(c) and c.is_visible_in_tree() else Rect2()
+
+
+func _union(list: Array) -> Rect2:
+	var out := Rect2()
+	for rc in list:
+		if rc.size == Vector2.ZERO:
+			continue
+		out = rc if out.size == Vector2.ZERO else out.merge(rc)
+	return out
+
+
+func _tut_steps(key: String) -> Array:
+	var side := func(): return _grect(side_card)
+	var stg := func(): return _grect(stage)
+	match key:
+		"basic":
+			return [
+				{"text": "嗨！我是光靈～第一次來這裡嗎？我帶你看一下畫面，很快就好！"},
+				{"rect": stg, "text": "左邊是「舞台」：圖形、題目和推導紀錄都在這裡。有些題目要直接在舞台上點、拖或畫。"},
+				{"rect": func(): return _union([_grect(story_label), _grect(step_label)]),
+				 "text": "右邊卡片最上面是這一題的故事，和你現在走到第幾步。"},
+				{"rect": side, "text": "作答都在這張卡片裡：照著金色的字做，選擇、填空、拖滑桿都在這裡。"},
+				{"rect": func(): return _grect(side_btns) if _grect(go_btn).size.x > 2.0 else Rect2(),
+				 "text": "需要送出的時候，按最下面的金色按鈕（也可以按 Enter）。"},
+				{"rect": func(): return _grect(pips) if _grect(pips).size.x > 40.0 else Rect2(), "text": "上面這排圓點是這一關的旅程：一個圓點一題，答對會亮起來。"},
+				{"rect": func(): return Rect2(score_label.global_position - Vector2(44, 2), Vector2(1128 - score_label.global_position.x + 44, 52)),
+				 "text": "右上角是你的星塵和暫停鍵（Esc）。暫停選單裡的「操作說明」可以再看一次教學。"},
+				{"text": "答錯也沒關係，我會在卡片裡給你提示，太久沒動我也會跑出來幫忙。準備好了就出發吧！"},
+			]
+		"type:fit":
+			return [
+				{"rect": side, "text": "這種題目先回答預言題，想一想參數是多少。"},
+				{"rect": func(): return _grect(sliders_box) if _grect(sliders_box).size.y > 10.0 else _grect(side_card),
+				 "text": "接著拖動滑桿調整參數，讓舞台上的光橋穿過所有寶石，再按按鈕點亮光橋！"},
+			]
+		"type:draw":
+			return [
+				{"rect": stg, "text": "徒手作圖：先在舞台上點出曲線經過的整數點（卡片會告訴你共有幾個）。"},
+				{"rect": stg, "text": "接著用滑鼠或手指，在舞台上一筆畫出整條曲線。畫歪了可以重畫，吻合度 60 分就過關！"},
+			]
+		"type:cross":
+			return [
+				{"rect": stg, "text": "交點獵人：在舞台上先後畫出兩個函數的圖形。"},
+				{"rect": side, "text": "兩條都畫對之後，在卡片裡回答它們交了幾次。"},
+			]
+		"type:table":
+			return [{"rect": side, "text": "列表作圖：一格一格比較兩個函數的大小，找出交點在哪個區間，最後數交點。"}]
+		"type:rank":
+			return [{"rect": stg, "text": "幫舞台上的每一條曲線配上正確的底數：底數越大，越陡（或越平）？"}]
+		"type:quadrant":
+			return [{"rect": side, "text": "調整參數，讓燈塔的光只經過題目指定的象限。"}]
+		"type:count":
+			return [{"rect": side, "text": "先拖動滑桿完成調頻任務，看看交點個數怎麼變，最後回答範圍題。"}]
+		"type:chord":
+			return [{"rect": stg, "text": "先判斷圖形的凹口方向，再在舞台上連出弦，最後比大小。"}]
+		"type:forge":
+			return [
+				{"rect": side, "text": "推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。"},
+				{"rect": stg, "text": "每答對一步，就會寫進左邊的推導紀錄。全部做完，就是一份完整的計算過程！"},
+			]
+		"type:speed":
+			return [{"rect": side, "text": "速算挑戰：時間內連續作答，答對越多、連對越多，分數越高！答錯會扣 5 秒喔。"}]
+		"type:tune":
+			return [{"rect": stg, "text": "拖動參數，看圖形怎麼變，再回答範圍題。"}]
+	return []

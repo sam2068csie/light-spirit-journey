@@ -70,6 +70,7 @@ var main_rw := {"slots": {}, "types": {}, "star3": {}, "chests": {}, "tower_day"
 var owned := {}                        # 光靈裝扮：id → 抽到幾次
 var streak := {"last": "", "count": 0, "best": 0, "guards": 1, "log": [], "popup": ""}   # 連續簽到（log：最近的簽到／守護紀錄）
 var equipped := {}                     # 穿戴中：類別 → id
+var tut := {}                          # 新手教學看過哪些：{"basic": true, "type:fit": true…}
 var house := {}                        # 光靈小屋：{owned:[], placed:{格位:id}}
 var world11 := {}                      # 高二世界地圖（光潮群島）：{pos, visited, eggs, ret}
 var world10 := {}                      # 高一世界地圖（曦光大陸）：{stones: 啟用的傳送石, visited: 去過的地區, eggs: 找到的彩蛋, pos: [x, y]}
@@ -232,6 +233,7 @@ func wipe_progress() -> void:
 	world10 = {}
 	world11 = {}
 	house = {}
+	tut = {}
 	cur_unit = "exp"
 	review_days = []
 	session = {}
@@ -528,7 +530,7 @@ func save_review() -> void:
 	if f:
 		f.store_string(JSON.stringify({"mistakes": mistakes, "fixed": fixed, "last_wrong": last_wrong,
 			"days": review_days, "story": story_seen, "unit": cur_unit, "units": _per_unit, "quests": quests, "inv": inv,
-			"owned": owned, "equipped": equipped, "gacha": gacha, "streak": streak, "main_rw": main_rw, "world10": world10, "world11": world11, "house": house}))
+			"owned": owned, "equipped": equipped, "gacha": gacha, "streak": streak, "main_rw": main_rw, "world10": world10, "world11": world11, "house": house, "tut": tut}))
 
 
 func _load_review() -> void:
@@ -547,6 +549,8 @@ func _load_review() -> void:
 			world11 = w11 if w11 is Dictionary else {}
 			var hs = data.get("house", {})
 			house = hs if hs is Dictionary else {}
+			var tu = data.get("tut", {})
+			tut = tu if tu is Dictionary else {}
 
 			_load_quests(data)
 			for d in [mistakes, fixed]:
@@ -572,7 +576,7 @@ func mark_story(key: String) -> void:
 
 const DQ := preload("daily_quests.gd")
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.02-r"
+const BUILD := "2026.11.02-s"
 
 
 ## 讀取各單元的資料；舊存檔（還沒有單元的版本）的今日修煉、終焉之塔紀錄搬到「指數與對數」

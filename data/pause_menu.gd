@@ -11,6 +11,7 @@ var _settings: Control = null
 var _confirming := false
 var list_action := Callable()   # 關卡設定後，暫停選單會多一個「返回關卡列表」
 var list_label := "返回關卡列表"
+var help_action := Callable()   # 有設定時，暫停選單會多一個「操作說明」（重看新手教學）
 var report_info := Callable()   # 回傳「現在是哪一題」的文字；有設定時，暫停選單會多一個「回報這一題」
 
 
@@ -60,6 +61,13 @@ func _show_menu(fade: bool = false) -> void:
 	UITheme.accent_button(resume_b, 20)
 	resume_b.pressed.connect(resume)
 	col.add_child(resume_b)
+
+	if help_action.is_valid():
+		var help_b := _button("操作說明", 50)
+		help_b.pressed.connect(func():
+			resume()
+			help_action.call())
+		col.add_child(help_b)
 
 	var set_b := _button("設定", 50)
 	set_b.pressed.connect(_open_settings)
