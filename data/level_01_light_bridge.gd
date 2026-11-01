@@ -1170,7 +1170,8 @@ func _show_question(q: Dictionary) -> void:
 	stage.hide_curve = r.type == "fit" and not busy
 	predict_tries = 0
 	sliders_box.visible = false
-	energy_label.visible = false
+	# 限時的試煉：預言時也要看得到愛心和倒數秒數
+	energy_label.visible = r.has("time")
 	go_btn.visible = false
 	alt_btn.visible = false
 	rank_box.visible = false
@@ -1225,6 +1226,13 @@ func _on_answer(idx: int) -> void:
 		_record(cur_q.tag)
 		if r.type == "chord":
 			chord_errs += 1
+		# 限時的試煉：預言答錯也扣一顆心（終焉之塔已經在 _record 扣過）
+		if r.has("time") and not tower_mode:
+			energy -= 1
+			_update_hud()
+			if energy <= 0:
+				_reveal("三顆心都用完了…")
+				return
 		_hint("還不對，再想想：\n" + cur_q.nudge, "bad")
 		return
 
