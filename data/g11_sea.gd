@@ -572,7 +572,10 @@ func _make_shape(isl: Dictionary) -> Dictionary:
 			return {"kind": "trig", "k": k, "o": tf.call(TM.O), "r": TM.R * k, "rw": TM.RW * k, "wave": wave,
 				"cw": TM.CW * k, "cp": tf.call(TM.CP), "dr": TM.DR * k, "sites": sites}
 		"exp":
-			var polys := [EM.island_poly(0), EM.island_poly(1)]
+			var obs := PackedVector2Array()      # 天文台小島（位數望遠鏡）
+			for j in 24:
+				obs.append(EM.OBS_C + Vector2.from_angle(TAU * j / 24.0) * EM.OBS_R)
+			var polys := [EM.island_poly(0), EM.island_poly(1), obs]
 			var lo := Vector2(INF, INF)
 			var hi := Vector2(-INF, -INF)
 			for poly in polys:

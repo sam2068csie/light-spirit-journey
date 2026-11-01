@@ -29,8 +29,8 @@ signal open_tower
 
 # ---------------- 地形 ----------------
 ## 數學座標 → 畫面：原點 O，一單位 S 像素
-const O := Vector2(500, 420)
-const SC := Vector2(96, 74)     # 一單位：橫的拉寬一點，畫面比較不擠
+const O := Vector2(470, 420)
+const SC := Vector2(115, 74)     # 一單位：橫的拉寬一點，畫面比較不擠
 const CW := 46.0                  # 島的陸地寬度
 const EXP_U := Vector2(-1.3, 2.3)       # 指數島：x 的範圍
 const LOG_V := Vector2(-1.75, 1.9)      # 對數島：y 的範圍（對數島上的點 = 指數島上的點對 y = x 翻過去）
@@ -50,9 +50,9 @@ const SITES := [
 ]
 
 ## 終焉之塔：鏡面海峽的上游（y = x 上）
-const TOWER_P := Vector2(500 + 2.95 * 96.0, 420 - 2.95 * 74.0 + 6.0)
+const TOWER_P := Vector2(470 + 2.95 * 115.0, 420 - 2.95 * 74.0 + 6.0)
 ## 天文台小島（位數望遠鏡）：對數島的東北外海
-const OBS_C := Vector2(1010, 196)
+const OBS_C := Vector2(1062, 192)
 const OBS_R := 46.0
 
 ## 小離島（位置、大小）
@@ -255,23 +255,28 @@ static func isle_band(isle: int, a: float, b: float, half: float) -> PackedVecto
 static func island_poly(isle: int) -> PackedVector2Array:
 	var r := isle_range(isle)
 	var mid := isle_pts(isle, r.x, r.y)
-	var top := PackedVector2Array()
-	var bot := PackedVector2Array()
-	for p in mid:
-		var n := isle_n(isle, _u_of(isle, p))
-		top.append(p + n * CW / 2.0)
-		bot.append(p - n * CW / 2.0)
-	var out := PackedVector2Array(top)
-	var e := mid[mid.size() - 1]
-	var ne := isle_n(isle, r.y)
-	for k in range(1, 12):
-		out.append(e + ne.rotated(-PI * k / 12.0 * (1.0 if isle == 0 else -1.0)) * CW / 2.0)
-	bot.reverse()
-	out.append_array(bot)
-	var s0 := mid[0]
-	var n0 := isle_n(isle, r.x)
-	for k in range(1, 12):
-		out.append(s0 - n0.rotated(-PI * k / 12.0 * (1.0 if isle == 0 else -1.0)) * CW / 2.0)
+	var m := mid.size()
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	for k in m:
+		var d := (mid[mini(k + 1, m - 1)] - mid[maxi(k - 1, 0)]).normalized()
+		var n := d.orthogonal()
+		left.append(mid[k] + n * CW / 2.0)
+		right.append(mid[k] - n * CW / 2.0)
+	# 頭尾往外收成半圓：從一側繞過端點到另一側
+	var out := PackedVector2Array(left)
+	var de := (mid[m - 1] - mid[m - 2]).normalized()
+	var ne := de.orthogonal()
+	for k in range(1, 16):
+		var a := PI * k / 16.0
+		out.append(mid[m - 1] + (ne * cos(a) + de * sin(a)) * CW / 2.0)
+	right.reverse()
+	out.append_array(right)
+	var d0 := (mid[0] - mid[1]).normalized()
+	var n0 := d0.orthogonal()
+	for k in range(1, 16):
+		var a := PI * k / 16.0
+		out.append(mid[0] + (n0 * cos(a) + d0 * sin(a)) * CW / 2.0)
 	return out
 
 
@@ -555,8 +560,8 @@ const HIGH := Color("272f58")
 const TIDE := Color("1d4152")       # 對數島海平面以下：潮間帶淺灘
 const TIDE_HI := Color("245468")
 const SAND := Color(0.85, 0.8, 0.62, 0.30)
-const MIRROR_A := Vector2(500 - 1.4 * 96.0, 420 + 1.4 * 74.0)      # 鏡面海峽的兩端（y = x）
-const MIRROR_B := Vector2(500 + 3.2 * 96.0, 420 - 3.2 * 74.0)
+const MIRROR_A := Vector2(470 - 1.4 * 115.0, 420 + 1.4 * 74.0)      # 鏡面海峽的兩端（y = x）
+const MIRROR_B := Vector2(470 + 3.2 * 115.0, 420 - 3.2 * 74.0)
 
 
 ## 不會動的陸地（畫在 _land）
@@ -791,7 +796,6 @@ func _draw_fx(layer: CanvasItem) -> void:
 	var font := get_theme_default_font()
 	layer.draw_set_transform(SCREEN_C - cam * zoom, 0.0, Vector2(zoom, zoom))
 	_draw_mirror_shine()
-	_draw_walls()
 	_draw_bridge()
 	for i in SITES.size():
 		_draw_region_ring(i)
