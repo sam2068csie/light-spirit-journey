@@ -8,10 +8,12 @@ extends Control
 ## 存檔放在 Game.world10：{stones: [], visited: [], eggs: [], pos: [x, y]}
 const UITheme := preload("game_theme.gd")
 const Game := preload("game.gd")
+const Units := preload("units.gd")
 
 signal enter_level(file: String)
 signal story_changed(on: bool)
 signal open_tower
+signal pick_unit(uid: String)     # 進入地區（單元）：主選單接著打開那個單元的地圖
 
 const W := 1152.0
 const H := 648.0
@@ -36,24 +38,24 @@ const HOUSE := Vector2(360, 1930)
 
 ## 四個地區：center 地區中心、gate 入口（站在這裡進入）、stone 傳送石
 const ZONES := [
-	{"id": "num", "name": "數之原野", "chapter": "數與式", "center": Vector2(540, 1470), "gate": Vector2(760, 1660),
+	{"id": "num", "unit": "h1num", "name": "數之原野", "chapter": "數與式", "center": Vector2(540, 1470), "gate": Vector2(760, 1660),
 	 "stone": Vector2(860, 1660), "color": Color("f5c84c")},
-	{"id": "exp", "name": "倍增峽谷", "chapter": "指數與常用對數", "center": Vector2(560, 620), "gate": Vector2(600, 930),
+	{"id": "exp", "unit": "h1exp", "name": "倍增峽谷", "chapter": "指數與常用對數", "center": Vector2(560, 620), "gate": Vector2(600, 930),
 	 "stone": Vector2(700, 930), "color": Color("ff9a5a")},
-	{"id": "line", "name": "圓規湖", "chapter": "直線與圓", "center": Vector2(1250, 470), "gate": Vector2(1250, 800),
+	{"id": "line", "unit": "h1line", "name": "圓規湖", "chapter": "直線與圓", "center": Vector2(1250, 470), "gate": Vector2(1250, 800),
 	 "stone": Vector2(1350, 800), "color": Color("5fd4ff")},
-	{"id": "poly", "name": "根之洞窟", "chapter": "多項式", "center": Vector2(1380, 1300), "gate": Vector2(1380, 1520),
+	{"id": "poly", "unit": "h1poly", "name": "根之洞窟", "chapter": "多項式", "center": Vector2(1380, 1300), "gate": Vector2(1380, 1520),
 	 "stone": Vector2(1480, 1520), "color": Color("c59bff")},
 	# ---- 星夜之地（高一下）----
-	{"id": "seq", "name": "階梯瀑布", "chapter": "數列與級數", "center": Vector2(2330, 1800), "gate": Vector2(2580, 1730),
+	{"id": "seq", "unit": "h1seq", "name": "階梯瀑布", "chapter": "數列與級數", "center": Vector2(2330, 1800), "gate": Vector2(2580, 1730),
 	 "stone": Vector2(2680, 1730), "color": Color("6ee7c0")},
-	{"id": "data", "name": "星點觀測台", "chapter": "數據分析", "center": Vector2(2450, 960), "gate": Vector2(2450, 1190),
+	{"id": "data", "unit": "h1data", "name": "星點觀測台", "chapter": "數據分析", "center": Vector2(2450, 960), "gate": Vector2(2450, 1190),
 	 "stone": Vector2(2550, 1190), "color": Color("9fd8ff")},
-	{"id": "comb", "name": "排列花園", "chapter": "排列組合", "center": Vector2(2560, 420), "gate": Vector2(2780, 640),
+	{"id": "comb", "unit": "h1comb", "name": "排列花園", "chapter": "排列組合", "center": Vector2(2560, 420), "gate": Vector2(2780, 640),
 	 "stone": Vector2(2880, 640), "color": Color("ff9ad5")},
-	{"id": "prob", "name": "骰子市集", "chapter": "機率", "center": Vector2(3150, 760), "gate": Vector2(3150, 1010),
+	{"id": "prob", "unit": "h1prob", "name": "骰子市集", "chapter": "機率", "center": Vector2(3150, 760), "gate": Vector2(3150, 1010),
 	 "stone": Vector2(3250, 1010), "color": Color("ffb35a")},
-	{"id": "trig", "name": "三角燈塔", "chapter": "三角比", "center": Vector2(3230, 1620), "gate": Vector2(3040, 1780),
+	{"id": "trig", "unit": "h1trig", "name": "三角燈塔", "chapter": "三角比", "center": Vector2(3230, 1620), "gate": Vector2(3040, 1780),
 	 "stone": Vector2(2940, 1780), "color": Color("f5e27a")},
 ]
 const LEFT_ZONES := 4                 # ZONES 前 4 個在左岸
@@ -85,6 +87,9 @@ const CHEST := Vector2(560, 1450)
 const STELE := Vector2(330, 420)
 
 var pos := SPAWN
+var zoom := 1.0
+var _busy := false
+var _fade: ColorRect
 var cam := Vector2.ZERO
 var face := Vector2(1, 0)
 var t := 0.0
@@ -144,12 +149,18 @@ func _ready() -> void:
 		var p0 := Vector2(float(sp[0]), float(sp[1]))
 		if _free(p0):
 			pos = p0
-	# 從選擇冒險的「星夜之地」進來：光靈出現在右岸；從「曦光大陸」進來：出現在左岸
-	var east_unit := String(g.cur_unit) == "g10b"
-	if east_unit and pos.x < 1900.0:
-		pos = RIGHT_SPAWN
-	elif not east_unit and pos.x > 1900.0:
-		pos = SPAWN
+	# 從單元地圖回來：站在那個地區的入口，播離開動畫（畫面由暗轉亮、鏡頭拉遠）
+	var ret := String(_state().get("ret", ""))
+	if ret != "":
+		_state()["ret"] = ""
+		for z in ZONES:
+			if z.unit == ret:
+				pos = z.gate + Vector2(0, 40)
+		zoom = 1.7
+		_fade.color.a = 1.0
+		var tw := create_tween().set_parallel()
+		tw.tween_property(self, "zoom", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_fade, "color:a", 0.0, 0.6)
 	cam = _cam_target()
 
 
@@ -313,6 +324,11 @@ func _build_ui() -> void:
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast.modulate.a = 0.0
 	add_child(_toast)
+	_fade = ColorRect.new()
+	_fade.color = Color(0.02, 0.04, 0.1, 0.0)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fade)
 
 
 func _show_toast(s: String) -> void:
@@ -322,10 +338,14 @@ func _show_toast(s: String) -> void:
 
 func _update_card() -> void:
 	var k := String(_near.get("kind", ""))
-	_card.visible = k != "" and not is_instance_valid(_overlay)
+	_card.visible = k != "" and not is_instance_valid(_overlay) and not _busy
 	if not _card.visible:
 		return
 	match k:
+		"ferry":
+			_card_title.text = "渡口"
+			_card_sub.text = "搭船到高二的光潮群島"
+			_card_btn.text = "搭船 ▶"
 		"zone":
 			var z: Dictionary = ZONES[int(_near.i)]
 			_card_title.text = z.name
@@ -349,10 +369,16 @@ func _update_card() -> void:
 
 func _interact() -> void:
 	var k := String(_near.get("kind", ""))
-	if k == "" or is_instance_valid(_overlay):
+	if k == "" or is_instance_valid(_overlay) or _busy:
 		return
 	Game.of(self).sfx("click")
 	match k:
+		"ferry":
+			var mm := get_parent()
+			while mm != null and not mm.has_method("_set_grade"):
+				mm = mm.get_parent()
+			if mm != null:
+				mm._set_grade("高二")
 		"zone":
 			_open_zone(int(_near.i))
 		"stele":
@@ -363,9 +389,21 @@ func _interact() -> void:
 			_open_dice()
 
 
-## 進入地區：題目還沒放，先告訴玩家準備中
+## 進入地區：單元開放了 → 鏡頭推進、畫面變暗，進入那個單元的地圖；還沒開放 → 告訴玩家準備中
 func _open_zone(i: int) -> void:
 	var z: Dictionary = ZONES[i]
+	var u: Dictionary = Units.unit(z.unit)
+	if u.id == z.unit and Units.is_open(u):
+		_busy = true
+		Game.of(self).sfx("success")
+		_state()["ret"] = z.unit
+		_save()
+		var tw := create_tween().set_parallel()
+		tw.tween_property(self, "zoom", 1.8, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		tw.tween_property(_fade, "color:a", 1.0, 0.5).set_delay(0.08)
+		await tw.finished
+		pick_unit.emit(z.unit)
+		return
 	var o := UITheme.modal(self, z.color, 460)
 	_overlay = o[0]
 	var col: VBoxContainer = o[1]
@@ -680,7 +718,7 @@ func _cam_target() -> Vector2:
 
 func _process(delta: float) -> void:
 	t += delta
-	var active := is_visible_in_tree() and not is_instance_valid(_overlay)
+	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy
 	var dir := _key_dir() if active else Vector2.ZERO
 	if dir == Vector2.ZERO and _hold and active:
 		var target := _hold_pt + cam
@@ -727,8 +765,7 @@ func _check_world(delta: float) -> void:
 			_add("stones", z.id)
 			Game.of(self).sfx("success")
 			_show_toast("◆ 傳送石啟用：%s" % z.name)
-	if pos.distance_to(EXIT_SIGN) < 90.0 and _toast_t <= 0.0:
-		_show_toast("渡海就是高二的三角函數群島（之後開放）")
+
 	# 彩蛋一：數字石
 	_egg_cool = maxf(0.0, _egg_cool - delta)
 	if not _has("eggs", "stones") and _egg_cool <= 0.0:
@@ -755,6 +792,8 @@ func _check_world(delta: float) -> void:
 		_near = {"kind": "stele"}
 	if pos.distance_to(DICE_NPC) < 90.0:
 		_near = {"kind": "dice"}
+	if pos.distance_to(EXIT_SIGN) < 110.0:
+		_near = {"kind": "ferry"}
 	if _egg_seq.size() == EGG_STONES.size() and not _has("eggs", "stones") and pos.distance_to(CHEST) < 70.0:
 		_near = {"kind": "chest"}
 
@@ -776,7 +815,8 @@ func _draw() -> void:
 	var font := UITheme.bold_font()
 	# 海
 	draw_rect(Rect2(Vector2.ZERO, size), Color("0c1430"))
-	draw_set_transform(-cam, 0.0, Vector2.ONE)
+	var C := Vector2(W, H) / 2.0
+	draw_set_transform(C - (cam + C) * zoom, 0.0, Vector2(zoom, zoom))
 	var view := Rect2(cam - Vector2(80, 80), Vector2(W, H) + Vector2(160, 160))
 	_draw_waves(view)
 	# 右岸（星夜之地）
@@ -813,7 +853,7 @@ func _draw() -> void:
 	var sg := EXIT_SIGN
 	draw_rect(Rect2(sg + Vector2(-4, 10), Vector2(8, 60)), Color("6b4f2e"))
 	draw_rect(Rect2(sg + Vector2(-90, -24), Vector2(180, 40)), Color("9fd8ff"))
-	draw_string(font, sg + Vector2(-80, 4), "渡海 → 高二群島", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("10223a"))
+	draw_string(font, sg + Vector2(-80, 4), "渡口 → 高二", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("10223a"))
 	# 小屋
 	_draw_house(font)
 	# 彩蛋二：石碑

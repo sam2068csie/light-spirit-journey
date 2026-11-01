@@ -16,14 +16,26 @@ extends RefCounted
 const UITheme := preload("game_theme.gd")
 
 const UNITS := [
-	# ======================= 高一上 =======================
-	# 曦光大陸：可以自由走動的 2D 地圖（g10_world.gd）。題目還沒放，地區先做好地圖、傳送、彩蛋
-	{"id": "g10a", "term": "高一上", "title": "曦光大陸", "exam": "高一上・試玩地圖", "color": UITheme.VIOLET, "open": true,
-	 "world": "光靈的旅程：曦光大陸", "map": "g10_world.gd", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	# ======================= 高一下 =======================
-	# 星夜之地：和曦光大陸同一張地圖（g10_world.gd），從這裡進去光靈會出現在晨昏之橋東岸
-	{"id": "g10b", "term": "高一下", "title": "星夜之地", "exam": "高一下・試玩地圖", "color": UITheme.BLUE, "open": true,
-	 "world": "光靈的旅程：曦光大陸", "map": "g10_world.gd", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# ======================= 高一 =======================
+	# 高一的單元：在「曦光大陸」（g10_world.gd）上，一個地區一個單元。題目還沒放，先 open = false（進去會顯示準備中）
+	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1seq", "term": "高一下", "title": "數列與級數", "exam": "", "color": UITheme.GOOD, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1data", "term": "高一下", "title": "數據分析", "exam": "", "color": UITheme.BLUE, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1comb", "term": "高一下", "title": "排列組合", "exam": "", "color": UITheme.PINK, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1prob", "term": "高一下", "title": "機率", "exam": "", "color": UITheme.ORANGE, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	{"id": "h1trig", "term": "高一下", "title": "三角比", "exam": "", "color": UITheme.GOLD, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# ======================= 高二上 =======================
 	# 三角函數：建造中。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看（學生看不到）
 	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": false, "preview": true,

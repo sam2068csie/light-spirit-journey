@@ -269,78 +269,52 @@ func _build_units_page() -> void:
 	_gacha_chip(_units_page, Vector2(270, 14))
 
 
+## 選擇冒險：每個年級一張可以走動的世界地圖（高一：曦光大陸；高二：光潮群島），走到地區／島就進入那個單元的地圖
+const WorldG10 := preload("g10_world.gd")
+const WorldG11 := preload("g11_sea.gd")
+
+
 func _refresh_units() -> void:
 	for c in _units_body.get_children():
 		c.queue_free()
 	var g = Game.of(self)
-	var title := UITheme.title_label("選擇冒險", 30, UITheme.ACCENT)
-	title.position = Vector2(0, 52)
-	title.size = Vector2(1152, 40)
-	_units_body.add_child(title)
-	# 年級分頁：高一／高二（一次排一個年級）
 	if _grade == "":
 		_grade = Units.grade_of(g.cur_unit)
+	var w: Control = WorldG10.new() if _grade == "高一" else WorldG11.new()
+	_units_body.add_child(w)
+	w.pick_unit.connect(func(uid: String):
+		g.set_unit(uid)
+		_ensure_map()
+		_show_page("levels"))
+	# 年級分頁（右上角）
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
-	tabs.position = Vector2(1152 - 18 - 2 * 96 - 8, 56)
+	tabs.position = Vector2(1152 - 18 - 2 * 96 - 8, 14)
 	_units_body.add_child(tabs)
 	for gr in ["高一", "高二"]:
 		var tb := Button.new()
 		tb.text = gr
 		tb.focus_mode = Control.FOCUS_NONE
-		tb.custom_minimum_size = Vector2(96, 40)
+		tb.custom_minimum_size = Vector2(96, 44)
 		var on: bool = gr == _grade
-		tb.add_theme_stylebox_override("normal", UITheme.box(Color(1, 1, 1, 0.14) if on else Color(1, 1, 1, 0.04), 20, UITheme.ACCENT if on else Color(1, 1, 1, 0.16), 2 if on else 1, 8))
-		tb.add_theme_stylebox_override("hover", UITheme.box(Color(1, 1, 1, 0.18), 20, UITheme.ACCENT, 2, 8))
-		tb.add_theme_stylebox_override("pressed", UITheme.box(Color(1, 1, 1, 0.22), 20, UITheme.ACCENT, 2, 8))
+		tb.add_theme_stylebox_override("normal", UITheme.box(Color(0.1, 0.12, 0.26, 0.9) if on else Color(0.05, 0.06, 0.14, 0.8), 22, UITheme.ACCENT if on else Color(1, 1, 1, 0.16), 2 if on else 1, 8))
+		tb.add_theme_stylebox_override("hover", UITheme.box(Color(0.12, 0.14, 0.3, 0.95), 22, UITheme.ACCENT, 2, 8))
+		tb.add_theme_stylebox_override("pressed", UITheme.box(Color(0.14, 0.16, 0.34, 0.95), 22, UITheme.ACCENT, 2, 8))
 		tb.add_theme_color_override("font_color", UITheme.ACCENT if on else UITheme.TEXT_DIM)
 		tb.add_theme_font_override("font", UITheme.bold_font())
 		tb.add_theme_font_size_override("font_size", UITheme.fs(17))
 		var grc: String = gr
-		tb.pressed.connect(func():
-			_grade = grc
-			Game.of(self).sfx("click")
-			_refresh_units())
+		tb.pressed.connect(func(): _set_grade(grc))
 		tabs.add_child(tb)
-	# 每個學期一排：左邊是學期標籤，右邊照章節順序排卡片，卡片之間有小箭頭
-	var cw := UNIT_CARD.x
-	var gap := 22.0
-	var x0 := 148.0
-	var y := 126.0
-	var no := 1
-	for term in Units.GRADES[_grade]:
-		var list: Array = Units.units_of_term(term)
-		var tag := PanelContainer.new()
-		tag.add_theme_stylebox_override("panel", UITheme.box(Color(1, 1, 1, 0.05), 16, Color(1, 1, 1, 0.14), 1, 8))
-		tag.position = Vector2(26, y)
-		tag.custom_minimum_size = Vector2(100, UNIT_CARD.y)
-		var tl := Label.new()
-		tl.text = "\n".join(Array(String(term).split("")))
-		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		tl.add_theme_font_override("font", UITheme.bold_font())
-		tl.add_theme_font_size_override("font_size", UITheme.fs(24))
-		tl.add_theme_constant_override("line_spacing", 4)
-		tl.add_theme_color_override("font_color", UITheme.TEXT)
-		tag.add_child(tl)
-		_units_body.add_child(tag)
-		for i in list.size():
-			var card := _unit_card(g, list[i], no)
-			no += 1
-			card.position = Vector2(x0 + i * (cw + gap), y)
-			_units_body.add_child(card)
-			if i < list.size() - 1:
-				var ar := Label.new()
-				ar.text = "›"
-				ar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				ar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-				ar.position = Vector2(x0 + i * (cw + gap) + cw, y)
-				ar.size = Vector2(gap, UNIT_CARD.y)
-				ar.add_theme_font_size_override("font_size", UITheme.fs(24))
-				ar.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
-				ar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				_units_body.add_child(ar)
-		y += UNIT_CARD.y + 18.0
+
+
+## 換年級（分頁、或在地圖上搭船到另一個年級）
+func _set_grade(gr: String) -> void:
+	if gr == _grade:
+		return
+	_grade = gr
+	Game.of(self).sfx("click")
+	_refresh_units()
 
 
 const UNIT_CARD := Vector2(228, 240)
@@ -1239,7 +1213,13 @@ func _unhandled_input(e: InputEvent) -> void:
 		if _page == "levels":
 			_level_back()
 		elif _page == "units":
-			_show_page("title")
+			# 地圖上開著視窗（傳送、彩蛋）：先關視窗
+			var closed := false
+			for c in _units_body.get_children():
+				if c.has_method("close_overlay") and c.close_overlay():
+					closed = true
+			if not closed:
+				_show_page("title")
 		elif _page == "tower":
 			_show_page(_tower_origin())
 		else:
