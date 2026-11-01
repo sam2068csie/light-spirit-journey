@@ -701,8 +701,15 @@ class LightView extends MirrorView:
 		var pf := Vector2(px, _py(area, ymax, f))
 		UITheme.dot(self, pf, 12.0, Color(1, 0.85, 0.4, 0.3))
 		UITheme.dot(self, pf, 6.0, UITheme.GOLD)
-		var s := "x = %s°　　a sin x = %s　＋　b cos x = %s　＝　f(x) = %s" % [TideView.dec(pk_x), dec3(va), pn(vb), dec3(f)]
-		_line_text(font, rc.position.x + 14.0, rc.position.y + 70.0, rc.size.x - 28.0, s, 15, Color(1, 0.95, 0.8))
+		# 圖例：顏色對應的函數
+		var lx := rc.position.x + 16.0
+		var ly := rc.position.y + 78.0
+		for it in [[UITheme.CYAN, "y = %s" % _term(a, "sin x")], [UITheme.ORANGE, "y = %s" % _term(b, "cos x")], [UITheme.GOLD, "y = f(x)"]]:
+			draw_line(Vector2(lx, ly - 5.0), Vector2(lx + 22.0, ly - 5.0), it[0], 3.0, true)
+			var t2 := SBk.root_markup(String(it[1]))
+			var tw := MathLabel.text_width(font, t2, UITheme.fs(15))
+			MathLabel.draw_on(self, font, lx + 28.0 + tw / 2.0, ly, t2, UITheme.fs(15), it[0])
+			lx += 46.0 + tw
 		# 亮度
 		var goal := String(spec.get("goal", "max"))
 		var k := 0.0
@@ -724,6 +731,22 @@ class LightView extends MirrorView:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * k, bar.size.y)), UITheme.GOOD if hit else Color(1, 0.75, 0.4))
 		var msg := "就是這裡！按「確定」" if hit else String(word)
 		_line_text(font, rc.position.x + 14.0, rc.position.y + 208.0, rc.size.x - 28.0, msg, 13, UITheme.GOOD if hit else Color(1, 0.92, 0.7))
+
+	## 係數 × 函數：1 → "sin x"、−1 → "−sin x"、√3 → "√3 sin x"、2√3 → "2√3 sin x"
+	static func _term(v: float, fn: String) -> String:
+		var sg := "−" if v < 0.0 else ""
+		var av := absf(v)
+		var c := ""
+		if absf(av - roundf(av)) < 1e-6:
+			c = "" if int(roundf(av)) == 1 else str(int(roundf(av)))
+		else:
+			var n := int(roundf(av * av))
+			var k := 1
+			for q in range(2, 10):
+				if n % (q * q) == 0:
+					k = q
+			c = ("%d" % k if k > 1 else "") + "√%d" % (n / (k * k))
+		return sg + (c + " " if c != "" else "") + fn
 
 	# --- spin ---
 	func _draw_spinrng(font: Font, rc: Rect2) -> void:
