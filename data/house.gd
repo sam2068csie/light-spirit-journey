@@ -43,6 +43,7 @@ var sel_slot := -1
 var _spirit := Vector2(590, 510)
 var _spirit_to := Vector2(590, 510)
 var _wait := 2.0
+var _face_left := false
 var _say := ""
 var _say_t := 0.0
 var _overlay: Control
@@ -697,7 +698,17 @@ func _draw() -> void:
 	var bob := sin(t * 3.0) * 4.0
 	var sp := _spirit + Vector2(0, bob)
 	UITheme.dot(self, _spirit + Vector2(0, 34), 26.0, Color(0, 0, 0, 0.22))
-	SL.draw_all(self, sp, 26.0, Game.of(self).equipped, t)
+	# 往左走就面向左（左右翻轉）
+	if _spirit_to.x < _spirit.x - 1.0:
+		_face_left = true
+	elif _spirit_to.x > _spirit.x + 1.0:
+		_face_left = false
+	if _face_left:
+		draw_set_transform(sp, 0.0, Vector2(-1, 1))
+		SL.draw_all(self, Vector2.ZERO, 26.0, Game.of(self).equipped, t)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		SL.draw_all(self, sp, 26.0, Game.of(self).equipped, t)
 	if _say_t > 0.0 and _say != "":
 		var tw := font.get_string_size(_say, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var br := Rect2(sp + Vector2(-tw / 2.0 - 12, -78), Vector2(tw + 24, 30))
@@ -817,14 +828,15 @@ func _draw_window() -> void:
 
 func _draw_shelf(font: Font) -> void:
 	var r := SHELF
-	var dp := Vector2(18, 14)      # 櫃子的深度（往右下凸出來）
-	_shadow(Vector2(r.get_center().x + 14, r.end.y + 8), r.size.x * 0.62, 10.0)
-	# 側面、頂面
-	_poly([Vector2(r.end.x, r.position.y), r.end, r.end + dp, Vector2(r.end.x, r.position.y) + dp], Color("4a3224"))
-	_poly([r.position, Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.position.y) + dp, r.position + dp], Color("9a7a58"))
-	draw_rect(Rect2(r.position + dp, r.size), Color("5a3f2e"))
+	var dp := Vector2(16, -12)     # 櫃子的深度：往後（右上，朝消失點）縮進牆裡
+	_shadow(Vector2(r.get_center().x + 8, r.end.y + 4), r.size.x * 0.6, 10.0)
+	var tr := Vector2(r.end.x, r.position.y)
+	# 右側面（櫃子在消失點左邊，所以看得到右側）、頂面
+	_poly([tr, r.end, r.end + dp, tr + dp], Color("4a3224"))
+	_poly([r.position, tr, tr + dp, r.position + dp], Color("9a7a58"))
+	# 正面
+	draw_rect(r, Color("5a3f2e"))
 	draw_rect(r.grow(-8), Color("3e2a1e"))   # 內部（比較暗，看起來凹進去）
-	r = Rect2(r.position + dp, r.size)
 	draw_rect(r, Color("8a6a4e"), false, 6.0)
 	var title := "紀念品櫃"
 	var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
