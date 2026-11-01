@@ -25,8 +25,8 @@ const WINDOW := Rect2(486, 92, 180, 136)
 const SLOTS := [
 	{"kind": "wall", "r": Rect2(380, 112, 90, 80)},
 	{"kind": "wall", "r": Rect2(684, 112, 90, 80)},
-	{"kind": "big", "r": Rect2(374, 270, 110, 174)},
-	{"kind": "big", "r": Rect2(1012, 270, 66, 174)},
+	{"kind": "big", "r": Rect2(386, 270, 98, 174)},
+	{"kind": "wide", "r": Rect2(494, 296, 166, 148)},
 	{"kind": "sill", "r": Rect2(500, 198, 152, 36)},
 	{"kind": "top", "r": Rect2(790, 334, 64, 38)},
 	{"kind": "top", "r": Rect2(930, 334, 64, 38)},
@@ -34,7 +34,7 @@ const SLOTS := [
 	{"kind": "rug", "r": Rect2(500, 552, 180, 42)},
 	{"kind": "floor", "r": Rect2(860, 470, 110, 70)},
 ]
-const KIND_NAME := {"wall": "牆面", "big": "大型家具", "sill": "窗台", "top": "桌上", "floor": "地板", "rug": "地毯"}
+const KIND_NAME := {"wide": "窗下大型", "wall": "牆面", "big": "大型家具", "sill": "窗台", "top": "桌上", "floor": "地板", "rug": "地毯"}
 const LINES := ["歡迎回家～", "今天也來點亮一座聖地吧！", "這裡好溫暖喔。", "紀念品櫃還有好多空位呢！", "星塵存夠了，就去商店逛逛吧～"]
 
 var t := 0.0
@@ -72,6 +72,12 @@ func _st() -> Dictionary:
 		g.house["owned"] = []
 	if not g.house.has("placed"):
 		g.house["placed"] = {}
+	# 格位種類改過：放不進去的家具收回抽屜
+	for k in g.house.placed.keys():
+		var i := int(k)
+		var it := HI.item(String(g.house.placed[k]))
+		if i < 0 or i >= SLOTS.size() or it.is_empty() or not (SLOTS[i].kind in it.slots):
+			g.house.placed.erase(k)
 	return g.house
 
 
@@ -675,7 +681,7 @@ func _draw() -> void:
 		var id := _placed(i)
 		if id != "":
 			var sr: Rect2 = SLOTS[i].r
-			if SLOTS[i].kind in ["floor", "big"]:
+			if SLOTS[i].kind in ["floor", "big", "wide"]:
 				_shadow(Vector2(sr.get_center().x, sr.end.y - 2), sr.size.x * 0.48, 7.0, 0.3)
 			_draw_item(self, id, sr)
 	# 擺設模式：格位
@@ -990,7 +996,10 @@ static func _draw_item(ci: CanvasItem, id: String, r: Rect2, dim := false) -> vo
 			var tp := b + Vector2(0, -r.size.y * 0.4)
 			ci.draw_line(tp + Vector2(-s * 0.35, s * 0.2), tp + Vector2(s * 0.35, -s * 0.35), c, 12.0)
 		"piano":
-			ci.draw_rect(Rect2(r.position + Vector2(0, r.size.y * 0.2), Vector2(r.size.x, r.size.y * 0.8)), c if not dim else c)
+			var pr := Rect2(r.position + Vector2(0, r.size.y * 0.2), Vector2(r.size.x, r.size.y * 0.8))
+			ci.draw_rect(pr, c)
+			ci.draw_rect(Rect2(pr.position - Vector2(4, 6), Vector2(pr.size.x + 8, 8)), c.lightened(0.25))
+			ci.draw_rect(pr, c.lightened(0.35), false, 2.0)
 			ci.draw_rect(Rect2(r.position + Vector2(4, r.size.y * 0.55), Vector2(r.size.x - 8, 10)), Color("fffaf0"))
 			for k in int((r.size.x - 10) / 8):
 				ci.draw_rect(Rect2(r.position + Vector2(8 + k * 8, r.size.y * 0.55), Vector2(4, 6)), Color("2a2440"))
