@@ -53,8 +53,6 @@ func _ready() -> void:
 	_show_page(pg if pg in ["levels", "review", "tower", "units"] else "title", false)
 	if a.has("tower_result"):
 		_show_tower_result(a.tower_result)
-	if a.get("quests", false):
-		_open_quests.call_deferred()
 	if a.has("summary"):
 		_show_summary(a.summary, a.get("summary_kind", "daily"))
 	# 今天第一次打開：自動跳出連續簽到
@@ -165,11 +163,6 @@ func _build_title_page() -> void:
 	var rv := _menu_button("修煉之間", 52)
 	rv.pressed.connect(func(): _show_page("review"))
 	col.add_child(rv)
-	var hs_b := _menu_button("光靈小屋", 52)
-	hs_b.pressed.connect(func():
-		Game.of(self).set_meta("house_from", "title")
-		Game.of(self).goto("house.gd"))
-	col.add_child(hs_b)
 	var tw_b := _menu_button("終焉之塔", 52)
 	tw_b.pressed.connect(func():
 		Game.of(self).tower_from = "title"
@@ -185,6 +178,7 @@ func _build_title_page() -> void:
 	_quest_chip(_title_page, Vector2(1152 - 140 - 18, 14))
 	_gacha_chip(_title_page, Vector2(1152 - 140 - 18 - 150, 14))
 	_wardrobe_chip(_title_page, Vector2(1152 - 140 - 18 - 300, 14))
+	_house_chip(_title_page, Vector2(1152 - 140 - 18 - 450, 14))
 	# 光靈最後加入：整頁大小的透明層，只有點在光靈身上才會接住（其他地方照常點得到按鈕）
 	_title_spirit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_title_page.add_child(_title_spirit)
@@ -1179,6 +1173,20 @@ func _wardrobe_chip(parent: Control, pos: Vector2) -> Button:
 	for c in b.pressed.get_connections():
 		b.pressed.disconnect(c.callable)
 	b.pressed.connect(_open_wardrobe)
+	return b
+
+
+func _house_chip(parent: Control, pos: Vector2) -> Button:
+	var b := _quest_chip(parent, pos)
+	_quest_chips.erase(b)
+	b.text = "光靈小屋"
+	b.icon = UITheme.icon("house", 20, Color("ffd6a0"))
+	b.get_meta("dot").queue_free()
+	for c in b.pressed.get_connections():
+		b.pressed.disconnect(c.callable)
+	b.pressed.connect(func():
+		Game.of(self).set_meta("house_from", "title")
+		Game.of(self).goto("house.gd"))
 	return b
 
 

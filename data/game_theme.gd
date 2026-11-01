@@ -366,6 +366,12 @@ static func _icon_hit(kind: String, u: float, v: float) -> bool:
 			var clip := u > 0.35 and u < 0.65 and v > 0.08 and v < 0.26
 			var lines := u > 0.36 and u < 0.64 and (absf(v - 0.42) < 0.04 or absf(v - 0.56) < 0.04 or absf(v - 0.70) < 0.04)
 			return (inside and not hole) or clip or lines
+		"house":
+			# 小屋：三角屋頂＋方形屋身，中間一扇門
+			var roof := v > 0.12 and v < 0.48 and absf(u - 0.5) < (v - 0.12) * 1.2
+			var body := u > 0.22 and u < 0.78 and v >= 0.46 and v < 0.88
+			var door := u > 0.42 and u < 0.58 and v > 0.62 and v < 0.88
+			return roof or (body and not door)
 		"hanger":
 			# 衣架：上面的小勾＋三角形骨架
 			var p := Vector2(u, v)

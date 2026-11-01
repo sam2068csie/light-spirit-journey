@@ -1,7 +1,7 @@
 extends Control
 ## 光靈的小屋（Lv.1：一個房間＋固定格位擺設＋紀念品櫃）
 ##   ・紀念品櫃：每個單元一件紀念品，點亮整個單元的聖地就會出現（高一、高二、高三共用一個櫃子）
-##   ・書桌 → 修煉之間；布告欄 → 每日任務
+##   ・布告欄 → 每日任務（在小屋裡打開）
 ##   ・擺設模式：點格位 → 從抽屜挑家具放上去（只列出放得進那種格位的家具）
 ##   ・商店：用星塵買家具（小家具每天買得起、少量昂貴大家具）；彩蛋家具在地圖上解開才拿得到
 ##   ・小屋等級：點亮 10／25／50 座聖地升級（目前先做 Lv.1 的房間，等級和下一階段先顯示出來）
@@ -35,8 +35,7 @@ const SLOTS := [
 	{"kind": "floor", "r": Rect2(860, 470, 110, 70)},
 ]
 const KIND_NAME := {"wall": "牆面", "big": "大型家具", "sill": "窗台", "top": "桌上", "floor": "地板", "rug": "地毯"}
-const LINES := ["歡迎回家～", "今天也來點亮一座聖地吧！", "這裡好溫暖喔。", "紀念品櫃還有好多空位呢！", "要不要去書桌那邊複習一下？",
-	"星塵存夠了，就去商店逛逛吧～"]
+const LINES := ["歡迎回家～", "今天也來點亮一座聖地吧！", "這裡好溫暖喔。", "紀念品櫃還有好多空位呢！", "星塵存夠了，就去商店逛逛吧～"]
 
 var t := 0.0
 var deco := false
@@ -202,7 +201,7 @@ func _refresh() -> void:
 		_bar_lab.text = "升級：點亮 %d／%d 座聖地" % [lit, nxt.need]
 	_top_dust.text = "✦ %d" % int(Game.of(self).inv.get("dust", 0))
 	_deco_btn.text = "完成擺設" if deco else "擺設模式"
-	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點紀念品櫃、書桌（修煉之間）或布告欄（每日任務）"
+	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點紀念品櫃，或點布告欄看每日任務"
 	queue_redraw()
 
 
@@ -212,6 +211,8 @@ func _talk(s: String) -> void:
 
 
 func _back() -> void:
+	if is_instance_valid(_quest_panel):
+		return
 	if close_overlay():
 		return
 	if deco:
@@ -267,18 +268,33 @@ func _gui_input(e: InputEvent) -> void:
 		return
 	if SHELF.has_point(p):
 		_open_shelf()
-	elif Rect2(DESK.position - Vector2(0, 60), DESK.size + Vector2(0, 130)).has_point(p):
-		Game.of(self).sfx("click")
-		Game.of(self).goto("main_menu.gd", {"page": "review"})
 	elif BOARD.has_point(p):
-		Game.of(self).sfx("click")
-		Game.of(self).goto("main_menu.gd", {"page": "title", "quests": true})
+		_open_quests()
 	elif p.distance_to(_spirit) < 50.0:
 		_talk(LINES[randi() % LINES.size()])
 	else:
 		for i in SLOTS.size():
 			if (SLOTS[i].r as Rect2).has_point(p) and _placed(i) != "":
 				_talk("這是%s！" % HI.item(_placed(i)).name)
+
+
+var _quest_panel: Control
+
+
+func _open_quests() -> void:
+	if is_instance_valid(_quest_panel) or is_instance_valid(_overlay):
+		return
+	Game.of(self).sfx("click")
+	_quest_panel = preload("quest_panel.gd").new()
+	add_child(_quest_panel)
+	_quest_panel.closed.connect(func():
+		_quest_panel = null
+		_refresh())
+	_quest_panel.go.connect(func(dest: String):
+		var g = Game.of(self)
+		if dest == "tower":
+			g.tower_from = "title"
+		g.goto("main_menu.gd", {"page": dest}))
 
 
 func _placed(i: int) -> String:
@@ -303,7 +319,8 @@ func _pick_slot(i: int) -> void:
 		_drawer.queue_free()
 	_drawer = PanelContainer.new()
 	_drawer.add_theme_stylebox_override("panel", UITheme.box(Color(0.06, 0.08, 0.2, 0.97), 16, UITheme.ACCENT, 2, 12))
-	_drawer.position = Vector2(20, 448)
+	# 選的是下面的格位（地板、地毯）→ 抽屜放上面，才不會蓋住格位
+	_drawer.position = Vector2(20, 64) if (SLOTS[i].r as Rect2).position.y > 400.0 else Vector2(20, 448)
 	_drawer.custom_minimum_size = Vector2(W - 40, 0)
 	add_child(_drawer)
 	var vb := VBoxContainer.new()
@@ -495,17 +512,29 @@ func _open_shelf() -> void:
 			var b := Button.new()
 			b.focus_mode = Control.FOCUS_NONE
 			b.custom_minimum_size = Vector2(82, 74)
-			b.clip_text = true
-			b.text = "\n\n" + String(u.title)
-			b.add_theme_font_size_override("font_size", UITheme.fs(11))
+			var nl := Label.new()
+			var tt := String(u.title)
+			if tt.length() > 5:      # 太長：從中間斷成兩行
+				var cut := (tt.length() + 1) / 2
+				tt = tt.substr(0, cut) + "\n" + tt.substr(cut)
+			nl.text = tt
+			nl.position = Vector2(2, 36)
+			nl.custom_minimum_size = Vector2(78, 36)
+			nl.size = Vector2(78, 36)
+			nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			nl.add_theme_font_size_override("font_size", UITheme.fs(12))
+			nl.add_theme_constant_override("line_spacing", -3)
+			nl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(nl)
 			var c: Color = sv.col
 			b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.28) if lit else Color(0, 0, 0, 0.25), 10, c if lit else Color(1, 1, 1, 0.12), 2 if lit else 1, 4))
 			b.add_theme_stylebox_override("hover", UITheme.box(Color(c.r, c.g, c.b, 0.36) if lit else Color(1, 1, 1, 0.06), 10, c, 2, 4))
-			b.add_theme_color_override("font_color", UITheme.TEXT if lit else UITheme.TEXT_DIM)
+			nl.add_theme_color_override("font_color", UITheme.TEXT if lit else UITheme.TEXT_DIM)
 			var gem := SouvenirIcon.new()
 			gem.col = c
 			gem.lit = lit
-			gem.position = Vector2(26, 6)
+			gem.position = Vector2(26, 4)
 			gem.size = Vector2(30, 30)
 			gem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			b.add_child(gem)
@@ -720,9 +749,6 @@ func _draw_desk(font: Font) -> void:
 	draw_line(lp, lp + Vector2(0, -34), Color("c9a46e"), 3.0)
 	draw_colored_polygon(PackedVector2Array([lp + Vector2(-16, -30), lp + Vector2(16, -30), lp + Vector2(8, -46), lp + Vector2(-8, -46)]), Color("f5c84c"))
 	draw_rect(Rect2(r.position.x + 74, r.position.y - 8, 34, 8), Color("e8dcc0"))
-	var lab := "書桌 → 修煉之間"
-	draw_string_outline(font, Vector2(r.position.x + 40, r.end.y + 46), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 6, Color(0.1, 0.07, 0.12))
-	draw_string(font, Vector2(r.position.x + 40, r.end.y + 46), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("ffe7a3"))
 
 
 ## 畫一件家具：r 是格位（底部對齊格位的底）
