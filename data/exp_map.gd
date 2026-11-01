@@ -29,11 +29,11 @@ signal open_tower
 
 # ---------------- 地形 ----------------
 ## 數學座標 → 畫面：原點 O，一單位 S 像素
-const O := Vector2(560, 420)
-const S := 74.0
+const O := Vector2(500, 420)
+const SC := Vector2(96, 74)     # 一單位：橫的拉寬一點，畫面比較不擠
 const CW := 46.0                  # 島的陸地寬度
 const EXP_U := Vector2(-1.3, 2.3)       # 指數島：x 的範圍
-const LOG_V := Vector2(-1.75, 2.35)      # 對數島：y 的範圍（對數島上的點 = 指數島上的點對 y = x 翻過去）
+const LOG_V := Vector2(-1.75, 1.9)      # 對數島：y 的範圍（對數島上的點 = 指數島上的點對 y = x 翻過去）
 const TAILS := [-1.85, -2.3, -2.75, -3.2, -3.65]      # 碎成小島的尾巴（參數），一個比一個小
 const TAIL_R := [10.0, 7.0, 5.0, 3.5, 2.5]
 
@@ -42,15 +42,18 @@ const SITES := [
 	{"id": "L1", "isle": 0, "r": Vector2(-1.3, 0.3), "at": -0.4, "lab": Vector2(-84, -12)},
 	{"id": "L2", "isle": 0, "r": Vector2(0.3, 1.45), "at": 0.95, "lab": Vector2(-92, 4)},
 	{"id": "L3", "isle": 0, "r": Vector2(1.45, 2.3), "at": 1.95, "lab": Vector2(-90, 10)},
-	{"id": "L4", "isle": 1, "r": Vector2(-1.75, -0.95), "at": -1.35, "lab": Vector2(-96, 18)},
-	{"id": "L5", "isle": 1, "r": Vector2(-0.95, 0.0), "at": -0.45, "lab": Vector2(84, 26)},
-	{"id": "L6", "isle": 1, "r": Vector2(0.0, 0.65), "at": 0.3, "lab": Vector2(92, 22)},
-	{"id": "L7", "isle": 1, "r": Vector2(0.65, 1.45), "at": 1.0, "lab": Vector2(84, 30)},
-	{"id": "L8", "isle": 1, "r": Vector2(1.45, 2.35), "at": 1.95, "lab": Vector2(30, 56)},
+	{"id": "L4", "isle": 1, "r": Vector2(-1.75, -0.85), "at": -1.3, "lab": Vector2(-96, 18)},
+	{"id": "L5", "isle": 1, "r": Vector2(-0.85, 0.0), "at": -0.42, "lab": Vector2(84, 26)},
+	{"id": "L6", "isle": 1, "r": Vector2(0.0, 0.95), "at": 0.48, "lab": Vector2(88, 28)},
+	{"id": "L7", "isle": 1, "r": Vector2(0.95, 1.9), "at": 1.42, "lab": Vector2(70, 34)},
+	{"id": "L8", "isle": 2, "r": Vector2(0.0, 0.0), "at": 0.0, "lab": Vector2(0, 62)},
 ]
 
 ## 終焉之塔：鏡面海峽的上游（y = x 上）
-const TOWER_P := Vector2(560 + 3.65 * 74.0, 420 - 3.65 * 74.0 + 6.0)
+const TOWER_P := Vector2(500 + 2.95 * 96.0, 420 - 2.95 * 74.0 + 6.0)
+## 天文台小島（位數望遠鏡）：對數島的東北外海
+const OBS_C := Vector2(1010, 196)
+const OBS_R := 46.0
 
 ## 小離島（位置、大小）
 const ISLETS := [[Vector2(1040, 120), 10.0], [Vector2(1090, 420), 13.0], [Vector2(170, 150), 9.0], [Vector2(300, 560), 11.0]]
@@ -189,8 +192,10 @@ func _play_pending() -> void:
 static func isle_p(isle: int, u: float) -> Vector2:
 	var a := pow(2.0, u)
 	if isle == 0:
-		return O + Vector2(u, -a) * S
-	return O + Vector2(a, -u) * S
+		return O + Vector2(u, -a) * SC
+	if isle == 2:
+		return OBS_C
+	return O + Vector2(a, -u) * SC
 
 
 ## 島上參數 u 的法向量（指數島：往左上那一側；對數島：往右下那一側）
@@ -229,7 +234,7 @@ static func isle_edge(isle: int, a: float, b: float, side: float, pad: float = 0
 
 
 static func _u_of(isle: int, p: Vector2) -> float:
-	var v := (p - O) / S
+	var v := (p - O) / SC
 	return v.x if isle == 0 else -v.y
 
 
@@ -287,6 +292,8 @@ static func hover_point(i: int) -> Vector2:
 
 ## 這一點在陸地上的哪一座聖地（−1：海上）
 static func region_at(p: Vector2) -> int:
+	if p.distance_to(OBS_C) <= OBS_R:
+		return 7
 	var best := -1
 	var bd := CW / 2.0 + 4.0
 	for isle in 2:
@@ -509,6 +516,8 @@ func _process(delta: float) -> void:
 func _rand_point(i: int) -> Vector2:
 	var st: Dictionary = SITES[i]
 	var isle: int = st.isle
+	if isle == 2:
+		return OBS_C + Vector2.from_angle(randf() * TAU) * randf_range(4.0, OBS_R - 6.0)
 	var u := randf_range(st.r.x, st.r.y)
 	return isle_p(isle, u) + isle_n(isle, u) * randf_range(-0.4, 0.4) * CW
 
@@ -546,8 +555,8 @@ const HIGH := Color("272f58")
 const TIDE := Color("1d4152")       # 對數島海平面以下：潮間帶淺灘
 const TIDE_HI := Color("245468")
 const SAND := Color(0.85, 0.8, 0.62, 0.30)
-const MIRROR_A := Vector2(560 - 1.4 * 74.0, 420 + 1.4 * 74.0)      # 鏡面海峽的兩端（y = x）
-const MIRROR_B := Vector2(560 + 3.2 * 74.0, 420 - 3.2 * 74.0)
+const MIRROR_A := Vector2(500 - 1.4 * 96.0, 420 + 1.4 * 74.0)      # 鏡面海峽的兩端（y = x）
+const MIRROR_B := Vector2(500 + 3.2 * 96.0, 420 - 3.2 * 74.0)
 
 
 ## 不會動的陸地（畫在 _land）
@@ -562,9 +571,6 @@ func _draw_land(layer: CanvasItem) -> void:
 		var f := sin(PI * (k + 0.5) / 24.0)
 		L.draw_line(a0, a1, Color(0.6, 0.78, 1.0, 0.06 * f), 40.0)
 	# ---- 雷射牆的底座（光束每幀畫在 _fx）----
-	for p in _wall_posts():
-		L.draw_rect(Rect2(p - Vector2(6, 6), Vector2(12, 12)), Color("3a1f3a"))
-		L.draw_rect(Rect2(p - Vector2(6, 6), Vector2(12, 12)), Color(1, 0.45, 0.66, 0.8), false, 2.0)
 	# 小離島
 	for it in ISLETS:
 		_islet(L, it[0], it[1], false)
@@ -578,19 +584,24 @@ func _draw_land(layer: CanvasItem) -> void:
 	var e := isle_pts(0, EXP_U.x, EXP_U.y)
 	var lw := isle_pts(1, LOG_V.x, 0.0)
 	var lu := isle_pts(1, 0.0, LOG_V.y)
-	for pts in [e, lw, lu]:
-		L.draw_polyline(pts, Color(0.35, 0.7, 0.95, 0.05), CW + 44.0, true)
-		L.draw_polyline(pts, Color(0.4, 0.75, 1.0, 0.08), CW + 22.0, true)
-	for isle in 2:
-		var r := isle_range(isle)
-		UITheme.dot(L, isle_p(isle, r.x), CW / 2.0, TIDE if isle == 1 else LAND)
-		UITheme.dot(L, isle_p(isle, r.y), CW / 2.0, LAND)
-	L.draw_polyline(e, LAND, CW, true)
-	L.draw_polyline(lu, LAND, CW, true)
-	L.draw_polyline(lw, TIDE, CW, true)
-	L.draw_polyline(e, HIGH, CW - 18.0, true)
-	L.draw_polyline(lu, HIGH, CW - 18.0, true)
-	L.draw_polyline(lw, TIDE_HI, CW - 18.0, true)
+	var ea := isle_pts(0, EXP_U.x, EXP_U.y)
+	var la := isle_pts(1, LOG_V.x, LOG_V.y)
+	for pts in [ea, la]:
+		_round_line(L, pts, Color(0.35, 0.7, 0.95, 0.05), CW + 44.0)
+		_round_line(L, pts, Color(0.4, 0.75, 1.0, 0.08), CW + 22.0)
+	UITheme.dot(L, OBS_C, OBS_R + 22.0, Color(0.35, 0.7, 0.95, 0.05))
+	UITheme.dot(L, OBS_C, OBS_R + 11.0, Color(0.4, 0.75, 1.0, 0.08))
+	# 頭尾都收成圓的
+	_round_line(L, e, LAND, CW)
+	_round_line(L, lu, LAND, CW, false, true)
+	_round_line(L, lw, TIDE, CW, true, false)
+	_round_line(L, e, HIGH, CW - 18.0)
+	_round_line(L, lu, HIGH, CW - 18.0, false, true)
+	_round_line(L, lw, TIDE_HI, CW - 18.0, true, false)
+	# 天文台小島
+	UITheme.dot(L, OBS_C, OBS_R, LAND)
+	UITheme.dot(L, OBS_C, OBS_R - 9.0, HIGH)
+	L.draw_arc(OBS_C, OBS_R, 0, TAU, 48, SAND, 3.0, true)
 	# 點亮的區域
 	for i in SITES.size():
 		_draw_region_fill(L, i)
@@ -611,18 +622,30 @@ func _draw_land(layer: CanvasItem) -> void:
 	L.draw_line(w0 - wn * (CW / 2.0 + 18.0), w0 + wn * (CW / 2.0 + 18.0), Color(0.75, 0.95, 1.0, 0.45), 2.0, true)
 	# 沙灘
 	_draw_sand(L)
-	# 位數望遠鏡旁的「尾數尺」碼頭：刻度照 log 排（1、2、3……10）
-	var pa := site_point(7) + Vector2(26, 18)
-	L.draw_line(pa, pa + Vector2(200, 0), Color("6b4f2e"), 9.0)
-	for k in range(1, 11):
-		var x := pa.x + 200.0 * log(float(k)) / log(10.0)
-		var h := 9.0 if k == 1 or k == 10 else 5.0
-		L.draw_line(Vector2(x, pa.y - h), Vector2(x, pa.y + h), Color(1, 0.9, 0.6, 0.35 + 0.5 * glow[7]), 1.5)
 	# 山和樹
 	_draw_details(L)
 	# 區域之間的虛線邊界
 	_draw_borders(L)
 	_tgt = self
+
+
+## 粗線，兩端加半圓（島的頭尾收圓）
+func _round_line(L: CanvasItem, pts: PackedVector2Array, c: Color, w: float, cap0 := true, cap1 := true) -> void:
+	L.draw_polyline(pts, c, w, true)
+	if cap0:
+		_half_cap(L, pts[0], pts[0] - pts[1], c, w / 2.0)
+	if cap1:
+		_half_cap(L, pts[pts.size() - 1], pts[pts.size() - 1] - pts[pts.size() - 2], c, w / 2.0)
+
+
+func _half_cap(L: CanvasItem, c: Vector2, dir: Vector2, col: Color, r: float) -> void:
+	var d := dir.normalized()
+	var n := d.orthogonal()
+	var poly := PackedVector2Array()
+	for k in 17:
+		var a := PI * k / 16.0
+		poly.append(c + n * cos(a) * r + d * sin(a) * r)
+	L.draw_colored_polygon(poly, col)
 
 
 func _islet(L: CanvasItem, c: Vector2, r: float, tide: bool) -> void:
@@ -632,16 +655,6 @@ func _islet(L: CanvasItem, c: Vector2, r: float, tide: bool) -> void:
 	L.draw_arc(c, r, 0, TAU, 24, SAND, 2.0, true)
 
 
-## 雷射牆的柱子：y = 0（指數島下方）和 x = 0（對數島左方）
-func _wall_posts() -> Array:
-	var out := []
-	for k in 6:
-		out.append(O + Vector2(-1.55 - k * 0.6, 0.0) * S)
-	for k in 3:
-		out.append(O + Vector2(0.0, 1.95 + k * 0.6) * S)
-	return out
-
-
 func _draw_sand(L: CanvasItem) -> void:
 	if not _cache.has("sand"):
 		var lines := []
@@ -649,17 +662,16 @@ func _draw_sand(L: CanvasItem) -> void:
 			var r := isle_range(isle)
 			for side in [1.0, -1.0]:
 				lines.append(isle_edge(isle, r.x, r.y, side))
-			for u in [r.x, r.y]:
-				var c := isle_p(isle, u)
-				var n := isle_n(isle, u)
-				var tg := n.orthogonal()
-				var out := 1.0 if u == r.y else -1.0
-				if isle == 1:
-					out = -out
+			var mid := isle_pts(isle, r.x, r.y)
+			var m := mid.size()
+			for end in [[mid[0], mid[0] - mid[1]], [mid[m - 1], mid[m - 1] - mid[m - 2]]]:
+				var c: Vector2 = end[0]
+				var d: Vector2 = (end[1] as Vector2).normalized()
+				var n := d.orthogonal()
 				var arc := PackedVector2Array()
-				for k in 13:
-					var a := PI * k / 12.0
-					arc.append(c + (n * cos(a) + tg * sin(a) * out) * CW / 2.0)
+				for k in 17:
+					var a := PI * k / 16.0
+					arc.append(c + (n * cos(a) + d * sin(a)) * CW / 2.0)
 				lines.append(arc)
 		_cache["sand"] = lines
 	for ln in _cache.sand:
@@ -673,9 +685,27 @@ func _draw_region_fill(L: CanvasItem, i: int) -> void:
 		return
 	var st: Dictionary = SITES[i]
 	var c: Color = Center.level_info(st.id).color
-	var pts := isle_pts(int(st.isle), st.r.x, st.r.y)
-	L.draw_polyline(pts, Color(c.r, c.g, c.b, 0.30 * gl).darkened(0.1), CW, false)
-	L.draw_polyline(pts, Color(c.r, c.g, c.b, 0.22 * gl), CW - 18.0, false)
+	if int(st.isle) == 2:
+		UITheme.dot(L, OBS_C, OBS_R, Color(c.r, c.g, c.b, 0.30 * gl).darkened(0.1))
+		UITheme.dot(L, OBS_C, OBS_R - 9.0, Color(c.r, c.g, c.b, 0.22 * gl))
+		return
+	var isle: int = st.isle
+	var rr := isle_range(isle)
+	var pts := isle_pts(isle, st.r.x, st.r.y)
+	var c0 := Color(c.r, c.g, c.b, 0.30 * gl).darkened(0.1)
+	var c1 := Color(c.r, c.g, c.b, 0.22 * gl)
+	var at0: bool = absf(st.r.x - rr.x) < 0.001
+	var at1: bool = absf(st.r.y - rr.y) < 0.001
+	L.draw_polyline(pts, c0, CW, false)
+	L.draw_polyline(pts, c1, CW - 18.0, false)
+	if at0 or at1:
+		if at0:
+			_half_cap(L, pts[0], pts[0] - pts[1], c0, CW / 2.0)
+			_half_cap(L, pts[0], pts[0] - pts[1], c1, CW / 2.0 - 9.0)
+		if at1:
+			var n := pts.size()
+			_half_cap(L, pts[n - 1], pts[n - 1] - pts[n - 2], c0, CW / 2.0)
+			_half_cap(L, pts[n - 1], pts[n - 1] - pts[n - 2], c1, CW / 2.0 - 9.0)
 
 
 ## 點亮區域的發光邊（會脈動，所以每幀畫）
@@ -688,7 +718,13 @@ func _draw_region_ring(i: int) -> void:
 	var pulse := 0.85 + 0.15 * sin(t * 2.0 + i)
 	var key := "ring%d" % i
 	if not _cache.has(key):
-		_cache[key] = [isle_edge(int(st.isle), st.r.x, st.r.y, 1.0), isle_edge(int(st.isle), st.r.x, st.r.y, -1.0)]
+		if int(st.isle) == 2:
+			var circ := PackedVector2Array()
+			for k in 49:
+				circ.append(OBS_C + Vector2.from_angle(TAU * k / 48.0) * OBS_R)
+			_cache[key] = [circ]
+		else:
+			_cache[key] = [isle_edge(int(st.isle), st.r.x, st.r.y, 1.0), isle_edge(int(st.isle), st.r.x, st.r.y, -1.0)]
 	for ln in _cache[key]:
 		_tgt.draw_polyline(ln, Color(c.r, c.g, c.b, 0.25 * gl * pulse), 7.0)
 		_tgt.draw_polyline(ln, Color(c.r, c.g, c.b, 0.9 * gl).lightened(0.3), 2.0, true)
@@ -794,10 +830,10 @@ func _draw_mirror_shine() -> void:
 ## 雷射牆：柱子之間的光束（會閃）
 func _draw_walls() -> void:
 	var a := 0.55 + 0.25 * sin(t * 6.0)
-	var y0 := O + Vector2(-1.55 - 5 * 0.6, 0.0) * S
-	var y1 := O + Vector2(-1.55, 0.0) * S
-	var x0 := O + Vector2(0.0, 1.95) * S
-	var x1 := O + Vector2(0.0, 1.95 + 2 * 0.6) * S
+	var y0 := Vector2(-40.0, O.y)
+	var y1 := O + Vector2(-1.55, 0.0) * SC
+	var x0 := O + Vector2(0.0, 1.95) * SC
+	var x1 := Vector2(O.x, H + 40.0)
 	for seg in [[y0, y1], [x0, x1]]:
 		_tgt.draw_line(seg[0], seg[1], Color(1, 0.42, 0.66, 0.16), 9.0)
 		_tgt.draw_line(seg[0], seg[1], Color(1, 0.62, 0.8, a), 2.0)
@@ -833,7 +869,7 @@ func _route(i: int) -> PackedVector2Array:
 	else:
 		var p0 := site_point(i)
 		var p1 := site_point(i + 1)
-		var ctl := O + Vector2(1.9, -1.9) * S
+		var ctl := O + Vector2(1.9, -1.9) * SC if i == 2 else (p0 + p1) / 2.0 + Vector2(0, -50)
 		for k in 31:
 			var s := k / 30.0
 			pts.append(p0.lerp(ctl, s).lerp(ctl.lerp(p1, s), s))
@@ -994,7 +1030,16 @@ func _draw_landmark(i: int) -> void:
 			var a := -PI / 2.0 + (0.5 * sin(t * 0.9) if gl > 0.5 else 1.4 * sin(t * 1.7))
 			T.draw_line(cc, cc + Vector2(cos(a), sin(a)) * 15.0, Color(1, 0.85, 0.45, 0.6 + 0.4 * gl), 2.5, true)
 			UITheme.dot(T, cc, 2.5, Color(1, 1, 1, 0.8))
-		7:   # 位數望遠鏡：三腳架上的望遠鏡，對著星星
+		7:   # 位數望遠鏡：天文台小島上的圓頂，旁邊一架望遠鏡對著星星
+			var dm := p + Vector2(-14, 0)
+			T.draw_rect(Rect2(dm + Vector2(-16, -16), Vector2(32, 16)), base)
+			var dome := PackedVector2Array()
+			for k in 17:
+				var a := PI * k / 16.0
+				dome.append(dm + Vector2(cos(a) * 16.0, -16.0 - sin(a) * 16.0))
+			T.draw_colored_polygon(dome, base.lightened(0.15))
+			T.draw_line(dm + Vector2(-2, -31), dm + Vector2(4, -18), dark, 3.0)
+			p = p + Vector2(20, 2)
 			T.draw_line(p + Vector2(0, -16), p + Vector2(-12, 0), base, 2.5)
 			T.draw_line(p + Vector2(0, -16), p + Vector2(12, 0), base, 2.5)
 			T.draw_line(p + Vector2(0, -16), p + Vector2(0, 0), base, 2.5)
