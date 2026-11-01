@@ -9,6 +9,7 @@ extends Control
 const UITheme := preload("game_theme.gd")
 const Game := preload("game.gd")
 const Units := preload("units.gd")
+const SL := preload("spirit_look.gd")
 
 signal enter_level(file: String)
 signal story_changed(on: bool)
@@ -94,6 +95,7 @@ var cam := Vector2.ZERO
 var face := Vector2(1, 0)
 var t := 0.0
 var walking := false
+var _face_left := false
 var playing := false
 var _hold := false
 var _hold_pt := Vector2.ZERO
@@ -1085,13 +1087,18 @@ func _draw_spirit() -> void:
 	var bob := sin(t * (9.0 if walking else 3.0)) * (3.0 if walking else 2.0)
 	var p := pos + Vector2(0, bob - 6.0)
 	UITheme.dot(self, pos + Vector2(0, 14), 14.0, Color(0, 0, 0, 0.25))
-	UITheme.dot(self, p, 34.0, Color(1.0, 0.9, 0.55, 0.22))
-	UITheme.dot(self, p, 18.0, Color("fff3c4"))
-	draw_arc(p, 18.0, 0, TAU, 32, Color("f5c84c"), 2.5, true)
-	var ex := clampf(face.x, -1.0, 1.0) * 4.0
-	var ey := clampf(face.y, -1.0, 1.0) * 3.0
-	draw_rect(Rect2(p + Vector2(-7 + ex, -6 + ey), Vector2(4, 7)), Color("2a2440"))
-	draw_rect(Rect2(p + Vector2(3 + ex, -6 + ey), Vector2(4, 7)), Color("2a2440"))
+	if absf(face.x) > 0.2:
+		_face_left = face.x < 0.0
+	_draw_dressed(p, 20.0, _face_left)
+
+
+## 畫穿著裝扮的光靈（和主畫面、衣櫃同一隻）；往左走就左右翻轉
+func _draw_dressed(p: Vector2, r: float, left: bool) -> void:
+	var C := Vector2(W, H) / 2.0
+	var o := C - (cam + C) * zoom
+	draw_set_transform(o + p * zoom, 0.0, Vector2(-zoom if left else zoom, zoom))
+	SL.draw_all(self, Vector2.ZERO, r, Game.of(self).equipped, t)
+	draw_set_transform(o, 0.0, Vector2(zoom, zoom))
 
 
 func _draw_minimap(font: Font) -> void:

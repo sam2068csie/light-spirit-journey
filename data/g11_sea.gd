@@ -9,6 +9,7 @@ const UITheme := preload("game_theme.gd")
 const Game := preload("game.gd")
 const Units := preload("units.gd")
 const Center := preload("review_center.gd")
+const SL := preload("spirit_look.gd")
 const TM := preload("trig_map.gd")     # 月輪島：照單元地圖的形狀縮小畫（圓環＋正弦海岸＋羅盤礁）
 const WM := preload("world_map.gd")    # 指數島、對數島：照單元地圖的海岸線縮小畫
 
@@ -872,13 +873,16 @@ func _draw_boat() -> void:
 	hl.append(hull[0])
 	draw_polyline(hl, Color("c98a3e"), 3.0, true)
 	# 光靈坐在船上
-	var sp := p + Vector2(0, -16)
-	UITheme.dot(self, sp, 28.0, Color(1.0, 0.9, 0.55, 0.22))
-	UITheme.dot(self, sp, 15.0, Color("fff3c4"))
-	draw_arc(sp, 15.0, 0, TAU, 28, Color("f5c84c"), 2.5, true)
-	var ex := clampf(f.x, -1.0, 1.0) * 3.0
-	draw_rect(Rect2(sp + Vector2(-6 + ex, -5), Vector2(3.5, 6)), Color("2a2440"))
-	draw_rect(Rect2(sp + Vector2(3 + ex, -5), Vector2(3.5, 6)), Color("2a2440"))
+	_draw_dressed(p + Vector2(0, -18), 17.0, f.x < -0.1)
+
+
+## 畫穿著裝扮的光靈（和主畫面、衣櫃同一隻）；往左走就左右翻轉
+func _draw_dressed(p: Vector2, r: float, left: bool) -> void:
+	var C := Vector2(W, H) / 2.0
+	var o := C - (cam + C) * zoom
+	draw_set_transform(o + p * zoom, 0.0, Vector2(-zoom if left else zoom, zoom))
+	SL.draw_all(self, Vector2.ZERO, r, Game.of(self).equipped, t)
+	draw_set_transform(o, 0.0, Vector2(zoom, zoom))
 
 
 func _draw_minimap() -> void:
