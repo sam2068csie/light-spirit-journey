@@ -277,13 +277,38 @@ func _refresh_units() -> void:
 	title.position = Vector2(0, 52)
 	title.size = Vector2(1152, 40)
 	_units_body.add_child(title)
+	# 年級分頁：高一／高二（一次排一個年級）
+	if _grade == "":
+		_grade = Units.grade_of(g.cur_unit)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 8)
+	tabs.position = Vector2(1152 - 18 - 2 * 96 - 8, 56)
+	_units_body.add_child(tabs)
+	for gr in ["高一", "高二"]:
+		var tb := Button.new()
+		tb.text = gr
+		tb.focus_mode = Control.FOCUS_NONE
+		tb.custom_minimum_size = Vector2(96, 40)
+		var on: bool = gr == _grade
+		tb.add_theme_stylebox_override("normal", UITheme.box(Color(1, 1, 1, 0.14) if on else Color(1, 1, 1, 0.04), 20, UITheme.ACCENT if on else Color(1, 1, 1, 0.16), 2 if on else 1, 8))
+		tb.add_theme_stylebox_override("hover", UITheme.box(Color(1, 1, 1, 0.18), 20, UITheme.ACCENT, 2, 8))
+		tb.add_theme_stylebox_override("pressed", UITheme.box(Color(1, 1, 1, 0.22), 20, UITheme.ACCENT, 2, 8))
+		tb.add_theme_color_override("font_color", UITheme.ACCENT if on else UITheme.TEXT_DIM)
+		tb.add_theme_font_override("font", UITheme.bold_font())
+		tb.add_theme_font_size_override("font_size", UITheme.fs(17))
+		var grc: String = gr
+		tb.pressed.connect(func():
+			_grade = grc
+			Game.of(self).sfx("click")
+			_refresh_units())
+		tabs.add_child(tb)
 	# 每個學期一排：左邊是學期標籤，右邊照章節順序排卡片，卡片之間有小箭頭
 	var cw := UNIT_CARD.x
 	var gap := 22.0
 	var x0 := 148.0
 	var y := 126.0
 	var no := 1
-	for term in Units.TERMS:
+	for term in Units.GRADES[_grade]:
 		var list: Array = Units.units_of_term(term)
 		var tag := PanelContainer.new()
 		tag.add_theme_stylebox_override("panel", UITheme.box(Color(1, 1, 1, 0.05), 16, Color(1, 1, 1, 0.14), 1, 8))
@@ -319,6 +344,7 @@ func _refresh_units() -> void:
 
 
 const UNIT_CARD := Vector2(228, 240)
+var _grade := ""     # 選擇冒險目前看哪個年級（"高一"／"高二"）
 
 
 func _unit_card(g, u: Dictionary, no: int) -> Control:
@@ -1656,6 +1682,15 @@ class UnitEmblem extends Control:
 					draw_line(f[k], f[(k + 1) % 4], col, 2.5, true)
 					draw_line(bk[k], bk[(k + 1) % 4], Color(col.r, col.g, col.b, 0.6), 2.0, true)
 					draw_line(f[k], bk[k], Color(col.r, col.g, col.b, 0.8), 2.0, true)
+			"g10a", "g10b":
+				# 曦光：地平線上升起的太陽和光芒
+				var hz := c + Vector2(0, 14)
+				draw_arc(hz, 22.0, PI, TAU, 24, col.lightened(0.3), 3.0, true)
+				for k in 5:
+					var a := PI + PI * (k + 1) / 6.0
+					draw_line(hz + Vector2(cos(a), sin(a)) * 28.0, hz + Vector2(cos(a), sin(a)) * 38.0, col, 2.5, true)
+				draw_line(hz + Vector2(-42, 0), hz + Vector2(42, 0), col, 3.0, true)
+				draw_line(hz + Vector2(-28, 10), hz + Vector2(28, 10), Color(col.r, col.g, col.b, 0.5), 2.0, true)
 			"trig":
 				# 單位圓和正弦波
 				draw_arc(c + Vector2(-18, 0), 20.0, 0, TAU, 32, Color(col.r, col.g, col.b, 0.7), 2.0, true)

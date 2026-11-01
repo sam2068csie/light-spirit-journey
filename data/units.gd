@@ -16,6 +16,13 @@ extends RefCounted
 const UITheme := preload("game_theme.gd")
 
 const UNITS := [
+	# ======================= 高一上 =======================
+	# 曦光大陸：可以自由走動的 2D 地圖（g10_world.gd）。題目還沒放，地區先做好地圖、傳送、彩蛋
+	{"id": "g10a", "term": "高一上", "title": "曦光大陸", "exam": "高一上・試玩地圖", "color": UITheme.VIOLET, "open": true,
+	 "world": "光靈的旅程：曦光大陸", "map": "g10_world.gd", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# ======================= 高一下 =======================
+	{"id": "g10b", "term": "高一下", "title": "星夜之地", "exam": "", "color": UITheme.BLUE, "open": false,
+	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# ======================= 高二上 =======================
 	# 三角函數：建造中。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看（學生看不到）
 	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": false, "preview": true,
@@ -56,7 +63,17 @@ const UNITS := [
 ]
 
 ## 選擇冒險頁面的分組（依課本的章節順序；UNITS 也照這個順序排）
-const TERMS := ["高二上", "高二下"]
+const TERMS := ["高一上", "高一下", "高二上", "高二下"]
+## 年級分頁：選擇冒險一次只排一個年級（兩排），免得超出畫面
+const GRADES := {"高一": ["高一上", "高一下"], "高二": ["高二上", "高二下"]}
+
+
+static func grade_of(uid: String) -> String:
+	var term := String(unit(uid).term)
+	for g in GRADES:
+		if term in GRADES[g]:
+			return g
+	return "高二"
 
 const DEFAULT := "exp"
 
