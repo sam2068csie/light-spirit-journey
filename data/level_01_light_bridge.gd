@@ -2527,6 +2527,8 @@ func _show_journeys(ch: int) -> void:
 		_show_chapter_card()
 	elif _chest_ready(ch):
 		_open_chest(ch)      # 以前就全部通過、還沒開過寶箱的章節（更新前的存檔）
+	elif _gold_ready(ch):
+		_open_chest(ch, true)
 
 
 ## 一張旅程卡：編號、名稱、題型、最佳星數、完成度條；鎖住的卡片變暗
@@ -2890,6 +2892,11 @@ func _finish_journey() -> void:
 		get_tree().create_timer(0.7).timeout.connect(func():
 			if is_instance_valid(layer):
 				_open_chest(ch))
+	elif _gold_ready(ch):
+		# 這一章所有題型都答對過了：打開章節黃金寶箱
+		get_tree().create_timer(0.7).timeout.connect(func():
+			if is_instance_valid(layer):
+				_open_chest(ch, true))
 
 
 ## 回報問題用：現在是哪一關、哪一題、第幾種題型、第幾步
@@ -2931,6 +2938,15 @@ func _chapter_all_cleared(ch: int) -> bool:
 
 func _chest_ready(ch: int) -> bool:
 	return not review_mode and _chapter_all_cleared(ch) and not Game.of(self).chest_claimed(_chest_key(ch))
+
+
+## 章節黃金寶箱：這一章完成度 100%（每段旅程的每一種題型都答對過）
+func _gold_key(ch: int) -> String:
+	return _chest_key(ch) + "_gold"
+
+
+func _gold_ready(ch: int) -> bool:
+	return not review_mode and _chapter_completion(ch) >= 0.999 and not Game.of(self).chest_claimed(_gold_key(ch))
 
 
 ## 一排物品：圖示＋數量（例如 星塵 ×200、光之碎片 ×30）；note 是小字說明
@@ -2977,6 +2993,14 @@ func _dust_count_up(gain: int) -> void:
 
 ## 題目列表上方：這一章的寶箱狀態
 func _chest_status(ch: int, list_layer: Control) -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	v.add_child(_chest_status_row(ch, false))
+	v.add_child(_chest_status_row(ch, true))
+	return v
+
+
+func _chest_status_row(ch: int, gold: bool) -> Control:
 	var g = Game.of(self)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -2985,6 +3009,20 @@ func _chest_status(ch: int, list_layer: Control) -> Control:
 	ic.kind = "chest"
 	ic.custom_minimum_size = Vector2(34, 34)
 	row.add_child(ic)
+	if gold:
+		ic.modulate = Color(1.0, 0.85, 0.3)
+		var gl := Label.new()
+		gl.add_theme_font_size_override("font_size", UITheme.fs(15))
+		var pc := roundi(100.0 * _chapter_completion(ch))
+		if g.chest_claimed(_gold_key(ch)):
+			gl.text = "章節黃金寶箱　已打開 ✓"
+			gl.add_theme_color_override("font_color", UITheme.GOOD)
+			ic.modulate = Color(1.0, 0.85, 0.3, 0.45)
+		else:
+			gl.text = "章節黃金寶箱：這一章完成度 100%% 就能打開（目前 %d%%）" % pc
+			gl.add_theme_color_override("font_color", Color("ffd36e") if pc >= 100 else UITheme.TEXT_DIM)
+		row.add_child(gl)
+		return row
 	var sl := _chapter_slots(ch)
 	var done := 0
 	for slot in sl:
@@ -3004,10 +3042,14 @@ func _chest_status(ch: int, list_layer: Control) -> Control:
 
 
 ## 章節大寶箱：寶箱跳一跳 → 點「打開」→ 東西飛出來、加進持有物品
-func _open_chest(ch: int) -> void:
+var _chest_showing := false
+
+
+func _open_chest(ch: int, gold := false) -> void:
 	var g = Game.of(self)
-	if not _chest_ready(ch):
+	if _chest_showing or not (_gold_ready(ch) if gold else _chest_ready(ch)):
 		return
+	_chest_showing = true
 	var item_name := level_title()
 	var c: Color = UITheme.ACCENT
 	for it in level_chapters():
@@ -3017,15 +3059,17 @@ func _open_chest(ch: int) -> void:
 	g.sfx("open")
 	var o := UITheme.modal(self, c, 440)
 	var layer: Control = o[0]
+	layer.tree_exited.connect(func(): _chest_showing = false)
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 10)
 	col.add_child(_big_label(item_name, 26, c))
-	col.add_child(_big_label("全部通過！獲得章節大寶箱", 17, UITheme.TEXT))
+	col.add_child(_big_label("完成度 100%！獲得章節黃金寶箱" if gold else "全部通過！獲得章節大寶箱", 17, Color("ffd36e") if gold else UITheme.TEXT))
 	var holder := CenterContainer.new()
 	col.add_child(holder)
 	var box := ChestFx.new()
 	box.custom_minimum_size = Vector2(400, 190)
 	box.glow = c
+	box.gold = gold
 	holder.add_child(box)
 	var info := VBoxContainer.new()
 	info.custom_minimum_size = Vector2(0, 52)
@@ -3043,13 +3087,16 @@ func _open_chest(ch: int) -> void:
 	btn.pressed.connect(func():
 		if state[0] == 2:
 			layer.queue_free()
+			_chest_showing = false
 			_refresh_journey_list(ch)
+			if not gold and _gold_ready(ch):
+				_open_chest(ch, true)      # 一次就 100%：大寶箱之後接著開黃金寶箱
 			return
 		if state[0] == 1:
 			return
 		state[0] = 1
 		btn.disabled = true
-		var got: Dictionary = g.claim_chest(_chest_key(ch), _chest_final(ch))
+		var got: Dictionary = g.claim_chest(_gold_key(ch) if gold else _chest_key(ch), _chest_final(ch), gold)
 		# 1) 寶箱抖三下（音越來越高）
 		for i in 3:
 			g.play("bell", Game.semi(Game.scale_semi(2 + i * 2)), -10.0, 0.18 * i)
@@ -3096,6 +3143,7 @@ class ChestFx extends Control:
 	signal tapped
 	const UITheme := preload("game_theme.gd")
 	var glow := UITheme.GOLD
+	var gold := false       # 章節黃金寶箱：整個箱子是金色的
 	var t := 0.0
 	var phase := 0          # 0 等待（輕輕晃）、1 抖動、2 打開
 	var pt := 0.0           # 這個階段經過的時間
@@ -3179,10 +3227,11 @@ class ChestFx extends Control:
 		# 箱身
 		var body := Rect2(o.x - W / 2.0, o.y, W, 66)
 		draw_rect(Rect2(body.position + Vector2(4, 6), body.size), Color(0, 0, 0, 0.25))
-		draw_rect(body, Color("7a3d1c"))
-		draw_rect(Rect2(body.position, Vector2(W, 10)), UITheme.GOLD_DEEP)
-		draw_rect(Rect2(body.position.x + W * 0.17, body.position.y, 12, 66), UITheme.GOLD_DEEP)
-		draw_rect(Rect2(body.position.x + W * 0.83 - 12, body.position.y, 12, 66), UITheme.GOLD_DEEP)
+		var trim: Color = Color("fff3c4") if gold else UITheme.GOLD_DEEP
+		draw_rect(body, Color("d9a52a") if gold else Color("7a3d1c"))
+		draw_rect(Rect2(body.position, Vector2(W, 10)), trim)
+		draw_rect(Rect2(body.position.x + W * 0.17, body.position.y, 12, 66), trim)
+		draw_rect(Rect2(body.position.x + W * 0.83 - 12, body.position.y, 12, 66), trim)
 		# 開口的光
 		if lid > 0.0:
 			draw_rect(Rect2(o.x - W / 2.0 + 6, o.y - 4, W - 12, 10), Color(1, 0.95, 0.7, 0.9 * lid))
@@ -3192,21 +3241,25 @@ class ChestFx extends Control:
 		if front > 0.5:
 			var lp := PackedVector2Array([Vector2(o.x - W / 2.0, o.y), Vector2(o.x - W / 2.0 + 8, o.y - front),
 				Vector2(o.x + W / 2.0 - 8, o.y - front), Vector2(o.x + W / 2.0, o.y)])
-			draw_colored_polygon(lp, Color("9a5228"))
-			draw_rect(Rect2(o.x - W / 2.0, o.y - 6, W, 6), UITheme.GOLD_DEEP)
-			draw_rect(Rect2(o.x - W * 0.33, o.y - front, 12, front), UITheme.GOLD_DEEP)
-			draw_rect(Rect2(o.x + W * 0.33 - 12, o.y - front, 12, front), UITheme.GOLD_DEEP)
+			draw_colored_polygon(lp, Color("f0c040") if gold else Color("9a5228"))
+			draw_rect(Rect2(o.x - W / 2.0, o.y - 6, W, 6), trim)
+			draw_rect(Rect2(o.x - W * 0.33, o.y - front, 12, front), trim)
+			draw_rect(Rect2(o.x + W * 0.33 - 12, o.y - front, 12, front), trim)
 		if lid > 0.0:
 			var back := lh * 1.1 * lid
 			var ip := PackedVector2Array([Vector2(o.x - W / 2.0 + 4, o.y - 2), Vector2(o.x - W / 2.0 + 12, o.y - 2 - back),
 				Vector2(o.x + W / 2.0 - 12, o.y - 2 - back), Vector2(o.x + W / 2.0 - 4, o.y - 2)])
-			draw_colored_polygon(ip, Color("4e2410"))
-			draw_rect(Rect2(o.x - W / 2.0 + 12, o.y - 2 - back, W - 24, 6), UITheme.GOLD_DEEP)
+			draw_colored_polygon(ip, Color("8a6018") if gold else Color("4e2410"))
+			draw_rect(Rect2(o.x - W / 2.0 + 12, o.y - 2 - back, W - 24, 6), trim)
 		# 鎖
 		if lid < 0.5:
 			draw_rect(Rect2(o.x - 11, o.y - 8, 22, 26), UITheme.GOLD_LIGHT)
 			UITheme.dot(self, o + Vector2(0, 4), 3.5, Color("5a2c10"))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		if gold and phase < 2:
+			for i in 4:
+				var f := fmod(t * 0.7 + i * 0.25, 1.0)
+				_star(m + Vector2(-70 + i * 46, 50 - f * 90), 3.0 + 4.0 * sin(f * PI), Color(1, 0.97, 0.8, sin(f * PI)))
 		# 星星
 		for p in parts:
 			var a: float = clampf(p.life, 0.0, 1.0)

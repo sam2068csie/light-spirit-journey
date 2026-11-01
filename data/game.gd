@@ -401,6 +401,9 @@ const RW_TYPE := 5            # 之後每答對一種新題型
 const RW_STAR3 := 10          # 第一次拿到三顆星
 const CHEST := {"dust": 150, "shard": 20, "crystal": 1}
 const CHEST_FINAL := {"dust": 200, "shard": 40, "crystal": 1}   # 一大關的最後一章
+## 章節黃金寶箱：這一章完成度 100%（每段旅程的每一種題型都答對過）才能打開
+const GOLD_CHEST := {"dust": 300, "shard": 40, "crystal": 2}
+const GOLD_CHEST_FINAL := {"dust": 400, "shard": 60, "crystal": 3}
 ## 終焉之塔：每通過一層給一點星塵；同一天同一層只給一次（今天第一次爬到 5 層給 1～5 層，再爬到 10 層只給 6～10 層）
 const TOWER_DUST := 3         # 每一層
 const TOWER_DUST_BONUS := 5   # 每第 5 層再多給
@@ -466,11 +469,15 @@ func chest_claimed(ckey: String) -> bool:
 
 
 ## 打開章節寶箱（ckey 例如 "L1_c1"）：回傳拿到的東西，已經開過就回傳 {}
-func claim_chest(ckey: String, final: bool) -> Dictionary:
+func claim_chest(ckey: String, final: bool, gold := false) -> Dictionary:
 	if main_rw.chests.has(ckey):
 		return {}
 	main_rw.chests[ckey] = true
-	var got: Dictionary = (CHEST_FINAL if final else CHEST).duplicate()
+	var got: Dictionary
+	if gold:
+		got = (GOLD_CHEST_FINAL if final else GOLD_CHEST).duplicate()
+	else:
+		got = (CHEST_FINAL if final else CHEST).duplicate()
 	for k in got:
 		inv[k] = int(inv.get(k, 0)) + int(got[k])
 	save_review()
@@ -576,7 +583,7 @@ func mark_story(key: String) -> void:
 
 const DQ := preload("daily_quests.gd")
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.02-s"
+const BUILD := "2026.11.02-t"
 
 
 ## 讀取各單元的資料；舊存檔（還沒有單元的版本）的今日修煉、終焉之塔紀錄搬到「指數與對數」

@@ -33,11 +33,8 @@ const ITEMS := [
 	{"id": "orb", "name": "漩渦水晶球", "slots": ["top", "sill"], "src": "egg11:whirl", "how": "光潮群島 · 海上的漩渦", "draw": "orb", "col": Color("6ee7c0")},
 ]
 
-## 每個單元的紀念品（點亮整個單元的所有聖地才拿得到）
-const SOUVENIRS := {
-	"exp": {"name": "雙島模型", "story": "指數島和對數島，中間連著光之橋。點亮八座聖地時，島上的光靈們送你的模型。", "col": Color("f5c84c")},
-	"trig": {"name": "月輪島模型", "story": "圓環島、正弦海岸和羅盤礁，晚上潟湖會倒映月光。", "col": Color("ff9ad5")},
-}
+## 每個單元的紀念品：見 souvenir_art.gd（名字、故事、造型、100% 特效）
+const SA := preload("souvenir_art.gd")
 
 ## 小屋等級：點亮幾座聖地升級（高一、高二、高三都算）
 const LEVELS := [
@@ -56,4 +53,4 @@ static func item(id: String) -> Dictionary:
 
 
 static func souvenir(uid: String) -> Dictionary:
-	return SOUVENIRS.get(uid, {"name": "紀念品", "story": "點亮這個單元的所有聖地就會出現。", "col": Color("c8d0f0")})
+	return SA.info(uid)

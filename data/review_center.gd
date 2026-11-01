@@ -27,6 +27,7 @@ const TYPE_DEFAULT_TAG := {"cross": "exp_quad_cross", "draw": "draw_graph", "tab
 static var _index: Dictionary = {}       # tag → [{level, slot, vi, title, type}]
 static var _level_tags: Dictionary = {}  # 大關 id → [tag…]
 static var _built := false
+static var _nvar: Dictionary = {}        # "大關/旅程" → 題型數（算 100% 完成度用）
 static var _slots: Dictionary = {}       # 大關 id → [旅程 id…]（世界地圖算完成度用）
 
 
@@ -68,6 +69,7 @@ static func build() -> void:
 		_slots[lv.id] = []
 		for slot in bank.slots():
 			_slots[lv.id].append(slot.id)
+			_nvar[lv.id + "/" + slot.id] = slot.variants.size()
 			if SKIP_TYPES.has(slot.type):
 				continue
 			var slot_tags := {}
@@ -127,6 +129,23 @@ static func level_progress(g, id: String) -> float:
 		if not g.cleared_of(id + "/" + sid).is_empty():
 			n += 1
 	return float(n) / sl.size()
+
+
+## 這一大關的「100% 完成度」：每段旅程的每一種題型都答對過
+static func level_full(g, id: String) -> float:
+	build()
+	var sl: Array = _slots.get(id, [])
+	if sl.is_empty():
+		return 0.0
+	var sum := 0.0
+	for sid in sl:
+		var n := int(_nvar.get(id + "/" + sid, 1))
+		var got := 0
+		for vi in g.cleared_of(id + "/" + sid):
+			if int(vi) < n:
+				got += 1
+		sum += float(got) / maxf(1.0, n)
+	return sum / sl.size()
 
 
 # ================= 熟練度 =================

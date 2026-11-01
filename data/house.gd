@@ -12,6 +12,7 @@ const Units := preload("units.gd")
 const Center := preload("review_center.gd")
 const HI := preload("house_items.gd")
 const SL := preload("spirit_look.gd")
+const SA := preload("souvenir_art.gd")
 
 const W := 1152.0
 const H := 648.0
@@ -123,6 +124,23 @@ func _unit_lit(u: Dictionary) -> bool:
 		if Center.level_progress(g, l.id) < 0.999:
 			return false
 	return true
+
+
+## 全單元 100%（每段旅程的每一種題型都答對過）
+func _unit_full(u: Dictionary) -> bool:
+	if u.levels.is_empty():
+		return false
+	var g = Game.of(self)
+	for l in u.levels:
+		if Center.level_full(g, l.id) < 0.999:
+			return false
+	return true
+
+
+func _sv_state(u: Dictionary) -> int:
+	if not _unit_lit(u):
+		return 0
+	return 2 if _unit_full(u) else 1
 
 
 func _save() -> void:
@@ -527,12 +545,16 @@ func _open_shelf() -> void:
 	Game.of(self).sfx("click")
 	var vb := _modal(Color("f0d29a"), 860, "紀念品櫃")
 	var tip := Label.new()
-	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品"
+	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品；全單元 100% 時，紀念品會發光並出現專屬特效"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	vb.add_child(tip)
 	var detail := Label.new()
+	var big := SouvenirView.new()
+	big.s = 80.0
+	big.custom_minimum_size = Vector2(130, 110)
+	big.visible = false
 	for gr in ["高一", "高二", "高三"]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
@@ -554,7 +576,8 @@ func _open_shelf() -> void:
 			row.add_child(l)
 			continue
 		for u in units:
-			var lit := _unit_lit(u)
+			var stt := _sv_state(u)
+			var lit := stt > 0
 			var sv := HI.souvenir(u.id)
 			var b := Button.new()
 			b.focus_mode = Control.FOCUS_NONE
@@ -578,26 +601,40 @@ func _open_shelf() -> void:
 			b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.28) if lit else Color(0, 0, 0, 0.25), 10, c if lit else Color(1, 1, 1, 0.12), 2 if lit else 1, 4))
 			b.add_theme_stylebox_override("hover", UITheme.box(Color(c.r, c.g, c.b, 0.36) if lit else Color(1, 1, 1, 0.06), 10, c, 2, 4))
 			nl.add_theme_color_override("font_color", UITheme.TEXT if lit else UITheme.TEXT_DIM)
-			var gem := SouvenirIcon.new()
-			gem.col = c
-			gem.lit = lit
-			gem.position = Vector2(26, 4)
-			gem.size = Vector2(30, 30)
+			var gem := SouvenirView.new()
+			gem.uid = u.id
+			gem.state = stt
+			gem.s = 30.0
+			gem.position = Vector2(16, 2)
+			gem.size = Vector2(50, 36)
 			gem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			b.add_child(gem)
+			if stt == 2:
+				b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.4), 10, Color("ffe7a3"), 3, 4))
 			var uu: Dictionary = u
 			b.pressed.connect(func():
-				if lit:
-					detail.text = "%s：%s　—　%s" % [uu.title, sv.name, sv.story]
+				big.uid = uu.id
+				big.state = stt
+				big.visible = true
+				if stt == 2:
+					detail.text = "★ %s　%s（全單元 100%%）\n%s" % [uu.title, sv.name, sv.story]
+				elif stt == 1:
+					detail.text = "%s　%s\n%s\n把這個單元每一段旅程的所有題型都答對（100%%），它就會發光！" % [uu.title, sv.name, sv.story]
 				else:
 					detail.text = "%s：點亮這個單元的所有聖地就會出現。" % uu.title)
 			row.add_child(b)
+	var drow := HBoxContainer.new()
+	drow.add_theme_constant_override("separation", 14)
+	vb.add_child(drow)
+	drow.add_child(big)
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.custom_minimum_size = Vector2(0, 48)
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	detail.custom_minimum_size = Vector2(0, 60)
 	detail.add_theme_font_size_override("font_size", UITheme.fs(14))
 	detail.add_theme_color_override("font_color", UITheme.TEXT)
 	detail.text = "點一件紀念品看看。"
-	vb.add_child(detail)
+	drow.add_child(detail)
 	_close_btn(vb)
 
 
@@ -859,18 +896,11 @@ func _draw_shelf(font: Font) -> void:
 			units.append_array(Units.units_of_term(term))
 		var x := r.position.x + 16
 		for u in units:
-			if x > r.end.x - 26:
+			if x > r.end.x - 24:
 				break
-			var lit := _unit_lit(u)
-			var c: Color = HI.souvenir(u.id).col
-			var base := Vector2(x + 10, y + 84)
-			if lit:
-				UITheme.dot(self, base + Vector2(0, -24), 18.0 + sin(t * 2.0 + x) * 2.0, Color(c.r, c.g, c.b, 0.3))
-				draw_colored_polygon(PackedVector2Array([base + Vector2(-10, 0), base + Vector2(10, 0), base + Vector2(7, -30), base + Vector2(-7, -30)]), c)
-				UITheme.dot(self, base + Vector2(0, -34), 7.0, c.lightened(0.4))
-			else:
-				draw_rect(Rect2(base + Vector2(-8, -24), Vector2(16, 24)), Color(0, 0, 0, 0.25))
-			x += 24
+			var base := Vector2(x + 12, y + 80)
+			SA.draw(self, u.id, base, 34.0, t + x * 0.37, _sv_state(u))
+			x += 25
 
 
 func _draw_board(font: Font) -> void:
@@ -1055,6 +1085,23 @@ class ItemPreview extends Control:
 			return
 		var r := Rect2(Vector2(size.x / 2.0 - 30, 2), Vector2(60, size.y - 4))
 		house._draw_item(self, id, r, dim)
+
+
+## 紀念品（會動的：100% 的特效）
+class SouvenirView extends Control:
+	const SA := preload("souvenir_art.gd")
+	var uid := ""
+	var state := 0
+	var s := 30.0
+	var t := 0.0
+
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		if uid != "":
+			SA.draw(self, uid, Vector2(size.x / 2.0, size.y - 2.0), s, t, state)
 
 
 ## 紀念品櫃視窗裡的小寶石
