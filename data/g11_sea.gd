@@ -64,6 +64,7 @@ var _toast_t := 0.0
 var _fade: ColorRect
 var _busy := false
 var _tp: Button
+var _zoom_hold := 0.0     # 離島動畫（zoom 1.7 → 1）播放中，先不要自動縮放
 var _whirl_spin := 0.0
 
 
@@ -119,6 +120,7 @@ func _ready() -> void:
 		var tw := create_tween().set_parallel()
 		tw.tween_property(self, "zoom", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_property(_fade, "color:a", 0.0, 0.6)
+		_zoom_hold = 0.8
 		vel = Vector2.from_angle(heading) * 160.0
 	cam = _cam_target()
 	_refresh_goal()
@@ -591,13 +593,47 @@ func _make_shape(isl: Dictionary) -> Dictionary:
 	return {}
 
 
+## 一座島真正的範圍（月輪島、雙島照實際形狀算），外面多留一點海
+func _island_box(i: int) -> Rect2:
+	var isl: Dictionary = ISLANDS[i]
+	var sh: Dictionary = _shape[i]
+	var box := Rect2(isl.c - isl.r, isl.r * 2.0)
+	match String(sh.get("kind", "")):
+		"trig":
+			var rr: float = sh.r + sh.rw
+			box = Rect2(sh.o - Vector2(rr, rr), Vector2(rr, rr) * 2.0)
+			for q in sh.wave:
+				box = box.expand(q)
+			box = box.merge(Rect2(sh.cp - Vector2(sh.dr, sh.dr), Vector2(sh.dr, sh.dr) * 2.0))
+		"exp":
+			box = Rect2(sh.polys[0][0], Vector2.ZERO)
+			for poly in sh.polys:
+				for q in poly:
+					box = box.expand(q)
+	return box.grow(50.0)
+
+
+## 靠近碼頭（跳出卡片）時：整座島和光舟都要入鏡 → 回傳 [中心, 縮放]；沒有就回傳 []
+func _dock_view() -> Array:
+	if String(_near.get("kind", "")) != "dock" or story_focus.x >= 0.0:
+		return []
+	var box := _island_box(int(_near.i)).expand(pos + Vector2(60, 60)).expand(pos - Vector2(60, 60))
+	# 上面留給橫幅、按鈕，下面留給卡片
+	var z := minf((W - 80.0) / box.size.x, (H - 260.0) / box.size.y)
+	return [box.get_center() + Vector2(0, 30.0 / z), clampf(z, 0.35, 1.0)]
+
+
 func _cam_target() -> Vector2:
+	var dv := _dock_view()
+	if not dv.is_empty():
+		return dv[0] - Vector2(W, H) / 2.0
 	var c := (story_focus if story_focus.x >= 0.0 else pos) - Vector2(W, H) / 2.0
 	return Vector2(clampf(c.x, 0.0, WORLD.x - W), clampf(c.y, 0.0, WORLD.y - H))
 
 
 func _process(delta: float) -> void:
 	t += delta
+	_zoom_hold -= delta
 	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy and not playing
 	_goal_t -= delta
 	if _goal_t <= 0.0:
@@ -634,6 +670,11 @@ func _process(delta: float) -> void:
 	_wake = _wake.filter(func(w): return w.life < 1.4)
 	if not _busy:
 		cam = cam.lerp(_cam_target(), 1.0 - exp(-6.0 * delta))
+		# 鏡頭縮放：靠近碼頭時拉遠到看得到整座島，離開就慢慢回到 1
+		if not _busy and _zoom_hold <= 0.0:
+			var dv := _dock_view()
+			var zt: float = dv[1] if not dv.is_empty() else 1.0
+			zoom = lerpf(zoom, zt, 1.0 - exp(-4.0 * delta))
 	_check_world()
 	if _toast_t > 0.0:
 		_toast_t -= delta
