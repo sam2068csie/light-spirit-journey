@@ -27,7 +27,7 @@ const SLOTS := [
 	{"kind": "wall", "r": Rect2(684, 112, 90, 80)},
 	{"kind": "big", "r": Rect2(374, 270, 110, 174)},
 	{"kind": "big", "r": Rect2(1012, 270, 66, 174)},
-	{"kind": "sill", "r": Rect2(500, 230, 152, 34)},
+	{"kind": "sill", "r": Rect2(500, 198, 152, 36)},
 	{"kind": "top", "r": Rect2(790, 334, 64, 38)},
 	{"kind": "top", "r": Rect2(930, 334, 64, 38)},
 	{"kind": "floor", "r": Rect2(380, 470, 110, 70)},
@@ -664,17 +664,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var font := UITheme.bold_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Color("0d1230"))
-	# 牆、踢腳板、地板
-	draw_rect(WALL, Color("3a2f52"))
-	draw_rect(Rect2(WALL.position.x, 300, WALL.size.x, FLOOR_Y - 300), Color("33294a"))
-	for k in 12:
-		var x := WALL.position.x + 40 + k * 84
-		draw_line(Vector2(x, WALL.position.y + 4), Vector2(x, FLOOR_Y - 4), Color(1, 1, 1, 0.03), 2.0)
-	draw_rect(Rect2(40, FLOOR_Y, W - 80, H - FLOOR_Y - 40), Color("6b4f3e"))
-	draw_rect(Rect2(40, FLOOR_Y, W - 80, 8), Color("8a6a4e"))
-	for k in 3:
-		draw_line(Vector2(40, FLOOR_Y + 46 + k * 46), Vector2(W - 40, FLOOR_Y + 46 + k * 46), Color(0, 0, 0, 0.16), 2.0)
-	draw_rect(WALL, Color("5a4a78"), false, 3.0)
+	_draw_room()
 	_draw_window()
 	_draw_shelf(font)
 	_draw_board(font)
@@ -683,7 +673,10 @@ func _draw() -> void:
 	for i in SLOTS.size():
 		var id := _placed(i)
 		if id != "":
-			_draw_item(self, id, SLOTS[i].r)
+			var sr: Rect2 = SLOTS[i].r
+			if SLOTS[i].kind in ["floor", "big"]:
+				_shadow(Vector2(sr.get_center().x, sr.end.y - 2), sr.size.x * 0.48, 7.0, 0.3)
+			_draw_item(self, id, sr)
 	# 擺設模式：格位
 	if deco:
 		for i in SLOTS.size():
@@ -719,8 +712,92 @@ func _dash_rect(r: Rect2, c: Color, w: float) -> void:
 	draw_dashed_line(Vector2(r.position.x, r.end.y), r.position, c, w, 6.0)
 
 
+## 透視房間：天花板、左右側牆、往前展開的地板（消失點在畫面中間偏上）
+const VP := Vector2(576, 250)
+
+
+func _poly(pts: Array, c: Color) -> void:
+	draw_colored_polygon(PackedVector2Array(pts), c)
+
+
+func _draw_room() -> void:
+	var L := WALL.position.x
+	var R := WALL.end.x
+	var T := WALL.position.y
+	var B := FLOOR_Y
+	var FL := Vector2(-90, H)          # 地板前緣（畫面外一點）
+	var FR := Vector2(W + 90, H)
+	# 地板往前到畫面底的直線：左右側牆的底線
+	var lb := Vector2(0, B + (H - B) * (L / (L - FL.x)))
+	var rb := Vector2(W, B + (H - B) * ((W - R) / (FR.x - R)))
+	# 天花板
+	_poly([Vector2(0, 0), Vector2(W, 0), Vector2(R, T), Vector2(L, T)], Color("221a36"))
+	for k in 4:
+		var f := (k + 1) / 5.0
+		draw_line(Vector2(L * (1.0 - f) + 0, T * (1.0 - f)), Vector2(R + (W - R) * f, T * (1.0 - f)), Color(1, 1, 1, 0.03), 2.0)
+	# 側牆（比後牆暗）
+	_poly([Vector2(0, 0), Vector2(L, T), Vector2(L, B), lb], Color("2a2142"))
+	_poly([Vector2(W, 0), Vector2(R, T), Vector2(R, B), rb], Color("2a2142"))
+	# 後牆＋下半部牆裙
+	draw_rect(WALL, Color("3a2f52"))
+	draw_rect(Rect2(L, 300, R - L, B - 300), Color("33294a"))
+	draw_rect(Rect2(L, 296, R - L, 6), Color("4a3d66"))
+	for k in 12:
+		var x := L + 40 + k * 84
+		draw_line(Vector2(x, 302), Vector2(x, B - 4), Color(0, 0, 0, 0.08), 2.0)
+	# 窗戶灑進來的月光（後牆上的光暈）
+	for k in 5:
+		UITheme.dot(self, WINDOW.get_center() + Vector2(0, 20), 150.0 - k * 26.0, Color(0.6, 0.7, 1.0, 0.025))
+	# 側牆的牆裙
+	_poly([Vector2(L, 300), Vector2(L, B), lb, Vector2(0, 300 + (300 - T) * 0.0 + (lb.y - B) * 0.55)], Color("261e3c"))
+	_poly([Vector2(R, 300), Vector2(R, B), rb, Vector2(W, 300 + (rb.y - B) * 0.55)], Color("261e3c"))
+	# 地板（梯形）
+	_poly([Vector2(L, B), Vector2(R, B), FR, FL], Color("6b4f3e"))
+	# 木板：往消失點收斂的縫
+	for k in 15:
+		var bx := L + (R - L) * k / 14.0
+		var d := (Vector2(bx, B) - VP).normalized()
+		var fx := VP + d * ((H - VP.y) / d.y)
+		draw_line(Vector2(bx, B), fx, Color(0, 0, 0, 0.14), 2.0)
+	# 橫向接縫：越前面間距越大
+	var yy := B
+	var gap := 14.0
+	while yy < H:
+		yy += gap
+		gap *= 1.35
+		draw_line(Vector2(0, yy), Vector2(W, yy), Color(0, 0, 0, 0.1), 1.5)
+	# 窗光落在地板上
+	var wl := WINDOW.position.x
+	var wr := WINDOW.end.x
+	_poly([Vector2(wl + 10, B + 6), Vector2(wr - 10, B + 6), Vector2(wr + 70, H - 20), Vector2(wl - 70, H - 20)], Color(0.65, 0.75, 1.0, 0.07))
+	# 踢腳板（後牆＋兩側）
+	draw_rect(Rect2(L, B - 10, R - L, 10), Color("4a3a2e"))
+	_poly([Vector2(L, B - 10), Vector2(L, B), lb, lb + Vector2(0, -18)], Color("3e3026"))
+	_poly([Vector2(R, B - 10), Vector2(R, B), rb, rb + Vector2(0, -18)], Color("3e3026"))
+	# 牆角的陰影線
+	draw_line(Vector2(L, T), Vector2(L, B), Color(0, 0, 0, 0.35), 3.0)
+	draw_line(Vector2(R, T), Vector2(R, B), Color(0, 0, 0, 0.35), 3.0)
+	draw_line(Vector2(L, T), Vector2(R, T), Color(0, 0, 0, 0.3), 3.0)
+	draw_line(Vector2(L, B), Vector2(R, B), Color(0, 0, 0, 0.3), 2.0)
+	# 前景暗角
+	for k in 4:
+		draw_rect(Rect2(0, H - 10 - k * 10, W, 10), Color(0, 0, 0, 0.06 * (4 - k)))
+
+
+## 貼地的橢圓陰影
+func _shadow(c: Vector2, rx: float, ry: float, a := 0.28) -> void:
+	var pts := PackedVector2Array()
+	for k in 24:
+		var ang := TAU * k / 24.0
+		pts.append(c + Vector2(cos(ang) * rx, sin(ang) * ry))
+	draw_colored_polygon(pts, Color(0, 0, 0, a))
+
+
 func _draw_window() -> void:
 	var r := WINDOW
+	# 窗框內側的厚度（看得到牆的深度）
+	draw_rect(r.grow(10), Color("2a2142"))
+	_poly([r.position - Vector2(10, 10), Vector2(r.end.x + 10, r.position.y - 10), Vector2(r.end.x, r.position.y), r.position], Color("1e1830"))
 	draw_rect(r, Color("142458"))
 	var mc := r.position + Vector2(130, 36)
 	UITheme.dot(self, mc, 20.0, Color("fff3d6"))
@@ -731,13 +808,24 @@ func _draw_window() -> void:
 	draw_rect(r, Color("c9a46e"), false, 6.0)
 	draw_line(r.position + Vector2(r.size.x / 2.0, 0), r.position + Vector2(r.size.x / 2.0, r.size.y), Color("c9a46e"), 4.0)
 	draw_line(r.position + Vector2(0, r.size.y / 2.0), r.position + Vector2(r.size.x, r.size.y / 2.0), Color("c9a46e"), 4.0)
-	draw_rect(Rect2(r.position.x - 12, r.end.y, r.size.x + 24, 8), Color("8a6a4e"))
+	# 窗台：上面一塊往前凸的台面（看得到頂面）＋正面＋下方陰影
+	var sy := r.end.y + 6
+	_poly([Vector2(r.position.x - 14, r.end.y), Vector2(r.end.x + 14, r.end.y), Vector2(r.end.x + 26, sy + 6), Vector2(r.position.x - 26, sy + 6)], Color("a8865e"))
+	draw_rect(Rect2(r.position.x - 26, sy + 6, r.size.x + 52, 10), Color("7a5a40"))
+	draw_rect(Rect2(r.position.x - 22, sy + 16, r.size.x + 44, 6), Color(0, 0, 0, 0.22))
 
 
 func _draw_shelf(font: Font) -> void:
 	var r := SHELF
-	draw_rect(r, Color("5a3f2e"))
-	draw_rect(r, Color("8a6a4e"), false, 4.0)
+	var dp := Vector2(18, 14)      # 櫃子的深度（往右下凸出來）
+	_shadow(Vector2(r.get_center().x + 14, r.end.y + 8), r.size.x * 0.62, 10.0)
+	# 側面、頂面
+	_poly([Vector2(r.end.x, r.position.y), r.end, r.end + dp, Vector2(r.end.x, r.position.y) + dp], Color("4a3224"))
+	_poly([r.position, Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.position.y) + dp, r.position + dp], Color("9a7a58"))
+	draw_rect(Rect2(r.position + dp, r.size), Color("5a3f2e"))
+	draw_rect(r.grow(-8), Color("3e2a1e"))   # 內部（比較暗，看起來凹進去）
+	r = Rect2(r.position + dp, r.size)
+	draw_rect(r, Color("8a6a4e"), false, 6.0)
 	var title := "紀念品櫃"
 	var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 	draw_string(font, Vector2(r.position.x + (r.size.x - tw) / 2.0, r.position.y - 8), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("ffe7a3"))
@@ -745,7 +833,9 @@ func _draw_shelf(font: Font) -> void:
 	for k in 3:
 		var y := r.position.y + 20 + k * 104
 		draw_string(font, Vector2(r.position.x + 10, y + 12), rows[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f0d29a"))
-		draw_rect(Rect2(r.position.x + 6, y + 84, r.size.x - 12, 8), Color("8a6a4e"))
+		_poly([Vector2(r.position.x + 6, y + 80), Vector2(r.end.x - 6, y + 80), Vector2(r.end.x - 6, y + 84), Vector2(r.position.x + 6, y + 84)], Color("a8865e"))
+		draw_rect(Rect2(r.position.x + 6, y + 84, r.size.x - 12, 7), Color("7a5a40"))
+		draw_rect(Rect2(r.position.x + 6, y + 91, r.size.x - 12, 5), Color(0, 0, 0, 0.25))
 		var units := []
 		for term in Units.GRADES.get(rows[k], []):
 			units.append_array(Units.units_of_term(term))
@@ -767,6 +857,7 @@ func _draw_shelf(font: Font) -> void:
 
 func _draw_board(font: Font) -> void:
 	var r := BOARD
+	draw_rect(Rect2(r.position + Vector2(6, 8), r.size), Color(0, 0, 0, 0.25))
 	draw_rect(r, Color("a07a4e"))
 	draw_rect(r, Color("6b4f2e"), false, 6.0)
 	var notes := [[Vector2(14, 14), Color("fff3d6")], [Vector2(104, 18), Color("d6f0ff")], [Vector2(54, 70), Color("ffd6ec")]]
@@ -780,9 +871,17 @@ func _draw_board(font: Font) -> void:
 
 func _draw_desk(font: Font) -> void:
 	var r := DESK
-	draw_rect(r, Color("8a5a3a"))
-	draw_rect(Rect2(r.position.x + 12, r.end.y, 12, FLOOR_Y - r.end.y + 20), Color("6b4f2e"))
-	draw_rect(Rect2(r.end.x - 24, r.end.y, 12, FLOOR_Y - r.end.y + 20), Color("6b4f2e"))
+	_shadow(Vector2(r.get_center().x, FLOOR_Y + 22), r.size.x * 0.58, 12.0)
+	# 後腳（短、暗）
+	draw_rect(Rect2(r.position.x + 22, r.end.y, 10, FLOOR_Y - r.end.y - 2), Color("4a3426"))
+	draw_rect(Rect2(r.end.x - 32, r.end.y, 10, FLOOR_Y - r.end.y - 2), Color("4a3426"))
+	# 桌面：頂面（梯形往後縮）＋正面
+	_poly([r.position + Vector2(10, -16), Vector2(r.end.x - 10, r.position.y - 16), Vector2(r.end.x, r.position.y), r.position], Color("a8744a"))
+	draw_rect(r, Color("7a4a2e"))
+	draw_line(r.position, Vector2(r.end.x, r.position.y), Color(1, 0.85, 0.6, 0.35), 2.0)
+	# 前腳
+	draw_rect(Rect2(r.position.x + 8, r.end.y, 14, FLOOR_Y - r.end.y + 26), Color("6b4f2e"))
+	draw_rect(Rect2(r.end.x - 22, r.end.y, 14, FLOOR_Y - r.end.y + 26), Color("6b4f2e"))
 	# 檯燈和攤開的書
 	var lp := Vector2(r.position.x + 120, r.position.y)
 	UITheme.dot(self, lp + Vector2(0, -40), 34.0, Color(1, 0.85, 0.4, 0.12 + 0.04 * sin(t * 2.0)))
