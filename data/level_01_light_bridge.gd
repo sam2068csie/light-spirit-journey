@@ -2499,7 +2499,6 @@ func _show_journeys(ch: int) -> void:
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 12)
 	col.add_child(_big_label(item.name, 30, c))
-	col.add_child(_big_label("完成度 %d%%" % roundi(100.0 * _chapter_completion(ch)), 16, UITheme.TEXT_DIM))
 	col.add_child(_chest_status(ch, layer))
 	var grid := GridContainer.new()
 	grid.columns = 4
@@ -2993,8 +2992,10 @@ func _dust_count_up(gain: int) -> void:
 
 ## 題目列表上方：這一章的寶箱狀態
 func _chest_status(ch: int, list_layer: Control) -> Control:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 4)
+	# 兩個寶箱排在同一行，省下垂直空間（題目列表才不會超出畫面）
+	var v := HBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 28)
 	v.add_child(_chest_status_row(ch, false))
 	v.add_child(_chest_status_row(ch, true))
 	return v
@@ -3019,7 +3020,7 @@ func _chest_status_row(ch: int, gold: bool) -> Control:
 			gl.add_theme_color_override("font_color", UITheme.GOOD)
 			ic.modulate = Color(1.0, 0.85, 0.3, 0.45)
 		else:
-			gl.text = "章節黃金寶箱：這一章完成度 100%% 就能打開（目前 %d%%）" % pc
+			gl.text = "章節黃金寶箱：完成度 %d%%／100%%" % pc
 			gl.add_theme_color_override("font_color", Color("ffd36e") if pc >= 100 else UITheme.TEXT_DIM)
 		row.add_child(gl)
 		return row
@@ -3035,7 +3036,7 @@ func _chest_status_row(ch: int, gold: bool) -> Control:
 		l.add_theme_color_override("font_color", UITheme.GOOD)
 		ic.modulate = Color(1, 1, 1, 0.45)
 	else:
-		l.text = "章節大寶箱：通過這一章全部 %d 段旅程就能打開（%d／%d）" % [sl.size(), done, sl.size()]
+		l.text = "章節大寶箱：通過 %d／%d 段旅程" % [done, sl.size()]
 		l.add_theme_color_override("font_color", UITheme.ACCENT if done >= sl.size() else UITheme.TEXT_DIM)
 	row.add_child(l)
 	return row
