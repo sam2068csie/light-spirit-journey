@@ -55,12 +55,80 @@ func _ready() -> void:
 		_show_tower_result(a.tower_result)
 	if a.has("summary"):
 		_show_summary(a.summary, a.get("summary_kind", "daily"))
+	# 第一次打開遊戲：先選身分（高一／高二），選完直接進那個年級的世界地圖
+	if g.grade_pick == "" and pg == "title" and g.stars.is_empty() and g.cleared.is_empty():
+		_open_grade_pick.call_deferred()
 	# 今天第一次打開：自動跳出連續簽到
-	if not a.has("tower_result") and not a.has("summary") and g.streak_should_popup():
+	elif not a.has("tower_result") and not a.has("summary") and g.streak_should_popup():
 		_open_signin.call_deferred()
 	# 第一次玩完一段之後回到主畫面：問要不要讓光靈提醒（手機版、只問一次）
 	elif not g.notify_asked and g.notifier.available() and not g.stars.is_empty():
 		_ask_notify.call_deferred()
+
+
+## 第一次打開：選身分
+func _open_grade_pick() -> void:
+	var g = Game.of(self)
+	var o := UITheme.modal(self, UITheme.ACCENT, 760)
+	var layer: Control = o[0]
+	var col: VBoxContainer = o[1]
+	col.add_theme_constant_override("separation", 14)
+	var sp := TitleSpirit.new()
+	sp.custom_minimum_size = Vector2(0, 110)
+	col.add_child(sp)
+	col.add_child(UITheme.title_label("歡迎來到光靈的旅程！", 28, UITheme.ACCENT))
+	var sub := Label.new()
+	sub.text = "你現在是幾年級呢？我會帶你到那個年級的世界地圖。\n（之後隨時可以在地圖右上角切換）"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", UITheme.fs(16))
+	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	col.add_child(sub)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	col.add_child(row)
+	var specs := [
+		["高一", "曦光大陸", "數與式、直線與圓、機率……", Color("f5c84c"), true],
+		["高二", "光潮群島", "三角函數、指對數、向量……", Color("5fd4ff"), true],
+		["高三", "？？？", "之後開放", Color("8a8fb0"), false],
+	]
+	for spec in specs:
+		var c: Color = spec[3]
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(220, 150)
+		b.disabled = not spec[4]
+		b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.14), 18, Color(c.r, c.g, c.b, 0.7), 2, 12))
+		b.add_theme_stylebox_override("hover", UITheme.box(Color(c.r, c.g, c.b, 0.26), 18, c, 3, 12))
+		b.add_theme_stylebox_override("pressed", UITheme.box(Color(c.r, c.g, c.b, 0.34), 18, c, 3, 12))
+		b.add_theme_stylebox_override("disabled", UITheme.box(Color(1, 1, 1, 0.04), 18, Color(1, 1, 1, 0.1), 1, 12))
+		var v := VBoxContainer.new()
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 4)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(v)
+		for line in [[spec[0], 34, c if spec[4] else UITheme.TEXT_DIM, true], [spec[1], 17, UITheme.TEXT if spec[4] else UITheme.TEXT_DIM, true], [spec[2], 12, UITheme.TEXT_DIM, false]]:
+			var l := Label.new()
+			l.text = line[0]
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size = Vector2(200, 0)
+			if line[3]:
+				l.add_theme_font_override("font", UITheme.bold_font())
+			l.add_theme_font_size_override("font_size", UITheme.fs(line[1]))
+			l.add_theme_color_override("font_color", line[2])
+			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			v.add_child(l)
+		var gr: String = spec[0]
+		b.pressed.connect(func():
+			g.grade_pick = gr
+			g.save_review()
+			g.sfx("success")
+			layer.queue_free()
+			_grade = gr
+			_show_page("units"))
+		row.add_child(b)
 
 
 func _ask_notify() -> void:
@@ -280,7 +348,8 @@ func _refresh_units() -> void:
 		c.queue_free()
 	var g = Game.of(self)
 	if _grade == "":
-		_grade = Units.grade_of(g.cur_unit)
+		# 上次看的年級（第一次選的身分，之後切換分頁也會記住）；沒有就看目前的單元
+		_grade = g.grade_pick if g.grade_pick != "" else Units.grade_of(g.cur_unit)
 	var w: Control = WorldG10.new() if _grade == "高一" else WorldG11.new()
 	_units_body.add_child(w)
 	w.pick_unit.connect(func(uid: String):
@@ -316,6 +385,8 @@ func _set_grade(gr: String) -> void:
 	var dir := 1.0 if gr == "高二" else -1.0     # 高一 → 高二：往左滑（高二在右邊）
 	var old: Array = _units_body.get_children()
 	_grade = gr
+	Game.of(self).grade_pick = gr
+	Game.of(self).save_review()
 	Game.of(self).sfx("click")
 	_grade_anim = true
 	var tw := create_tween().set_parallel()
