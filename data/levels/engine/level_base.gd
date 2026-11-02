@@ -1202,6 +1202,14 @@ func _show_question(q: Dictionary) -> void:
 			if b.get_node("Math").get_combined_minimum_size().x + 28.0 > half:
 				grid.columns = 1
 				break
+	# 一欄還是放不下（很長的式子）：把那個選項的字縮小到放得下為止
+	if grid.columns == 1:
+		for b in grid.get_children():
+			var m = b.get_node_or_null("Math")
+			if m == null:
+				continue
+			while m.font_size > UITheme.fs(11) and m.get_combined_minimum_size().x + 24.0 > 348.0:
+				m.font_size -= 1
 
 
 func _on_answer(idx: int) -> void:
