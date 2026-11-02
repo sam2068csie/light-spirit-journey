@@ -47,6 +47,8 @@ var t := 0.0
 var playing := false
 var _hold := false
 var _hold_pt := Vector2.ZERO
+var _joy_base := Vector2.ZERO          # 虛擬搖桿的中心（按下去的地方）
+const JOY_R := 64.0
 var _polys: Array = []
 var _shape: Array = []        # 有單元地圖的島：縮小後的真實形狀 {kind, k, off, …}
 var _docks: Array = []
@@ -224,7 +226,7 @@ func _build_ui() -> void:
 	_card_btn.pressed.connect(_interact)
 	hb.add_child(_card_btn)
 	var tip := Label.new()
-	tip.text = "方向鍵／WASD 划船，或按住畫面往那裡划　·　Enter 上岸　·　M 單元列表"
+	tip.text = "方向鍵／WASD 划船，或按住左半邊用搖桿　·　Enter 上岸　·　M 單元列表"
 	tip.position = Vector2(18, H - 34)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
@@ -478,11 +480,17 @@ func _open_egg(id: String) -> void:
 func _gui_input(e: InputEvent) -> void:
 	if playing:
 		return
+	# 虛擬搖桿：在畫面左半邊按下去，搖桿就出現在手指下面；拖動決定方向和速度
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
-		_hold = e.pressed
-		_hold_pt = e.position
+		if e.pressed and e.position.x < W * 0.5:
+			_hold = true
+			_joy_base = e.position
+			_hold_pt = e.position
+		elif not e.pressed:
+			_hold = false
 	elif e is InputEventMouseMotion and _hold:
-		_hold_pt = e.position
+		var d: Vector2 = e.position - _joy_base
+		_hold_pt = _joy_base + d.limit_length(JOY_R)
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -645,9 +653,9 @@ func _process(delta: float) -> void:
 		_refresh_goal()
 	var dir := _key_dir() if active else Vector2.ZERO
 	if dir == Vector2.ZERO and _hold and active:
-		var to := (_hold_pt - Vector2(W, H) / 2.0) / zoom + Vector2(W, H) / 2.0 + cam - pos
-		if to.length() > 14.0:
-			dir = to.normalized()
+		var jv := (_hold_pt - _joy_base) / JOY_R
+		if jv.length() > 0.18:
+			dir = jv.normalized() * clampf((jv.length() - 0.18) / 0.62, 0.35, 1.0)
 	# 有一點慣性的划船
 	vel = vel.lerp(dir * SPEED, 1.0 - exp(-(3.0 if dir != Vector2.ZERO else 1.6) * delta))
 	if _whirl_spin > 0.0:
@@ -764,6 +772,7 @@ func _draw() -> void:
 		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, 0.12 + 0.12 * sin(t * s.s + s.ph)))
 	_draw_minimap()
 	_draw_goal()
+	_draw_joystick()
 	draw_string(font, Vector2(20, 142), "光潮群島 · 高二", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fd8ff"))
 
 
@@ -1068,7 +1077,7 @@ func _goal_world(gl: Dictionary) -> Vector2:
 func _tut_steps() -> Array:
 	return [
 		{"rect": func(): return _scr(pos, Vector2(50, 50)),
-		 "text": "這是我們的光舟！用方向鍵或 WASD 划船；也可以按住畫面，船會往那個方向開。"},
+		 "text": "這是我們的光舟！用方向鍵或 WASD 划船；也可以在畫面左半邊按住，用出現的搖桿掌舵。"},
 		{"rect": func(): return _goal_rect(),
 		 "text": "上面的金色橫幅是「主線目標」；畫面邊緣的金色箭頭指著要去的島。"},
 		{"rect": func(): return _scr(_goal_pt, Vector2(60, 60)) if _goal_pt.x >= 0.0 else Rect2(),
@@ -1078,3 +1087,25 @@ func _tut_steps() -> Array:
 		{"rect": func(): return Rect2(W - 18 - 200, 14, 200, 44),
 		 "text": "右上角可以切回高一的曦光大陸。出航吧！"},
 	]
+
+
+## 虛擬搖桿（螢幕座標）：按著的時候畫在手指下面；沒按的時候左下角淡淡地提示
+func _draw_joystick() -> void:
+	if playing:
+		return
+	var font := UITheme.bold_font()
+	if _hold:
+		UITheme.dot(self, _joy_base, JOY_R + 6.0, Color(0.05, 0.08, 0.2, 0.35))
+		draw_arc(_joy_base, JOY_R, 0, TAU, 48, Color(1, 1, 1, 0.45), 3.0, true)
+		for k in 4:
+			var a := k * PI / 2.0
+			var tip := _joy_base + Vector2.from_angle(a) * (JOY_R - 12.0)
+			draw_colored_polygon(PackedVector2Array([tip + Vector2.from_angle(a) * 6.0, tip + Vector2.from_angle(a + 2.3) * 6.0,
+				tip + Vector2.from_angle(a - 2.3) * 6.0]), Color(1, 1, 1, 0.4))
+		UITheme.dot(self, _hold_pt, 30.0, Color(1, 0.9, 0.55, 0.85))
+		UITheme.dot(self, _hold_pt + Vector2(-6, -6), 12.0, Color(1, 1, 1, 0.45))
+	else:
+		var c := Vector2(110, H - 120)
+		draw_arc(c, 42.0, 0, TAU, 40, Color(1, 1, 1, 0.16), 2.0, true)
+		UITheme.dot(self, c, 18.0, Color(1, 1, 1, 0.14))
+		draw_string(font, c + Vector2(-70, 66), "按住左半邊移動", HORIZONTAL_ALIGNMENT_CENTER, 140, 13, Color(1, 1, 1, 0.35))
