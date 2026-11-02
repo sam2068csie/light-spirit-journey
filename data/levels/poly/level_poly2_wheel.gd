@@ -113,6 +113,7 @@ func _custom_reveal(msg: String) -> void:
 
 func _speed_show() -> void:
 	var pb: Dictionary = problems[sp_i]
+	_wv().speed_spec = pb.get("synth", {})      # 下方先畫好綜合除法的格式（第一排的係數、右邊的 k）
 	fview.show_speed(pb.eq, sp_i, problems.size(), streak)
 	step_label.text = UITheme.step_bar(_steps(), 0)
 	if sp_i > 0:
@@ -147,7 +148,8 @@ static func gen_problems(_kind: String, n: int) -> Array:
 		if seen.has(eq + str(what)):
 			continue
 		seen[eq + str(what)] = true
-		var pb := {"eq": eq + "\n" + ["餘式 = ？", "商式的常數項 = ？"][what], "ans": BankP2._qa(ans), "tag": BankP2.T_SYN}
+		var pb := {"eq": eq + "\n" + ["餘式 = ？", "商式的常數項 = ？"][what], "ans": BankP2._qa(ans), "tag": BankP2.T_SYN,
+			"synth": {"coef": coef, "a": [a, 1]}}
 		pb.q = ["用綜合除法算出餘式。", "用綜合除法算出商式的常數項（最下面一排的倒數第二格）。"][what]
 		pb.template = ["餘式 = [0]", "商式的常數項 = [0]"][what]
 		pb.nudge = "左邊寫 %d；每一格 = 上面的係數 + %d × 前一格。" % [a, a]
@@ -166,6 +168,7 @@ class WheelView extends ForgeView:
 	var vals: Array = []         # 學生填的最下面一排（字串）
 	var bad: Array = []
 	var cur := 0
+	var speed_spec := {}         # 速算時下方的空白算式（只填好第一排和 k）
 	var done_spec := {}          # 答對之後留在下方的算式
 	var done_vals: Array = []
 
@@ -181,6 +184,15 @@ class WheelView extends ForgeView:
 
 	func _draw() -> void:
 		super()
+		if kind == "speed" and not done and not speed_spec.is_empty():
+			# 速算：題目下方畫好綜合除法的格式，第二、三排留空（可以用計算紙直接寫在上面）
+			var keep := cur
+			var keep_bad := bad
+			cur = -1
+			bad = []
+			_draw_table(get_theme_default_font(), Rect2(36, size.y - 196, size.x - 72, 184), speed_spec, [], true)
+			cur = keep
+			bad = keep_bad
 		if on and kind == "forge" and intro < 0.0:
 			var h := _table_h()
 			_draw_table(get_theme_default_font(), Rect2(36, size.y - h - 12.0, size.x - 72, h), spec, vals, true)
