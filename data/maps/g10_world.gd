@@ -69,8 +69,8 @@ const MOUND_R := 165.0
 ## 彩蛋一：數之原野的數字石，由小到大踩過去
 const EGG_STONES := [
 	{"t": "π", "v": 3.14159, "p": Vector2(380, 1360)},
-	{"t": "√2", "v": 1.41421, "p": Vector2(600, 1310)},
-	{"t": "√10", "v": 3.16228, "p": Vector2(720, 1440)},
+	{"t": "√{2}", "v": 1.41421, "p": Vector2(600, 1310)},
+	{"t": "√{10}", "v": 3.16228, "p": Vector2(720, 1440)},
 	{"t": "3/2", "v": 1.5, "p": Vector2(430, 1570)},
 ]
 const CHEST := Vector2(560, 1450)
@@ -88,6 +88,8 @@ var _sparks: Array = []
 var _trail: Array = []
 var _egg_seq: Array = []          # 這一輪已經踩對的數字石（編號）
 var _egg_cool := 0.0
+var _egg_bad_t := -10.0           # 踩錯順序的時間（數字石閃紅色再重置）
+const MathLabel := preload("res://data/ui/math_text.gd")
 var _card: PanelContainer
 var _card_title: Label
 var _card_sub: Label
@@ -725,7 +727,8 @@ func _check_world(delta: float) -> void:
 				else:
 					_egg_seq = []
 					_egg_cool = 1.2
-					Game.of(self).sfx("wrong")
+					_egg_bad_t = t
+					Game.of(self).play("bonk", 1.0, -6.0)      # 只有聲音，不要整個畫面閃紅（不是扣血）
 					_show_toast("石頭暗下去了……要照什麼順序踩呢？")
 				break
 	# 靠近什麼
@@ -915,11 +918,18 @@ func _draw_zone_grounds(font: Font) -> void:
 	for i in EGG_STONES.size():
 		var e: Dictionary = EGG_STONES[i]
 		var lit := _has("eggs", "stones") or _egg_seq.has(i)
+		# 踩錯順序：四顆石頭一起閃紅色三下，然後暗下去重來
+		var bad := t - _egg_bad_t < 0.9
+		var red := bad and fmod(t - _egg_bad_t, 0.3) < 0.18
+		var fill := Color("e0505e") if red else (Color("f5c84c") if lit else Color("4a4366"))
+		var rim := Color("ffb0b8") if red else (Color("ffe7a3") if lit else Color("8d7fb8"))
 		UITheme.dot(self, e.p + Vector2(0, 8), 30.0, Color(0, 0, 0, 0.2))
-		UITheme.dot(self, e.p, 30.0, Color("f5c84c") if lit else Color("4a4366"))
-		draw_arc(e.p, 30.0, 0, TAU, 32, Color("ffe7a3") if lit else Color("8d7fb8"), 3.0, true)
-		var tw := font.get_string_size(e.t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
-		draw_string(font, e.p + Vector2(-tw / 2.0, 8), e.t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("2a2440") if lit else Color("e4d8ff"))
+		if red:
+			UITheme.dot(self, e.p, 40.0, Color(1, 0.3, 0.35, 0.25))
+		UITheme.dot(self, e.p, 30.0, fill)
+		draw_arc(e.p, 30.0, 0, TAU, 32, rim, 3.0, true)
+		# 用數學排版畫，根號上面才有橫線
+		MathLabel.draw_on(self, font, e.p.x, e.p.y + 8.0, e.t, 22, Color("2a2440") if (lit or red) else Color("e4d8ff"))
 	if _egg_seq.size() == EGG_STONES.size() or _has("eggs", "stones"):
 		var opened := _has("eggs", "stones")
 		UITheme.dot(self, CHEST, 46.0, Color(1.0, 0.85, 0.4, 0.15 + 0.1 * sin(t * 3.0)))
