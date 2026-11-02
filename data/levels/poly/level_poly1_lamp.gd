@@ -240,7 +240,8 @@ static func gen_problems(_kind: String, n: int) -> Array:
 		if seen.has(eq + str(what)):
 			continue
 		seen[eq + str(what)] = true
-		var pb := {"eq": eq, "ans": str(ans), "tag": BankP1.T_SUM}
+		var pb := {"eq": eq + "\n" + ["展開後的各項係數和 = ？", "展開後的常數項 = ？", "a_{0} − a_{1} + a_{2} − a_{3} + … = ？"][what],
+			"ans": str(ans), "tag": BankP1.T_SUM}
 		match what:
 			0:
 				pb.q = "展開後的各項係數和是多少？"
@@ -251,7 +252,7 @@ static func gen_problems(_kind: String, n: int) -> Array:
 				pb.template = "f(0) = [0]"
 				pb.nudge = "x 代 0：只剩 (%s)^{%d}。" % [_num(b), p]
 			_:
-				pb.q = "a₀ − a₁ + a₂ − …（奇次項變號）是多少？"
+				pb.q = "a_{0} − a_{1} + a_{2} − …（奇次項變號）是多少？"
 				pb.template = "f(−1) = [0]"
 				pb.nudge = "x 代 −1：(%s %s %d)^{%d}。" % [_num(-a), "+" if b > 0 else "−", absi(b), p]
 		out.append(pb)
