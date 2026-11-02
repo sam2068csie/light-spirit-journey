@@ -58,6 +58,8 @@ var root_tokens: Array = []     # [{btn, struck, cand, why}]
 var numline: NumLine = null
 
 
+var scratch: Control      # 計算紙
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.shared()
@@ -132,6 +134,7 @@ func _build_ui() -> void:
 	pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	pb.pressed.connect(func(): pause_menu.open())
 	top.add_child(pb)
+	scratch = preload("scratch_pad.gd").attach(self, top, pb)     # 計算紙（暫停鍵左邊的筆）
 
 	# 左：題目板
 	stage_panel = PanelContainer.new()
@@ -290,6 +293,8 @@ func _step_bar() -> String:
 # ================= 流程 =================
 
 func _start() -> void:
+	if scratch:
+		scratch.clear()      # 換下一題：清掉計算紙
 	_update_hud()
 	stem_label.text = item.stem
 	stem_label.modulate.a = 0.0

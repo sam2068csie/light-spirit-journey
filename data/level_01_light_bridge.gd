@@ -191,6 +191,8 @@ func chapter_card() -> Dictionary:
 
 # ================= 初始化 =================
 
+var scratch: Control      # 計算紙
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.shared()
@@ -472,6 +474,7 @@ func _build_ui() -> void:
 	pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	pb.pressed.connect(func(): pause_menu.open())
 	top.add_child(pb)
+	scratch = preload("scratch_pad.gd").attach(self, top, pb)     # 計算紙（暫停鍵左邊的筆）
 	top.add_theme_constant_override("separation", 12)
 
 	stage = Stage.new()
@@ -832,6 +835,8 @@ func _fit_formula() -> void:
 
 
 func _start_round() -> void:
+	if scratch:
+		scratch.clear()      # 換下一題：清掉計算紙
 	formula_fs = 30
 	round_gen += 1
 	wrong_streak = 0
@@ -6015,6 +6020,8 @@ func _tut_steps(key: String) -> Array:
 				{"rect": func(): return _grect(pips) if _grect(pips).size.x > 40.0 else Rect2(), "text": "上面這排圓點是這一關的旅程：一個圓點一題，答對會亮起來。"},
 				{"rect": func(): return Rect2(score_label.global_position - Vector2(44, 2), Vector2(1128 - score_label.global_position.x + 44, 52)),
 				 "text": UITheme.kb("右上角是你的星塵和暫停鍵（Esc）。暫停選單裡的「操作說明」可以再看一次教學。", "右上角是你的星塵和暫停鍵。暫停選單裡的「操作說明」可以再看一次教學。")},
+				{"rect": func(): return _grect(scratch._btn) if scratch else Rect2(),
+				 "text": "暫停鍵左邊的筆是「計算紙」：按下去整個畫面都能手寫，寫完按「收起」就能作答（計時不會停喔）。"},
 				{"text": "答錯也沒關係，我會在卡片裡給你提示，太久沒動我也會跑出來幫忙。準備好了就出發吧！"},
 			]
 		"type:fit":

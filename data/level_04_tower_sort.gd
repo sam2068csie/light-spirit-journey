@@ -109,6 +109,8 @@ func _make_rounds() -> Array:
 
 # ================= 初始化 =================
 
+var scratch: Control      # 計算紙
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UITheme.shared()   # 與第 1 關共用的視覺主題
@@ -168,6 +170,7 @@ func _build_ui() -> void:
 	pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	pb.pressed.connect(func(): pause_menu.open())
 	top.add_child(pb)
+	scratch = preload("scratch_pad.gd").attach(self, top, pb)     # 計算紙（暫停鍵左邊的筆）
 
 	view = TowerView.new()
 	view.position = Vector2(24, 70)
@@ -242,6 +245,8 @@ func _hint(text: String, kind: String = "info") -> void:
 # ================= 一題的流程 =================
 
 func _start_round() -> void:
+	if scratch:
+		scratch.clear()      # 換下一題：清掉計算紙
 	var r: Dictionary = rounds[round_index]
 	busy = false
 	towers = r.towers.duplicate()
@@ -621,6 +626,8 @@ func _start_exam() -> void:
 
 
 func _show_question() -> void:
+	if scratch:
+		scratch.clear()
 	busy = false
 	_clear_cards()
 	var q: Dictionary = exam_questions[exam_index]

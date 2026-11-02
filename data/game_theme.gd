@@ -353,6 +353,13 @@ static func icon(kind: String, d: int = 20, c: Color = Color.WHITE) -> ImageText
 
 static func _icon_hit(kind: String, u: float, v: float) -> bool:
 	match kind:
+		"pen":
+			# 筆：斜斜的筆桿＋筆尖
+			var p := Vector2(u, v)
+			if _seg_d(p, Vector2(0.72, 0.22), Vector2(0.32, 0.62)) < 0.1:
+				return true
+			var tip := Geometry2D.is_point_in_polygon(p, PackedVector2Array([Vector2(0.25, 0.6), Vector2(0.36, 0.71), Vector2(0.18, 0.8)]))
+			return tip or (v > 0.86 and v < 0.92 and u > 0.18 and u < 0.62)
 		"pause":
 			var in_y := v > 0.2 and v < 0.8
 			return in_y and ((u > 0.24 and u < 0.42) or (u > 0.58 and u < 0.76))
