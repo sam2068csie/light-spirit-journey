@@ -137,6 +137,8 @@ static var _parse_cache: Dictionary = {}
 
 static func _parse_uncached(markup: String, base_color: Color) -> Array:
 	var out := []
+	if markup.contains("√"):
+		markup = root_auto(markup)
 	if auto_frac and (markup.contains("/") or markup.contains("÷")):
 		markup = frac_markup(markup)
 	_frac_depth = 0
@@ -866,6 +868,93 @@ static func _draw_row(ci: CanvasItem, font: Font, base: Vector2, row: Array, fs:
 		gl.append({"ch": ch.ch, "pos": p, "size": sz, "color": c, "w": w, "rad": ch.get("rad", -1), "idx": ch.get("idx", ""), "rads": ch.rads})
 		x += w
 	draw_radicals(ci, gl, Vector2.ZERO)
+
+
+# ================= 自動根號 =================
+
+## 沒寫大括號的根號自動補上：√2 → √{2}、√x → √{x}、√(x + 1) → √{x + 1}、√2x → √{2}x
+## （根號上面的橫線要靠 √{…} 才畫得出來；題目、卡片、劇情不管怎麼寫，畫出來都有橫線）
+static func root_auto(s: String) -> String:
+	var out := ""
+	var i := 0
+	while i < s.length():
+		var c := s[i]
+		if (c == "√" or c == "∛" or c == "∜") and i + 1 < s.length() and s[i + 1] != "{":
+			var j := i + 1
+			if s[j] == "(":
+				var d := 0
+				var k := j
+				while k < s.length():
+					if s[k] == "(":
+						d += 1
+					elif s[k] == ")":
+						d -= 1
+						if d == 0:
+							break
+					k += 1
+				if k < s.length():
+					out += c + "{" + s.substr(j + 1, k - j - 1) + "}"
+					i = k + 1
+					continue
+			elif s[j].is_valid_int():
+				var k2 := j
+				while k2 < s.length() and (s[k2].is_valid_int() or (s[k2] == "." and k2 + 1 < s.length() and s[k2 + 1].is_valid_int())):
+					k2 += 1
+				out += c + "{" + s.substr(j, k2 - j) + "}"
+				i = k2
+				continue
+			elif _is_letter(s[j]) or s[j] in ["π", "θ", "α", "β"]:
+				out += c + "{" + s[j] + "}"
+				i = j + 1
+				continue
+		out += c
+		i += 1
+	return out
+
+
+## 檢查一段要排版的文字有沒有寫錯（測試 test_markup.gd 用）：回傳問題清單，空的就是沒問題
+##   ・大括號要成對　・\frac 後面要有 {分子}{分母}　・^、_ 後面要接 {…}
+##   ・根號：自動補完之後，算式裡的 √ 後面都要接 {…}（√ 後面接空白、中文，當作是在講這個符號，不算錯）
+##   ・不能出現兩個反斜線（"\\\\frac" 這種多跳脫一次的寫法，畫面上會直接印出 \frac）
+static func lint(markup: String) -> Array:
+	var out := []
+	var s := markup
+	if s.contains("\\\\"):
+		out.append("多了一個反斜線（\\\\）")
+	# 先拿掉顏色標記
+	var re := RegEx.new()
+	re.compile("\\[/?color[^\\]]*\\]|\\[/?b\\]")
+	s = re.sub(s, "", true)
+	var depth := 0
+	for ch in s:
+		if ch == "{":
+			depth += 1
+		elif ch == "}":
+			depth -= 1
+			if depth < 0:
+				break
+	if depth != 0:
+		out.append("大括號沒有成對")
+	var k := s.find("\\frac")
+	while k >= 0:
+		var j := k + 5
+		if j >= s.length() or s[j] != "{" or _match_fwd(s, j) < 0 or _match_fwd(s, j) + 1 >= s.length() or s[_match_fwd(s, j) + 1] != "{":
+			out.append("\\frac 後面要接 {分子}{分母}")
+			break
+		k = s.find("\\frac", j)
+	for i in s.length():
+		if (s[i] == "^" or s[i] == "_") and (i + 1 >= s.length() or s[i + 1] != "{"):
+			out.append("%s 後面要接 {…}" % s[i])
+			break
+	var r := root_auto(s)
+	for i in r.length():
+		if (r[i] == "√" or r[i] == "∛" or r[i] == "∜") and i + 1 < r.length() and r[i + 1] != "{":
+			# 根號後面接空白或中文：是在講「√ 這個符號」，不是算式；其他的（−、[、+…）就畫不出橫線
+			var nx := r[i + 1]
+			if nx != " " and nx.unicode_at(0) < 0x2E80:
+				out.append("根號後面看不出是什麼（畫不出橫線）")
+				break
+	return out
 
 
 # ================= 自動分數 =================
