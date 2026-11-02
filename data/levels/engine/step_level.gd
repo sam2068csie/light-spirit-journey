@@ -1134,6 +1134,8 @@ func _speed_show() -> void:
 
 
 func _speed_correct() -> void:
+	if scratch:
+		scratch.clear()      # 速算每答對一小題：清掉計算紙的筆跡，下一題從乾淨的紙開始
 	streak += 1
 	score += 10 * streak
 	sp_i += 1
