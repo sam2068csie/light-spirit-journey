@@ -88,6 +88,12 @@ const MISTAKE_INFO := {
 	"exp_eq_factor":   {"name": "分組分解", "level": 2},
 	"exp_eq_param":    {"name": "含參數的指數方程式（根的範圍）", "level": 2},
 	# ---- 三角函數 ----
+	# 多項式（P1～）
+	"poly_def":        {"name": "判斷是不是多項式（x 的次方要是 0 或正整數）", "level": 1},
+	"poly_deg":        {"name": "次數與領導係數", "level": 1},
+	"poly_sum":        {"name": "係數和：代 x = 1、−1、0", "level": 1},
+	"poly_ident":      {"name": "恆等：比較係數、代特殊值", "level": 2},
+	"poly_degop":      {"name": "多項式相加、相乘、相除後的次數", "level": 2},
 	"trig_rad_conv":   {"name": "度與弧度的換算（π = 180°）", "level": 1},
 	"trig_angle_draw": {"name": "有向角：逆時針為正、順時針為負、超過一圈", "level": 1},
 	"trig_coterminal": {"name": "同界角（最小正、最大負）", "level": 1},

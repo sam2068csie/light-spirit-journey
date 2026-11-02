@@ -8,7 +8,7 @@ extends RefCounted
 ##   2. 大關 id 和觀念標籤（tag）不能和別的單元重複：
 ##        指數與對數用 "L1"～"L8"、tag 用 exp_／log_／digits_… 開頭
 ##        平面向量建議用 "V1"～、tag 用 "vec_" 開頭；空間向量用 "S1"～、tag 用 "svec_" 開頭
-##        三角函數 "G1"～／"trig_"、平面與直線 "P1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
+##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
 ##      （check() 會檢查重複；這樣存檔裡的星星、錯題本、熟練度不會互相打架，舊存檔也不用轉換）
 ##   3. map：這個單元的世界地圖腳本；tower：終焉之塔的題庫（沒有就先留空）
 ##      concepts：觀念卡片檔（例如 "concepts_vec2.gd"，寫法照 concepts_exp.gd）
@@ -24,8 +24,19 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": false,
-	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# 多項式：建造中（先做好地圖和第一關）。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看
+	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": false, "preview": true,
+	 "world": "光靈的旅程：根之洞窟", "map": "poly_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_poly.gd",
+	 "levels": [
+		{"id": "P1", "name": "係數礦燈", "topic": "多項式與係數", "file": "level_poly1_lamp.gd", "bank": "poly1_bank.gd", "color": UITheme.GOLD},
+		{"id": "P2", "name": "綜合除法水車", "topic": "多項式的除法", "file": "", "bank": "", "color": UITheme.CYAN},
+		{"id": "P3", "name": "回音石廊", "topic": "餘式定理與因式定理", "file": "", "bank": "", "color": UITheme.BLUE},
+		{"id": "P4", "name": "根之鑄模", "topic": "求多項式", "file": "", "bank": "", "color": UITheme.ORANGE},
+		{"id": "P5", "name": "拋物鏡湖", "topic": "二次函數的圖形", "file": "", "bank": "", "color": UITheme.GOOD},
+		{"id": "P6", "name": "極值燈芯", "topic": "二次函數的極值", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "P7", "name": "對稱水晶", "topic": "三次函數的圖形", "file": "", "bank": "", "color": UITheme.VIOLET},
+		{"id": "P8", "name": "符號地下河", "topic": "多項式不等式", "file": "", "bank": "", "color": UITheme.PINK},
+	 ]},
 	{"id": "h1seq", "term": "高一下", "title": "數列與級數", "exam": "", "color": UITheme.GOOD, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	{"id": "h1data", "term": "高一下", "title": "數據分析", "exam": "", "color": UITheme.BLUE, "open": false,
