@@ -62,6 +62,7 @@ func _ensure_fview() -> void:
 		fview.log_title = "推導紀錄"
 		fview.work_word = "推導"
 		fview.speed_title = "水車速算"
+		fview.speed_y = 0.30         # 題目往上移，下方留給綜合除法的格式
 
 
 func _wv() -> WheelView:
@@ -149,8 +150,8 @@ static func gen_problems(_kind: String, n: int) -> Array:
 			continue
 		seen[eq + str(what)] = true
 		var pb := {"eq": eq + "\n" + ["餘式 = ？", "商式的常數項 = ？"][what], "ans": BankP2._qa(ans), "tag": BankP2.T_SYN,
-			"synth": {"coef": coef, "a": [a, 1]}}
-		pb.q = ["用綜合除法算出餘式。", "用綜合除法算出商式的常數項（最下面一排的倒數第二格）。"][what]
+			"synth": {"coef": coef, "a": [a, 1], "ask": 3 if what == 0 else 2}}      # ask：所求的那一格（餘式／商式的常數項）
+		pb.q = ["用綜合除法算出餘式。", "用綜合除法算出商式的常數項（第三排、餘式左邊那一格）。"][what]
 		pb.template = ["餘式 = [0]", "商式的常數項 = [0]"][what]
 		pb.nudge = "左邊寫 %d；每一格 = 上面的係數 + %d × 前一格。" % [a, a]
 		out.append(pb)
@@ -190,7 +191,7 @@ class WheelView extends ForgeView:
 			var keep_bad := bad
 			cur = -1
 			bad = []
-			_draw_table(get_theme_default_font(), Rect2(36, size.y - 196, size.x - 72, 184), speed_spec, [], true)
+			_draw_table(get_theme_default_font(), Rect2(36, size.y - 236, size.x - 72, 222), speed_spec, [], true)
 			cur = keep
 			bad = keep_bad
 		if on and kind == "forge" and intro < 0.0:
@@ -363,9 +364,20 @@ class WheelView extends ForgeView:
 				if cur_live:
 					var bc := UITheme.BAD if (i < bad.size() and bad[i]) else (GOLDC if i == cur else Color(1, 1, 1, 0.25))
 					var box := Rect2(x - cw * 0.42, y_bot - rh * 0.6, cw * 0.84, rh * 0.8)
-					if sv2 == "":
+					if int(sp.get("ask", -1)) == i:
+						# 速算：所求的那一格用粉紅色標出來（一眼看出問的是餘式還是商式的常數項）
+						var pk := UITheme.PINK
+						var pulse := 0.75 + 0.25 * sin(t * 4.0)
+						draw_rect(box.grow(4.0), Color(pk.r, pk.g, pk.b, 0.5 * pulse))
+						draw_rect(box.grow(4.0), Color(pk.r, pk.g, pk.b, pulse), false, 3.0)
+						MathLabel.draw_on(self, font, x, y_bot, "?", fs + 2, Color.WHITE)
+						UITheme.text_ol(self, font, Vector2(x - 40, y_bot - rh * 0.75 - 6.0), "所求", HORIZONTAL_ALIGNMENT_CENTER, 80,
+							UITheme.fs(13), Color(1, 0.6, 0.8), 3)
+					elif sv2 == "":
 						draw_rect(box, Color(bc.r, bc.g, bc.b, 0.08))
-					draw_rect(box, bc, false, 2.0 if i == cur else 1.0)
+						draw_rect(box, bc, false, 2.0 if i == cur else 1.0)
+					else:
+						draw_rect(box, bc, false, 2.0 if i == cur else 1.0)
 				if shown != "":
 					var col := UITheme.BAD if (cur_live and i < bad.size() and bad[i]) else (AQUA.lightened(0.3) if i < L - 1 else GOLDC)
 					MathLabel.draw_on(self, font, x, y_bot, shown, fs, col)

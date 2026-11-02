@@ -1499,6 +1499,7 @@ class ForgeView extends Control:
 	var log_title := "鍛造紀錄"
 	var work_word := "鍛造"
 	var speed_title := "速算爐"
+	var speed_y := 0.42           # 速算題目在畫面上的高度（比例）；下方要畫東西的關卡可以調高一點
 
 	## 題目一共有幾個字（逐字出現用）
 	func intro_total() -> float:
@@ -2259,8 +2260,8 @@ class ForgeView extends Control:
 		if ma > 0.0:
 			shake = sin(t * 60.0) * 10.0 * ma
 		var pop := clampf(1.0 - (t - hit_t) / 0.3, 0.0, 1.0)
-		var y := size.y * 0.42
-		draw_string(font, Vector2(0, y - 70), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
+		var y := size.y * speed_y
+		draw_string(font, Vector2(0, maxf(y - 70, 112.0)), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
 		# 題目可以有兩行：第一行是式子（大字），第二行是問句（小一點）
 		var sl := sp_eq.split("\n")
 		MathLabel.draw_on(self, font, cx + shake, y, sl[0], _fit_fs(font, sl[0], UITheme.fs(40)), Color(1, 0.97, 0.9))
