@@ -9,7 +9,7 @@ const Units := preload("units.gd")
 const Center := preload("review_center.gd")
 const SA := preload("souvenir_art.gd")
 const UITheme := preload("game_theme.gd")
-const WM := preload("world_map.gd")
+const StoryPlayer := preload("story_player.gd")
 
 ## 每一句：{text, who（"光靈" 或空白＝旁白）, focus（鏡頭看哪裡：地圖座標；可以是字串，由地圖自己解讀）}
 const STORY := {
@@ -98,7 +98,7 @@ static func play(host: Control, key: String, lines: Array, title: String, uid :=
 	host.set("playing", true)
 	if host.has_signal("story_changed"):
 		host.emit_signal("story_changed", true)
-	var pl = WM.StoryPlayer.new()
+	var pl = StoryPlayer.new()
 	pl.title = title
 	layer.add_child(pl)
 	await pl.intro()
