@@ -39,7 +39,7 @@ func setup() -> void:
 	var helper := Node.new()
 	root.add_child.call_deferred(helper)
 	await process_frame
-	g = load("res://data/game.gd").of(helper)
+	g = load("res://data/core/game.gd").of(helper)
 	g.notify_asked = true
 	g.grade_pick = "高二"
 	var seen := {"basic": true}

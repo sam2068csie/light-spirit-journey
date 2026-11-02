@@ -17,7 +17,7 @@ config/icon="uid://bx46m6s6t0pfm"
 
 [autoload]
 
-QuizManager="*res://data/quiz_manager.gd"
+QuizManager="*res://data/core/quiz_manager.gd"
 
 [display]
 

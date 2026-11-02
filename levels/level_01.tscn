@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cg8k7xbx4ihrj"]
 
-[ext_resource type="Script" uid="uid://qa4dtvnp85x6" path="res://data/level_01_light_bridge.gd" id="1_mckh2"]
+[ext_resource type="Script" uid="uid://qa4dtvnp85x6" path="res://data/levels/exp/level_01_light_bridge.gd" id="1_mckh2"]
 
 [node name="Level01" type="Control" unique_id=372138463]
 layout_mode = 3

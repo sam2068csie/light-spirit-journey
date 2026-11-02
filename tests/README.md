@@ -26,3 +26,21 @@ Windows 可以用 Git Bash 執行，或直接：`Godot.exe --headless --path . -
 新增 `tests/test_xxx.gd`（`extends "test_base.gd"`），用 `ok(條件, "說明")` 做檢查，最後呼叫 `finish("XXX")`，再把 `xxx` 加進 `run_tests.sh` 的預設清單。
 
 `tests/` 不會被匯出到遊戲裡（export_presets 已排除）。
+
+## 腳本放在哪裡
+
+```
+data/
+  core/           遊戲管家（game*.gd）、單元設定 units.gd、修煉中心、通知、paths.gd
+  ui/             主畫面、各種面板、主題、數學排版、新手教學、計算紙、光靈外觀
+  maps/           單元地圖（exp_map、trig_map、共用底層）、大地圖（g10、g11、共用底層）、劇情
+  levels/engine/  關卡共用引擎（level_base、光橋舞台、推導題 step_level、寶箱）
+  levels/exp/     指數與對數 L1～L8 的關卡、題庫、觀念卡
+  levels/trig/    三角函數 G1～G7 的關卡、題庫、觀念卡
+  levels/tower/   終焉之塔
+  house/          光靈小屋、家具、紀念品
+```
+
+- 腳本之間一律用完整路徑：`preload("res://data/ui/game_theme.gd")`。
+- 用檔名字串的地方（換場景 `goto("main_menu.gd")`、`units.gd` 的 file／bank／map）透過 `data/core/paths.gd` 找到位置；**檔名要唯一**。
+- 新增或搬動腳本之後執行 `python3 tools/gen_paths.py` 更新 `paths.gd`。忘了的話，`test_load` 會提醒。

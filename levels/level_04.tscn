@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://caegw7e8ilh3k"]
 
-[ext_resource type="Script" uid="uid://cmqe0qluqgn1n" path="res://data/level_04_tower_sort.gd" id="1_vosiq"]
+[ext_resource type="Script" uid="uid://cmqe0qluqgn1n" path="res://data/levels/exp/level_04_tower_sort.gd" id="1_vosiq"]
 
 [node name="Level04" type="Control" unique_id=1575672056]
 layout_mode = 3

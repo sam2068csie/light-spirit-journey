@@ -6,20 +6,20 @@ extends "test_base.gd"
 ##   ・題庫格式檢查（step_bank.check）
 ## 環境變數 ONLY=L3 只測某一關；SHOTS=資料夾 會在每一步截圖（需要有畫面，不能 --headless）
 
-const Units := preload("res://data/units.gd")
+const Units := preload("res://data/core/units.gd")
 
 
 func _initialize() -> void:
 	await setup()
 	var only := OS.get_environment("ONLY")
-	var SB := load("res://data/step_bank.gd")
+	var SB := load("res://data/levels/engine/step_bank.gd")
 	for u in Units.UNITS:
 		for l in u.levels:
 			if String(l.get("bank", "")) == "" or String(l.get("file", "")) == "":
 				continue
 			if only != "" and not (String(l.id) in only.split(",")):
 				continue
-			var bank = load("res://data/" + String(l.bank))
+			var bank = load(preload("res://data/core/paths.gd").of(String(l.bank)))
 			ok(bank != null, "題庫 %s" % l.bank)
 			if bank == null:
 				continue

@@ -47,5 +47,5 @@ func _initialize() -> void:
 	g.wipe_progress()
 	ok(int(g.inv.dust) == 0 and g.house.is_empty() and g.grade_pick == "" and g.story_seen.is_empty(), "刪除紀錄：全部回到預設值")
 	g.inv.dust = 7
-	ok(int(load("res://data/game.gd").SAVE_FIELDS[6][2].dust) == 0, "預設值沒有被改到（有複製一份）")
+	ok(int(load("res://data/core/game.gd").SAVE_FIELDS[6][2].dust) == 0, "預設值沒有被改到（有複製一份）")
 	finish("SAVE")
