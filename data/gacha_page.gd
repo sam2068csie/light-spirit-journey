@@ -451,6 +451,7 @@ class Reveal extends Control:
 		var dim := ColorRect.new()
 		dim.color = Color(0.02, 0.02, 0.07, 0.86)
 		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE     # 讓點擊傳到這一層（單抽「點一下打開」）
 		add_child(dim)
 		if results.size() == 1:
 			_single(results[0])
