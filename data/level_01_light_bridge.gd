@@ -6011,10 +6011,10 @@ func _tut_steps(key: String) -> Array:
 				 "text": "右邊卡片最上面是這一題的故事，和你現在走到第幾步。"},
 				{"rect": side, "text": "作答都在這張卡片裡：照著金色的字做，選擇、填空、拖滑桿都在這裡。"},
 				{"rect": func(): return _grect(side_btns) if _grect(go_btn).size.x > 2.0 else Rect2(),
-				 "text": "需要送出的時候，按最下面的金色按鈕（也可以按 Enter）。"},
+				 "text": UITheme.kb("需要送出的時候，按最下面的金色按鈕（也可以按 Enter）。", "需要送出的時候，按最下面的金色按鈕。")},
 				{"rect": func(): return _grect(pips) if _grect(pips).size.x > 40.0 else Rect2(), "text": "上面這排圓點是這一關的旅程：一個圓點一題，答對會亮起來。"},
 				{"rect": func(): return Rect2(score_label.global_position - Vector2(44, 2), Vector2(1128 - score_label.global_position.x + 44, 52)),
-				 "text": "右上角是你的星塵和暫停鍵（Esc）。暫停選單裡的「操作說明」可以再看一次教學。"},
+				 "text": UITheme.kb("右上角是你的星塵和暫停鍵（Esc）。暫停選單裡的「操作說明」可以再看一次教學。", "右上角是你的星塵和暫停鍵。暫停選單裡的「操作說明」可以再看一次教學。")},
 				{"text": "答錯也沒關係，我會在卡片裡給你提示，太久沒動我也會跑出來幫忙。準備好了就出發吧！"},
 			]
 		"type:fit":
@@ -6045,7 +6045,7 @@ func _tut_steps(key: String) -> Array:
 			return [{"rect": stg, "text": "先判斷圖形的凹口方向，再在舞台上連出弦，最後比大小。"}]
 		"type:forge":
 			return [
-				{"rect": side, "text": "推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。"},
+				{"rect": side, "text": UITheme.kb("推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。", "推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤。")},
 				{"rect": stg, "text": "每答對一步，就會寫進左邊的推導紀錄。全部做完，就是一份完整的計算過程！"},
 			]
 		"type:speed":

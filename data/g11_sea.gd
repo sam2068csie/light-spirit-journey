@@ -178,7 +178,7 @@ func _exit_tree() -> void:
 func _build_ui() -> void:
 	var tp := Button.new()
 	_tp = tp
-	tp.text = "☰ 單元列表（M）"
+	tp.text = UITheme.kb("☰ 單元列表（M）", "☰ 單元列表")
 	tp.focus_mode = Control.FOCUS_NONE
 	tp.custom_minimum_size = Vector2(160, 44)
 	tp.position = Vector2(16, 70)
@@ -226,7 +226,7 @@ func _build_ui() -> void:
 	_card_btn.pressed.connect(_interact)
 	hb.add_child(_card_btn)
 	var tip := Label.new()
-	tip.text = "方向鍵／WASD 划船，或按住左半邊用搖桿　·　Enter 上岸　·　M 單元列表"
+	tip.text = UITheme.kb("方向鍵／WASD 划船，或按住左半邊用搖桿　·　Enter 上岸　·　M 單元列表", "按住畫面左半邊，用搖桿划船")
 	tip.position = Vector2(18, H - 34)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
@@ -1077,13 +1077,13 @@ func _goal_world(gl: Dictionary) -> Vector2:
 func _tut_steps() -> Array:
 	return [
 		{"rect": func(): return _scr(pos, Vector2(50, 50)),
-		 "text": "這是我們的光舟！用方向鍵或 WASD 划船；也可以在畫面左半邊按住，用出現的搖桿掌舵。"},
+		 "text": UITheme.kb("這是我們的光舟！用方向鍵或 WASD 划船；也可以在畫面左半邊按住，用出現的搖桿掌舵。", "這是我們的光舟！在畫面左半邊按住，用出現的搖桿掌舵。")},
 		{"rect": func(): return _goal_rect(),
 		 "text": "上面的金色橫幅是「主線目標」；畫面邊緣的金色箭頭指著要去的島。"},
 		{"rect": func(): return _scr(_goal_pt, Vector2(60, 60)) if _goal_pt.x >= 0.0 else Rect2(),
-		 "text": "這是島的碼頭。船開到碼頭旁邊會跳出卡片，按 Enter 或「上岸」就能登島。"},
+		 "text": UITheme.kb("這是島的碼頭。船開到碼頭旁邊會跳出卡片，按 Enter 或「上岸」就能登島。", "這是島的碼頭。船開到碼頭旁邊會跳出卡片，按「上岸」就能登島。")},
 		{"rect": func(): return _tp.get_global_rect(),
-		 "text": "想直接過去的話，按「單元列表」（M），選好島就會開船過去。"},
+		 "text": UITheme.kb("想直接過去的話，按「單元列表」（M），選好島就會開船過去。", "想直接過去的話，按「單元列表」，選好島就會開船過去。")},
 		{"rect": func(): return Rect2(W - 18 - 200, 14, 200, 44),
 		 "text": "右上角可以切回高一的曦光大陸。出航吧！"},
 	]

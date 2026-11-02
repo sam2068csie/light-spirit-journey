@@ -275,7 +275,7 @@ func _exit_tree() -> void:
 func _build_ui() -> void:
 	# 傳送鍵（左上，主選單的按鈕下面）
 	_tp_btn = Button.new()
-	_tp_btn.text = "☰ 單元列表（M）"
+	_tp_btn.text = UITheme.kb("☰ 單元列表（M）", "☰ 單元列表")
 	_tp_btn.focus_mode = Control.FOCUS_NONE
 	_tp_btn.custom_minimum_size = Vector2(140, 44)
 	_tp_btn.position = Vector2(16, 70)
@@ -312,7 +312,7 @@ func _build_ui() -> void:
 	hb.add_child(_card_btn)
 	# 提示文字（畫面左下）
 	var tip := Label.new()
-	tip.text = "方向鍵／WASD 移動，或按住左半邊用搖桿　·　Enter 進入　·　M 單元列表"
+	tip.text = UITheme.kb("方向鍵／WASD 移動，或按住左半邊用搖桿　·　Enter 進入　·　M 單元列表", "按住畫面左半邊，用搖桿移動")
 	tip.position = Vector2(18, H - 34)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
@@ -1224,13 +1224,13 @@ func _goal_world(gl: Dictionary) -> Vector2:
 func _tut_steps() -> Array:
 	return [
 		{"rect": func(): return _scr(pos, Vector2(44, 52)),
-		 "text": "這是我！用方向鍵或 WASD 走路；用手機或滑鼠的話，在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。"},
+		 "text": UITheme.kb("這是我！用方向鍵或 WASD 走路；用滑鼠的話，在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。", "這是我！在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。")},
 		{"rect": func(): return _goal_rect(),
 		 "text": "上面的金色橫幅是「主線目標」，告訴你下一步要做什麼；金色箭頭會指出要往哪裡走。"},
 		{"rect": func(): return _scr(ZONES[0].gate, Vector2(70, 60)),
-		 "text": "這是地區的拱門。走到拱門前會跳出卡片，按 Enter 或「進入」就能進去。"},
+		 "text": UITheme.kb("這是地區的拱門。走到拱門前會跳出卡片，按 Enter 或「進入」就能進去。", "這是地區的拱門。走到拱門前會跳出卡片，按「進入」就能進去。")},
 		{"rect": func(): return _tp_btn.get_global_rect(),
-		 "text": "不想走路的話，按「單元列表」（M），直接選要去的單元。"},
+		 "text": UITheme.kb("不想走路的話，按「單元列表」（M），直接選要去的單元。", "不想走路的話，按「單元列表」，直接選要去的單元。")},
 		{"rect": func(): return _scr(HOUSE, Vector2(80, 70)),
 		 "text": "這是我們的小屋！走過去就能進屋：擺家具、看紀念品、接每日任務。"},
 		{"rect": func(): return Rect2(W - 18 - 200, 14, 200, 44),

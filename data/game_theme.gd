@@ -54,6 +54,16 @@ const FONT_PATH := "res://fonts/game_font.tres"   # 思源黑體繁中子集 + D
 const DISC_SIZES := [8, 16, 32, 64, 128, 256]
 static var _discs: Dictionary = {}
 
+## 玩家用的是手機／平板（觸控為主）嗎？是的話，說明文字就不提鍵盤快捷鍵
+static func is_touch() -> bool:
+	return OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+
+
+## 依裝置挑說明文字：電腦用 desktop，手機用 touch
+static func kb(desktop: String, touch: String) -> String:
+	return touch if is_touch() else desktop
+
+
 static func dot(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 	if r <= 0.0 or col.a <= 0.0:
 		return
