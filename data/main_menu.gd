@@ -336,6 +336,12 @@ func _build_units_page() -> void:
 	_units_page.add_child(back)
 	_quest_chip(_units_page, Vector2(120, 14))
 	_gacha_chip(_units_page, Vector2(270, 14))
+	var hc := _house_chip(_units_page, Vector2(420, 14))
+	for c in hc.pressed.get_connections():
+		hc.pressed.disconnect(c.callable)
+	hc.pressed.connect(func():
+		Game.of(self).set_meta("house_from", "units")      # 從小屋返回時回到地圖
+		Game.of(self).goto("house.gd"))
 
 
 ## 選擇冒險：每個年級一張可以走動的世界地圖（高一：曦光大陸；高二：光潮群島），走到地區／島就進入那個單元的地圖
