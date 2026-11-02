@@ -227,26 +227,11 @@ func apply_resolution() -> void:
 func wipe_progress() -> void:
 	stars = {}
 	cleared = {}
-	mistakes = {}
-	fixed = {}
-	last_wrong = {}
 	_per_unit = {}
-	world10 = {}
-	world11 = {}
-	house = {}
-	tut = {}
-	grade_pick = ""
 	cur_unit = "exp"
-	review_days = []
 	session = {}
-	story_seen = []
-	quests = {}
-	inv = {"dust": 0, "shard": 0, "crystal": 0}
-	main_rw = {"slots": {}, "types": {}, "star3": {}, "chests": {}, "tower_day": {}}
-	owned = {}
-	equipped = {}
-	streak = {"last": "", "count": 0, "best": 0, "guards": 1, "log": [], "popup": ""}
-	gacha = {"pity_sr": 0, "pity_ssr": 0, "half_day": "", "pulls": 0}
+	for f in SAVE_FIELDS:
+		set(f[0], f[2].duplicate(true) if f[2] is Dictionary or f[2] is Array else f[2])
 
 	for path in [STARS_PATH, CLEARED_PATH, REVIEW_PATH, "user://progress.json"]:
 		if FileAccess.file_exists(path):
@@ -534,39 +519,89 @@ static func today() -> String:
 	return DQ.day_key()
 
 
+# ================= 存檔（review.json） =================
+## 新增要存的東西：只要在 SAVE_FIELDS 加一行 [變數名, 存檔裡的 key, 預設值]，
+## 存檔、讀檔、「刪除所有紀錄」都會自動處理，讀到的型別和預設值不同時會用預設值（壞掉的存檔不會讓遊戲當掉）。
+## 存檔格式要改（改名、搬資料）時：把 SAVE_VERSION 加 1，在 _migrate() 寫「舊版 → 新版」怎麼轉。
+## 讀檔要額外整理的欄位（數字轉 int、過濾不存在的裝扮……）在 _load_units()／_load_quests() 處理。
+const SAVE_VERSION := 2      # 1：沒有版本號的舊存檔；2：加上 version
+const SAVE_FIELDS := [
+	["mistakes", "mistakes", {}],
+	["fixed", "fixed", {}],
+	["last_wrong", "last_wrong", {}],
+	["review_days", "days", []],
+	["story_seen", "story", []],
+	["quests", "quests", {}],
+	["inv", "inv", {"dust": 0, "shard": 0, "crystal": 0}],
+	["owned", "owned", {}],
+	["equipped", "equipped", {}],
+	["gacha", "gacha", {"pity_sr": 0, "pity_ssr": 0, "half_day": "", "pulls": 0}],
+	["streak", "streak", {"last": "", "count": 0, "best": 0, "guards": 1, "log": [], "popup": ""}],
+	["main_rw", "main_rw", {"slots": {}, "types": {}, "star3": {}, "chests": {}, "tower_day": {}}],
+	["world10", "world10", {}],
+	["world11", "world11", {}],
+	["house", "house", {}],
+	["tut", "tut", {}],
+	["grade_pick", "grade_pick", ""],
+]
+## 這幾個欄位讀進來之後由 _load_quests() 再整理一次
+const _NORMALIZED := ["quests", "inv", "main_rw", "owned", "equipped", "streak", "gacha"]
+
+
 func save_review() -> void:
+	var data := {"version": SAVE_VERSION, "unit": cur_unit, "units": _per_unit}
+	for f in SAVE_FIELDS:
+		data[f[1]] = get(f[0])
 	var f := FileAccess.open(REVIEW_PATH, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"mistakes": mistakes, "fixed": fixed, "last_wrong": last_wrong,
-			"days": review_days, "story": story_seen, "unit": cur_unit, "units": _per_unit, "quests": quests, "inv": inv,
-			"owned": owned, "equipped": equipped, "gacha": gacha, "streak": streak, "main_rw": main_rw, "world10": world10, "world11": world11, "house": house, "tut": tut, "grade_pick": grade_pick}))
+		f.store_string(JSON.stringify(data))
+
+
+## 舊版存檔 → 目前的版本（一版一版往上升）
+static func _migrate(data: Dictionary) -> Dictionary:
+	var v := int(data.get("version", 1))
+	while v < SAVE_VERSION:
+		match v:
+			1:
+				pass      # 1 → 2：格式沒變，只是開始記版本號
+		v += 1
+	data["version"] = v
+	return data
+
+
+static func _same_type(value, default) -> bool:
+	if default is Dictionary:
+		return value is Dictionary
+	if default is Array:
+		return value is Array
+	if default is String:
+		return value is String
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT]
 
 
 func _load_review() -> void:
 	if FileAccess.file_exists(REVIEW_PATH):
 		var data = JSON.parse_string(FileAccess.open(REVIEW_PATH, FileAccess.READ).get_as_text())
 		if data is Dictionary:
-			mistakes = data.get("mistakes", {})
-			fixed = data.get("fixed", {})
-			last_wrong = data.get("last_wrong", {})
+			var old_v := int(data.get("version", 1))
+			if old_v < SAVE_VERSION:
+				# 升級前留一份備份（review.json.v1.bak），升級出問題還救得回來
+				var bak := FileAccess.open(REVIEW_PATH + ".v%d.bak" % old_v, FileAccess.WRITE)
+				if bak:
+					bak.store_string(JSON.stringify(data))
+			data = _migrate(data)
+			for f in SAVE_FIELDS:
+				if f[0] in _NORMALIZED:
+					continue
+				var val = data.get(f[1], null)
+				set(f[0], val if val != null and _same_type(val, f[2]) else (f[2].duplicate(true) if f[2] is Dictionary or f[2] is Array else f[2]))
 			_load_units(data)
-			review_days = data.get("days", [])
-			story_seen = data.get("story", [])
-			var w10 = data.get("world10", {})
-			world10 = w10 if w10 is Dictionary else {}
-			var w11 = data.get("world11", {})
-			world11 = w11 if w11 is Dictionary else {}
-			var hs = data.get("house", {})
-			house = hs if hs is Dictionary else {}
-			var tu = data.get("tut", {})
-			tut = tu if tu is Dictionary else {}
-			grade_pick = String(data.get("grade_pick", ""))
-
 			_load_quests(data)
 			for d in [mistakes, fixed]:
 				for k in d:
 					d[k] = int(d[k])
-
+			if old_v < SAVE_VERSION:
+				save_review()
 			return
 	# 第一次：把舊版錯題本（progress.json）的紀錄搬過來
 	if FileAccess.file_exists("user://progress.json"):
@@ -586,7 +621,7 @@ func mark_story(key: String) -> void:
 
 const DQ := preload("daily_quests.gd")
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.03-l"
+const BUILD := "2026.11.03-m"
 
 
 ## 讀取各單元的資料；舊存檔（還沒有單元的版本）的今日修煉、終焉之塔紀錄搬到「指數與對數」
