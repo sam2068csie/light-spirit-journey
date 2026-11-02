@@ -1071,6 +1071,7 @@ class ConceptPlot extends Control:
 	var _yr := Vector2(-2.6, 3.6)
 	var _ga := 1.0             # 這一幕的整體透明度（換幕時淡入淡出）
 	var _ph := 0.0             # 圖的高度（有說明文字時，底下留一條給文字）
+	var _spec := {}            # 這一幕的 spec（示意圖 shape 要用到裡面的資料）
 
 	func _ready() -> void:
 		clip_contents = true
@@ -1162,6 +1163,7 @@ class ConceptPlot extends Control:
 			_ph -= 8.0
 		# 不是函數圖形的示意圖（例如扇形捲成圓錐）：不畫格線和座標軸
 		if spec.has("shape"):
+			_spec = spec
 			_draw_shape(font, String(spec.shape))
 			_draw_caption(font, cap)
 			return
@@ -1273,10 +1275,70 @@ class ConceptPlot extends Control:
 			cfs = maxi(12, int(cfs * (size.x - 12.0) / cw))
 		MathLabel.draw_on(self, font, size.x / 2.0, by, cap, cfs, _col(Color(1, 0.92, 0.7), 0.95))
 
+	## 示意圖 "synth"：綜合除法的算式（課本的寫法）
+	##   {"shape": "synth", "top": [第一排…], "k": "−3", "mid": [第二排…（第一格留 ""）], "bot": [第三排…（最後一格是餘式）],
+	##    "m": "+2"（除式 mx + n 時，左邊寫的 m，可省略）, "q4": [第四排…（可省略）], "caption": …}
+	##   格子寫 "?" 會用金色框起來（隨堂小測要學生找的那一格）
+	func _draw_synth(font: Font) -> void:
+		var sp := _spec
+		var top: Array = sp.get("top", [])
+		var mid: Array = sp.get("mid", [])
+		var bot: Array = sp.get("bot", [])
+		var q4: Array = sp.get("q4", [])
+		var has_m := sp.has("m")
+		var n := top.size()
+		if n == 0:
+			return
+		var rows := 3 + (1 if has_m else 0)
+		var w := size.x
+		var rh := minf(40.0, _ph / (rows + 0.4))
+		var fs := UITheme.fs(16)
+		var cw := minf(46.0, (w - (78.0 if has_m else 52.0)) / n)
+		var x0 := (w - cw * n) / 2.0 + cw / 2.0 - 14.0 + (12.0 if has_m else 0.0)
+		var y0 := (_ph - rh * rows) / 2.0
+		var y_of := func(r: int) -> float: return y0 + rh * (r + 0.72)
+		var line_c := _col(Color(1, 1, 1), 0.6)
+		var cols := [Color(1, 0.97, 0.9), UITheme.CYAN.lightened(0.2), UITheme.CYAN.lightened(0.35), UITheme.GOOD.lightened(0.2)]
+		var all := [top, mid, bot, q4]
+		for r in rows:
+			var row: Array = all[r]
+			for i in row.size():
+				var s := String(row[i])
+				if s == "":
+					continue
+				var x := x0 + cw * i
+				var y: float = y_of.call(r)
+				if s == "?":
+					draw_rect(Rect2(x - cw * 0.4, y - rh * 0.62, cw * 0.8, rh * 0.8), _col(UITheme.GOLD, 0.95), false, 2.0)
+					MathLabel.draw_on(self, font, x, y, "?", fs, _col(UITheme.GOLD, 0.95))
+				else:
+					var c: Color = cols[r]
+					if r == 2 and i == n - 1:
+						c = UITheme.GOLD
+					MathLabel.draw_on(self, font, x, y, s, fs, _col(c, 0.95))
+		# 右邊的直線和 k、橫線、餘式的直線和圈圈
+		var xb := x0 + cw * (n - 0.5) + 2.0
+		var y_line: float = y_of.call(1) + rh * 0.3
+		draw_line(Vector2(xb, y0 + 2.0), Vector2(xb, y_line), line_c, 1.5)
+		var ks := String(sp.get("k", ""))
+		MathLabel.draw_on(self, font, xb + 8.0 + MathLabel.text_width(font, ks, fs) / 2.0, y_of.call(1), ks, fs, _col(UITheme.GOLD, 0.95))
+		draw_line(Vector2(x0 - cw * 0.5, y_line), Vector2(xb, y_line), line_c, 1.5)
+		var xr := x0 + cw * (n - 1)
+		draw_line(Vector2(xr - cw * 0.5, y_line), Vector2(xr - cw * 0.5, y_of.call(2) + rh * 0.2), line_c, 1.2)
+		if bot.size() == n and String(bot[n - 1]) not in ["", "?"]:
+			draw_arc(Vector2(xr, y_of.call(2) - fs * 0.32), minf(cw * 0.48, rh * 0.5), 0, TAU, 24, _col(UITheme.GOLD, 0.8), 1.5, true)
+		# mx + n：左邊寫 m，框住第三排的商
+		if has_m:
+			var y3: float = y_of.call(2)
+			MathLabel.draw_on(self, font, x0 - cw * 0.95, y3, String(sp.m), fs, _col(UITheme.GOLD, 0.95))
+			draw_rect(Rect2(x0 - cw * 0.5, y3 - rh * 0.66, cw * (n - 1), rh * 0.86), _col(UITheme.GOLD, 0.55), false, 1.2)
+
 	## 示意圖 shape：
 	##   "cone"  左邊是扇形、右邊是捲好的圓錐：扇形半徑 ↔ 斜高 ℓ（白）、弧長 ↔ 底圓周長（藍，一起閃）
 	func _draw_shape(font: Font, kind: String) -> void:
 		match kind:
+			"synth":
+				_draw_synth(font)
 			"tantri":
 				# 以切表弦的直角三角形：底 1 − t²、高 2t、斜邊 1 + t²，左下角 2θ
 				var w := size.x
