@@ -1,4 +1,4 @@
-extends "level_01_light_bridge.gd"
+extends "level_base.gd"
 ## 第五大關「鏡像之塔」（對應講義 重點二：對數函數之圖形與性質）
 ## 用法：根節點選 Control，掛上這個腳本（主選單會自動開啟它）。
 ## 需要同資料夾的 level_01_light_bridge.gd（共用的遊戲引擎）與 level05_bank.gd（題庫）。

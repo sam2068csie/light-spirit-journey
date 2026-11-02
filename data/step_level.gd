@@ -1,4 +1,4 @@
-extends "level_01_light_bridge.gd"
+extends "level_base.gd"
 ## 通用的「步驟推導」關卡引擎（所有單元共用）
 ## 指數與對數的 L2～L8、之後的平面向量、空間向量…都繼承它，只要寫題庫和關卡資訊。
 ##
