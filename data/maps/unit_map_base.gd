@@ -395,7 +395,7 @@ func _draw() -> void:
 	_draw_sea()
 	for st in sky_stars:
 		var a: float = 0.12 + 0.14 * sin(t * 1.5 + st.ph)
-		UITheme.dot(self, st.p, st.s, Color(0.85, 0.93, 1.0, a))
+		UITheme.dot_n(self, st.p, st.s, Color(0.85, 0.93, 1.0, a), 16)
 
 
 func _draw_sea() -> void:
@@ -449,7 +449,7 @@ func _draw_fx(layer: CanvasItem) -> void:
 		_draw_landmark(i)
 	_draw_fog()
 	for p in particles:
-		UITheme.dot(layer, p.p, p.r, Color(p.c.r, p.c.g, p.c.b, p.life * 0.8))
+		UITheme.dot_n(layer, p.p, p.r, Color(p.c.r, p.c.g, p.c.b, p.life * 0.8), 32)
 	for i in m_sites.size():
 		_draw_label(font, i)
 	if spirit_on:
@@ -475,7 +475,7 @@ func _draw_path() -> void:
 			var b: Vector2 = pts[k + 1]
 			var L := a.distance_to(b)
 			while nxt <= acc + L:
-				UITheme.dot(_tgt, a.lerp(b, (nxt - acc) / L), 2.3, c)
+				UITheme.dot_n(_tgt, a.lerp(b, (nxt - acc) / L), 2.3, c, 16)
 				nxt += 14.0
 			acc += L
 

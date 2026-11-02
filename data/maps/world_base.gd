@@ -62,6 +62,25 @@ func _tut_steps() -> Array:
 
 # ================= 共用 =================
 
+## 大塊多邊形（陸地、島）：三角化只算一次，之後每幀直接畫三角形（不用每幀重新切）
+var _tri := {}
+
+func _fill(key: String, poly: PackedVector2Array, col: Color) -> void:
+	if poly.size() < 3:
+		return
+	if not _tri.has(key):
+		var idx := Geometry2D.triangulate_polygon(poly)
+		_tri[key] = idx
+	var idx2: PackedInt32Array = _tri[key]
+	if idx2.is_empty():
+		draw_colored_polygon(poly, col)
+		return
+	var cols := PackedColorArray()
+	cols.resize(poly.size())
+	cols.fill(col)
+	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), idx2, poly, cols)
+
+
 func _add(key: String, id: String) -> void:
 	if not _has(key, id):
 		(_state()[key] as Array).append(id)

@@ -19,3 +19,7 @@ jobs:
           chmod +x godot
       - name: 跑測試（載入、題庫、主要畫面）
         run: GODOT=./godot tests/run_tests.sh
+      - name: 效能守門（draw calls 預算，用虛擬螢幕真的畫出來）
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri >/dev/null
+          SHOTS=/tmp/shots xvfb-run -a -s "-screen 0 1280x720x24" env GODOT=./godot tests/run_tests.sh perf

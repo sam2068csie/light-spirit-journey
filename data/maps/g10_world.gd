@@ -94,6 +94,7 @@ var _card_sub: Label
 var _card_btn: Button
 var _tp_btn: Button
 var _save_t := 0.0
+var _mini: Array = []      # 小地圖上縮小的兩塊陸地（算一次）
 var _left_poly := PackedVector2Array()
 var _right_poly := PackedVector2Array()
 
@@ -766,7 +767,7 @@ func _draw() -> void:
 	var view := Rect2(cam - Vector2(80, 80), Vector2(W, H) + Vector2(160, 160))
 	_draw_waves(view)
 	# 右岸（星夜之地）
-	draw_colored_polygon(_right_poly, Color("1c3352"))
+	_fill("right", _right_poly, Color("1c3352"))
 	_outline(_right_poly, Color("4f86b0"), 4.0)
 	# 河
 	var rv := PackedVector2Array(RIVER)
@@ -776,15 +777,17 @@ func _draw() -> void:
 		var yy := fmod(t * 40.0 + i * 230.0, 2300.0) - 60.0
 		draw_line(Vector2(1890, yy), Vector2(1906, yy + 30), Color(0.7, 0.88, 1.0, 0.35), 3.0, true)
 	# 左岸
-	draw_colored_polygon(_left_poly, Color("2c2646"))
+	_fill("left", _left_poly, Color("2c2646"))
 	_outline(_left_poly, Color("6b5a8e"), 4.0)
 	_draw_path()
+	var grass := PackedVector2Array()      # 草：全部收集起來一次畫完
 	for gr in _grass:
 		if view.has_point(gr.p):
 			var gp: Vector2 = gr.p
 			var s: float = gr.s
-			draw_line(gp, gp + Vector2(-4, -10) * s, Color("4f6a5c"), 2.0, true)
-			draw_line(gp + Vector2(4, 0), gp + Vector2(6, -12) * s + Vector2(4, 0), Color("4f6a5c"), 2.0, true)
+			grass.append_array([gp, gp + Vector2(-4, -10) * s, gp + Vector2(4, 0), gp + Vector2(6, -12) * s + Vector2(4, 0)])
+	if not grass.is_empty():
+		draw_multiline(grass, Color("4f6a5c"), 2.0, true)
 	_draw_zone_grounds(font)
 	_draw_east_grounds(font)
 	# 橋
@@ -810,27 +813,29 @@ func _draw() -> void:
 	draw_string(font, STELE + Vector2(-18, -30), "1 1 2", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c4b8ea"))
 	draw_string(font, STELE + Vector2(-18, -12), "3 5 ?", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c4b8ea"))
 	# 樹（依 y 排序：上面的先畫）
+	var vis := []
 	for tr in _trees:
-		if view.has_point(tr.p):
-			_draw_tree(tr.p, tr.r, tr.k, bool(tr.get("east", false)))
+		if view.grow(40.0).has_point(tr.p):
+			vis.append(tr)
+	_draw_trees(vis)
 	# 霧：還沒去過的地區
 	for z in ZONES:
 		if not _has("visited", z.id):
 			for k in 6:
 				var o := Vector2(cos(k * 1.05 + t * 0.2), sin(k * 1.05 + t * 0.15)) * 120.0
-				UITheme.dot(self, z.center + o, 170.0, Color(0.8, 0.82, 0.95, 0.07))
+				UITheme.dot_n(self, z.center + o, 170.0, Color(0.8, 0.82, 0.95, 0.07), 256)
 	# 入口、傳送石、名字
 	for z in ZONES:
 		_draw_gate(font, z)
 	# 光靈
 	for p in _trail:
-		UITheme.dot(self, p.p, 3.0 * (1.0 - p.life / 0.8), Color(1.0, 0.92, 0.6, 0.7 * (1.0 - p.life / 0.8)))
+		UITheme.dot_n(self, p.p, 3.0 * (1.0 - p.life / 0.8), Color(1.0, 0.92, 0.6, 0.7 * (1.0 - p.life / 0.8)), 32)
 	_draw_spirit()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# 螢幕上：小光點、小地圖、地區名
 	for s in _sparks:
 		var a := 0.15 + 0.15 * sin(t * s.s + s.ph)
-		UITheme.dot(self, s.p, 1.6, Color(1, 0.95, 0.8, a))
+		UITheme.dot_n(self, s.p, 1.6, Color(1, 0.95, 0.8, a), 16)
 	_draw_minimap(font)
 	_draw_goal()
 	_draw_joystick()
@@ -847,15 +852,21 @@ func _outline(poly: PackedVector2Array, c: Color, w: float) -> void:
 
 
 func _draw_waves(view: Rect2) -> void:
+	var wv := PackedVector2Array()      # 海浪：全部收集起來一次畫完
 	var y0 := floorf(view.position.y / 90.0) * 90.0
 	var y := y0
 	while y < view.end.y:
 		var x := floorf(view.position.x / 160.0) * 160.0 + fmod(y, 320.0) * 0.5
 		while x < view.end.x:
 			var off := sin(t * 1.2 + x * 0.01 + y * 0.02) * 6.0
-			draw_arc(Vector2(x + off, y), 18.0, PI * 1.1, PI * 1.9, 8, Color(0.4, 0.55, 0.9, 0.18), 2.0, true)
+			var c := Vector2(x + off, y)
+			for k in 4:
+				wv.append(c + Vector2.from_angle(PI * (1.1 + 0.2 * k)) * 18.0)
+				wv.append(c + Vector2.from_angle(PI * (1.1 + 0.2 * (k + 1))) * 18.0)
 			x += 160.0
 		y += 90.0
+	if not wv.is_empty():
+		draw_multiline(wv, Color(0.4, 0.55, 0.9, 0.18), 2.0, true)
 
 
 func _draw_path() -> void:
@@ -865,7 +876,7 @@ func _draw_path() -> void:
 		var b: Vector2 = pts[i + 1]
 		var n := int(a.distance_to(b) / 26.0)
 		for k in n:
-			UITheme.dot(self, a.lerp(b, (k + 0.5) / maxf(1.0, n)), 5.0, Color(0.95, 0.85, 0.65, 0.28))
+			UITheme.dot_n(self, a.lerp(b, (k + 0.5) / maxf(1.0, n)), 5.0, Color(0.95, 0.85, 0.65, 0.28), 32)
 
 
 func _draw_house(font: Font) -> void:
@@ -877,14 +888,23 @@ func _draw_house(font: Font) -> void:
 	draw_string(font, h + Vector2(-56, 70), "光靈的小屋", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("f0d29a"))
 
 
-func _draw_tree(p: Vector2, r: float, k: float, east := false) -> void:
-	UITheme.dot(self, p + Vector2(0, r * 0.7), r * 0.8, Color(0, 0, 0, 0.18))
-	draw_rect(Rect2(p + Vector2(-4, 0), Vector2(8, r * 0.7)), Color("5a3f2e"))
-	var c := Color("3f6b52") if k < 0.5 else (Color("4d7a4a") if k < 0.8 else Color("8a5a6e"))
-	if east:
-		c = Color("2f5f72") if k < 0.5 else (Color("3d6e8a") if k < 0.8 else Color("5a5a9a"))
-	UITheme.dot(self, p + Vector2(0, -r * 0.3), r, c)
-	UITheme.dot(self, p + Vector2(-r * 0.3, -r * 0.6), r * 0.45, c.lightened(0.15))
+## 樹：同一種東西一起畫（影子 → 樹幹 → 樹冠 → 亮面），每一種只要一次繪圖
+func _draw_trees(list: Array) -> void:
+	for tr in list:
+		UITheme.dot_n(self, tr.p + Vector2(0, tr.r * 0.7), tr.r * 0.8, Color(0, 0, 0, 0.18), 128)
+	for tr in list:
+		draw_rect(Rect2(tr.p + Vector2(-4, 0), Vector2(8, tr.r * 0.7)), Color("5a3f2e"))
+	for tr in list:
+		UITheme.dot_n(self, tr.p + Vector2(0, -tr.r * 0.3), tr.r, _tree_col(tr), 128)
+	for tr in list:
+		UITheme.dot_n(self, tr.p + Vector2(-tr.r * 0.3, -tr.r * 0.6), tr.r * 0.45, _tree_col(tr).lightened(0.15), 128)
+
+
+func _tree_col(tr: Dictionary) -> Color:
+	var k: float = tr.k
+	if bool(tr.get("east", false)):
+		return Color("2f5f72") if k < 0.5 else (Color("3d6e8a") if k < 0.8 else Color("5a5a9a"))
+	return Color("3f6b52") if k < 0.5 else (Color("4d7a4a") if k < 0.8 else Color("8a5a6e"))
 
 
 ## 各地區的地面景物
@@ -910,7 +930,7 @@ func _draw_zone_grounds(font: Font) -> void:
 	var z1: Dictionary = ZONES[1]
 	for k in 5:
 		var rr := 260.0 - k * 46.0
-		draw_colored_polygon(_ellipse(z1.center, rr * 1.25, rr * 0.75), Color(0.45 - k * 0.07, 0.28 - k * 0.04, 0.3 - k * 0.03))
+		_fill("canyon%d" % k, _ellipse(z1.center, rr * 1.25, rr * 0.75), Color(0.45 - k * 0.07, 0.28 - k * 0.04, 0.3 - k * 0.03))
 		if k < 4:
 			draw_string(font, z1.center + Vector2(rr * 1.05, -rr * 0.2), "×10", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.75, 0.55, 0.7))
 	# 圓規湖：正圓的湖 + 兩條筆直的路切過湖邊
@@ -924,9 +944,9 @@ func _draw_zone_grounds(font: Font) -> void:
 	draw_line(LAKE_C, LAKE_C + Vector2(LAKE_R, 0), Color(1, 1, 1, 0.3), 2.0, true)
 	draw_string(font, LAKE_C + Vector2(LAKE_R * 0.35, -8), "r", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1, 0.5))
 	# 根之洞窟：岩石土丘 + 洞口
-	draw_colored_polygon(_ellipse(MOUND_C, MOUND_R + 20.0, MOUND_R), Color("4a3f5e"))
-	draw_colored_polygon(_ellipse(MOUND_C + Vector2(0, -30), MOUND_R * 0.75, MOUND_R * 0.6), Color("5b4f72"))
-	draw_colored_polygon(_ellipse(MOUND_C + Vector2(0, MOUND_R - 40.0), 60.0, 46.0), Color("140f22"))
+	_fill("mound0", _ellipse(MOUND_C, MOUND_R + 20.0, MOUND_R), Color("4a3f5e"))
+	_fill("mound1", _ellipse(MOUND_C + Vector2(0, -30), MOUND_R * 0.75, MOUND_R * 0.6), Color("5b4f72"))
+	_fill("mound2", _ellipse(MOUND_C + Vector2(0, MOUND_R - 40.0), 60.0, 46.0), Color("140f22"))
 	draw_string(font, MOUND_C + Vector2(-40, -40), "x² − 1", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.85, 0.75, 1.0, 0.6))
 
 
@@ -1052,14 +1072,16 @@ func _draw_minimap(font: Font) -> void:
 	var o := Vector2(W - 18 - mw, 70)
 	draw_rect(Rect2(o - Vector2(4, 4), Vector2(mw + 8, mh + 8)), Color(0.04, 0.05, 0.12, 0.85))
 	draw_rect(Rect2(o - Vector2(4, 4), Vector2(mw + 8, mh + 8)), Color(1, 1, 1, 0.2), false, 1.0)
-	var lp := PackedVector2Array()
-	for q in _left_poly:
-		lp.append(o + q * k)
-	draw_colored_polygon(lp, Color("4a3f6e"))
-	var rp := PackedVector2Array()
-	for q in _right_poly:
-		rp.append(o + q * k)
-	draw_colored_polygon(rp, Color("223a58"))
+	if not _tri.has("mini_left"):
+		var lp := PackedVector2Array()
+		for q in _left_poly:
+			lp.append(o + q * k)
+		var rp := PackedVector2Array()
+		for q in _right_poly:
+			rp.append(o + q * k)
+		_mini = [lp, rp]
+	_fill("mini_left", _mini[0], Color("4a3f6e"))
+	_fill("mini_right", _mini[1], Color("223a58"))
 	for z in ZONES:
 		UITheme.dot(self, o + z.center * k, 4.0, z.color if _has("visited", z.id) else Color(0.6, 0.62, 0.75))
 	# 鏡頭框

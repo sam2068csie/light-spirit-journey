@@ -616,6 +616,7 @@ func _open_shelf() -> void:
 				big.uid = uu.id
 				big.state = stt
 				big.visible = true
+				big.queue_redraw()
 				if stt == 2:
 					detail.text = "★ %s　%s（全單元 100%%）\n%s" % [uu.title, sv.name, sv.story]
 				elif stt == 1:
@@ -689,6 +690,9 @@ func _open_upgrade() -> void:
 
 # ================= 每幀 =================
 
+var _redraw_acc := 0.0
+
+
 func _process(delta: float) -> void:
 	t += delta
 	_wait -= delta
@@ -700,7 +704,11 @@ func _process(delta: float) -> void:
 		_say_t -= delta
 	elif randf() < delta * 0.05 and not deco:
 		_talk(LINES[randi() % LINES.size()])
-	queue_redraw()
+	# 小屋裡只有光靈在慢慢飄：一秒重畫 30 次就很順了（點擊、擺設時會另外馬上重畫）
+	_redraw_acc += delta
+	if _redraw_acc >= 1.0 / 30.0:
+		_redraw_acc = 0.0
+		queue_redraw()
 
 
 # ================= 畫圖 =================
@@ -1095,9 +1103,17 @@ class SouvenirView extends Control:
 	var s := 30.0
 	var t := 0.0
 
+	var _acc := 0.0
+
+	## 只有 100% 的紀念品有動畫特效；其他的畫一次就好
 	func _process(delta: float) -> void:
+		if state < 2:
+			return
 		t += delta
-		queue_redraw()
+		_acc += delta
+		if _acc >= 1.0 / 30.0:
+			_acc = 0.0
+			queue_redraw()
 
 	func _draw() -> void:
 		if uid != "":

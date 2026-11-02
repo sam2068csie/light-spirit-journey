@@ -3,6 +3,7 @@
 #   GODOT=/path/to/godot tests/run_tests.sh            （headless，CI 用）
 #   SHOTS=/tmp/shots xvfb-run -a tests/run_tests.sh     （有畫面，存截圖）
 #   ONLY=L3 tests/run_tests.sh banks                    （只跑題庫測試、只測 L3）
+#   SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh perf   （效能：各畫面 draw calls 不可超過預算）
 set -u
 cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"

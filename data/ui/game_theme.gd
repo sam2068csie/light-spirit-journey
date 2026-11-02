@@ -75,6 +75,14 @@ static func dot(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 	ci.draw_texture_rect(_disc(DISC_SIZES[k]), Rect2(c.x - r, c.y - r, 2.0 * r, 2.0 * r), false, col)
 
 
+## 同 dot()，但固定用某一張貼圖（n 是 DISC_SIZES 裡的大小）。
+## 一連串的點都用同一張貼圖時，繪圖引擎會把它們合成一次繪圖（省效能）；大量的小點（樹、霧、光點）用這個。
+static func dot_n(ci: CanvasItem, c: Vector2, r: float, col: Color, n: int) -> void:
+	if r <= 0.0 or col.a <= 0.0:
+		return
+	ci.draw_texture_rect(_disc(n), Rect2(c.x - r, c.y - r, 2.0 * r, 2.0 * r), false, col)
+
+
 static func _disc(n: int) -> Texture2D:
 	if _discs.has(n):
 		return _discs[n]

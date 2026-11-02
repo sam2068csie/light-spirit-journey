@@ -1632,10 +1632,15 @@ class Radar extends Control:
 
 
 ## 背景：漸層夜空、閃爍的星星、緩緩上升的水晶碎片，以及一條有光點奔跑的指數曲線
+## 主畫面的夜空：分三層，不會動的部分（漸層、柔光、曲線、山）只在視窗大小改變時畫一次，
+## 只有星星、碎片和曲線上奔跑的光點每格重畫（而且一秒最多 30 次）
 class NightSky extends Control:
+	const FPS := 30.0
 	var t := 0.0
 	var stars: Array = []
 	var shards: Array = []
+	var _live: Control
+	var _acc := 0.0
 
 	func _ready() -> void:
 		var rng := RandomNumberGenerator.new()
@@ -1645,62 +1650,83 @@ class NightSky extends Control:
 		for i in 22:
 			shards.append({"x": rng.randf(), "y": rng.randf(), "v": rng.randf_range(0.01, 0.03),
 				"s": rng.randf_range(3.0, 7.0), "ph": rng.randf() * TAU})
+		_live = Control.new()
+		_live.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_live.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_live.draw.connect(_draw_live)
+		add_child(_live)
+		var hills := Control.new()
+		hills.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		hills.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hills.draw.connect(func():
+			_mountain(hills, size.y - 60, 46.0, 0.008, Color(0.12, 0.13, 0.30, 0.9))
+			_mountain(hills, size.y - 22, 30.0, 0.015, Color(0.06, 0.08, 0.18, 1.0)))
+		resized.connect(hills.queue_redraw)
+		add_child(hills)
 
 	func _process(delta: float) -> void:
+		if not is_visible_in_tree():
+			return
 		t += delta
 		for sh in shards:
 			sh.y -= sh.v * delta
 			if sh.y < -0.05:
 				sh.y = 1.05
-		queue_redraw()
+		_acc += delta
+		if _acc >= 1.0 / FPS:
+			_acc = 0.0
+			_live.queue_redraw()
 
+	## 不會動的底：漸層＋標題柔光＋指數曲線（只有大小改變才重畫）
 	func _draw() -> void:
 		var w := size.x
 		var h := size.y
 		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
 			PackedColorArray([Color("1b1650"), Color("1b1650"), Color("0b2a3f"), Color("0b2a3f")]))
-		for s in stars:
-			var a: float = 0.3 + 0.35 * sin(t * 1.5 + s.ph)
-			UITheme.dot(self, Vector2(s.p.x * w, s.p.y * h), s.s, Color(1, 1, 1, a))
-		for sh in shards:
-			var c := Vector2(sh.x * w + 10.0 * sin(t * 0.6 + sh.ph), sh.y * h)
-			var sz: float = sh.s
-			var a2: float = 0.25 + 0.2 * sin(t * 2.0 + sh.ph)
-			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -sz), c + Vector2(sz * 0.6, 0),
-				c + Vector2(0, sz), c + Vector2(-sz * 0.6, 0)]), Color(0.6, 0.9, 1.0, a2))
-
-		# 標題後方的柔光
 		var glow_c := Vector2(w / 2.0, h * 0.27)
 		for k in 28:
-			UITheme.dot(self, glow_c, 40.0 + k * 7.0, Color(1.0, 0.8, 0.4, 0.006))
-
-		# 指數曲線與奔跑的光點
+			UITheme.dot_n(self, glow_c, 40.0 + k * 7.0, Color(1.0, 0.8, 0.4, 0.006), 256)
 		var pts := PackedVector2Array()
 		for i in 121:
-			var u := i / 120.0
-			pts.append(_curve(u, w, h))
+			pts.append(_curve(i / 120.0, w, h))
 		draw_polyline(UITheme.thin(pts), Color(0.35, 0.85, 1.0, 0.07), 18.0)
 		draw_polyline(UITheme.thin(pts), Color(0.35, 0.85, 1.0, 0.18), 7.0)
 		draw_polyline(UITheme.thin(pts), Color(0.55, 0.9, 1.0, 0.6), 2.0, true)
+
+	## 會動的：星星（同一張貼圖連著畫）、碎片（一次送出）、奔跑的光點
+	func _draw_live() -> void:
+		var w := size.x
+		var h := size.y
+		for s in stars:
+			var a: float = 0.3 + 0.35 * sin(t * 1.5 + s.ph)
+			UITheme.dot_n(_live, Vector2(s.p.x * w, s.p.y * h), s.s, Color(1, 1, 1, a), 16)
+		var pv := PackedVector2Array()
+		var pc := PackedColorArray()
+		var idx := PackedInt32Array()
+		for sh in shards:
+			var c := Vector2(sh.x * w + 10.0 * sin(t * 0.6 + sh.ph), sh.y * h)
+			var sz: float = sh.s
+			var col := Color(0.6, 0.9, 1.0, 0.25 + 0.2 * sin(t * 2.0 + sh.ph))
+			var n := pv.size()
+			pv.append_array([c + Vector2(0, -sz), c + Vector2(sz * 0.6, 0), c + Vector2(0, sz), c + Vector2(-sz * 0.6, 0)])
+			pc.append_array([col, col, col, col])
+			idx.append_array([n, n + 1, n + 2, n, n + 2, n + 3])
+		RenderingServer.canvas_item_add_triangle_array(_live.get_canvas_item(), idx, pv, pc)
 		var u0 := fmod(t * 0.12, 1.0)
 		for k in 18:
 			var uu := u0 - k * 0.006
 			if uu < 0.0:
 				continue
-			var p := _curve(uu, w, h)
-			UITheme.dot(self, p, 7.0 - k * 0.35, Color(1.0, 0.95, 0.7, 0.5 * (1.0 - k / 18.0)))
+			UITheme.dot_n(_live, _curve(uu, w, h), 7.0 - k * 0.35, Color(1.0, 0.95, 0.7, 0.5 * (1.0 - k / 18.0)), 32)
 		var head := _curve(u0, w, h)
-		UITheme.dot(self, head, 16.0, Color(1.0, 0.9, 0.5, 0.15))
-		UITheme.dot(self, head, 7.0, Color(1.0, 0.98, 0.85))
-
-		_mountain(h - 60, 46.0, 0.008, Color(0.12, 0.13, 0.30, 0.9))
-		_mountain(h - 22, 30.0, 0.015, Color(0.06, 0.08, 0.18, 1.0))
+		UITheme.dot_n(_live, head, 16.0, Color(1.0, 0.9, 0.5, 0.15), 32)
+		UITheme.dot_n(_live, head, 7.0, Color(1.0, 0.98, 0.85), 32)
 
 	func _curve(u: float, w: float, h: float) -> Vector2:
 		var x := lerpf(-4.0, 3.2, u)
 		return Vector2(u * w, h - 70.0 - 26.0 * pow(2.0, x))
 
-	func _mountain(base: float, amp: float, freq: float, c: Color) -> void:
+	func _mountain(ci: CanvasItem, base: float, amp: float, freq: float, c: Color) -> void:
 		var pts := PackedVector2Array()
 		var x := 0.0
 		while x <= size.x + 20.0:
@@ -1708,7 +1734,7 @@ class NightSky extends Control:
 			x += 20.0
 		pts.append(Vector2(size.x, size.y))
 		pts.append(Vector2(0, size.y))
-		draw_colored_polygon(pts, c)
+		ci.draw_colored_polygon(pts, c)
 
 
 ## 紅色驚嘆號（有任務獎勵可以領）：輕輕跳動
