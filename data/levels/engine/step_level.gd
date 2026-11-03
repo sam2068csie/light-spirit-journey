@@ -430,7 +430,7 @@ func _build_fill(st: Dictionary) -> void:
 	rank_box.add_child(card)
 	# 敘述題：填空直接寫在中間的推導紀錄裡（學生只要看中間），右邊只留按鍵
 	card.visible = not _inline_fill()
-	if _inline_fill():
+	if _inline_fill() and n <= 4:      # 格子多的時候格子排成兩列，這行說明拿掉，免得按鍵被擠出畫面
 		var tip := Label.new()
 		tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
 		tip.add_theme_font_size_override("font_size", UITheme.fs(15))
@@ -446,8 +446,11 @@ func _build_fill(st: Dictionary) -> void:
 	card.add_child(fill_preview)
 	slot_btns = []
 	if n > 1:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
+		# 格子多（5 格以上，例如綜合除法的第三排）就排成兩列，免得每一格太窄、填了兩位數就看不到
+		var row := GridContainer.new()
+		row.columns = n if n <= 4 else ceili(n / 2.0)
+		row.add_theme_constant_override("h_separation", 6)
+		row.add_theme_constant_override("v_separation", 6)
 		rank_box.add_child(row)
 		# 格子列和下面的按鍵之間多留一點空隙
 		var gap := Control.new()
