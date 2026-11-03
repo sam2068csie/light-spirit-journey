@@ -6,7 +6,10 @@ extends "res://data/levels/poly/level_poly2_wheel.gd"
 ##   ・喊話（題庫的 _shout，畫面上是選擇題）：答對時聲波從左邊飛向深谷，波上寫著喊出去的 x = a
 ##   ・回音（填空帶 "echo"）：答對時回音帶著 f(a) 的值彈回來；f(a) = 0 時谷底一片安靜，跳出「x − a 是因式」
 ##   ・峽谷石廊的背景（兩側的岩壁、垂下來的鐘乳石）
-##   ・速算：f(x) 除以 x − a 的餘式（三次式附綜合除法的格式；大次方的式子除以 x ± 1）
+##   ・回音石（題庫的 probe 步驟）：下方有一條數線，學生拖動喊話點（或按右邊的 ◀ ▶），石壁即時顯示回音 f(x)。
+##     算術由遊戲來做，學生只要決定「在哪裡喊」：
+##       find  喊對除式要的那個數　roots  找出所有安靜的地方（因式）　tune  x 固定，轉動 k 讓回音變成要的值
+##   ・速算：看除式喊出要代的數、x = ±1 的餘式（一步就能算完）
 
 const BankP3 := preload("res://data/levels/poly/poly3_bank.gd")
 const ECHO_C := Color("c8a8ff")
@@ -59,7 +62,7 @@ func _ensure_fview() -> void:
 		fview.log_title = "推導紀錄"
 		fview.work_word = "推導"
 		fview.speed_title = "回音速算"
-		fview.speed_y = 0.30
+		fview.speed_y = 0.42
 
 
 func _ev() -> EchoView:
@@ -79,6 +82,146 @@ func _step_done(st: Dictionary, why: String) -> void:
 	super(st, why)
 
 
+# ================= 回音石（probe） =================
+
+var probe_lbl: Label
+var probe_found: Label
+
+func _forge_step() -> void:
+	if fview != null:
+		_ev().probe_off()
+	super()
+	if r.get("type", "") == "forge" and si < steps.size() and String(steps[si].kind) == "probe":
+		_build_probe(steps[si])
+
+
+func _build_probe(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	var ev := _ev()
+	ev.start_probe(st, _on_probe_move)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	rank_box.add_child(row)
+	var mk := func(txt: String, d: int) -> Button:
+		var b := Button.new()
+		b.text = txt
+		b.custom_minimum_size = Vector2(64, 56)
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", UITheme.fs(22))
+		b.pressed.connect(func():
+			if not busy:
+				ev.nudge_probe(d))
+		return b
+	row.add_child(mk.call("◀", -1))
+	probe_lbl = Label.new()
+	probe_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	probe_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	probe_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	probe_lbl.add_theme_font_size_override("font_size", UITheme.fs(26))
+	probe_lbl.add_theme_color_override("font_color", ECHO_C.lightened(0.3))
+	row.add_child(probe_lbl)
+	row.add_child(mk.call("▶", 1))
+	probe_found = Label.new()
+	probe_found.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	probe_found.custom_minimum_size = Vector2(300, 0)
+	probe_found.add_theme_font_size_override("font_size", UITheme.fs(17))
+	probe_found.add_theme_color_override("font_color", UITheme.GOOD.lightened(0.2))
+	probe_found.visible = String(st.mode) == "roots"
+	rank_box.add_child(probe_found)
+	var tip := Label.new()
+	tip.text = "在數線上拖動，或按 ◀ ▶ 移動一格。"
+	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	tip.custom_minimum_size = Vector2(300, 0)
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
+	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	rank_box.add_child(tip)
+	go_btn.visible = true
+	go_btn.disabled = false
+	go_btn.text = {"find": "喊！", "roots": "標記這裡", "tune": "就是這個 k"}.get(String(st.mode), "確定")
+	_on_probe_move()
+
+
+func _on_probe_move() -> void:
+	var ev := _ev()
+	if probe_lbl == null or not is_instance_valid(probe_lbl) or ev.probe.is_empty():
+		return
+	var tune := String(ev.probe.mode) == "tune"
+	probe_lbl.text = ("k = " if tune else "x = ") + EchoView.xs(ev.px, int(ev.probe.get("den", 1)))
+	if probe_found != null and is_instance_valid(probe_found) and String(ev.probe.mode) == "roots":
+		var need: int = ev.probe.roots.size()
+		var got := ev.marks.map(func(m): return "x = " + EchoView.xs(m, int(ev.probe.get("den", 1))))
+		probe_found.text = "找到 %d／%d 個：%s" % [got.size(), need, "、".join(got) if not got.is_empty() else "還沒有"]
+	Game.of(self).play("blip", 0.9 + 0.04 * clampf(ev.px, -6.0, 6.0), -16.0)
+
+
+func _custom_go() -> void:
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "probe":
+		_probe_submit(steps[si])
+		return
+	super()
+
+
+func _probe_submit(st: Dictionary) -> void:
+	var ev := _ev()
+	var den := int(st.get("den", 1))
+	var v := ev.probe_value()
+	var vs := EchoView.fmt(v)
+	match String(st.mode):
+		"find":
+			var want := EchoView.parse(String(st.target))
+			if absf(ev.px - want) < 1e-6:
+				Game.of(self).sfx("correct")
+				_probe_done(st, EchoView.xs(ev.px, den), vs)
+				return
+			_wrong(st, "x = %s 的回音是 %s，但這不是除以 %s 的餘式。提示：%s" % [EchoView.xs(ev.px, den), vs, st.div, st.nudge])
+		"roots":
+			if absf(v) > 1e-9:
+				_wrong(st, "x = %s 這裡有回音（%s），不是安靜的地方。提示：%s" % [EchoView.xs(ev.px, den), vs, st.nudge])
+				return
+			for m in ev.marks:
+				if absf(float(m) - ev.px) < 1e-6:
+					_hint("這裡已經標記過了，找找別的地方。", "info")
+					return
+			ev.marks.append(ev.px)
+			ev.echo(EchoView.xs(ev.px, den), "0")
+			Game.of(self).sfx("correct")
+			_on_probe_move()
+			if ev.marks.size() >= st.roots.size():
+				_probe_done(st, "", "")
+			else:
+				_hint("✓ x = %s 安靜：%s 是因式！還有 %d 個。" % [EchoView.xs(ev.px, den), EchoView.divisor_of(ev.px, den), st.roots.size() - ev.marks.size()], "good")
+		"tune":
+			var goal := EchoView.parse(String(st.goal))
+			if absf(v - goal) < 1e-9:
+				Game.of(self).sfx("correct")
+				_probe_done(st, String(st.x0), vs)
+				return
+			_wrong(st, "k = %d 時，x = %s 的回音是 %s，還不是 %s。提示：%s" % [int(ev.px), st.x0, vs, EchoView.fmt(goal), st.nudge])
+
+
+func _probe_done(st: Dictionary, x: String, val: String) -> void:
+	var ev := _ev()
+	go_btn.visible = false
+	_clear(rank_box)
+	rank_box.visible = false
+	ev.probe_off()
+	if x != "":
+		ev.echo(x, val)
+	_step_done(st, "")
+
+
+func _custom_reveal(msg: String) -> void:
+	if fview != null:
+		_ev().probe_off()
+	super(msg)
+
+
 # ================= 速算 =================
 
 func _speed_tag() -> String:
@@ -89,7 +232,9 @@ func _speed_gen(kind: String, n: int) -> Array:
 	return gen_problems(kind, n)
 
 
-## 速算題：f(x) 除以 x − a 的餘式。{eq, q, template, ans, nudge, tag}（三次式多帶 synth：下方畫綜合除法的格式）
+## 速算題（一步就能算完）：{eq, q, template, ans, nudge, tag}
+##   ・看除式喊出要代的數：x − a、ax + b
+##   ・除以 x − 1（係數和）、x + 1 的餘式（小小的三次式）
 static func gen_problems(_kind: String, n: int) -> Array:
 	var out := []
 	var seen := {}
@@ -98,36 +243,25 @@ static func gen_problems(_kind: String, n: int) -> Array:
 		guard += 1
 		var pb := {}
 		if randf() < 0.6:
-			var coef := [randi_range(1, 2), randi_range(-4, 4), randi_range(-5, 5), randi_range(-6, 6)]
-			var a: int = [-2, -1, 1, 2, 3].pick_random()
-			var row := BankP2.synth_row(coef, [a, 1])
-			var v: Array = row[3]
-			if absi(v[0]) > 50 or coef[1] == 0 and randf() < 0.7:
+			var a := randi_range(1, 4)
+			var b := randi_range(-7, 7)
+			if b == 0 or (a > 1 and BankP2._gcd(a, absi(b)) != 1):
 				continue
-			pb = {"eq": "%s 除以 %s\n餘式 = ？" % [BankP2.poly_text(coef), BankP2.divisor_text([a, 1])], "ans": BankP2._qa(v),
-				"synth": {"coef": coef, "a": [a, 1], "ask": 3},
-				"q": "餘式 = f(%s)：代進去，或用綜合除法。" % BankP2._qs([a, 1]),
-				"nudge": "除以 %s ⇒ 代 x = %s。" % [BankP2.divisor_text([a, 1]), BankP2._qs([a, 1])]}
+			var div := ("%dx" % a if a > 1 else "x") + (" + %d" % b if b > 0 else " − %d" % -b)
+			var ans := BankP2._q(-b, a)
+			pb = {"eq": "f(x) 除以 %s\n要喊 x = ？" % div, "ans": BankP2._qa(ans), "template": "x = [0]",
+				"q": "讓 %s = 0 的數。" % div, "nudge": "%s = 0 ⇒ x = ?" % div}
 		else:
-			# 大次方：x^{n} + bx^{m} + c 除以 x ± 1
+			var coef := [1, randi_range(-3, 3), randi_range(-4, 4), randi_range(-5, 5)]
 			var a2: int = [1, -1].pick_random()
-			var n1 := randi_range(20, 99)
-			var m1 := randi_range(3, n1 - 5)
-			var b := [-3, -2, 2, 3].pick_random() as int
-			var c := randi_range(-5, 5)
-			if c == 0:
-				continue
-			var pn := 1 if (a2 == 1 or n1 % 2 == 0) else -1
-			var pm := 1 if (a2 == 1 or m1 % 2 == 0) else -1
-			var v2 := pn + b * pm + c
-			var txt := "x^{%d} %s %dx^{%d} %s %d" % [n1, "−" if b < 0 else "+", absi(b), m1, "−" if c < 0 else "+", absi(c)]
-			pb = {"eq": "%s 除以 %s\n餘式 = ？" % [txt, "x − 1" if a2 == 1 else "x + 1"], "ans": str(v2),
-				"q": "餘式 = f(%s)：看次方是奇數還是偶數。" % ("1" if a2 == 1 else "−1"),
-				"nudge": "1 的任何次方是 1。" if a2 == 1 else "(−1) 的偶數次方是 1，奇數次方是 −1。"}
+			var row := BankP2.synth_row(coef, [a2, 1])
+			pb = {"eq": "%s 除以 %s\n餘式 = ？" % [BankP2.poly_text(coef), BankP2.divisor_text([a2, 1])], "ans": BankP2._qa(row[3]),
+				"template": "餘式 = [0]",
+				"q": "餘式 = f(1) = 係數和。" if a2 == 1 else "餘式 = f(−1)：奇次項變號。",
+				"nudge": "把係數加起來。" if a2 == 1 else "偶次項係數和 − 奇次項係數和。"}
 		if seen.has(pb.eq):
 			continue
 		seen[pb.eq] = true
-		pb["template"] = "餘式 = [0]"
 		pb["tag"] = BankP3.T_REM
 		out.append(pb)
 	return out
@@ -144,11 +278,253 @@ class EchoView extends WheelView:
 	var echo_x := ""
 	var echo_val := ""
 	var _walls := []             # 岩壁（快取）
+	# 回音石（probe）
+	var probe := {}              # 這一步的 probe 步驟（空的：沒有在用）
+	var px := 0.0                # 喊話點的位置（tune 時是 k）
+	var marks: Array = []        # roots：已經標記的安靜位置
+	var probe_cb: Callable       # 喊話點移動時通知關卡（更新右邊的數字）
+	var move_t := -10.0
+	var pad: Control             # 接收拖動的透明區域（畫面本身不接收滑鼠，推導紀錄才能捲動）
 
 	func setup(round: Dictionary) -> void:
 		super(round)
 		shout_t = -10.0
 		echo_t = -10.0
+		probe_off()
+
+	# ---------- 回音石 ----------
+	func start_probe(st: Dictionary, cb: Callable) -> void:
+		probe = st
+		probe_cb = cb
+		marks = []
+		px = 0.0
+		if pad == null:
+			pad = Control.new()
+			pad.mouse_filter = Control.MOUSE_FILTER_STOP
+			pad.gui_input.connect(_pad_input)
+			add_child(pad)
+		pad.visible = true
+		_place_pad()
+		queue_redraw()
+
+	func probe_off() -> void:
+		probe = {}
+		if pad != null:
+			pad.visible = false
+
+	func _probe_rect() -> Rect2:
+		return Rect2(36, size.y - 214, size.x - 72, 190)
+
+	func _place_pad() -> void:
+		if pad != null:
+			var rc := _probe_rect()
+			pad.position = rc.position
+			pad.size = rc.size
+
+	func _process(delta: float) -> void:
+		super(delta)
+		if pad != null and pad.visible and pad.size != _probe_rect().size:
+			_place_pad()
+
+	func _range() -> Vector2:
+		var rg: Array = probe.get("range", [-4, 4])
+		return Vector2(float(rg[0]), float(rg[1]))
+
+	func _line_x0() -> float:
+		return _probe_rect().position.x + 34.0
+
+	func _line_x1() -> float:
+		return _probe_rect().end.x - 34.0
+
+	func _x_at(v: float) -> float:
+		var rg := _range()
+		return lerpf(_line_x0(), _line_x1(), (v - rg.x) / (rg.y - rg.x))
+
+	func set_probe(v: float) -> void:
+		var den := float(probe.get("den", 1))
+		var rg := _range()
+		v = clampf(roundf(v * den) / den, rg.x, rg.y)
+		if absf(v - px) < 1e-9:
+			return
+		px = v
+		move_t = t
+		queue_redraw()
+		if probe_cb.is_valid():
+			probe_cb.call()
+
+	func nudge_probe(d: int) -> void:
+		set_probe(px + d / float(probe.get("den", 1)))
+
+	func _pad_input(e: InputEvent) -> void:
+		if probe.is_empty():
+			return
+		var pos := Vector2.INF
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
+			pos = e.position
+		elif e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT):
+			pos = e.position
+		if pos == Vector2.INF:
+			return
+		var gx := pos.x + pad.position.x
+		var rg := _range()
+		set_probe(lerpf(rg.x, rg.y, (gx - _line_x0()) / (_line_x1() - _line_x0())))
+		pad.accept_event()
+
+	## 目前喊話點的回音
+	func probe_value() -> float:
+		if probe.is_empty():
+			return 0.0
+		if String(probe.mode) == "tune":
+			return eval_fk(probe.fk, parse(String(probe.x0)), px)
+		return eval_fx(probe.fx, px)
+
+	## fx：積的和，每個因式是 [[係數, 次方]…]
+	static func eval_fx(fx: Array, x: float) -> float:
+		var total := 0.0
+		for term in fx:
+			var prod := 1.0
+			for fac in term:
+				var s := 0.0
+				for cp in fac:
+					s += float(cp[0]) * pow(x, float(cp[1]))
+				prod *= s
+			total += prod
+		return total
+
+	## fk：[[常數, k 的係數]…]（由高次到低次）
+	static func eval_fk(fk: Array, x: float, k: float) -> float:
+		var v := 0.0
+		for c in fk:
+			v = v * x + float(c[0]) + float(c[1]) * k
+		return v
+
+	static func parse(s: String) -> float:
+		var v := s.strip_edges().replace("−", "-")
+		if v.contains("/"):
+			var pr := v.split("/")
+			return float(pr[0]) / float(pr[1])
+		return float(v)
+
+	static func _gcd(a: int, b: int) -> int:
+		a = absi(a)
+		b = absi(b)
+		while b != 0:
+			var t2 := a % b
+			a = b
+			b = t2
+		return maxi(a, 1)
+
+	## 數線上的位置寫成「1/2」「−3」
+	static func xs(x: float, den: int) -> String:
+		var n := int(roundf(x * den))
+		var g := _gcd(n, den)
+		var nn := n / g
+		var dd := den / g
+		var body := str(absi(nn)) if dd == 1 else "%d/%d" % [absi(nn), dd]
+		return ("−" if nn < 0 else "") + body
+
+	## x = a 安靜 ⇒ 因式的寫法：x − 2、x + 3、2x − 1
+	static func divisor_of(x: float, den: int) -> String:
+		var n := int(roundf(x * den))
+		var g := _gcd(n, den)
+		var nn := n / g
+		var dd := den / g
+		if nn == 0:
+			return "x"
+		var lead := "x" if dd == 1 else "%dx" % dd
+		return lead + (" − %d" % nn if nn > 0 else " + %d" % -nn)
+
+	## 回音的數值（分數、太大聲）
+	static func fmt(v: float) -> String:
+		if is_nan(v) or is_inf(v) or absf(v) >= 1e9:
+			return "震耳欲聾！"
+		if absf(v) < 1e-9:
+			return "0"
+		for d in [1, 2, 3, 4, 6, 8, 9, 12, 16, 18, 27, 32, 54, 64, 81]:
+			var nv: float = v * d
+			if absf(nv - roundf(nv)) < 1e-6 * d:
+				var n := int(roundf(nv))
+				var body := str(absi(n)) if d == 1 else "\\frac{%d}{%d}" % [absi(n), d]
+				return ("−" if n < 0 else "") + body
+		return str(snappedf(v, 0.01)).replace("-", "−")
+
+	func _draw_probe(font: Font) -> void:
+		var rc := _probe_rect()
+		var mode := String(probe.mode)
+		var den := int(probe.get("den", 1))
+		var tune := mode == "tune"
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.08, 0.06, 0.16, 0.78)
+		sb.border_color = Color(ECHO.r, ECHO.g, ECHO.b, 0.45)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(14)
+		sb.anti_aliasing = true
+		draw_style_box(sb, rc)
+		var head: String = {"find": "回音石：拖動喊話點", "roots": "回音石：找出安靜的地方", "tune": "調音石：轉動 k"}.get(mode, "")
+		MathLabel.draw_text(self, font, rc.position + Vector2(4, -10), head, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(0.85, 0.75, 1.0, 0.85))
+		if mode == "find":
+			MathLabel.draw_on(self, font, rc.end.x - 70.0, rc.position.y + 22.0, "除以 " + String(probe.div), UITheme.fs(15), GOLD)
+		elif tune:
+			MathLabel.draw_on(self, font, rc.end.x - 60.0, rc.position.y + 22.0, "x = " + String(probe.x0), UITheme.fs(15), GOLD)
+		# 數線
+		var rg := _range()
+		var yl := rc.end.y - 58.0
+		draw_line(Vector2(_line_x0() - 14.0, yl), Vector2(_line_x1() + 14.0, yl), Color(1, 1, 1, 0.45), 2.0)
+		var n := int(roundf((rg.y - rg.x) * den))
+		var tick := PackedVector2Array()
+		for i in n + 1:
+			var v := rg.x + float(i) / den
+			var xx := _x_at(v)
+			var major := absf(v - roundf(v)) < 1e-6
+			tick.append_array([Vector2(xx, yl - (7.0 if major else 4.0)), Vector2(xx, yl + (7.0 if major else 4.0))])
+			if major:
+				MathLabel.draw_on(self, font, xx, yl + 26.0, xs(v, 1), UITheme.fs(14), Color(1, 1, 1, 0.65))
+		draw_multiline(tick, Color(1, 1, 1, 0.45), 1.5)
+		MathLabel.draw_on(self, font, _line_x1() + 24.0, yl + 26.0, "k" if tune else "x", UITheme.fs(14), Color(1, 1, 1, 0.5))
+		# 已經標記的安靜位置
+		for m in marks:
+			var mx := _x_at(float(m))
+			UITheme.dot(self, Vector2(mx, yl), 12.0, Color(UITheme.GOOD.r, UITheme.GOOD.g, UITheme.GOOD.b, 0.3))
+			UITheme.dot(self, Vector2(mx, yl), 6.0, UITheme.GOOD)
+			MathLabel.draw_on(self, font, mx, yl - 18.0, divisor_of(float(m), den), UITheme.fs(13), UITheme.GOOD.lightened(0.3))
+		# 喊話點與回音：回音越大聲，聲波越大；安靜時沒有聲波
+		var v := probe_value()
+		var quiet := absf(v) < 1e-9
+		var ox := _x_at(px)
+		var orb := Vector2(ox, yl)
+		if not quiet:
+			var amp := clampf(log(absf(v) + 1.0) / log(10.0) / 3.0, 0.15, 1.0) if not is_inf(v) else 1.0
+			for k in 3:
+				var ph := fposmod(t * 1.2 + k / 3.0, 1.0)
+				draw_arc(orb, 10.0 + ph * (16.0 + 46.0 * amp), PI * 1.05, PI * 1.95, 18,
+					Color(ECHO.r, ECHO.g, ECHO.b, 0.55 * (1.0 - ph)), 2.0, true)
+		var oc: Color = UITheme.GOOD if quiet else GOLD
+		UITheme.dot(self, orb, 16.0, Color(oc.r, oc.g, oc.b, 0.25 + 0.1 * sin(t * 4.0)))
+		UITheme.dot(self, orb, 9.0, oc)
+		# 回音的泡泡
+		var xs_ := xs(px, den)
+		var txt := ""
+		if tune:
+			txt = "k = %s：f(%s) = %s" % [xs_, String(probe.x0), fmt(v)]
+		else:
+			txt = "f(%s) = %s" % [xs_, fmt(v)]
+		if quiet:
+			txt += "　……安靜"
+		var fs := UITheme.fs(20)
+		var tw := MathLabel.text_width(font, txt, fs)
+		var bx := clampf(ox, rc.position.x + tw / 2.0 + 16.0, rc.end.x - tw / 2.0 - 16.0)
+		var by := rc.position.y + 58.0
+		var pop := clampf(1.0 - (t - move_t) / 0.25, 0.0, 1.0)
+		var box := Rect2(bx - tw / 2.0 - 12.0, by - fs - 6.0 - 3.0 * pop, tw + 24.0, fs + 22.0)
+		var bsb := StyleBoxFlat.new()
+		bsb.bg_color = Color(0.12, 0.09, 0.22, 0.92)
+		bsb.border_color = UITheme.GOOD if quiet else Color(ECHO.r, ECHO.g, ECHO.b, 0.8)
+		bsb.set_border_width_all(2)
+		bsb.set_corner_radius_all(12)
+		bsb.anti_aliasing = true
+		draw_style_box(bsb, box)
+		draw_line(Vector2(clampf(ox, box.position.x + 12.0, box.end.x - 12.0), box.end.y), orb - Vector2(0, 12), Color(oc.r, oc.g, oc.b, 0.5), 1.5)
+		MathLabel.draw_on(self, font, bx, box.position.y + fs + 4.0, txt, fs, UITheme.GOOD.lightened(0.3) if quiet else Color(1, 0.95, 1.0))
 
 	func shout(x: String) -> void:
 		shout_x = x
@@ -166,6 +542,15 @@ class EchoView extends WheelView:
 		if s.begins_with("−") or s.begins_with("-"):
 			return "x + " + s.substr(1)
 		return "x − " + s if s != "0" else "x"
+
+	func _graph_on() -> bool:
+		return not probe.is_empty() or super()
+
+	func _draw_mini_graph(font: Font, rect: Rect2) -> void:
+		if not probe.is_empty() and kind == "forge":
+			_draw_probe(font)
+			return
+		super(font, rect)
 
 	# ---------- 背景 ----------
 	func _draw_forge_bg() -> void:
