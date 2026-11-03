@@ -132,7 +132,7 @@ func _build_probe(st: Dictionary) -> void:
 	probe_found.custom_minimum_size = Vector2(300, 0)
 	probe_found.add_theme_font_size_override("font_size", UITheme.fs(17))
 	probe_found.add_theme_color_override("font_color", UITheme.GOOD.lightened(0.2))
-	probe_found.visible = String(st.mode) == "roots"
+	probe_found.visible = String(st.mode) in ["roots", "pins"]
 	rank_box.add_child(probe_found)
 	var tip := Label.new()
 	tip.text = "在數線上拖動，或按 ◀ ▶ 移動一格。"
@@ -143,8 +143,8 @@ func _build_probe(st: Dictionary) -> void:
 	rank_box.add_child(tip)
 	go_btn.visible = true
 	go_btn.disabled = false
-	go_btn.text = {"find": "喊！", "roots": "標記這裡", "tune": "就是這個 k"}.get(String(st.mode), "確定")
-	fview.live_q = "拖動下方的喊話點（或按右邊的 ◀ ▶），再按「%s」。" % go_btn.text
+	go_btn.text = _probe_btn(String(st.mode))
+	fview.live_q = _probe_hint() % go_btn.text
 	_on_probe_move()
 
 
@@ -152,9 +152,8 @@ func _on_probe_move() -> void:
 	var ev := _ev()
 	if probe_lbl == null or not is_instance_valid(probe_lbl) or ev.probe.is_empty():
 		return
-	var tune := String(ev.probe.mode) == "tune"
-	probe_lbl.text = ("k = " if tune else "x = ") + EchoView.xs(ev.px, int(ev.probe.get("den", 1)))
-	if probe_found != null and is_instance_valid(probe_found) and String(ev.probe.mode) == "roots":
+	probe_lbl.text = _probe_var(String(ev.probe.mode)) + " = " + EchoView.xs(ev.px, int(ev.probe.get("den", 1)))
+	if probe_found != null and is_instance_valid(probe_found) and String(ev.probe.mode) in ["roots", "pins"]:
 		var need: int = ev.probe.roots.size()
 		var got := ev.marks.map(func(m): return "x = " + EchoView.xs(m, int(ev.probe.get("den", 1))))
 		probe_found.text = "找到 %d／%d 個：%s" % [got.size(), need, "、".join(got) if not got.is_empty() else "還沒有"]
@@ -166,8 +165,24 @@ func _on_probe_move() -> void:
 			fview.live_fill = "求：所有回音是 0 的 x（找到 %d／%d 個）" % [ev.marks.size(), ev.probe.roots.size()]
 		"tune":
 			fview.live_fill = "求：讓 f(%s) = %s 的 k" % [ev.probe.x0, ev.probe.goal]
+		_:
+			fview.live_fill = _probe_center(ev)
 	fview.queue_redraw()
 	Game.of(self).play("blip", 0.9 + 0.04 * clampf(ev.px, -6.0, 6.0), -16.0)
+
+
+## 右邊按鈕的字、拖動的變數、中間「求：…」的文字（下一關可以加新的 mode）
+func _probe_btn(mode: String) -> String:
+	return {"find": "喊！", "roots": "標記這裡", "tune": "就是這個 k"}.get(mode, "確定")
+
+func _probe_hint() -> String:
+	return "拖動下方的喊話點（或按右邊的 ◀ ▶），再按「%s」。"
+
+func _probe_var(mode: String) -> String:
+	return "k" if mode == "tune" else "x"
+
+func _probe_center(_ev_: EchoView) -> String:
+	return ""
 
 
 func _custom_go() -> void:
@@ -326,6 +341,8 @@ class EchoView extends WheelView:
 	var echo_x := ""
 	var echo_val := ""
 	var _walls := []             # 岩壁（快取）
+	var echo_head := "回音"
+	var echo_word := "（餘式）"    # 回音後面的說明（第四關代入的不一定是餘式，就不寫）
 	# 回音石（probe）
 	var probe := {}              # 這一步的 probe 步驟（空的：沒有在用）
 	var px := 0.0                # 喊話點的位置（tune 時是 k）
@@ -693,4 +710,4 @@ class EchoView extends WheelView:
 					Color(c.r, c.g, c.b, a))
 			else:
 				var x2 := lerpf(w - 60.0, w - 150.0, clampf(et / 1.0, 0.0, 1.0))
-				MathLabel.draw_on(self, font, x2, y, "回音 f(%s) = %s（餘式）" % [echo_x, echo_val], UITheme.fs(18), Color(ECHO.r, ECHO.g, ECHO.b, a).lightened(0.2))
+				MathLabel.draw_on(self, font, x2, y, "%s f(%s) = %s%s" % [echo_head, echo_x, echo_val, echo_word], UITheme.fs(18), Color(ECHO.r, ECHO.g, ECHO.b, a).lightened(0.2))

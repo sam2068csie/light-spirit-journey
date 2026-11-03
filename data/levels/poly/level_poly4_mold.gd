@@ -6,6 +6,10 @@ extends "res://data/levels/poly/level_poly3_echo.gd"
 ##   ・鑄模（題目帶 "mold"）：選好「怎麼假設」之後，下方出現模具，上面刻著假設式，未知數是空的模穴。
 ##     每算出一個未知數，熔液就倒進那一格；全部填滿時整個式子「鑄成」。
 ##   ・看圖題（題目帶 "cubic"）：下方左邊畫出三次函數的部分圖形，標出和 x 軸的交點與另一個點，右邊是鑄模。
+##   ・圖形操作（題庫的 probe 步驟，引擎沿用第三關）：
+##       pins     游標移到圖形和 x 軸的交點，標記根
+##       stretch  轉動首項係數 k，曲線即時跟著變，讓它通過指定的點（驗算自己算的 k）
+##       shift    調 m，畫出 f(x) − m 的點：幾個一樣高的點一起往下，落在 x 軸上就變成根
 ##   ・鑄造工坊的背景（深紅褐色的岩壁、底部的熔爐、滴落的熔液）
 ##   ・速算：已知根和一個點，求首項係數或函數值
 
@@ -60,6 +64,79 @@ func _ensure_fview() -> void:
 		fview.work_word = "推導"
 		fview.speed_title = "鑄模速算"
 		fview.speed_y = 0.42
+		(fview as MoldView).echo_word = ""
+		(fview as MoldView).echo_head = "代入："
+
+
+# ================= 圖形操作（pins、stretch、shift） =================
+
+func _probe_btn(mode: String) -> String:
+	match mode:
+		"pins":
+			return "標記這個根"
+		"stretch":
+			return "就是這個 k"
+		"shift":
+			return "就是這個 m"
+	return super(mode)
+
+
+func _probe_hint() -> String:
+	return "拖動下方的數線（或按右邊的 ◀ ▶），再按「%s」。"
+
+
+func _probe_var(mode: String) -> String:
+	match mode:
+		"stretch":
+			return "k"
+		"shift":
+			return "m"
+	return super(mode)
+
+
+func _probe_center(ev: EchoView) -> String:
+	var st := ev.probe
+	match String(st.get("mode", "")):
+		"pins":
+			return "求：圖形和 x 軸的所有交點（找到 %d／%d 個根）" % [ev.marks.size(), st.roots.size()]
+		"stretch":
+			return "驗算：k 是多少時，曲線通過 (%s, %s)？" % [BankP4._n(st.pt[0]), BankP4._n(st.pt[1])]
+		"shift":
+			return "求：f(x) − m 在這幾個點都是 0 的 m"
+	return ""
+
+
+func _probe_submit(st: Dictionary) -> void:
+	var ev := _ev()
+	var den := int(st.get("den", 1))
+	match String(st.mode):
+		"pins":
+			var v := ev.probe_value()
+			if absf(v) > 1e-9:
+				_wrong(st, "x = %s 不是交點：圖形在這裡不在 x 軸上（f(%s) ≠ 0）。提示：%s" % [EchoView.xs(ev.px, den), EchoView.xs(ev.px, den), st.nudge])
+				return
+			for m in ev.marks:
+				if absf(float(m) - ev.px) < 1e-6:
+					_hint("這個根已經標記過了，找找別的交點。", "info")
+					return
+			ev.marks.append(ev.px)
+			Game.of(self).sfx("correct")
+			_on_probe_move()
+			if ev.marks.size() >= st.roots.size():
+				_probe_done(st, "", "")
+			else:
+				_hint("✓ f(%s) = 0：x = %s 是根，%s 是因式！還有 %d 個。" % [EchoView.xs(ev.px, den), EchoView.xs(ev.px, den),
+					EchoView.divisor_of(ev.px, den), st.roots.size() - ev.marks.size()], "good")
+		"stretch", "shift":
+			var goal := EchoView.parse(String(st.goal))
+			if absf(ev.px - goal) < 1e-9:
+				Game.of(self).sfx("correct")
+				_probe_done(st, "", "")
+				return
+			var what := "曲線還沒有通過 (%s, %s)" % [BankP4._n(st.pt[0]), BankP4._n(st.pt[1])] if String(st.mode) == "stretch" else "點還沒有全部落在 x 軸上"
+			_wrong(st, "%s = %s 時%s。提示：%s" % [_probe_var(String(st.mode)), EchoView.xs(ev.px, den), what, st.nudge])
+		_:
+			super(st)
 
 
 # ================= 速算 =================
@@ -182,7 +259,24 @@ class MoldView extends EchoView:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
 
 	# ---------- 下方：看圖 + 鑄模 ----------
+	func probe_value() -> float:
+		if not probe.is_empty() and String(probe.mode) == "pins":
+			return _curve_y(probe.curve, float(probe.curve.k), 0.0, px)
+		return super()
+
+	static func _curve_y(cv: Dictionary, k: float, m: float, x: float) -> float:
+		var v := k
+		for r in cv.roots:
+			v *= x - float(r)
+		return v + m
+
 	func _draw_mini_graph(font: Font, rect: Rect2) -> void:
+		if not probe.is_empty() and kind == "forge" and String(probe.mode) in ["pins", "stretch", "shift"]:
+			_draw_graph_probe(font, _probe_rect())
+			return
+		if not probe.is_empty():
+			super(font, rect)
+			return
 		if on or not done_spec.is_empty() or (mold.is_empty() and cubic.is_empty()):
 			super(font, rect)
 			return
@@ -250,6 +344,146 @@ class MoldView extends EchoView:
 		var pp: Vector2 = to.call(float(pt[0]), float(pt[1]))
 		UITheme.dot(self, pp, 4.5, UITheme.CYAN)
 		MathLabel.draw_on(self, font, pp.x + 34.0, pp.y + 4.0, "(%s, %s)" % [_num(float(pt[0])), _num(float(pt[1]))], fs, UITheme.CYAN.lightened(0.3))
+
+	## 圖形操作的畫面：pins（游標找交點）、stretch（轉動 k）、shift（f(x) − m）
+	func _draw_graph_probe(font: Font, rc: Rect2) -> void:
+		var mode := String(probe.mode)
+		var den := int(probe.get("den", 1))
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.1, 0.05, 0.03, 0.7)
+		sb.border_color = Color(HOT.r, HOT.g, HOT.b, 0.45)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(14)
+		sb.anti_aliasing = true
+		draw_style_box(sb, rc)
+		var head: String = {"pins": "圖形和 x 軸的交點 = 根", "stretch": "轉動首項係數 k", "shift": "f(x) − m 的點"}.get(mode, "")
+		MathLabel.draw_text(self, font, rc.position + Vector2(4, -10), head, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(1, 0.8, 0.6, 0.85))
+		var fs := UITheme.fs(13)
+		var ax := Color(1, 1, 1, 0.4)
+		if mode == "pins":
+			# 圖形的 x 和數線一樣（拖動的位置就是 x）
+			var cv: Dictionary = probe.curve
+			var rg := _range()
+			var ys := []
+			for i in 61:
+				ys.append(_curve_y(cv, float(cv.k), 0.0, lerpf(float(cv.roots.min()), float(cv.roots.max()), i / 60.0)))
+			var top: float = maxf(float(ys.max()), 1.0) * 1.3
+			var bot: float = minf(float(ys.min()), -1.0) * 1.3
+			var y0 := rc.position.y + 14.0
+			var y1 := rc.end.y - 30.0
+			var to := func(x: float, y: float) -> Vector2: return Vector2(_x_at(x), lerpf(y1, y0, (y - bot) / (top - bot)))
+			var yl: float = to.call(0.0, 0.0).y
+			draw_line(Vector2(_line_x0() - 14.0, yl), Vector2(_line_x1() + 14.0, yl), ax, 1.5)
+			for i in int(rg.y - rg.x) + 1:
+				var v := rg.x + i
+				var p: Vector2 = to.call(v, 0.0)
+				draw_line(p - Vector2(0, 5), p + Vector2(0, 5), ax, 1.5)
+				MathLabel.draw_on(self, font, p.x, rc.end.y - 10.0, xs(v, 1), fs, Color(1, 1, 1, 0.6))
+			var seg := PackedVector2Array()
+			for i in 121:
+				var x := lerpf(rg.x, rg.y, i / 120.0)
+				var y := _curve_y(cv, float(cv.k), 0.0, x)
+				if y < bot or y > top:
+					if seg.size() > 1:
+						draw_polyline(seg, Color(1, 0.7, 0.35, 0.95), 2.5, true)
+					seg = PackedVector2Array()
+					continue
+				seg.append(to.call(x, y))
+			if seg.size() > 1:
+				draw_polyline(seg, Color(1, 0.7, 0.35, 0.95), 2.5, true)
+			for m in marks:
+				var mp: Vector2 = to.call(float(m), 0.0)
+				draw_line(mp + Vector2(0, -16), mp + Vector2(0, 6), GLOWC, 3.0)
+				UITheme.dot(self, mp + Vector2(0, -16), 5.0, GLOWC)
+				MathLabel.draw_on(self, font, mp.x, mp.y - 26.0, divisor_of(float(m), 1), fs, GLOWC)
+			# 游標
+			var cx := _x_at(px)
+			draw_dashed_line(Vector2(cx, y0), Vector2(cx, y1), Color(1, 1, 1, 0.5), 1.5, 6.0)
+			var cy := _curve_y(cv, float(cv.k), 0.0, px)
+			var on_axis := absf(cy) < 1e-9
+			UITheme.dot(self, Vector2(cx, yl), 8.0, UITheme.GOOD if on_axis else Color(1, 1, 1, 0.8))
+			var tag := "x = %s：碰到 x 軸 ⇒ 是根" % xs(px, den) if on_axis else "x = %s：不在 x 軸上" % xs(px, den)
+			var tw := MathLabel.text_width(font, tag, UITheme.fs(15))
+			var tx := clampf(cx, rc.position.x + tw / 2.0 + 10.0, rc.end.x - tw / 2.0 - 10.0)
+			MathLabel.draw_on(self, font, tx, rc.position.y + 22.0, tag, UITheme.fs(15), UITheme.GOOD.lightened(0.2) if on_axis else Color(1, 0.9, 0.8))
+			return
+		# stretch / shift：上面是圖，下面是調 k（或 m）的數線
+		var yl2 := rc.end.y - 30.0
+		var rg2 := _range()
+		draw_line(Vector2(_line_x0() - 10.0, yl2), Vector2(_line_x1() + 10.0, yl2), Color(1, 1, 1, 0.35), 2.0)
+		var nt := int(roundf((rg2.y - rg2.x) * den))
+		for i in nt + 1:
+			var v := rg2.x + float(i) / den
+			var tx2 := _x_at(v)
+			var major := absf(v - roundf(v)) < 1e-6
+			draw_line(Vector2(tx2, yl2 - (5.0 if major else 3.0)), Vector2(tx2, yl2 + (5.0 if major else 3.0)), Color(1, 1, 1, 0.4), 1.5)
+			if major:
+				MathLabel.draw_on(self, font, tx2, yl2 + 18.0, xs(v, 1), UITheme.fs(11), Color(1, 1, 1, 0.5))
+		UITheme.dot(self, Vector2(_x_at(px), yl2), 9.0, GLOWC)
+		MathLabel.draw_on(self, font, _line_x1() + 20.0, yl2 + 4.0, _var_name(), UITheme.fs(14), GOLD)
+		var area := Rect2(rc.position.x + 20.0, rc.position.y + 30.0, rc.size.x - 40.0, yl2 - rc.position.y - 44.0)
+		if mode == "stretch":
+			var cv2: Dictionary = probe.curve
+			var pt: Array = probe.pt
+			var lo: float = float(cv2.roots.min()) - 1.0
+			var hi: float = float(cv2.roots.max()) + 1.0
+			var lim := maxf(absf(float(pt[1])) * 2.2, 6.0)
+			var to2 := func(x: float, y: float) -> Vector2:
+				return Vector2(lerpf(area.position.x, area.end.x, (x - lo) / (hi - lo)), lerpf(area.end.y, area.position.y, (y + lim) / (2.0 * lim)))
+			draw_line(to2.call(lo, 0.0), to2.call(hi, 0.0), ax, 1.5)
+			if lo < 0.0 and hi > 0.0:
+				draw_line(to2.call(0.0, -lim), to2.call(0.0, lim), ax, 1.5)
+			var seg2 := PackedVector2Array()
+			for i in 121:
+				var x := lerpf(lo, hi, i / 120.0)
+				var y := _curve_y(cv2, px, float(cv2.m), x)
+				if absf(y) > lim:
+					if seg2.size() > 1:
+						draw_polyline(seg2, Color(1, 0.7, 0.35, 0.95), 2.5, true)
+					seg2 = PackedVector2Array()
+					continue
+				seg2.append(to2.call(x, y))
+			if seg2.size() > 1:
+				draw_polyline(seg2, Color(1, 0.7, 0.35, 0.95), 2.5, true)
+			for r in cv2.roots:
+				UITheme.dot(self, to2.call(float(r), float(cv2.m)), 4.0, GLOWC)
+			var yv := _curve_y(cv2, px, float(cv2.m), float(pt[0]))
+			var hit := absf(yv - float(pt[1])) < 1e-9
+			var pp: Vector2 = to2.call(float(pt[0]), float(pt[1]))
+			UITheme.dot(self, pp, 10.0 if hit else 7.0, UITheme.GOOD if hit else UITheme.CYAN)
+			MathLabel.draw_on(self, font, pp.x + 40.0, pp.y + 4.0, "(%s, %s)" % [_num(float(pt[0])), _num(float(pt[1]))], fs, UITheme.CYAN.lightened(0.3))
+			var msg := "k = %s：曲線通過 (%s, %s) ✓" % [xs(px, den), _num(float(pt[0])), _num(float(pt[1]))] if hit else \
+				"k = %s：x = %s 時 y = %s" % [xs(px, den), _num(float(pt[0])), fmt(yv)]
+			MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + 22.0, msg, UITheme.fs(15), UITheme.GOOD.lightened(0.2) if hit else Color(1, 0.9, 0.8))
+		else:
+			var pts: Array = probe.pts
+			var xs_ := pts.map(func(q): return float(q[0]))
+			var lo2: float = float(xs_.min()) - 1.5
+			var hi2: float = float(xs_.max()) + 1.5
+			var hmax := 0.0
+			for q in pts:
+				hmax = maxf(hmax, absf(float(q[1])))
+			var lim2 := maxf(hmax * 1.4, 4.0)
+			var to3 := func(x: float, y: float) -> Vector2:
+				return Vector2(lerpf(area.position.x, area.end.x, (x - lo2) / (hi2 - lo2)), lerpf(area.end.y, area.position.y, (y + lim2 * 0.4) / (lim2 * 1.4)))
+			draw_line(to3.call(lo2, 0.0), to3.call(hi2, 0.0), ax, 1.5)
+			MathLabel.draw_on(self, font, to3.call(hi2, 0.0).x - 8.0, to3.call(hi2, 0.0).y - 8.0, "x", fs, Color(1, 1, 1, 0.5))
+			var all_on := true
+			for q in pts:
+				var y := float(q[1]) - px
+				var on0 := absf(y) < 1e-9
+				all_on = all_on and on0
+				var p0: Vector2 = to3.call(float(q[0]), float(q[1]))
+				var p1: Vector2 = to3.call(float(q[0]), y)
+				draw_dashed_line(p0, p1, Color(1, 0.8, 0.5, 0.35), 1.5, 5.0)
+				UITheme.dot(self, p0, 3.5, Color(1, 1, 1, 0.3))
+				UITheme.dot(self, p1, 7.0, UITheme.GOOD if on0 else GLOWC)
+				MathLabel.draw_on(self, font, p1.x, p1.y - 12.0, "x = %s" % _num(float(q[0])), fs, UITheme.GOOD.lightened(0.2) if on0 else Color(1, 0.9, 0.7))
+			var msg2 := "m = %s：f(x) − %s 在這些點都是 0 ⇒ 都是根 ✓" % [xs(px, den), xs(px, den)] if all_on else "m = %s：f(x) − m 的值是 %s" % [xs(px, den), fmt(float(pts[0][1]) - px)]
+			MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + 22.0, msg2, UITheme.fs(15), UITheme.GOOD.lightened(0.2) if all_on else Color(1, 0.9, 0.8))
+
+	func _var_name() -> String:
+		return "m" if String(probe.get("mode", "")) == "shift" else "k"
 
 	static func _num(v: float) -> String:
 		var s := str(absi(int(roundf(v)))) if is_equal_approx(v, roundf(v)) else str(absf(snappedf(v, 0.01)))
