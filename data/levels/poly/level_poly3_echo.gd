@@ -182,7 +182,7 @@ func _probe_submit(st: Dictionary) -> void:
 			_wrong(st, "x = %s 的回音是 %s，但這不是除以 %s 的餘式。提示：%s" % [EchoView.xs(ev.px, den), vs, st.div, st.nudge])
 		"roots":
 			if absf(v) > 1e-9:
-				_wrong(st, "x = %s 這裡有回音（%s），不是安靜的地方。提示：%s" % [EchoView.xs(ev.px, den), vs, st.nudge])
+				_wrong(st, "x = %s 這裡有回音 %s：除以 %s 的餘式不是 0，所以它不是因式。提示：%s" % [EchoView.xs(ev.px, den), vs, EchoView.divisor_of(ev.px, den), st.nudge])
 				return
 			for m in ev.marks:
 				if absf(float(m) - ev.px) < 1e-6:
@@ -195,7 +195,8 @@ func _probe_submit(st: Dictionary) -> void:
 			if ev.marks.size() >= st.roots.size():
 				_probe_done(st, "", "")
 			else:
-				_hint("✓ x = %s 安靜：%s 是因式！還有 %d 個。" % [EchoView.xs(ev.px, den), EchoView.divisor_of(ev.px, den), st.roots.size() - ev.marks.size()], "good")
+				_hint("✓ x = %s 安靜：除以 %s 的餘式是 0，所以 %s 是因式！還有 %d 個。" % [EchoView.xs(ev.px, den), EchoView.divisor_of(ev.px, den),
+					EchoView.divisor_of(ev.px, den), st.roots.size() - ev.marks.size()], "good")
 		"tune":
 			var goal := EchoView.parse(String(st.goal))
 			if absf(v - goal) < 1e-9:
@@ -235,7 +236,9 @@ func _speed_gen(kind: String, n: int) -> Array:
 ## 速算題（一步就能算完）：{eq, q, template, ans, nudge, tag}
 ##   ・看除式喊出要代的數：x − a、ax + b
 ##   ・除以 x − 1（係數和）、x + 1 的餘式（小小的三次式）
-static func gen_problems(_kind: String, n: int) -> Array:
+static func gen_problems(kind: String, n: int) -> Array:
+	if kind == "swap":
+		return _gen_swap(n)
 	var out := []
 	var seen := {}
 	var guard := 0
@@ -263,6 +266,39 @@ static func gen_problems(_kind: String, n: int) -> Array:
 			continue
 		seen[pb.eq] = true
 		pb["tag"] = BankP3.T_REM
+		out.append(pb)
+	return out
+
+
+## 第二章的速算「換換看」：令除式 = 0，高次項換成什麼（一步）
+##   ・除以 x^{2} ∓ c：x^{2} 換成 ±c　・除以 x^{2} − c：x^{2k} 換成 c^{k}　・除以 x^{2} + x + 1：x^{n} 換成 x 的幾次
+static func _gen_swap(n: int) -> Array:
+	var out := []
+	var seen := {}
+	var guard := 0
+	while out.size() < n and guard < 3000:
+		guard += 1
+		var pb := {}
+		match out.size() % 3:
+			0:
+				var c: int = [1, 2, 3, 4, 5, 7, 9].pick_random()
+				var plus := randf() < 0.5
+				var div := "x^{2} %s %d" % ["+" if plus else "−", c]
+				pb = {"eq": "除以 %s\n令除式 = 0：x^{2} 換成？" % div, "ans": str(-c if plus else c), "template": "x^{2} → [0]",
+					"q": "%s = 0，移項。" % div, "nudge": "x^{2} = %s。" % ("−%d" % c if plus else str(c))}
+			1:
+				var c2: int = [2, 3].pick_random()
+				var k := randi_range(2, 3)
+				pb = {"eq": "除以 x^{2} − %d\nx^{%d} 換成？" % [c2, 2 * k], "ans": str(int(pow(c2, k))), "template": "x^{%d} → [0]" % (2 * k),
+					"q": "x^{2} 換成 %d：x^{%d} = (x^{2})^{%d}。" % [c2, 2 * k, k], "nudge": "%d 的 %d 次方。" % [c2, k]}
+			2:
+				var m := randi_range(10, 60)
+				pb = {"eq": "除以 x^{2} + x + 1（x^{3} 換成 1）\nx^{%d} 換成 x 的幾次？" % m, "ans": str(m % 3), "template": "x^{%d} → x^{[0]}" % m,
+					"q": "%d 除以 3 的餘數。" % m, "nudge": "x^{3} 換成 1，只看 %d 除以 3 的餘數。" % m}
+		if seen.has(pb.eq):
+			continue
+		seen[pb.eq] = true
+		pb["tag"] = BankP3.T_POW
 		out.append(pb)
 	return out
 
@@ -460,12 +496,9 @@ class EchoView extends WheelView:
 		sb.set_corner_radius_all(14)
 		sb.anti_aliasing = true
 		draw_style_box(sb, rc)
-		var head: String = {"find": "回音石：拖動喊話點", "roots": "回音石：找出安靜的地方", "tune": "調音石：轉動 k"}.get(mode, "")
+		var head: String = {"find": "回音石：喊出除以 %s 的餘式" % String(probe.get("div", "")), "roots": "回音石：找出所有安靜（回音 = 0）的地方",
+			"tune": "調音石：在 x = %s 喊，轉動 k" % String(probe.get("x0", ""))}.get(mode, "")
 		MathLabel.draw_text(self, font, rc.position + Vector2(4, -10), head, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(0.85, 0.75, 1.0, 0.85))
-		if mode == "find":
-			MathLabel.draw_on(self, font, rc.end.x - 70.0, rc.position.y + 22.0, "除以 " + String(probe.div), UITheme.fs(15), GOLD)
-		elif tune:
-			MathLabel.draw_on(self, font, rc.end.x - 60.0, rc.position.y + 22.0, "x = " + String(probe.x0), UITheme.fs(15), GOLD)
 		# 數線
 		var rg := _range()
 		var yl := rc.end.y - 58.0
@@ -501,21 +534,25 @@ class EchoView extends WheelView:
 		var oc: Color = UITheme.GOOD if quiet else GOLD
 		UITheme.dot(self, orb, 16.0, Color(oc.r, oc.g, oc.b, 0.25 + 0.1 * sin(t * 4.0)))
 		UITheme.dot(self, orb, 9.0, oc)
-		# 回音的泡泡
+		# 回音的泡泡：第一行是回音 f(x)，第二行寫出它代表的意思（餘式、因式）
 		var xs_ := xs(px, den)
 		var txt := ""
+		var sub := ""
+		var dv := divisor_of(parse(String(probe.x0)), 1) if tune else divisor_of(px, den)
 		if tune:
 			txt = "k = %s：f(%s) = %s" % [xs_, String(probe.x0), fmt(v)]
+			sub = "回音 = 除以 %s 的餘式" % dv
 		else:
-			txt = "f(%s) = %s" % [xs_, fmt(v)]
+			txt = "回音 f(%s) = %s" % [xs_, fmt(v)]
+			sub = "除以 %s 的餘式是 0 ⇒ %s 是因式" % [dv, dv] if quiet else "= 除以 %s 的餘式" % dv
 		if quiet:
 			txt += "　……安靜"
 		var fs := UITheme.fs(20)
-		var tw := MathLabel.text_width(font, txt, fs)
+		var fs2 := UITheme.fs(15)
+		var tw := maxf(MathLabel.text_width(font, txt, fs), MathLabel.text_width(font, sub, fs2))
 		var bx := clampf(ox, rc.position.x + tw / 2.0 + 16.0, rc.end.x - tw / 2.0 - 16.0)
-		var by := rc.position.y + 58.0
 		var pop := clampf(1.0 - (t - move_t) / 0.25, 0.0, 1.0)
-		var box := Rect2(bx - tw / 2.0 - 12.0, by - fs - 6.0 - 3.0 * pop, tw + 24.0, fs + 22.0)
+		var box := Rect2(bx - tw / 2.0 - 12.0, rc.position.y + 10.0 - 3.0 * pop, tw + 24.0, fs + fs2 + 26.0)
 		var bsb := StyleBoxFlat.new()
 		bsb.bg_color = Color(0.12, 0.09, 0.22, 0.92)
 		bsb.border_color = UITheme.GOOD if quiet else Color(ECHO.r, ECHO.g, ECHO.b, 0.8)
@@ -525,6 +562,7 @@ class EchoView extends WheelView:
 		draw_style_box(bsb, box)
 		draw_line(Vector2(clampf(ox, box.position.x + 12.0, box.end.x - 12.0), box.end.y), orb - Vector2(0, 12), Color(oc.r, oc.g, oc.b, 0.5), 1.5)
 		MathLabel.draw_on(self, font, bx, box.position.y + fs + 4.0, txt, fs, UITheme.GOOD.lightened(0.3) if quiet else Color(1, 0.95, 1.0))
+		MathLabel.draw_on(self, font, bx, box.position.y + fs + fs2 + 14.0, sub, fs2, UITheme.GOOD.lightened(0.2) if quiet else Color(0.85, 0.78, 1.0, 0.9))
 
 	func shout(x: String) -> void:
 		shout_x = x
@@ -639,4 +677,4 @@ class EchoView extends WheelView:
 					Color(c.r, c.g, c.b, a))
 			else:
 				var x2 := lerpf(w - 60.0, w - 150.0, clampf(et / 1.0, 0.0, 1.0))
-				MathLabel.draw_on(self, font, x2, y, "回音 f(%s) = %s" % [echo_x, echo_val], UITheme.fs(18), Color(ECHO.r, ECHO.g, ECHO.b, a).lightened(0.2))
+				MathLabel.draw_on(self, font, x2, y, "回音 f(%s) = %s（餘式）" % [echo_x, echo_val], UITheme.fs(18), Color(ECHO.r, ECHO.g, ECHO.b, a).lightened(0.2))
