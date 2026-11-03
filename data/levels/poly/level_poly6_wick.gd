@@ -9,6 +9,13 @@ extends "res://data/levels/poly/level_poly5_lake.gd"
 
 const BankP6 := preload("res://data/levels/poly/poly6_bank.gd")
 const WICK_C := Color("ffd27a")
+const HI_C := "ff6b9d"    # 「最高」的顏色
+const LO_C := "4fd8ff"    # 「最低」的顏色
+
+
+## 把「最高」「最低」上色，一眼就看得到要找哪一個
+static func hl_word(s: String) -> String:
+	return s.replace("最高", "[color=#%s]最高[/color]" % HI_C).replace("最低", "[color=#%s]最低[/color]" % LO_C)
 
 const CHAPTERS_P6 := [
 	{"ch": 1, "name": "第一章．點亮燈芯", "topic": "配方求極值、平移、整數、限制範圍、反推係數", "color": Color("ffd27a")},
@@ -100,6 +107,8 @@ func _build_graph(st: Dictionary) -> void:
 				lv.nudge_graph(key, d))
 		row.add_child(b)
 	go_btn.text = "就是這裡" if mode == "window" else "點亮"
+	if mode == "wick":
+		task_label.text = hl_word(String(st.q))
 	fview.live_q = "在下方的湖面上拖動（或按右邊的按鈕），再按「%s」。" % go_btn.text
 	_on_graph_move()
 
@@ -115,7 +124,7 @@ func _graph_submit(st: Dictionary) -> void:
 					hit = true
 			var word := "最高" if String(goal[0]) == "max" else "最低"
 			if not hit:
-				_wrong(st, "%s = %s 這裡還不是%s的地方。提示：%s" % [String(st.get("xname", "x")), LakeView.qs(lv.gh), word, st.nudge])
+				_wrong(st, hl_word("%s = %s 這裡還不是%s的地方。提示：%s" % [String(st.get("xname", "x")), LakeView.qs(lv.gh), word, st.nudge]))
 				return
 			Game.of(self).sfx("correct")
 			lv.gmarks.append([lv.gh, String(goal[0])])
@@ -124,7 +133,7 @@ func _graph_submit(st: Dictionary) -> void:
 				_graph_done(st)
 			else:
 				var nxt: Array = st.goals[lv.gstage]
-				_hint("✓ 點亮了%s的地方！接著找%s的地方。" % [word, "最高" if String(nxt[0]) == "max" else "最低"], "good")
+				_hint(hl_word("✓ 點亮了%s的地方！接著找%s的地方。" % [word, "最高" if String(nxt[0]) == "max" else "最低"]), "good")
 				_on_graph_move()
 		"window":
 			var want := String(st.goals[lv.gstage])
@@ -207,6 +216,11 @@ class WickView extends LakeView:
 	const FLAME := Color("ffd27a")
 	const SHADE := Color("ffe9a8")
 	const LOC_NAME := {"left": "左端點", "vertex": "頂點", "right": "右端點"}
+	const HI := "ff6b9d"
+	const LO := "4fd8ff"
+
+	static func hlw(s: String) -> String:
+		return s.replace("最高", "[color=#%s]最高[/color]" % HI).replace("最低", "[color=#%s]最低[/color]" % LO)
 
 	func _wmode() -> bool:
 		return String(gst.get("mode", "")) in ["wick", "window"]
@@ -368,7 +382,7 @@ class WickView extends LakeView:
 				var word := "最高" if String(goal[0]) == "max" else "最低"
 				var n: int = gst.goals.size()
 				var tail := "（第 %d／%d 盞）" % [gstage + 1, n] if n > 1 else ""
-				return "求：點亮%s的地方%s　現在 %s = %s" % [word, tail, String(gst.get("xname", "x")), qm(gh)]
+				return "求：點亮%s的地方%s" % [hlw(word), tail]
 			"window":
 				var want := String(gst.goals[mini(gstage, gst.goals.size() - 1)])
 				return "求：%s在%s　現在在%s" % [ext_word(), LOC_NAME[want], loc_text()]
@@ -537,7 +551,7 @@ class WickView extends LakeView:
 			UITheme.dot(self, mp, 9.0, Color(UITheme.GOOD.r, UITheme.GOOD.g, UITheme.GOOD.b, 0.35))
 			UITheme.dot(self, mp, 5.0, UITheme.GOOD)
 			var top := String(m[1]) == "max"
-			MathLabel.draw_on(self, font, mp.x, mp.y + (-14.0 if top else 22.0), "最高" if top else "最低", UITheme.fs(12), UITheme.GOOD.lightened(0.2))
+			MathLabel.draw_on(self, font, mp.x, mp.y + (-14.0 if top else 22.0), "最高" if top else "最低", UITheme.fs(13), Color(HI if top else LO))
 		# 燈芯：往下畫一條虛線到橫軸
 		var wp := _to(gh, fv(c, gh))
 		var by := _to(gh, clampf(0.0, vy_.x, vy_.y)).y
