@@ -33,7 +33,7 @@ const UNITS := [
 		{"id": "P3", "name": "回音石廊", "topic": "餘式定理與因式定理", "file": "level_poly3_echo.gd", "bank": "poly3_bank.gd", "color": UITheme.BLUE},
 		{"id": "P4", "name": "根之鑄模", "topic": "求多項式", "file": "level_poly4_mold.gd", "bank": "poly4_bank.gd", "color": UITheme.ORANGE},
 		{"id": "P5", "name": "拋物鏡湖", "topic": "二次函數的圖形", "file": "level_poly5_lake.gd", "bank": "poly5_bank.gd", "color": UITheme.GOOD},
-		{"id": "P6", "name": "極值燈芯", "topic": "二次函數的極值", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "P6", "name": "極值燈芯", "topic": "二次函數的極值", "file": "level_poly6_wick.gd", "bank": "poly6_bank.gd", "color": UITheme.LIME},
 		{"id": "P7", "name": "對稱水晶", "topic": "三次函數的圖形", "file": "", "bank": "", "color": UITheme.VIOLET},
 		{"id": "P8", "name": "符號地下河", "topic": "多項式不等式", "file": "", "bank": "", "color": UITheme.PINK},
 	 ]},
