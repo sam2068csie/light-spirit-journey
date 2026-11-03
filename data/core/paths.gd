@@ -54,6 +54,7 @@ const MAP := {
 	"level_poly1_lamp.gd": "res://data/levels/poly/level_poly1_lamp.gd",
 	"level_poly2_wheel.gd": "res://data/levels/poly/level_poly2_wheel.gd",
 	"level_poly3_echo.gd": "res://data/levels/poly/level_poly3_echo.gd",
+	"level_poly4_mold.gd": "res://data/levels/poly/level_poly4_mold.gd",
 	"level_trig1_arc.gd": "res://data/levels/trig/level_trig1_arc.gd",
 	"level_trig2_sector.gd": "res://data/levels/trig/level_trig2_sector.gd",
 	"level_trig3_wave.gd": "res://data/levels/trig/level_trig3_wave.gd",
