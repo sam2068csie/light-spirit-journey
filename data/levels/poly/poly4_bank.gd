@@ -205,7 +205,7 @@ static func _slots() -> Array:
 			 ]},
 		 ]},
 
-		{"id": "speed1", "chapter": 1, "type": "speed", "title": "鑄模速算", "time": 150.0,
+		{"id": "speed1", "chapter": 1, "type": "speed", "title": "鑄模速算", "time": 200.0,
 		 "story": "熔爐越燒越旺！看根和首項係數，一步算出函數值、首項係數或常數項。",
 		 "insight": "f(p) = f(q) = 0 的二次式：f(x) = k(x − p)(x − q)，代入一個數就好；常數項 = f(0)。",
 		 "variants": [{"gen": "mold", "count": 7}]},

@@ -683,6 +683,16 @@ func _fill_submit() -> void:
 			if not ok:
 				for i in slot_bad.size():
 					slot_bad[i] = true
+		"perm":
+			# 前面幾格順序不限（例如代入後的幾個因數），最後一格（答案）要對
+			var n := ins.size()
+			ok = q_same_set(ins.slice(0, n - 1), ans.slice(0, n - 1))
+			if not ok:
+				for i in n - 1:
+					slot_bad[i] = true
+			if not q_eq(ins[n - 1], ans[n - 1]):
+				slot_bad[n - 1] = true
+				ok = false
 		"approx":
 			# 近似值：和答案相差不超過 tol
 			ok = true

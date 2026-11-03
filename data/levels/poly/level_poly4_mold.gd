@@ -149,10 +149,11 @@ func _speed_gen(kind: String, n: int) -> Array:
 	return gen_problems(kind, n)
 
 
-## 速算題：一步就能算完（{eq, q, template, ans, nudge, tag}）
-##   0：已知首項係數 k 和兩根 ⇒ 代一個數
-##   1：已知兩根和 f(0) ⇒ 求首項係數（f(0) = k·p·q）
-##   2：首項係數 1 的三次式，已知三根 ⇒ 常數項（= f(0)）
+## 速算題：中間是題目，下面的填空寫出算式的「架子」，學生自己填代入的數再算（{eq, q, template, answers, ans, mode, nudge, tag}）
+##   0：已知首項係數 k 和兩根 ⇒ f(r) = k × (r − p) × (r − q)
+##   1：已知兩根和 f(0) ⇒ k × (0 − p) × (0 − q) = f(0)
+##   2：首項係數 1 的三次式，已知三根 ⇒ 常數項 = f(0) = (0 − p)(0 − q)(0 − r)
+##   括號的順序不限、最後一格是答案（mode = "perm"）；右邊的提示只講觀念，不直接寫出式子
 static func gen_problems(_kind: String, n: int) -> Array:
 	var out := []
 	var seen := {}
@@ -164,39 +165,51 @@ static func gen_problems(_kind: String, n: int) -> Array:
 		var q := randi_range(-3, 3)
 		if p >= q:
 			continue
-		var fx := ("f(x) = k(x %s)(x %s)" % [_sgn(-p), _sgn(-q)]).replace("(x )", "x")
 		var pb := {}
 		match kind:
 			0:
-				var k: int = [-2, -1, 1, 2, 3].pick_random()
+				var k: int = [-2, -1, 2, 3].pick_random()
 				var r := randi_range(-2, 4)
 				if r == p or r == q:
 					continue
 				var v := k * (r - p) * (r - q)
-				pb = {"eq": "二次式 f(x) 的首項係數為 %s，f(%s) = f(%s) = 0\nf(%s) = ？" % [_n(k), _n(p), _n(q), _n(r)], "ans": str(v),
-					"q": fx.replace("k", _n(k) if absi(k) != 1 else ("−" if k < 0 else "")) + "，代 x = %s。" % _n(r),
-					"template": "f(%s) = [0]" % _n(r)}
+				pb = {"eq": "二次式 f(x) 的首項係數為 %s，f(%s) = f(%s) = 0\nf(%s) = ？" % [_n(k), _n(p), _n(q), _n(r)],
+					"answers": [str(r - p), str(r - q), str(v)], "ans": str(v),
+					"template": "%s × ([0]) × ([1]) = [2]" % _paren(k),
+					"q": "f(a) = 0 ⇒ x − a 是因式。把 x = %s 代入每個因式。" % _n(r),
+					"nudge": "f(x) = 首項係數 × (x − 根) × (x − 根)，再代入 x = %s。" % _n(r)}
 			1:
 				if p == 0 or q == 0:
 					continue
 				var k2: int = [-2, -1, 1, 2, 3].pick_random()
 				var v2 := k2 * p * q
-				pb = {"eq": "二次式 f(x)：f(%s) = f(%s) = 0，f(0) = %s\n首項係數 = ？" % [_n(p), _n(q), _n(v2)], "ans": str(k2),
-					"q": fx + "，代 x = 0：k × (%s) × (%s) = %s。" % [_n(-p), _n(-q), _n(v2)], "template": "k = [0]"}
+				pb = {"eq": "二次式 f(x)：f(%s) = f(%s) = 0，f(0) = %s\n首項係數 k = ？" % [_n(p), _n(q), _n(v2)],
+					"answers": [str(-p), str(-q), str(k2)], "ans": str(k2),
+					"template": "k([0])([1]) = %s，k = [2]" % _n(v2),
+					"q": "f(a) = 0 ⇒ x − a 是因式。設 f(x) = k(x − 根)(x − 根)，代入 x = 0。",
+					"nudge": "代入 x = 0：每個因式變成 0 − 根。"}
 			2:
 				var r3 := randi_range(-3, 3)
-				if r3 <= q or p == 0 or q == 0 or r3 == 0:      # 三個根由小到大、都不是 0（常數項才不會是 0）
+				if r3 <= q or p == 0 or q == 0 or r3 == 0:
 					continue
 				var c := -p * q * r3
-				pb = {"eq": "三次式 f(x) 的首項係數為 1，三個根是 %s、%s、%s\n常數項 = ？" % [_n(p), _n(q), _n(r3)], "ans": str(c),
-					"q": "f(x) = (x − 根)(x − 根)(x − 根)，常數項 = f(0) = (%s) × (%s) × (%s)。" % [_n(-p), _n(-q), _n(-r3)], "template": "常數項 = [0]"}
+				pb = {"eq": "三次式 f(x) 的首項係數為 1，三個根是 %s、%s、%s\n常數項 = ？" % [_n(p), _n(q), _n(r3)],
+					"answers": [str(-p), str(-q), str(-r3), str(c)], "ans": str(c),
+					"template": "([0]) × ([1]) × ([2]) = [3]",
+					"q": "根 a ⇒ 因式 x − a。常數項 = f(0)，把 x = 0 代入每個因式。",
+					"nudge": "代入 x = 0：每個因式變成 0 − 根。"}
 		if seen.has(pb.eq):
 			continue
 		seen[pb.eq] = true
-		pb["nudge"] = pb.q
+		pb["mode"] = "perm"
 		pb["tag"] = BankP4.T_ROOT
 		out.append(pb)
 	return out
+
+
+## 首項係數寫在乘號前面：負數加括號
+static func _paren(v: int) -> String:
+	return "(%s)" % _n(v) if v < 0 else str(v)
 
 
 static func _n(v: int) -> String:

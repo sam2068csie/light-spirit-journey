@@ -59,7 +59,7 @@ func _tour_level(lid: String, file: String, bank) -> void:
 				for k in 3:
 					if lv.problems.is_empty() or lv.sp_i >= lv.problems.size():
 						break
-					lv.slot_vals = [lv.problems[lv.sp_i].ans]
+					lv.slot_vals = lv.problems[lv.sp_i].get("answers", [lv.problems[lv.sp_i].ans]).duplicate()
 					lv._fill_submit()
 					await frames(2)
 				ok(int(lv.get("streak")) > 0, "%s 速算答對有算分" % tag)

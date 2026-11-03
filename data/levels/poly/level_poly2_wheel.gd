@@ -128,7 +128,8 @@ func _speed_show() -> void:
 	step_label.text = UITheme.step_bar(_steps(), 0)
 	if sp_i > 0:
 		story_label.visible = false
-	_build_fill({"name": "速算", "q": pb.q, "template": pb.template, "answers": [pb.ans], "mode": "ordered",
+	# 一般是一格答案；題目可以帶 answers（好幾格，例如先寫出代入的數再算）和 mode
+	_build_fill({"name": "速算", "q": pb.q, "template": pb.template, "answers": pb.get("answers", [pb.ans]), "mode": pb.get("mode", "ordered"),
 		"nudge": pb.nudge, "tag": pb.tag, "line": ""})
 
 

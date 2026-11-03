@@ -50,7 +50,7 @@ static func choice(name: String, q: String, options: Array, correct: int, why: S
 
 
 ## 數字鍵盤填空：template 裡的 [0]、[1]… 是空格，answers 是每一格的答案（可以寫 "−3/2"、"1/4"）
-##   mode："ordered" 依序比對（預設）、"set" 順序不限、"prop" 成比例就算對（例如方程式的係數）
+##   mode："ordered" 依序比對（預設）、"set" 順序不限、"perm" 前面幾格順序不限但最後一格要對、"prop" 成比例就算對（例如方程式的係數）
 static func fill(name: String, q: String, template: String, answers: Array, line: String, nudge: String,
 		tag := "", mode := "ordered") -> Dictionary:
 	return _tag({"kind": "fill", "name": name, "q": q, "template": template, "answers": answers,

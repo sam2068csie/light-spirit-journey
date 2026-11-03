@@ -268,7 +268,7 @@ static func _slots() -> Array:
 			 ]},
 		 ]},
 
-		{"id": "speed1", "chapter": 1, "type": "speed", "title": "回音速算", "time": 120.0,
+		{"id": "speed1", "chapter": 1, "type": "speed", "title": "回音速算", "time": 170.0,
 		 "story": "石廊裡回音此起彼落！看到除式，馬上喊出要代的數。",
 		 "insight": "除以 x − a：喊 a；除以 ax − b：喊 b/a。除以 x − 1 的餘式是係數和。",
 		 "variants": [{"gen": "shout", "count": 7}]},
@@ -452,7 +452,7 @@ static func _slots() -> Array:
 			 ]},
 		 ]},
 
-		{"id": "speed2", "chapter": 2, "type": "speed", "title": "換換看速算", "time": 120.0,
+		{"id": "speed2", "chapter": 2, "type": "speed", "title": "換換看速算", "time": 170.0,
 		 "story": "令除式 = 0，高次項就能換成簡單的式子。看一眼就說出要換成什麼！",
 		 "insight": "除以 x^{2} − c：x^{2} 換成 c；除以 x^{2} + x + 1：x^{3} 換成 1，次方只看除以 3 的餘數。",
 		 "variants": [{"gen": "swap", "count": 7}]},
