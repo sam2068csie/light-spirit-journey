@@ -104,7 +104,7 @@ const MISTAKE_INFO := {
 	"poly_factor":     {"name": "因式定理（x − a 是因式 ⇔ f(a) = 0）", "level": 2},
 	"poly_remhigh":    {"name": "除式是二次式、三次式的餘式", "level": 3},
 	"poly_remmul":     {"name": "餘式的運算（相乘再除）", "level": 3},
-	"poly_rempow":     {"name": "大次方的餘式", "level": 3},
+	"poly_rempow":     {"name": "餘式定理的推廣（令除式 = 0）", "level": 3},
 	"poly_newton":     {"name": "牛頓階梯假設法（求多項式）", "level": 3},
 	"poly_ladder":     {"name": "階梯假設法（求餘式）", "level": 3},
 	"trig_rad_conv":   {"name": "度與弧度的換算（π = 180°）", "level": 1},
