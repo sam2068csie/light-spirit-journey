@@ -251,7 +251,7 @@ func _forge_step() -> void:
 			rank_box.visible = false
 			go_btn.visible = false     # 上一步（例如排序）的按鈕不要留著
 			_show_question(shuffle_q({"q": st.q, "options": st.options, "correct": st.correct,
-				"why": st.why, "nudge": st.nudge, "tag": st.tag}))
+				"why": st.why, "nudge": st.nudge, "tag": st.tag, "keep_order": st.get("keep_order", false)}))
 			_step_text()          # 步驟多的時候用精簡的進度列，免得換行
 		"fill":
 			_clear(predict_box)
