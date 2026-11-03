@@ -296,9 +296,9 @@ func _build_blocks(st: Dictionary) -> void:
 		ml.valign_center = true
 		ml.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ml.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		ml.font_size = UITheme.fs(18)
+		ml.font_size = UITheme.fs(24) if plus else UITheme.fs(18)
 		ml.color = Color(1, 0.97, 0.9)
-		ml.text = "＋ 下一項" if plus else String(tok)
+		ml.text = "+" if plus else String(tok)
 		b.add_child(ml)
 		var t := String(tok)
 		b.pressed.connect(func():
@@ -332,15 +332,45 @@ func _build_blocks(st: Dictionary) -> void:
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = "拼好了"
-	fview.live_q = "點右邊的積木拼出假設的式子（拼出來的式子寫在這裡）；要接下一項就點「＋ 下一項」。"
+	fview.live_q = "點右邊的積木拼出假設的式子（拼出來的式子寫在這裡）；要接下一項就點「+」。"
 	_refresh_blocks()
 
 
+## 拼出來的式子：和別的積木乘在一起的「多項的式子」（例如 2x + 3、−1）要加括號；
+## 單獨一項、接在「+」後面的負數也加括號（+ (−x + 1)）
 static func blocks_text(seq: Array) -> String:
-	var out := ""
+	var terms := [[]]
 	for tok in seq:
-		out += " + " if String(tok) == "+" else String(tok)
-	return out
+		if String(tok) == "+":
+			terms.append([])
+		else:
+			terms[terms.size() - 1].append(String(tok))
+	var parts := []
+	for ti in terms.size():
+		var tm: Array = terms[ti]
+		var body := ""
+		for k in tm.size():
+			var t: String = tm[k]
+			# 數字接在別的積木後面（例如 (x − 1)2）也加括號，免得看成 12
+			var num := k > 0 and t.is_valid_float()
+			var need: bool = (tm.size() > 1 and (_multi_term(t) or t.begins_with("−") or num)) or (tm.size() == 1 and ti > 0 and t.begins_with("−"))
+			body += ("(%s)" % t) if need else t
+		parts.append(body)
+	return " + ".join(parts) if not seq.is_empty() else ""
+
+
+## 「2x + 3」「x^{2} − x + 1」這種有好幾項、外面沒有括號的式子
+static func _multi_term(t: String) -> bool:
+	var depth := 0
+	for i in t.length():
+		var ch := t[i]
+		if ch == "(" or ch == "{":
+			depth += 1
+		elif ch == ")" or ch == "}":
+			depth -= 1
+		elif depth == 0 and i > 0 and (ch == "+" or ch == "−") and t[i - 1] == " ":
+			return true
+	return false
 
 
 func _refresh_blocks() -> void:
@@ -393,9 +423,9 @@ func _blocks_submit(st: Dictionary) -> void:
 			return
 	var msg := "還不對。"
 	if got.has(""):
-		msg = "有一項是空的：「＋ 下一項」後面要接積木。"
+		msg = "有一項是空的：「+」後面要接積木。"
 	elif got.size() != want.size():
-		msg = "項數不對：正確的假設有 %d 項（用「＋ 下一項」分開）。" % want.size()
+		msg = "項數不對：正確的假設有 %d 項（用「+」分開）。" % want.size()
 	_wrong(st, msg + "提示：" + String(st.nudge))
 
 
