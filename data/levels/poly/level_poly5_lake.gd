@@ -689,7 +689,7 @@ class LakeView extends EchoView:
 				return "α + β = %s，αβ = %s ⇒ %s" % [qs(r0 + r1), qs(r0 * r1), roots_eq()]
 			"slide":
 				if String(gst.get("show", "")) == "pq":
-					return "求：轉到你算出的 k，看 PQ 是不是 4"
+					return "求：轉到你算出的 k，看 \\ol{PQ} 是不是 4"
 				return "求：剛好碰到%s的 k（標記 %d／%d 個）" % ["直線" if String(gst.get("show", "")) == "line" else "湖面", gmarks.size(), gst.goals.size()]
 			"hline":
 				var goal: int = int(gst.goals[mini(gstage, gst.goals.size() - 1)])
@@ -883,7 +883,7 @@ class LakeView extends EchoView:
 		if n == 1:
 			msg += "（剛好碰到！）"
 		if String(gst.get("show", "")) == "pq" and n == 2:
-			msg = "k = %s：PQ = %s" % [qs(gk), qs(absf(xs[1] - xs[0]))]
+			msg = "k = %s：\\ol{PQ} = %s" % [qs(gk), qs(absf(xs[1] - xs[0]))]
 		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + 20.0, msg, UITheme.fs(15), UITheme.GOOD.lightened(0.2) if n == 1 else Color(0.9, 0.95, 1.0))
 
 	static func _real_roots(c: Array) -> Array:
