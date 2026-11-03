@@ -72,37 +72,51 @@ func _speed_gen(kind: String, n: int) -> Array:
 	return gen_problems(kind, n)
 
 
-## 速算題：二次式 f(x) = k(x − p)(x − q)，已知 f(r) = v，求 k 或 f(s)。{eq, q, template, ans, nudge, tag}
+## 速算題：一步就能算完（{eq, q, template, ans, nudge, tag}）
+##   0：已知首項係數 k 和兩根 ⇒ 代一個數
+##   1：已知兩根和 f(0) ⇒ 求首項係數（f(0) = k·p·q）
+##   2：首項係數 1 的三次式，已知三根 ⇒ 常數項（= f(0)）
 static func gen_problems(_kind: String, n: int) -> Array:
 	var out := []
 	var seen := {}
 	var guard := 0
 	while out.size() < n and guard < 3000:
 		guard += 1
+		var kind := out.size() % 3
 		var p := randi_range(-3, 3)
 		var q := randi_range(-3, 3)
 		if p >= q:
 			continue
-		var k: int = [-3, -2, -1, 1, 2, 3].pick_random()
-		var r := randi_range(-3, 4)
-		if r == p or r == q:
-			continue
-		var v := k * (r - p) * (r - q)
-		var pq := "f(%s) = f(%s) = 0，f(%s) = %s" % [_n(p), _n(q), _n(r), _n(v)]
+		var fx := ("f(x) = k(x %s)(x %s)" % [_sgn(-p), _sgn(-q)]).replace("(x )", "x")
 		var pb := {}
-		if randf() < 0.5:
-			pb = {"eq": "二次式 f(x)：" + pq + "\n首項係數 k = ？", "ans": str(k),
-				"q": ("設 f(x) = k(x %s)(x %s)，代 x = %s。" % [_sgn(-p), _sgn(-q), _n(r)]).replace("(x )", "x"), "template": "k = [0]"}
-		else:
-			var s := randi_range(-3, 4)
-			if s == p or s == q or s == r:
-				continue
-			pb = {"eq": "二次式 f(x)：" + pq + "\nf(%s) = ？" % _n(s), "ans": str(k * (s - p) * (s - q)),
-				"q": ("設 f(x) = k(x %s)(x %s)，先代 x = %s 求 k，再代 x = %s。" % [_sgn(-p), _sgn(-q), _n(r), _n(s)]).replace("(x )", "x"), "template": "f(%s) = [0]" % _n(s)}
+		match kind:
+			0:
+				var k: int = [-2, -1, 1, 2, 3].pick_random()
+				var r := randi_range(-2, 4)
+				if r == p or r == q:
+					continue
+				var v := k * (r - p) * (r - q)
+				pb = {"eq": "二次式 f(x) 的首項係數為 %s，f(%s) = f(%s) = 0\nf(%s) = ？" % [_n(k), _n(p), _n(q), _n(r)], "ans": str(v),
+					"q": fx.replace("k", _n(k) if absi(k) != 1 else ("−" if k < 0 else "")) + "，代 x = %s。" % _n(r),
+					"template": "f(%s) = [0]" % _n(r)}
+			1:
+				if p == 0 or q == 0:
+					continue
+				var k2: int = [-2, -1, 1, 2, 3].pick_random()
+				var v2 := k2 * p * q
+				pb = {"eq": "二次式 f(x)：f(%s) = f(%s) = 0，f(0) = %s\n首項係數 = ？" % [_n(p), _n(q), _n(v2)], "ans": str(k2),
+					"q": fx + "，代 x = 0：k × (%s) × (%s) = %s。" % [_n(-p), _n(-q), _n(v2)], "template": "k = [0]"}
+			2:
+				var r3 := randi_range(-3, 3)
+				if r3 <= q or p == 0 or q == 0 or r3 == 0:      # 三個根由小到大、都不是 0（常數項才不會是 0）
+					continue
+				var c := -p * q * r3
+				pb = {"eq": "三次式 f(x) 的首項係數為 1，三個根是 %s、%s、%s\n常數項 = ？" % [_n(p), _n(q), _n(r3)], "ans": str(c),
+					"q": "f(x) = (x − 根)(x − 根)(x − 根)，常數項 = f(0) = (%s) × (%s) × (%s)。" % [_n(-p), _n(-q), _n(-r3)], "template": "常數項 = [0]"}
 		if seen.has(pb.eq):
 			continue
 		seen[pb.eq] = true
-		pb["nudge"] = ("f(x) = k(x %s)(x %s)。" % [_sgn(-p), _sgn(-q)]).replace("(x )", "x")
+		pb["nudge"] = pb.q
 		pb["tag"] = BankP4.T_ROOT
 		out.append(pb)
 	return out
