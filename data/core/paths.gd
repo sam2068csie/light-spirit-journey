@@ -71,6 +71,7 @@ const MAP := {
 	"poly1_bank.gd": "res://data/levels/poly/poly1_bank.gd",
 	"poly2_bank.gd": "res://data/levels/poly/poly2_bank.gd",
 	"poly3_bank.gd": "res://data/levels/poly/poly3_bank.gd",
+	"poly4_bank.gd": "res://data/levels/poly/poly4_bank.gd",
 	"poly_map.gd": "res://data/maps/poly_map.gd",
 	"quest_panel.gd": "res://data/ui/quest_panel.gd",
 	"quiz_manager.gd": "res://data/core/quiz_manager.gd",
