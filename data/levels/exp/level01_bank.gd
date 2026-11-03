@@ -44,7 +44,7 @@ const DIR_DOWN := {"q": "寶石在 (0, 1) 的左上方。曲線往右應該？",
 
 ## 凹口比大小：先判斷凹口方向（up = true 表示凹口向上）
 static func conc_q(eq: String, up: bool, why: String) -> Dictionary:
-	return {"q": eq + " 的圖形，凹口朝哪個方向？", "options": ["凹口向上（像碗）", "凹口向下（像蓋子）"],
+	return {"q": eq + " 的圖形，凹口朝哪個方向？", "options": ["凹口向上", "凹口向下"],
 		"correct": 0 if up else 1, "keep_order": true, "why": why,
 		"nudge": "往右走越陡還是越平？曲線往上彎還是往下彎？", "tag": "concavity"}
 
@@ -100,7 +100,7 @@ static func _sum_pred(fn: String, h: float) -> Dictionary:
 
 ## 「反彈」：問某顆寶石在翻折之前（沒有絕對值時）的高度
 static func _fold_pred(fn: String, x: float, y: float) -> Dictionary:
-	return {"q": "寶石 (%s, %s) 在這座光橋 %s 上。翻折之前（拿掉絕對值時），它的 y 是？" % [_sn(x), _sn(y), fn],
+	return {"q": "寶石 (%s, %s) 在這座光橋 %s 上。向上翻折之前，它原本的 y 是？" % [_sn(x), _sn(y), fn],
 		"options": [_sn(-y), _sn(y), "0", _sn(2.0 * y)], "correct": 0,
 		"why": "原本在 x 軸下方（y = %s），取絕對值翻上來變 %s。" % [_sn(-y), _sn(y)],
 		"nudge": "絕對值把負的翻成正的。這顆寶石是被翻上來的嗎？", "tag": "abs_reflect"}
@@ -169,7 +169,7 @@ static func slots() -> Array:
 
 		{"id": "lift", "chapter": 1, "type": "fit", "title": "升空之泉", "form": "exp",
 		 "params": ["a", "k"], "live": false,
-		 "story": "霧中模式：寶石不先發光。小心黑洞和雷射牆（漸近線）。",
+		 "story": "霧中模式：寶石不先發光。小心黑洞和雷射牆。",
 		 "predicts": [
 			{"q": "y = a^{x} + k 的圖形一定通過哪一點？",
 			 "options": ["(0, 1)", "(0, 1 + k)", "(0, k)", "(1, k)"], "correct": 1,
@@ -190,7 +190,7 @@ static func slots() -> Array:
 
 		{"id": "sketch", "chapter": 1, "type": "draw", "title": "徒手作圖", "form": "exp",
 		 "params": [], "tag": "draw_graph",
-		 "story": "沒有滑桿！直接把圖形畫出來（可以分好幾筆）。",
+		 "story": "沒有滑桿！直接把圖形畫出來。",
 		 "insight": "畫法：漸近線 y = k → 點 (h, 1 + k)、(h + 1, a + k) → 一邊貼漸近線、一邊變陡。",
 		 "variants": [
 			{"answer": {"a": 2.0, "h": 0.0, "k": -1.0}, "keys": [Vector2(0, 0), Vector2(1, 1), Vector2(2, 3)]},
