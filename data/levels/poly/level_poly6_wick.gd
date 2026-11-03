@@ -222,6 +222,108 @@ class WickView extends LakeView:
 	static func hlw(s: String) -> String:
 		return s.replace("最高", "[color=#%s]最高[/color]" % HI).replace("最低", "[color=#%s]最低[/color]" % LO)
 
+	var figure := ""     # 整段旅程都畫在下方的示意圖（trap、square）
+
+	func setup(round: Dictionary) -> void:
+		super(round)
+		figure = String(round.get("figure", "")) if String(round.get("type", "")) == "forge" else ""
+
+	func _graph_on() -> bool:
+		return figure != "" or super()
+
+	func _bottom_limit() -> float:
+		if figure != "" and gst.is_empty():
+			return size.y - 276.0
+		return super()
+
+	func _draw_mini_graph(font: Font, rect: Rect2) -> void:
+		if gst.is_empty() and figure != "":
+			_draw_figure(font)
+			return
+		super(font, rect)
+
+	## 示意圖（只標字母、長度和角度，不寫中文）
+	func _draw_figure(font: Font) -> void:
+		var rc := _grect()
+		if rc.size.x < 120.0:
+			return
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.07, 0.05, 0.12, 0.85)
+		sb.border_color = Color(FLAME.r, FLAME.g, FLAME.b, 0.4)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(14)
+		sb.anti_aliasing = true
+		draw_style_box(sb, rc)
+		var fs := UITheme.fs(15)
+		var wall := Color(0.72, 0.72, 0.8)
+		var fence := FLAME
+		var ink := Color(1, 1, 1, 0.85)
+		match figure:
+			"trap":
+				# 高 h = 8 的樣子：BC = 20、PQ = 28（只是示意）
+				var hh := 8.0
+				var bc := 20.0
+				var sc := minf((rc.size.x - 200.0) / (hh + bc + 4.0), (rc.size.y - 70.0) / (hh + 3.0))
+				var w := (hh + bc + 2.5) * sc
+				var B := Vector2(rc.get_center().x + 50.0 - w * 0.5 + (hh + 2.5) * sc, rc.end.y - 34.0)
+				var C := B + Vector2(bc * sc, 0)
+				var P := B + Vector2(-hh * sc, -hh * sc)
+				var Q := C + Vector2(0, -hh * sc)
+				var A := B + Vector2(-(hh + 2.5) * sc, -(hh + 2.5) * sc)
+				draw_colored_polygon(PackedVector2Array([P, Q, C, B]), Color(fence.r, fence.g, fence.b, 0.12))
+				# 原本的牆（灰色，外側畫斜線）
+				draw_line(A, B, wall, 4.0, true)
+				draw_line(B, C + Vector2(18, 0), wall, 4.0, true)
+				var hatch := PackedVector2Array()
+				for k in 9:
+					var u := (k + 0.5) / 9.0
+					var m := A.lerp(B, u)
+					hatch.append_array([m, m + Vector2(-9, 4)])
+				for k in 12:
+					var m2 := B.lerp(C + Vector2(18, 0), (k + 0.5) / 12.0)
+					hatch.append_array([m2, m2 + Vector2(-6, 8)])
+				draw_multiline(hatch, Color(wall.r, wall.g, wall.b, 0.5), 1.5)
+				# 新的牆 PQ、QR
+				draw_line(P, Q, fence, 3.5, true)
+				draw_line(Q, C, fence, 3.5, true)
+				# 135° 與直角記號
+				draw_arc(B, 18.0, -0.75 * PI, 0.0, 24, Color(1, 0.7, 0.9, 0.9), 2.0, true)
+				MathLabel.draw_on(self, font, B.x + 18.0, B.y - 22.0, "135°", UITheme.fs(13), Color(1, 0.75, 0.9))
+				var s9 := 10.0
+				draw_polyline(PackedVector2Array([C + Vector2(-s9, 0), C + Vector2(-s9, -s9), C + Vector2(0, -s9)]), ink, 1.5)
+				draw_dashed_line(P + Vector2(hh * sc, 0), B, Color(1, 1, 1, 0.35), 1.5, 5.0)
+				MathLabel.draw_on(self, font, A.x - 12.0, A.y + 4.0, "A", fs, ink)
+				MathLabel.draw_on(self, font, B.x - 4.0, B.y + 22.0, "B", fs, ink)
+				MathLabel.draw_on(self, font, C.x + 4.0, C.y + 22.0, "C(R)", fs, ink)
+				MathLabel.draw_on(self, font, P.x - 14.0, P.y - 2.0, "P", fs, fence)
+				MathLabel.draw_on(self, font, Q.x + 12.0, Q.y - 4.0, "Q", fs, fence)
+				MathLabel.draw_on(self, font, Q.x + 14.0, (Q.y + C.y) * 0.5 + 5.0, "h", fs, fence)
+			"square":
+				var side := minf(rc.size.y - 64.0, rc.size.x - 160.0)
+				var o := Vector2(rc.get_center().x + 50.0 - side * 0.5, rc.position.y + 28.0)
+				var u := side / 6.0
+				var x := 1.5
+				var A := o
+				var Bq := o + Vector2(0, 6) * u
+				var Cq := o + Vector2(6, 6) * u
+				var D := o + Vector2(6, 0) * u
+				var E := o + Vector2(0, 2.0 * x) * u
+				var F := o + Vector2(x, 0) * u
+				draw_colored_polygon(PackedVector2Array([Bq, Cq, F, E]), Color(fence.r, fence.g, fence.b, 0.18))
+				draw_polyline(PackedVector2Array([A, Bq, Cq, D, A]), wall, 2.0, true)
+				draw_polyline(PackedVector2Array([E, F, Cq]), fence, 2.5, true)
+				for pt in [E, F]:
+					UITheme.dot(self, pt, 4.0, fence)
+				MathLabel.draw_on(self, font, A.x - 14.0, A.y + 2.0, "A", fs, ink)
+				MathLabel.draw_on(self, font, Bq.x - 14.0, Bq.y + 14.0, "B", fs, ink)
+				MathLabel.draw_on(self, font, Cq.x + 14.0, Cq.y + 14.0, "C", fs, ink)
+				MathLabel.draw_on(self, font, D.x + 14.0, D.y + 2.0, "D", fs, ink)
+				MathLabel.draw_on(self, font, E.x - 14.0, E.y + 6.0, "E", fs, fence)
+				MathLabel.draw_on(self, font, F.x + 12.0, F.y + 18.0, "F", fs, fence)
+				MathLabel.draw_on(self, font, (A.x + F.x) * 0.5, A.y - 6.0, "x", fs, Color("9fd8ff"))
+				MathLabel.draw_on(self, font, A.x - 20.0, (A.y + E.y) * 0.5 + 6.0, "2x", fs, Color("9fd8ff"))
+				MathLabel.draw_on(self, font, (Bq.x + Cq.x) * 0.5, Bq.y + 20.0, "6", fs, ink)
+
 	func _wmode() -> bool:
 		return String(gst.get("mode", "")) in ["wick", "window"]
 
