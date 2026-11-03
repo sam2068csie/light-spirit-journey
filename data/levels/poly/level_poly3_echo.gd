@@ -45,7 +45,7 @@ func chapter_card() -> Dictionary:
 	return {"title": "第二章．雙重回音", "button": "走進雙重回音  ▶",
 		"text": "石廊深處，一次要喊兩聲、三聲：\n\n" \
 			+ "・除以 (x − a)(x − b)：餘式設 px + q，代 a、b 兩個數\n" \
-			+ "・沒有直接給的回音：從別的除法借過來\n" \
+			+ "・沒有直接給 f(a)：代入別的除法的餘式\n" \
 			+ "・階梯假設法：除式多一個因式，餘式就多一階 A × 原來的除式\n" \
 			+ "・兩個多項式的餘式也可以相乘\n" \
 			+ "・令除式 = 0：高次項一路換下去，換完就是餘式\n\n" \
@@ -144,6 +144,7 @@ func _build_probe(st: Dictionary) -> void:
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = {"find": "喊！", "roots": "標記這裡", "tune": "就是這個 k"}.get(String(st.mode), "確定")
+	fview.live_q = "拖動下方的喊話點（或按右邊的 ◀ ▶），再按「%s」。" % go_btn.text
 	_on_probe_move()
 
 
@@ -157,6 +158,15 @@ func _on_probe_move() -> void:
 		var need: int = ev.probe.roots.size()
 		var got := ev.marks.map(func(m): return "x = " + EchoView.xs(m, int(ev.probe.get("den", 1))))
 		probe_found.text = "找到 %d／%d 個：%s" % [got.size(), need, "、".join(got) if not got.is_empty() else "還沒有"]
+	# 中間的推導紀錄也寫出這一步要求什麼
+	match String(ev.probe.mode):
+		"find":
+			fview.live_fill = "求：除以 %s 的餘式 ⇒ 代入 x = ?" % ev.probe.div
+		"roots":
+			fview.live_fill = "求：所有回音是 0 的 x（找到 %d／%d 個）" % [ev.marks.size(), ev.probe.roots.size()]
+		"tune":
+			fview.live_fill = "求：讓 f(%s) = %s 的 k" % [ev.probe.x0, ev.probe.goal]
+	fview.queue_redraw()
 	Game.of(self).play("blip", 0.9 + 0.04 * clampf(ev.px, -6.0, 6.0), -16.0)
 
 
@@ -177,9 +187,10 @@ func _probe_submit(st: Dictionary) -> void:
 			var want := EchoView.parse(String(st.target))
 			if absf(ev.px - want) < 1e-6:
 				Game.of(self).sfx("correct")
-				_probe_done(st, EchoView.xs(ev.px, den), vs)
+				_probe_done(st, "", "")
+				ev.shout(EchoView.xs(ev.px, den))
 				return
-			_wrong(st, "x = %s 的回音是 %s，但這不是除以 %s 的餘式。提示：%s" % [EchoView.xs(ev.px, den), vs, st.div, st.nudge])
+			_wrong(st, "代入 x = %s 時，除式 %s 不是 0，這樣得到的回音不是它的餘式。提示：%s" % [EchoView.xs(ev.px, den), st.div, st.nudge])
 		"roots":
 			if absf(v) > 1e-9:
 				_wrong(st, "x = %s 這裡有回音 %s：除以 %s 的餘式不是 0，所以它不是因式。提示：%s" % [EchoView.xs(ev.px, den), vs, EchoView.divisor_of(ev.px, den), st.nudge])
@@ -214,6 +225,7 @@ func _probe_done(st: Dictionary, x: String, val: String) -> void:
 	ev.probe_off()
 	if x != "":
 		ev.echo(x, val)
+	fview.live_fill = ""
 	_step_done(st, "")
 
 
@@ -522,11 +534,12 @@ class EchoView extends WheelView:
 			MathLabel.draw_on(self, font, mx, yl - 18.0, divisor_of(float(m), den), UITheme.fs(13), UITheme.GOOD.lightened(0.3))
 		# 喊話點與回音：回音越大聲，聲波越大；安靜時沒有聲波
 		var v := probe_value()
-		var quiet := absf(v) < 1e-9
+		var hide := mode == "find"           # 喊對的數之後，回音要學生自己算（這裡先不顯示）
+		var quiet := absf(v) < 1e-9 and not hide
 		var ox := _x_at(px)
 		var orb := Vector2(ox, yl)
 		if not quiet:
-			var amp := clampf(log(absf(v) + 1.0) / log(10.0) / 3.0, 0.15, 1.0) if not is_inf(v) else 1.0
+			var amp := 0.4 if hide else (clampf(log(absf(v) + 1.0) / log(10.0) / 3.0, 0.15, 1.0) if not is_inf(v) else 1.0)
 			for k in 3:
 				var ph := fposmod(t * 1.2 + k / 3.0, 1.0)
 				draw_arc(orb, 10.0 + ph * (16.0 + 46.0 * amp), PI * 1.05, PI * 1.95, 18,
@@ -543,8 +556,11 @@ class EchoView extends WheelView:
 			txt = "k = %s：f(%s) = %s" % [xs_, String(probe.x0), fmt(v)]
 			sub = "回音 = 除以 %s 的餘式" % dv
 		else:
-			txt = "回音 f(%s) = %s" % [xs_, fmt(v)]
-			sub = "除以 %s 的餘式是 0 ⇒ %s 是因式" % [dv, dv] if quiet else "= 除以 %s 的餘式" % dv
+			txt = "代入 x = %s" % xs_ if hide else "回音 f(%s) = %s" % [xs_, fmt(v)]
+			if hide:
+				sub = "回音 f(%s) = 除以 %s 的餘式" % [xs_, dv]
+			else:
+				sub = "除以 %s 的餘式是 0 ⇒ %s 是因式" % [dv, dv] if quiet else "= 除以 %s 的餘式" % dv
 		if quiet:
 			txt += "　……安靜"
 		var fs := UITheme.fs(20)
