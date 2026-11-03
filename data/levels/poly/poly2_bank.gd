@@ -136,6 +136,145 @@ static func _divrow(coef: Array, a: Array, m: int, line: String) -> Dictionary:
 		"nudge": "第三排的每個數都除以 %d。" % m, "tag": T_LIN, "synth": {"coef": coef, "a": a, "m": m, "divrow": true}}
 
 
+# ================= 長除法（可以有 a、b 這種未知係數） =================
+## 係數用「一次式」表示：{"c": [分子, 分母], "s": {"a": [分子, 分母]}}，例如 a + 8 → {"c": [8, 1], "s": {"a": [1, 1]}}
+## 被除式的係數可以寫整數，或 "a"、"-k" 這種（代表 a、−k）；除式的係數都是整數，首項係數是 1
+
+static func lx(v) -> Dictionary:
+	if v is String:
+		var neg: bool = v.begins_with("-")
+		return {"c": [0, 1], "s": {v.trim_prefix("-"): [-1 if neg else 1, 1]}}
+	if v is Array:
+		return {"c": v, "s": {}}
+	return {"c": _q(int(v)), "s": {}}
+
+static func lx_sub(a: Dictionary, b: Dictionary) -> Dictionary:
+	var s := {}
+	for k in a.s:
+		s[k] = a.s[k]
+	for k in b.s:
+		s[k] = _qadd(s.get(k, [0, 1]), _qmul(b.s[k], [-1, 1]))
+	for k in s.keys():
+		if s[k][0] == 0:
+			s.erase(k)
+	return {"c": _qadd(a.c, _qmul(b.c, [-1, 1])), "s": s}
+
+static func lx_mul(a: Dictionary, q: Array) -> Dictionary:
+	var s := {}
+	for k in a.s:
+		s[k] = _qmul(a.s[k], q)
+	return {"c": _qmul(a.c, q), "s": s}
+
+static func lx_num(a: Dictionary) -> bool:
+	return a.s.is_empty()
+
+static func lx_zero(a: Dictionary) -> bool:
+	return a.s.is_empty() and a.c[0] == 0
+
+## 係數的文字（不含正負號以外的括號處理）：a + 8、−k − 5、−3
+static func lx_text(a: Dictionary) -> String:
+	var parts := []
+	for k in a.s:
+		var q: Array = a.s[k]
+		var m := _qs(_q(absi(q[0]), q[1]))
+		parts.append([q[0] < 0, ("" if m == "1" else m) + k])
+	if a.c[0] != 0 or parts.is_empty():
+		parts.append([a.c[0] < 0, _qs(_q(absi(a.c[0]), a.c[1]))])
+	var out := ""
+	for i in parts.size():
+		if i == 0:
+			out = ("−" if parts[i][0] else "") + parts[i][1]
+		else:
+			out += (" − " if parts[i][0] else " + ") + parts[i][1]
+	return out
+
+## 一項的文字：係數 × x^{k}；first：這一排的第一項（正號不寫）
+static func term_text(a: Dictionary, k: int, first: bool) -> String:
+	var xs := "" if k == 0 else ("x" if k == 1 else "x^{%d}" % k)
+	var body := ""
+	var neg := false
+	if lx_num(a):
+		neg = a.c[0] < 0
+		var m := _qs(_q(absi(a.c[0]), a.c[1]))
+		body = (m if (m != "1" or k == 0) else "") + xs
+	else:
+		var t := lx_text(a)
+		if a.c[0] == 0 and a.s.size() == 1:
+			neg = t.begins_with("−")
+			body = t.trim_prefix("−") + xs
+		else:
+			body = "(" + t + ")" + xs
+	if first:
+		return ("−" if neg else "") + body
+	return ("− " if neg else "+ ") + body
+
+## 長除法：f 除以 g（係數由高到低）；qv：已經知道的商式係數（null 表示還沒填，之後的都先不算）
+## 回傳 {"q": 商式係數, "rows": [{"terms": [[次數, 係數]], "line": 下面要不要畫橫線}], "rem": 餘式係數（[次數, 係數]）}
+static func long_rows(f: Array, g: Array, qv = null) -> Dictionary:
+	var cur: Array = f.map(func(v): return lx(v))
+	var dg := g.size() - 1
+	var df := f.size() - 1
+	var nq := df - dg + 1
+	var q := []
+	var rows := []
+	var complete := true
+	for i in nq:
+		var top := df - i                      # 這一輪要消掉的次數
+		var lead: Dictionary = cur[i]
+		var qi: Dictionary = lx_mul(lead, _q(1, int(g[0])))
+		if qv != null:
+			if i >= qv.size() or qv[i] == null:
+				complete = false
+				break
+			qi = lx(qv[i])
+		q.append(qi)
+		# 乘回去：qi × g，對齊次數 top … top − dg
+		var prod := []
+		for j in g.size():
+			prod.append([top - j, lx_mul(qi, _q(int(g[j])))])
+		rows.append({"terms": prod, "line": true, "kind": "prod"})
+		for j in g.size():
+			cur[i + j] = lx_sub(cur[i + j], prod[j][1])
+		# 相減之後的那一排：次數 top − 1 … top − dg − 1（多帶下來一項）
+		if i < nq - 1:
+			var diff := []
+			for d in range(top - 1, maxi(top - dg - 2, -1), -1):
+				diff.append([d, cur[df - d]])
+			rows.append({"terms": diff, "line": false, "kind": "diff"})
+	var rem := []
+	if complete:
+		for d in range(dg - 1, -1, -1):
+			rem.append([d, cur[df - d]])
+	return {"q": q, "rows": rows, "rem": rem, "complete": complete}
+
+
+## 長除法的填空：下方畫出完整的長除法（直式），學生填商式的係數（rem = true 時也填餘式的係數）
+static func _long(f: Array, g: Array, line: String, rem := true, name := "長除法") -> Dictionary:
+	var res := long_rows(f, g)
+	var df := f.size() - 1
+	var dg := g.size() - 1
+	var parts := []
+	var answers := []
+	var n := 0
+	for i in res.q.size():
+		var k: int = df - dg - i
+		parts.append("[%d]" % n + ("" if k == 0 else ("x" if k == 1 else "x^{%d}" % k)))
+		answers.append(_qa(res.q[i].c))
+		n += 1
+	var tpl := "商式：" + " + ".join(parts)
+	if rem:
+		var rp := []
+		for t in res.rem:
+			rp.append("[%d]" % n + ("" if t[0] == 0 else ("x" if t[0] == 1 else "x^{%d}" % t[0])))
+			answers.append(_qa(t[1].c))
+			n += 1
+		tpl += "　　餘式：" + " + ".join(rp)
+	var ask := "填出商式的係數" + ("和餘式" if rem else "") + "（每一輪：最高次項相除、乘回去、相減）。"
+	return {"kind": "fill", "name": name, "q": ask, "template": tpl, "answers": answers, "line": line,
+		"nudge": "先用被除式的最高次項除以除式的最高次項，得到商的一項；乘回去、相減，再做下一輪。", "tag": T_QUAD,
+		"longdiv": {"f": f, "g": g, "rem": rem}}
+
+
 static func slots() -> Array:
 	var out := _slots()
 	for slot in out:
@@ -246,57 +385,32 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．深層水車 =======================
 		{"id": "quad", "chapter": 2, "type": "forge", "title": "雙槽水車",
-		 "story": "深層的水車有兩個水槽：除式是二次式，就用長除法一層一層除下去——除、乘回去、相減，再除下一項。",
-		 "insight": "長除法：① 最高次項相除得到商的一項 ② 乘回去 ③ 相減，重複到剩下的次數比除式低。除式是二次式時，餘式最多一次（px + q）。",
+		 "story": "深層的水車有兩個水槽：除式是二次式，就用長除法——除、乘回去、相減，一層一層往下。",
+		 "insight": "長除法：最高次項相除得到商的一項，乘回去、相減，重複到剩下的次數比除式低。除式是二次式時，餘式最多一次（px + q）。",
 		 "variants": [
 			{"eq": "2x^{3} − x^{2} + ax + b 除以 x^{2} − 2x − 1\n餘式是 5x + 4，求 a + b",
 			 "steps": [
-				_f("商的第一項", "最高次項相除：2x^{3} 除以 x^{2}。", "商的第一項 = [0]x", ["2"],
-					"2x^{3} 除以 x^{2} 得 2x", "x^{3} 除以 x^{2} 剩 x；係數 2。", T_QUAD),
-				_f("乘回去", "2x 乘以除式 x^{2} − 2x − 1。", "2x(x^{2} − 2x − 1) = 2x^{3} − [0]x^{2} − [1]x", ["4", "2"],
-					"2x(x^{2} − 2x − 1) = 2x^{3} − 4x^{2} − 2x", "2x · 2x = 4x^{2}，2x · 1 = 2x。", T_QUAD),
-				_f("相減", "被除式減掉 2x^{3} − 4x^{2} − 2x（x 項先寫 a 加多少）。", "剩下 [0]x^{2} + (a + [1])x + b", ["3", "2"],
-					"相減：3x^{2} + (a + 2)x + b", "−x^{2} − (−4x^{2}) = 3x^{2}；ax − (−2x) = (a + 2)x。", T_QUAD),
-				_f("商的第二項", "再用最高次項相除：3x^{2} 除以 x^{2}。", "商的第二項 = [0]", ["3"],
-					"3x^{2} 除以 x^{2} 得 3 ⇒ 商式 2x + 3", "3x^{2} 除以 x^{2}。", T_QUAD),
-				_f("乘回去", "3 乘以除式 x^{2} − 2x − 1。", "3(x^{2} − 2x − 1) = 3x^{2} − [0]x − [1]", ["6", "3"],
-					"3(x^{2} − 2x − 1) = 3x^{2} − 6x − 3", "每一項都乘 3。", T_QUAD),
-				_f("相減得餘式", "3x^{2} + (a + 2)x + b 減掉 3x^{2} − 6x − 3。", "餘式 = (a + [0])x + (b + [1])", ["8", "3"],
-					"餘式 = (a + 8)x + (b + 3)", "(a + 2) − (−6) = a + 8；b − (−3) = b + 3。", T_QUAD),
-				_f("比較餘式", "餘式要等於 5x + 4：a + 8 = 5、b + 3 = 4。", "a = [0]，b = [1]", ["-3", "1"],
-					"a = −3，b = 1", "a + 8 = 5、b + 3 = 4。", T_QUAD),
+				_long([2, -1, "a", "b"], [1, -2, -1], "商式 2x + 3，餘式 (a + 8)x + (b + 3)", false),
+				_f("比較餘式", "長除法的餘式是 (a + 8)x + (b + 3)，要等於 5x + 4。", "a = [0]，b = [1]", ["-3", "1"],
+					"a + 8 = 5、b + 3 = 4 ⇒ a = −3，b = 1", "a + 8 = 5、b + 3 = 4。", T_QUAD),
 				_f("求和", "算出 a + b。", "a + b = [0]", ["-2"], "a + b = −3 + 1 = −2", "−3 + 1。", T_QUAD),
 			 ]},
-			{"eq": "x^{2} − 5x + 2 = 0 的兩根，也是\n3x^{4} − 14x^{3} + mx^{2} + nx − 2 = 0 的根，求 m + n",
+			{"eq": "x^{2} − 5x + 2 = 0 的兩根，也是\nx^{4} − 4x^{3} − 2x^{2} + mx + n = 0 的根，求 m + n",
 			 "steps": [
 				_c("代表什麼", "x^{2} − 5x + 2 的兩根都是四次式的根，代表？",
-					["x^{2} − 5x + 2 整除那個四次式", "兩個式子相等", "m = n", "x^{2} − 5x + 2 = 0 沒有實根"], 0,
+					["x^{2} − 5x + 2 整除那個四次式（餘式 = 0）", "兩個式子相等", "m = n", "x^{2} − 5x + 2 = 0 沒有實根"], 0,
 					"兩個根都讓四次式等於 0，所以四次式除以 x^{2} − 5x + 2 的餘式是 0。", "根都一樣，就能整除。",
-					"3x^{4} − 14x^{3} + mx^{2} + nx − 2 = (x^{2} − 5x + 2)(3x^{2} + px + k)", T_QUAD),
-				_c("商的首項", "四次式除以二次式，商式是二次式。最高次項：3x^{4} 除以 x^{2}，商式的首項是？", ["3x^{2}", "x^{2}", "3x", "x^{4}"], 0,
-					"3x^{4} 除以 x^{2} 得 3x^{2}。", "係數 3，次方 4 − 2。", "商式 = 3x^{2} + px + k", T_QUAD),
-				_c("商的常數", "常數項相乘要等於 −2：2 × k = −2，k 是？", ["−1", "2", "−2", "1"], 0,
-					"2 × k = −2 ⇒ k = −1。", "看兩邊的常數項。", "常數項：2k = −2 ⇒ k = −1", T_QUAD),
-				_f("比 x³ 項", "右邊的 x^{3} 項：x^{2} · px + (−5x) · 3x^{2} = (p − 15)x^{3}，要等於 −14x^{3}。", "p = [0]", ["1"],
-					"p − 15 = −14 ⇒ p = 1，商式 3x^{2} + x − 1", "p − 15 = −14。", T_QUAD),
-				_f("比 x² 項", "(x^{2} − 5x + 2)(3x^{2} + x − 1) 的 x^{2} 項：x^{2}·(−1) + (−5x)·x + 2·3x^{2}。", "m = ([0]) + ([1]) + [2] = [3]",
-					["-1", "-5", "6", "0"], "m = −1 − 5 + 6 = 0", "三組相乘會得到 x^{2}：−1、−5、6。", T_QUAD),
-				_f("比 x 項", "x 項：(−5x)·(−1) + 2·x。", "n = [0] + [1] = [2]", ["5", "2", "7"],
-					"n = 5 + 2 = 7", "(−5)(−1) = 5，2 × 1 = 2。", T_QUAD),
-				_f("求和", "算出 m + n。", "m + n = [0]", ["7"], "m + n = 0 + 7 = 7", "0 + 7。", T_QUAD),
+					"x^{2} − 5x + 2 整除 ⇒ 餘式 = 0", T_QUAD),
+				_long([1, -4, -2, "m", "n"], [1, -5, 2], "商式 x^{2} + x + 1，餘式 (m + 3)x + (n − 2)", false),
+				_f("餘式 = 0", "(m + 3)x + (n − 2) = 0 恆成立：兩個係數都是 0。", "m = [0]，n = [1]", ["-3", "2"],
+					"m + 3 = 0、n − 2 = 0 ⇒ m = −3，n = 2", "m + 3 = 0、n − 2 = 0。", T_QUAD),
+				_f("求和", "算出 m + n。", "m + n = [0]", ["-1"], "m + n = −3 + 2 = −1", "−3 + 2。", T_QUAD),
 			 ]},
 			{"eq": "2x^{3} + 5x^{2} − kx + 3 與 x^{3} − 2x^{2} − x − 3\n除以 x^{2} + x + 1 的餘式相同，求 k",
 			 "steps": [
-				_f("第一個：商的首項", "2x^{3} 除以 x^{2}。", "商的第一項 = [0]x", ["2"], "2x^{3} 除以 x^{2} 得 2x", "係數 2，次方 3 − 2。", T_QUAD),
-				_f("乘回去、相減", "2x(x^{2} + x + 1) = 2x^{3} + 2x^{2} + 2x，被除式減掉它。", "剩下 [0]x^{2} + (−k − [1])x + 3", ["3", "2"],
-					"相減：3x^{2} + (−k − 2)x + 3", "5x^{2} − 2x^{2} = 3x^{2}；−kx − 2x。", T_QUAD),
-				_f("商的第二項", "3x^{2} 除以 x^{2}，再乘回去 3(x^{2} + x + 1) = 3x^{2} + 3x + 3，相減。", "第一個的餘式 = (−k − [0])x + [1]", ["5", "0"],
-					"第一個的餘式 = (−k − 5)x", "(−k − 2) − 3 = −k − 5；3 − 3 = 0。", T_QUAD),
-				_f("第二個：乘開", "第二個的商式是 x − 3。乘開 (x^{2} + x + 1)(x − 3)。", "(x^{2} + x + 1)(x − 3) = x^{3} − 2x^{2} − [0]x − 3", ["2"],
-					"(x^{2} + x + 1)(x − 3) = x^{3} − 2x^{2} − 2x − 3", "x 項：x·(−3) + 1·x = −2x。", T_QUAD),
-				_f("第二個的餘式", "x^{3} − 2x^{2} − x − 3 減掉 x^{3} − 2x^{2} − 2x − 3。", "第二個的餘式 = [0]x + [1]", ["1", "0"],
-					"第二個的餘式 = x", "−x − (−2x) = x；−3 − (−3) = 0。", T_QUAD),
-				_f("求 k", "兩個餘式相同：−k − 5 = 1。", "k = [0]", ["-6"], "−k − 5 = 1 ⇒ k = −6", "移項：−k = 6。", T_QUAD),
+				_long([2, 5, "-k", 3], [1, 1, 1], "第一個：商式 2x + 3，餘式 (−k − 5)x", false, "第一個"),
+				_long([1, -2, -1, -3], [1, 1, 1], "第二個：商式 x − 3，餘式 x", true, "第二個"),
+				_f("求 k", "兩個餘式相同：(−k − 5)x = x。", "k = [0]", ["-6"], "−k − 5 = 1 ⇒ k = −6", "−k − 5 = 1。", T_QUAD),
 			 ]},
 		 ]},
 
@@ -311,15 +425,8 @@ static func _slots() -> Array:
 				_c("為什麼要除", "f(x) = (x^{2} + 2x − 1)·q(x) + 餘式。x = √2 − 1 代進去，會怎樣？",
 					["前面那項變 0，只剩餘式", "整個式子變 0", "q(x) 變成 0", "沒有差別"], 0,
 					"x^{2} + 2x − 1 = 0，所以 (x^{2} + 2x − 1)·q(x) = 0。", "x = √2 − 1 是 x^{2} + 2x − 1 = 0 的根。",
-					"② 長除法：2x^{3} + 3x^{2} − 3x + 4 除以 x^{2} + 2x − 1", T_EVAL),
-				_f("商的第一項", "2x^{3} 除以 x^{2}。", "商的第一項 = [0]x", ["2"], "2x^{3} 除以 x^{2} 得 2x", "係數 2，次方 3 − 2。", T_EVAL),
-				_f("乘回去", "2x 乘以 x^{2} + 2x − 1。", "2x(x^{2} + 2x − 1) = 2x^{3} + [0]x^{2} − [1]x", ["4", "2"],
-					"2x(x^{2} + 2x − 1) = 2x^{3} + 4x^{2} − 2x", "2x·2x = 4x^{2}；2x·1 = 2x。", T_EVAL),
-				_f("相減", "2x^{3} + 3x^{2} − 3x + 4 減掉 2x^{3} + 4x^{2} − 2x。", "剩下 ([0])x^{2} + ([1])x + 4", ["-1", "-1"],
-					"相減：−x^{2} − x + 4", "3x^{2} − 4x^{2} = −x^{2}；−3x − (−2x) = −x。", T_EVAL),
-				_f("商的第二項", "−x^{2} 除以 x^{2}。", "商的第二項 = [0]", ["-1"], "−x^{2} 除以 x^{2} 得 −1 ⇒ 商式 2x − 1", "−1 · x^{2} = −x^{2}。", T_EVAL),
-				_f("乘回去、相減", "−1 乘以 x^{2} + 2x − 1 是 −x^{2} − 2x + 1；−x^{2} − x + 4 減掉它。", "餘式 = [0]x + [1]", ["1", "3"],
-					"餘式 = x + 3", "−x − (−2x) = x；4 − 1 = 3。", T_EVAL),
+					"f(√2 − 1) = 餘式在 x = √2 − 1 的值", T_EVAL),
+				_long([2, 3, -3, 4], [1, 2, -1], "② 商式 2x − 1，餘式 x + 3", true, "② 長除法"),
 				_f("③ 代入餘式", "把 x = √2 − 1 代進餘式 x + 3。", "f(√2 − 1) = √2 + [0]", ["2"],
 					"f(√2 − 1) = (√2 − 1) + 3 = √2 + 2", "√2 − 1 + 3。", T_EVAL),
 			 ]},
@@ -327,14 +434,7 @@ static func _slots() -> Array:
 			 "steps": [
 				_f("① 找方程式", "x − 1 = √3，兩邊平方。", "x^{2} − [0]x − [1] = 0", ["2", "2"],
 					"(x − 1)^{2} = 3 ⇒ x^{2} − 2x − 2 = 0", "x^{2} − 2x + 1 = 3。", T_EVAL),
-				_c("商的第一項", "② 長除法：x^{3} 除以 x^{2}，商的第一項是？", ["x", "x^{2}", "1", "x^{5}"], 0,
-					"x^{3} 除以 x^{2} 得 x（次方 3 − 2 = 1）。", "次方相減。", "x^{3} 除以 x^{2} 得 x", T_EVAL),
-				_f("乘回去", "x 乘以 x^{2} − 2x − 2。", "x(x^{2} − 2x − 2) = x^{3} − [0]x^{2} − [1]x", ["2", "2"],
-					"x(x^{2} − 2x − 2) = x^{3} − 2x^{2} − 2x", "每一項都乘 x。", T_EVAL),
-				_f("相減", "x^{3} − x^{2} − 3x + 5 減掉 x^{3} − 2x^{2} − 2x。", "剩下 x^{2} + ([0])x + 5", ["-1"],
-					"相減：x^{2} − x + 5", "−x^{2} − (−2x^{2}) = x^{2}；−3x − (−2x) = −x。", T_EVAL),
-				_f("乘回去、相減", "商的第二項是 1：1·(x^{2} − 2x − 2) = x^{2} − 2x − 2；x^{2} − x + 5 減掉它。", "餘式 = [0]x + [1]", ["1", "7"],
-					"商式 x + 1，餘式 x + 7", "−x − (−2x) = x；5 − (−2) = 7。", T_EVAL),
+				_long([1, -1, -3, 5], [1, -2, -2], "② 商式 x + 1，餘式 x + 7", true, "② 長除法"),
 				_f("③ 代入餘式", "把 x = √3 + 1 代進餘式 x + 7。", "f(√3 + 1) = √3 + [0]", ["8"],
 					"f(√3 + 1) = √3 + 1 + 7 = √3 + 8", "√3 + 1 + 7。", T_EVAL),
 			 ]},

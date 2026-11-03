@@ -79,22 +79,31 @@ func _forge_step() -> void:
 
 func _refresh_fill() -> void:
 	super()
-	if fview == null or r.get("type", "") != "forge" or not fill_step.has("synth"):
+	if fview == null or r.get("type", "") != "forge" or not (fill_step.has("synth") or fill_step.has("longdiv")):
 		return
 	var wv := _wv()
 	wv.on = true
-	wv.spec = fill_step.synth
+	wv.spec = _spec_of(fill_step)
 	wv.vals = slot_vals.duplicate()
 	wv.bad = slot_bad.duplicate()
 	wv.cur = cur_slot
 	wv.queue_redraw()
 
 
+## 下方要畫的算式：綜合除法（synth）或長除法（longdiv，加上 "long": true 讓畫面分得出來）
+static func _spec_of(st: Dictionary) -> Dictionary:
+	if st.has("longdiv"):
+		var d: Dictionary = st.longdiv.duplicate()
+		d["long"] = true
+		return d
+	return st.synth
+
+
 func _step_done(st: Dictionary, why: String) -> void:
-	if fview != null and st.has("synth"):
+	if fview != null and (st.has("synth") or st.has("longdiv")):
 		var wv := _wv()
 		wv.on = false
-		wv.done_spec = st.synth
+		wv.done_spec = _spec_of(st)
 		wv.done_vals = Array(st.answers).map(func(s): return String(s).replace("-", "−"))
 		wv.burst_center()
 	super(st, why)
@@ -103,9 +112,9 @@ func _step_done(st: Dictionary, why: String) -> void:
 func _custom_reveal(msg: String) -> void:
 	if fview != null and r.type == "forge":
 		for j in range(si, steps.size()):
-			if steps[j].has("synth"):
+			if steps[j].has("synth") or steps[j].has("longdiv"):
 				_wv().on = false
-				_wv().done_spec = steps[j].synth
+				_wv().done_spec = _spec_of(steps[j])
 				_wv().done_vals = Array(steps[j].answers).map(func(s): return String(s).replace("-", "−"))
 	super(msg)
 
@@ -202,7 +211,7 @@ class WheelView extends ForgeView:
 		if on:
 			return
 		if not done_spec.is_empty():
-			if done_spec.has("base") or done_spec.has("m"):
+			if done_spec.has("base") or done_spec.has("m") or done_spec.has("long"):
 				var h := _table_h(done_spec)
 				rect = Rect2(36, size.y - h - 12.0, size.x - 72, h)
 			_draw_table(font, rect, done_spec, done_vals, false)
@@ -266,6 +275,9 @@ class WheelView extends ForgeView:
 
 	## 這個算式一共有幾排
 	static func rows_of(sp: Dictionary) -> int:
+		if sp.get("long", false):
+			var nq: int = sp.f.size() - sp.g.size() + 1
+			return 2 + 2 * nq
 		return 1 + 2 * (int(sp.get("chain", 0)) + 1) + (1 if sp.has("m") else 0)
 
 	## 填綜合除法時，下方算式的高度（排數越多越高）
@@ -276,7 +288,7 @@ class WheelView extends ForgeView:
 	func _bottom_limit() -> float:
 		if on:
 			return size.y - _table_h() - 24.0
-		if done_spec.has("base") or done_spec.has("m"):
+		if done_spec.has("base") or done_spec.has("m") or done_spec.has("long"):
 			return size.y - _table_h(done_spec) - 24.0       # 疊起來的算式比較高，下方留大一點
 		return super()
 
@@ -287,6 +299,9 @@ class WheelView extends ForgeView:
 	##   第三排：上下相加；最後一個是餘式（用直線隔開、圈起來）
 	##   連續使用：商繼續往下除，算式一路往下疊；除式是 mx + n：左邊寫 m，第四排是商除以 m
 	func _draw_table(font: Font, rc: Rect2, sp: Dictionary, row: Array, live: bool) -> void:
+		if sp.get("long", false):
+			_draw_long(font, rc, sp, row, live)
+			return
 		var P := preload("res://data/levels/poly/poly2_bank.gd")
 		var k: Array = sp.a
 		var chain := int(sp.get("chain", 0))
@@ -421,3 +436,111 @@ class WheelView extends ForgeView:
 			var L1 := base.size()
 			UITheme.text_ol(self, font, Vector2(x0 + cw * (L1 - 2) / 2.0 - 60.0, yc), "商式的係數", HORIZONTAL_ALIGNMENT_CENTER, 120, cap_fs, Color(0.6, 0.85, 1.0, 0.8))
 			UITheme.text_ol(self, font, Vector2(x0 + cw * (L1 - 1) - 30.0, yc), "餘式", HORIZONTAL_ALIGNMENT_CENTER, 60, cap_fs, Color(1, 0.85, 0.5, 0.85))
+
+	## 長除法（直式）：
+	##   最上面是商式（對齊被除式同次的那一欄）
+	##   除式 )‾‾ 被除式
+	##   每一輪：乘回去的那一排（下面畫橫線）、相減之後的那一排（多帶下一項下來）
+	##   最後一排是餘式。填的時候：商式（和餘式）是空格，已經填好的商才會往下算出乘回去、相減的那幾排
+	func _draw_long(font: Font, rc: Rect2, sp: Dictionary, row: Array, live: bool) -> void:
+		var P := preload("res://data/levels/poly/poly2_bank.gd")
+		var f: Array = sp.f
+		var g: Array = sp.g
+		var with_rem: bool = sp.get("rem", true)
+		var df := f.size() - 1
+		var dg := g.size() - 1
+		var nq := df - dg + 1
+		var qv = null
+		if live:
+			qv = []
+			for i in nq:
+				var q := _pq(String(row[i]) if i < row.size() else "")
+				qv.append(null if q.is_empty() else q)
+		var res: Dictionary = P.long_rows(f, g, qv)
+		var full_rows := rows_of(sp)
+		var rh := clampf((rc.size.y - 10.0) / full_rows, 20.0, 36.0)
+		var fs := int(clampf(rh * 0.58, 12.0, 20.0))
+		var div_txt: String = P.poly_text(g)
+		var dw := MathLabel.text_width(font, div_txt, fs)
+		var cw := minf(78.0, (rc.size.x - dw - 60.0) / (df + 1))
+		var x0 := rc.get_center().x - cw * (df + 1) / 2.0 + cw / 2.0 + dw / 2.0
+		var col_x := func(d: int) -> float: return x0 + cw * (df - d)
+		var y_of := func(r: int) -> float: return rc.position.y + 4.0 + rh * (r + 0.78)
+		var dim := Color(1, 1, 1, 0.55)
+		# 一排：[[次數, 係數]…]，第一項不寫正號
+		var draw_terms := func(terms: Array, r: int, col: Color) -> void:
+			for k in terms.size():
+				var t: Array = terms[k]
+				MathLabel.draw_on(self, font, col_x.call(t[0]), y_of.call(r), P.term_text(t[1], t[0], k == 0), fs, col)
+		# 填空的格子：[次數, 第幾格]
+		var draw_boxes := func(cells: Array, r: int, col: Color) -> void:
+			for k in cells.size():
+				var d: int = cells[k][0]
+				var si: int = cells[k][1]
+				var x: float = col_x.call(d)
+				var y: float = y_of.call(r)
+				var sv := String(row[si]) if si < row.size() else ""
+				var q := _pq(sv)
+				var bc := UITheme.BAD if (si < bad.size() and bad[si]) else (GOLDC if si == cur else Color(1, 1, 1, 0.3))
+				var bw := 30.0
+				var xs := "" if d == 0 else ("x" if d == 1 else "x^{%d}" % d)
+				var sx := MathLabel.text_width(font, xs, fs)
+				var bx := x - (bw + sx) / 2.0
+				if not q.is_empty():
+					MathLabel.draw_on(self, font, x, y, P.term_text(P.lx(q), d, k == 0), fs, col)
+				else:
+					if k > 0:
+						MathLabel.draw_on(self, font, bx - 10.0, y, "+", fs, dim)
+					draw_rect(Rect2(bx, y - fs * 0.95, bw, fs * 1.25), Color(bc.r, bc.g, bc.b, 0.1))
+					draw_rect(Rect2(bx, y - fs * 0.95, bw, fs * 1.25), bc, false, 2.0 if si == cur else 1.0)
+					if xs != "":
+						MathLabel.draw_on(self, font, bx + bw + sx / 2.0 + 2.0, y, xs, fs, col)
+		# 商式
+		var qcells := []
+		for i in nq:
+			qcells.append([df - dg - i, i])
+		if live:
+			draw_boxes.call(qcells, 0, AQUA.lightened(0.3))
+		else:
+			var qt := []
+			for i in res.q.size():
+				qt.append([df - dg - i, res.q[i]])
+			draw_terms.call(qt, 0, AQUA.lightened(0.3))
+		# 除式 )‾‾ 被除式
+		var y1: float = y_of.call(1)
+		var lx_: float = col_x.call(df) - cw * 0.5
+		MathLabel.draw_on(self, font, lx_ - 14.0 - dw / 2.0, y1, div_txt, fs, GOLDC)
+		var top: float = y1 - rh * 0.78
+		var bot: float = y1 + rh * 0.22
+		var arc := PackedVector2Array()
+		for q2 in 9:
+			var a := -0.5 + q2 / 8.0
+			arc.append(Vector2(lx_ - 4.0 + 6.0 * cos(a * PI) , lerpf(top, bot, q2 / 8.0)))
+		draw_polyline(arc, Color(1, 1, 1, 0.75), 2.0, true)
+		draw_line(Vector2(lx_, top), Vector2(col_x.call(0) + cw * 0.5, top), Color(1, 1, 1, 0.75), 2.0)
+		var ft := []
+		for i in f.size():
+			ft.append([df - i, P.lx(f[i])])
+		draw_terms.call(ft, 1, Color(1, 0.97, 0.9))
+		# 每一輪
+		var r := 2
+		for rw in res.rows:
+			var terms: Array = rw.terms
+			draw_terms.call(terms, r, dim.lightened(0.3) if rw.kind == "prod" else Color(0.9, 0.92, 1.0))
+			if rw.line:
+				var d0: int = terms[0][0]
+				var d1: int = terms[terms.size() - 1][0]
+				var yl: float = y_of.call(r) + rh * 0.24
+				draw_line(Vector2(col_x.call(d0) - cw * 0.5, yl), Vector2(col_x.call(d1) + cw * 0.5, yl), Color(1, 1, 1, 0.6), 1.5)
+			r += 1
+		# 餘式
+		if res.complete:
+			if live and with_rem:
+				var rc2 := []
+				for k in res.rem.size():
+					rc2.append([res.rem[k][0], nq + k])
+				draw_boxes.call(rc2, r, GOLDC)
+			else:
+				draw_terms.call(res.rem, r, GOLDC)
+			UITheme.text_ol(self, font, Vector2(col_x.call(0) + cw * 0.55, y_of.call(r) - 2.0), "餘式", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(1, 0.85, 0.5, 0.85))
+
