@@ -46,7 +46,7 @@ const Q_INVERSE_PT := {"q": "兩圖形對稱於 y = x。若點 (p, q) 在原曲�
 
 ## 凹口比大小：先判斷凹口方向（up = true 表示凹口向上）
 static func conc_q(eq: String, up: bool, why: String) -> Dictionary:
-	return {"q": eq + " 的圖形，凹口朝哪個方向？", "options": ["凹口向上（像碗）", "凹口向下（像蓋子）"],
+	return {"q": eq + " 的圖形，凹口朝哪個方向？", "options": ["凹口向上", "凹口向下"],
 		"correct": 0 if up else 1, "keep_order": true, "why": why,
 		"nudge": "往右走越陡還是越平？曲線往上彎還是往下彎？", "tag": "concavity"}
 
@@ -154,7 +154,7 @@ static func slots() -> Array:
 
 		{"id": "sketch", "chapter": 1, "type": "draw", "title": "徒手作圖", "form": "log",
 		 "params": [], "tag": "draw_graph", "view": {"x": Vector2(-2.0, 7.0), "y": Vector2(-3.0, 3.5)},
-		 "story": "沒有滑桿！直接把圖形畫出來（可以分好幾筆）。",
+		 "story": "沒有滑桿！直接把圖形畫出來。",
 		 "insight": "畫法：漸近線 x = h → 點 (1 + h, k)、(a + h, 1 + k) → 一邊貼漸近線、一邊變平。",
 		 "variants": [
 			{"answer": {"a": 2.0, "h": 0.0, "k": 0.0}, "keys": [Vector2(0.5, -1), Vector2(1, 0), Vector2(2, 1), Vector2(4, 2)]},
