@@ -5,7 +5,6 @@ extends "res://data/levels/poly/level_poly2_wheel.gd"
 ## 這一關多了：
 ##   ・喊話（題庫的 _shout，畫面上是選擇題）：答對時聲波從左邊飛向深谷，波上寫著喊出去的 x = a
 ##   ・回音（填空帶 "echo"）：答對時回音帶著 f(a) 的值彈回來；f(a) = 0 時谷底一片安靜，跳出「x − a 是因式」
-##   ・回音圖（題目帶 "echograph"）：下方的座標圖，回音點 (a, f(a)) 一個一個亮起來，最後畫出餘式的圖形
 ##   ・峽谷石廊的背景（兩側的岩壁、垂下來的鐘乳石）
 ##   ・速算：f(x) 除以 x − a 的餘式（三次式附綜合除法的格式；大次方的式子除以 x ± 1）
 
@@ -138,7 +137,6 @@ static func gen_problems(_kind: String, n: int) -> Array:
 class EchoView extends WheelView:
 	const ECHO := Color("c8a8ff")
 
-	var eg := {}                 # 回音圖 {pts, curve, after}
 	var shout_t := -10.0
 	var shout_x := ""
 	var echo_t := -10.0
@@ -148,7 +146,6 @@ class EchoView extends WheelView:
 
 	func setup(round: Dictionary) -> void:
 		super(round)
-		eg = round.get("echograph", {}) if String(round.get("type", "")) == "forge" else {}
 		shout_t = -10.0
 		echo_t = -10.0
 
@@ -161,9 +158,6 @@ class EchoView extends WheelView:
 		echo_x = x
 		echo_val = val
 		echo_t = t
-
-	func _graph_on() -> bool:
-		return not eg.is_empty() or super()
 
 	## 讓除式等於 0 的 x = a → 除式 x − a 的寫法（a 可以是 −3、1/2）
 	static func _divisor(x: String) -> String:
@@ -260,82 +254,3 @@ class EchoView extends WheelView:
 			else:
 				var x2 := lerpf(w - 60.0, w - 150.0, clampf(et / 1.0, 0.0, 1.0))
 				MathLabel.draw_on(self, font, x2, y, "回音 f(%s) = %s" % [echo_x, echo_val], UITheme.fs(18), Color(ECHO.r, ECHO.g, ECHO.b, a).lightened(0.2))
-
-	# ---------- 回音圖 ----------
-	func _draw_mini_graph(font: Font, rect: Rect2) -> void:
-		if eg.is_empty() or on or not done_spec.is_empty():
-			super(font, rect)
-			return
-		_draw_echograph(font, rect)
-
-	func _draw_echograph(font: Font, rect: Rect2) -> void:
-		var pts: Array = eg.pts
-		var cv: Array = eg.get("curve", [0.0, 0.0, 0.0])
-		var show_curve := step > int(eg.get("after", 99))
-		var xs := []
-		var ys := [0.0]
-		for p in pts:
-			xs.append(float(p[0]))
-			ys.append(float(p[1]))
-		var lo := minf(xs.min(), 0.0)
-		var hi := maxf(xs.max(), 0.0)
-		var pad := maxf(0.8, 0.25 * (hi - lo))
-		var xr := Vector2(lo - pad, hi + pad)
-		var fx := func(x: float) -> float: return float(cv[0]) * x * x + float(cv[1]) * x + float(cv[2])
-		for i in 41:
-			ys.append(fx.call(lerpf(xr.x, xr.y, i / 40.0)) if show_curve else 0.0)
-		var ymin: float = ys.min()
-		var ymax: float = ys.max()
-		var yp := maxf(1.0, 0.15 * (ymax - ymin))
-		var yr := Vector2(ymin - yp, ymax + yp)
-		var area := Rect2(rect.position + Vector2(10, 4), rect.size - Vector2(20, 12))
-		var to := func(x: float, yv: float) -> Vector2:
-			return Vector2(area.position.x + (x - xr.x) / (xr.y - xr.x) * area.size.x,
-				area.position.y + area.size.y - (yv - yr.x) / (yr.y - yr.x) * area.size.y)
-		draw_rect(rect, Color(0.08, 0.06, 0.16, 0.6))
-		draw_rect(rect, Color(ECHO.r, ECHO.g, ECHO.b, 0.35), false, 1.0)
-		MathLabel.draw_text(self, font, rect.position + Vector2(4, -10), "回音圖：點 (a, f(a))", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(0.85, 0.75, 1.0, 0.8))
-		# 座標軸
-		var ax := Color(1, 1, 1, 0.35)
-		draw_line(to.call(xr.x, 0.0), to.call(xr.y, 0.0), ax, 1.5)
-		if xr.x < 0.0 and xr.y > 0.0:
-			draw_line(to.call(0.0, yr.x), to.call(0.0, yr.y), ax, 1.5)
-		var fs := UITheme.fs(13)
-		# 餘式的圖形
-		if show_curve:
-			var poly := PackedVector2Array()
-			for i in 61:
-				var x := lerpf(xr.x, xr.y, i / 60.0)
-				poly.append(to.call(x, fx.call(x)))
-			draw_polyline(poly, Color(UITheme.CYAN.r, UITheme.CYAN.g, UITheme.CYAN.b, 0.9), 2.5, true)
-			var ci: Array = [int(round(float(cv[0]))), int(round(float(cv[1]))), int(round(float(cv[2])))]
-			while ci.size() > 1 and ci[0] == 0:
-				ci.pop_front()
-			MathLabel.draw_on(self, font, area.position.x + area.size.x * 0.22, area.position.y + 16.0,
-				"餘式 y = " + BankP2.poly_text(ci), UITheme.fs(16), UITheme.CYAN.lightened(0.3))
-		# 回音點
-		for p in pts:
-			if step <= int(p[2]):
-				continue
-			var pp: Vector2 = to.call(float(p[0]), float(p[1]))
-			var base: Vector2 = to.call(float(p[0]), 0.0)
-			draw_dashed_line(base, pp, Color(ECHO.r, ECHO.g, ECHO.b, 0.5), 1.5, 5.0)
-			var pulse := 1.0 + 0.15 * sin(t * 3.0)
-			UITheme.dot(self, pp, 9.0 * pulse, Color(ECHO.r, ECHO.g, ECHO.b, 0.25))
-			UITheme.dot(self, pp, 5.0, UITheme.GOLD)
-			var lab := "(%s, %s)" % [_num(float(p[0])), _num(float(p[1]))]
-			var lw := MathLabel.text_width(font, lab, fs)
-			var lx := pp.x + 12.0 + lw / 2.0
-			if lx + lw / 2.0 > area.end.x:
-				lx = pp.x - 12.0 - lw / 2.0
-			MathLabel.draw_on(self, font, lx, pp.y + fs * 0.35, lab, fs, Color(1, 0.9, 0.6))
-
-	static func _num(v: float) -> String:
-		var s := ""
-		if is_equal_approx(v, roundf(v)):
-			s = str(absi(int(roundf(v))))
-		elif is_equal_approx(v * 2.0, roundf(v * 2.0)):
-			s = "%d/2" % absi(int(roundf(v * 2.0)))
-		else:
-			s = str(absf(snappedf(v, 0.01)))
-		return ("−" if v < -0.001 else "") + s
