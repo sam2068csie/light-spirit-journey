@@ -484,10 +484,10 @@ class WickView extends LakeView:
 				var word := "最高" if String(goal[0]) == "max" else "最低"
 				var n: int = gst.goals.size()
 				var tail := "（第 %d／%d 盞）" % [gstage + 1, n] if n > 1 else ""
-				return "求：點亮%s的地方%s" % [hlw(word), tail]
+				return "點亮%s的地方%s" % [hlw(word), tail]
 			"window":
 				var want := String(gst.goals[mini(gstage, gst.goals.size() - 1)])
-				return "求：%s在%s　現在在%s" % [ext_word(), LOC_NAME[want], loc_text()]
+				return "%s在%s　現在在%s" % [ext_word(), LOC_NAME[want], loc_text()]
 		return super()
 
 	# ---------- 背景：夜裡的燈坊 ----------
