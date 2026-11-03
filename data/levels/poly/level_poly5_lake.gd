@@ -820,7 +820,6 @@ class LakeView extends EchoView:
 	func _curve(c: Array, col: Color, wdt: float, dashed: bool, abs_: bool = false) -> void:
 		var vw := _view()
 		var vx_: Vector2 = vw.x
-		var vy_: Vector2 = vw.y
 		var ar := _area()
 		var prev := Vector2.INF
 		var prev_y := 0.0
@@ -830,16 +829,33 @@ class LakeView extends EchoView:
 			if abs_:
 				y = absf(y)
 			var p := _to(x, y)
-			var inside := y >= vy_.x - 0.5 and y <= vy_.y + 0.5
-			if prev != Vector2.INF and inside:
+			if prev != Vector2.INF:
 				var under := (y + prev_y) * 0.5 < 0.0
 				var cc := Color(col.r, col.g, col.b, col.a * (0.45 if under else 1.0))
-				var a2 := Vector2(clampf(prev.x, ar.position.x, ar.end.x), clampf(prev.y, ar.position.y, ar.end.y))
-				var b2 := Vector2(clampf(p.x, ar.position.x, ar.end.x), clampf(p.y, ar.position.y, ar.end.y))
-				if not dashed or i % 4 < 2:
-					draw_line(a2, b2, cc, wdt, true)
-			prev = p if inside else Vector2.INF
+				var sg := clip_seg(prev, p, ar)
+				if sg.size() == 2 and (not dashed or i % 4 < 2):
+					draw_line(sg[0], sg[1], cc, wdt, true)
+			prev = p
 			prev_y = y
+
+	## 把線段切到圖的上下邊界裡（超出去的部分不畫，不會在邊上留下水平的一小段）
+	static func clip_seg(a: Vector2, b: Vector2, ar: Rect2) -> PackedVector2Array:
+		var top := ar.position.y
+		var bot := ar.end.y
+		if (a.y < top and b.y < top) or (a.y > bot and b.y > bot):
+			return PackedVector2Array()
+		var p := a
+		var q2 := b
+		for e in [top, bot]:
+			var edge: float = e
+			if (p.y - edge) * (q2.y - edge) < 0.0:
+				var k: float = (edge - p.y) / (q2.y - p.y)
+				var m := p.lerp(q2, k)
+				if (edge == top and p.y < top) or (edge == bot and p.y > bot):
+					p = m
+				else:
+					q2 = m
+		return PackedVector2Array([p, q2])
 
 	func _draw_quads(font: Font, ar: Rect2) -> void:
 		var got := quads_now()

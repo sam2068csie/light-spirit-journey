@@ -475,7 +475,6 @@ class WickView extends LakeView:
 	func _wcurve(c: Array, lo: float, hi: float) -> void:
 		var vw := _view()
 		var vx_: Vector2 = vw.x
-		var vy_: Vector2 = vw.y
 		var ar := _area()
 		var g0 := INF
 		var g1 := -INF
@@ -485,28 +484,36 @@ class WickView extends LakeView:
 		var prev := Vector2.INF
 		for i in 301:
 			var x := lerpf(vx_.x, vx_.y, i / 300.0)
-			var y := fv(c, x)
-			var p := _to(x, y)
-			var inside := y >= vy_.x - (vy_.y - vy_.x) * 0.05 and y <= vy_.y + (vy_.y - vy_.x) * 0.05
-			if prev != Vector2.INF and inside:
+			var p := _to(x, fv(c, x))
+			if prev != Vector2.INF:
 				var ok_ := x >= lo - 1e-9 and x <= hi + 1e-9 and not (x > g0 and x < g1)
 				var col := Color(CURVE.r, CURVE.g, CURVE.b, 1.0 if ok_ else 0.45)
-				var a2 := Vector2(clampf(prev.x, ar.position.x, ar.end.x), clampf(prev.y, ar.position.y, ar.end.y))
-				var b2 := Vector2(clampf(p.x, ar.position.x, ar.end.x), clampf(p.y, ar.position.y, ar.end.y))
-				if ok_ or i % 4 < 2:
-					draw_line(a2, b2, col, 2.8 if ok_ else 1.6, true)
-			prev = p if inside else Vector2.INF
+				var sg := clip_seg(prev, p, ar)
+				if sg.size() == 2 and (ok_ or i % 4 < 2):
+					draw_line(sg[0], sg[1], col, 2.8 if ok_ else 1.6, true)
+			prev = p
 
 	func _ypos(y: float) -> Vector2:
 		var ar := _area()
 		var p := _to(0.0, y)
 		return Vector2(p.x, clampf(p.y, ar.position.y, ar.end.y))
 
-	func _wick_at(x: float, c: Array, big: bool) -> void:
+	func _wick_at(x: float, c: Array, big: bool, font: Font = null) -> void:
 		var ar := _area()
 		var p := _to(x, fv(c, x))
-		p.y = clampf(p.y, ar.position.y, ar.end.y)
 		var fl := 0.5 + 0.5 * sin(t * 7.0)
+		if p.y < ar.position.y - 1.0 or p.y > ar.end.y + 1.0:
+			# 燈芯在畫面外：在邊上畫一個會跳動的箭頭，告訴玩家它在上面（下面）
+			var up := p.y < ar.position.y
+			var ey := ar.position.y + 4.0 if up else ar.end.y - 4.0
+			var bob := 3.0 * fl * (-1.0 if up else 1.0)
+			var tip := Vector2(p.x, ey + bob)
+			var dir := -1.0 if up else 1.0
+			var col := Color("ff6b9d")
+			UITheme.dot(self, tip + Vector2(0, -dir * 10.0), 14.0, Color(col.r, col.g, col.b, 0.18 + 0.12 * fl))
+			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-9, -dir * 13.0), tip + Vector2(9, -dir * 13.0)]), col)
+			draw_line(tip + Vector2(0, -dir * 12.0), tip + Vector2(0, -dir * 26.0), col, 3.0, true)
+			return
 		UITheme.dot(self, p, (18.0 if big else 12.0) + 2.0 * fl, Color(FLAME.r, FLAME.g, FLAME.b, 0.18))
 		UITheme.dot(self, p, 7.0, FLAME)
 		draw_colored_polygon(PackedVector2Array([p + Vector2(-4, -5), p + Vector2(0, -16 - 3.0 * fl), p + Vector2(4, -5)]), Color(1, 0.75, 0.35, 0.9))
@@ -556,7 +563,7 @@ class WickView extends LakeView:
 		var wp := _to(gh, fv(c, gh))
 		var by := _to(gh, clampf(0.0, vy_.x, vy_.y)).y
 		draw_dashed_line(Vector2(wp.x, clampf(wp.y, ar.position.y, ar.end.y)), Vector2(wp.x, by), Color(FLAME.r, FLAME.g, FLAME.b, 0.4), 1.5, 4.0)
-		_wick_at(gh, c, true)
+		_wick_at(gh, c, true, font)
 		if gst.has("fig"):
 			_draw_fig(font)
 
@@ -574,7 +581,7 @@ class WickView extends LakeView:
 		_wcurve(c, lo, hi)
 		var loc := win_loc()
 		var ex := {"left": lo, "vertex": ax, "right": hi}[loc] as float
-		_wick_at(ex, c, true)
+		_wick_at(ex, c, true, font)
 		var ep := _to(ex, fv(c, ex))
 		var is_max := String(gst.get("ext", "min")) == "max"
 		var right_side := ep.x < ar.get_center().x
