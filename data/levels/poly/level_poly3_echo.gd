@@ -93,6 +93,8 @@ func _forge_step() -> void:
 	super()
 	if r.get("type", "") == "forge" and si < steps.size() and String(steps[si].kind) == "probe":
 		_build_probe(steps[si])
+	elif r.get("type", "") == "forge" and si < steps.size() and String(steps[si].kind) == "blocks":
+		_build_blocks(steps[si])
 
 
 func _build_probe(st: Dictionary) -> void:
@@ -189,6 +191,9 @@ func _custom_go() -> void:
 	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "probe":
 		_probe_submit(steps[si])
 		return
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "blocks":
+		_blocks_submit(steps[si])
+		return
 	super()
 
 
@@ -248,6 +253,159 @@ func _custom_reveal(msg: String) -> void:
 	if fview != null:
 		_ev().probe_off()
 	super(msg)
+
+
+# ================= 拼積木（blocks）：假設餘式、假設多項式 =================
+## 題庫寫法（poly3_bank.gd 的 _blocks）：
+##   blocks：積木（文字可以用排版，例如 "(x^{2} + 1)"）；"+" 也是一塊積木，用來接下一項
+##   terms：正確的假設，每一項是一組積木（同一項裡的順序不限、項的順序也不限）
+##   lead：左邊固定的字（例如「f(x) = 」「餘式 = 」）
+
+var blk_seq: Array = []
+var blk_preview: MathLabel
+
+func _build_blocks(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	story_label.visible = false      # 積木比較多，開場的故事先收起來（故事在旅程開始時已經看過）
+	blk_seq = []
+	blk_preview = null       # 拼出來的式子寫在中間的推導紀錄（右邊只放積木）
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	rank_box.add_child(grid)
+	for tok in st.blocks:
+		var b := Button.new()
+		b.text = ""
+		b.custom_minimum_size = Vector2(0, 44)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.focus_mode = Control.FOCUS_NONE
+		var plus := String(tok) == "+"
+		var c := UITheme.GOLD if plus else step_color()
+		var sb := UITheme.box(Color(c.r, c.g, c.b, 0.16), 10, Color(c.r, c.g, c.b, 0.7), 1, 4)
+		for nm in ["normal", "hover", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(nm, sb)
+		var ml := MathLabel.new()
+		ml.align_center = true
+		ml.valign_center = true
+		ml.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ml.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		ml.font_size = UITheme.fs(18)
+		ml.color = Color(1, 0.97, 0.9)
+		ml.text = "＋ 下一項" if plus else String(tok)
+		b.add_child(ml)
+		var t := String(tok)
+		b.pressed.connect(func():
+			if busy:
+				return
+			blk_seq.append(t)
+			Game.of(self).play("blip", 1.1, -12.0)
+			_refresh_blocks())
+		grid.add_child(b)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	rank_box.add_child(row)
+	for spec in [["⌫ 拿掉最後一塊", -1], ["清除", 0]]:
+		var b2 := Button.new()
+		b2.text = spec[0]
+		b2.custom_minimum_size = Vector2(0, 40)
+		b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b2.focus_mode = Control.FOCUS_NONE
+		b2.add_theme_font_size_override("font_size", UITheme.fs(16))
+		var mode: int = spec[1]
+		b2.pressed.connect(func():
+			if busy:
+				return
+			if mode < 0:
+				if not blk_seq.is_empty():
+					blk_seq.pop_back()
+			else:
+				blk_seq = []
+			_refresh_blocks())
+		row.add_child(b2)
+	go_btn.visible = true
+	go_btn.disabled = false
+	go_btn.text = "拼好了"
+	fview.live_q = "點右邊的積木拼出假設的式子（拼出來的式子寫在這裡）；要接下一項就點「＋ 下一項」。"
+	_refresh_blocks()
+
+
+static func blocks_text(seq: Array) -> String:
+	var out := ""
+	for tok in seq:
+		out += " + " if String(tok) == "+" else String(tok)
+	return out
+
+
+func _refresh_blocks() -> void:
+	var st: Dictionary = steps[si]
+	var body := blocks_text(blk_seq)
+	var shown := String(st.get("lead", "")) + (body if body != "" else "▢")
+	if blk_preview != null and is_instance_valid(blk_preview):
+		blk_preview.text = shown
+	fview.live_fill = "拼出：" + shown
+	fview.queue_redraw()
+
+
+## 把積木切成項：每一項排好順序再比（同一項裡的因式順序、項的順序都不限）
+static func _block_terms(seq: Array) -> Array:
+	var terms := []
+	var cur := []
+	for tok in seq:
+		if String(tok) == "+":
+			terms.append(cur)
+			cur = []
+		else:
+			cur.append(String(tok))
+	terms.append(cur)
+	var out := []
+	for tm in terms:
+		var c: Array = tm.duplicate()
+		c.sort()
+		out.append("|".join(c))
+	out.sort()
+	return out
+
+
+func _blocks_submit(st: Dictionary) -> void:
+	if blk_seq.is_empty():
+		_hint("先點右邊的積木，拼出假設的式子。", "info")
+		return
+	var got := _block_terms(blk_seq)
+	var want := _block_terms(_flatten_terms(st.terms))
+	if got == want:
+		Game.of(self).sfx("correct")
+		go_btn.visible = false
+		_clear(rank_box)
+		rank_box.visible = false
+		fview.live_fill = ""
+		_step_done(st, String(st.get("why", "")))
+		return
+	for alt in st.get("alts", []):
+		if got == _block_terms(_flatten_terms(alt)):
+			_hint(String(st.get("alt_msg", "這樣也可以，不過請照題目的順序拼。")), "info")
+			return
+	var msg := "還不對。"
+	if got.has(""):
+		msg = "有一項是空的：「＋ 下一項」後面要接積木。"
+	elif got.size() != want.size():
+		msg = "項數不對：正確的假設有 %d 項（用「＋ 下一項」分開）。" % want.size()
+	_wrong(st, msg + "提示：" + String(st.nudge))
+
+
+static func _flatten_terms(terms: Array) -> Array:
+	var seq := []
+	for i in terms.size():
+		if i > 0:
+			seq.append("+")
+		seq.append_array(terms[i])
+	return seq
 
 
 # ================= 速算 =================

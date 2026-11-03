@@ -517,7 +517,7 @@ class MoldView extends EchoView:
 		MathLabel.draw_text(self, font, rect.position + Vector2(4, -10), "鑄模", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(1, 0.8, 0.6, 0.8))
 		var cx := rect.get_center().x
 		if step <= int(mold.after):
-			MathLabel.draw_on(self, font, cx, rect.get_center().y, "選好「怎麼假設」，模具就會出現", UITheme.fs(16), Color(1, 0.85, 0.7, 0.55))
+			MathLabel.draw_on(self, font, cx, rect.get_center().y, "拼好假設，模具就會出現", UITheme.fs(16), Color(1, 0.85, 0.7, 0.55))
 			return
 		var holes: Array = mold.holes
 		# 假設式：還沒算出來的未知數用橘色，算出來的用金色
