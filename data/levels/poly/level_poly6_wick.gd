@@ -128,9 +128,11 @@ func _graph_submit(st: Dictionary) -> void:
 				_on_graph_move()
 		"window":
 			var want := String(st.goals[lv.gstage])
-			var got := lv.win_loc()
-			if got != want:
-				_wrong(st, "現在%s在%s，要的是%s。提示：%s" % [lv.ext_word(), WickView.LOC_NAME[got], WickView.LOC_NAME[want], st.nudge])
+			if not lv.win_locs().has(want):
+				_wrong(st, "現在%s在%s，要的是%s。提示：%s" % [lv.ext_word(), lv.loc_text(), WickView.LOC_NAME[want], st.nudge])
+				return
+			if not lv.gmarks.is_empty() and LakeView.same(float(lv.gmarks.back()), lv.gh):
+				_hint("頂點剛好在端點上，%s和%s都算對——但這個位置剛剛用過了，搬動燈罩換一個位置。" % [WickView.LOC_NAME[lv.win_locs()[0]], WickView.LOC_NAME[lv.win_locs()[-1]]], "info")
 				return
 			Game.of(self).sfx("correct")
 			lv.gmarks.append(lv.gh)
@@ -328,6 +330,23 @@ class WickView extends LakeView:
 			return "right"
 		return "vertex"
 
+	## 頂點剛好在端點上時，兩個說法都對：["vertex", "left"]
+	func win_locs() -> Array:
+		var ax := axis_x()
+		var lo := gh
+		var hi := gh + float(gst.get("width", 2))
+		if same(ax, lo):
+			return ["vertex", "left"]
+		if same(ax, hi):
+			return ["vertex", "right"]
+		return [win_loc()]
+
+	func loc_text() -> String:
+		var ls := win_locs()
+		if ls.size() > 1:
+			return "%s（也是%s）" % [LOC_NAME[ls[0]], LOC_NAME[ls[1]]]
+		return LOC_NAME[ls[0]]
+
 	func ext_word() -> String:
 		return "最大值" if String(gst.get("ext", "min")) == "max" else "最小值"
 
@@ -352,7 +371,7 @@ class WickView extends LakeView:
 				return "求：點亮%s的地方%s　現在 %s = %s" % [word, tail, String(gst.get("xname", "x")), qm(gh)]
 			"window":
 				var want := String(gst.goals[mini(gstage, gst.goals.size() - 1)])
-				return "求：%s在%s　現在在%s" % [ext_word(), LOC_NAME[want], LOC_NAME[win_loc()]]
+				return "求：%s在%s　現在在%s" % [ext_word(), LOC_NAME[want], loc_text()]
 		return super()
 
 	# ---------- 背景：夜裡的燈坊 ----------
@@ -545,8 +564,10 @@ class WickView extends LakeView:
 		var ep := _to(ex, fv(c, ex))
 		var is_max := String(gst.get("ext", "min")) == "max"
 		var right_side := ep.x < ar.get_center().x
-		MathLabel.draw_on(self, font, clampf(ep.x + (62.0 if right_side else -62.0), ar.position.x + 50.0, ar.end.x - 50.0), clampf(ep.y + (10.0 if is_max else -6.0), ar.position.y + 30.0, ar.end.y - 4.0),
-			"%s在%s" % [ext_word(), LOC_NAME[loc]], UITheme.fs(13), FLAME)
+		var lbl := "%s在%s" % [ext_word(), loc_text()]
+		var half := MathLabel.text_width(font, lbl, UITheme.fs(13)) * 0.5 + 16.0
+		MathLabel.draw_on(self, font, clampf(ep.x + (half if right_side else -half), ar.position.x + half - 10.0, ar.end.x - half + 10.0), clampf(ep.y + (10.0 if is_max else -6.0), ar.position.y + 30.0, ar.end.y - 4.0),
+			lbl, UITheme.fs(13), FLAME)
 
 	# ---------- 旁邊的小圖 ----------
 	func _fig_rect() -> Rect2:
