@@ -939,8 +939,11 @@ func _refresh_filter() -> void:
 	for i in filter_btns.size():
 		var b: Button = filter_btns[i]
 		var keep: bool = filter_keep[i]
-		b.text = "%s = %s\n%s" % [st.get("var", "t"), _plain_root(str(st.cands[i])).replace("-", "−"),
-			st.get("keep_word", "✓ 保留") if keep else st.get("drop_word", "✗ 丟掉")]
+		var word: String = st.get("keep_word", "✓ 保留") if keep else st.get("drop_word", "✗ 丟掉")
+		if st.get("bare", false):      # bare：按鈕上只寫候選值本身（例如「x − 1」），不寫「t = 」
+			b.text = "%s\n%s" % [_plain_root(str(st.cands[i])), word]
+		else:
+			b.text = "%s = %s\n%s" % [st.get("var", "t"), _plain_root(str(st.cands[i])).replace("-", "−"), word]
 		var c := UITheme.GOOD if keep else UITheme.BAD
 		var sb := UITheme.box(Color(c.r, c.g, c.b, 0.14), 12, c, 2, 6)
 		b.add_theme_stylebox_override("normal", sb)

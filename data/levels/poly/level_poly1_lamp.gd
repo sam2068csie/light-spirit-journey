@@ -137,17 +137,6 @@ func _refresh_lamp() -> void:
 		b.add_theme_color_override("font_color", c.lightened(0.4) if on else UITheme.TEXT)
 
 
-## 「是不是多項式」的篩選：按鈕上只寫代號（A）、（B）…，式子寫在左邊（排版比較清楚）
-func _refresh_filter() -> void:
-	super()
-	var st: Dictionary = steps[si]
-	if not st.get("bare", false):
-		return
-	for i in filter_btns.size():
-		var keep: bool = filter_keep[i]
-		filter_btns[i].text = "%s\n%s" % [st.cands[i], st.get("keep_word", "✓ 保留") if keep else st.get("drop_word", "✗ 丟掉")]
-
-
 func _custom_go() -> void:
 	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "lamp":
 		_lamp_submit()
