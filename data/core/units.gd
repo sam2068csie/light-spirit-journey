@@ -35,7 +35,7 @@ const UNITS := [
 		{"id": "P5", "name": "拋物鏡湖", "topic": "二次函數的圖形", "file": "level_poly5_lake.gd", "bank": "poly5_bank.gd", "color": UITheme.GOOD},
 		{"id": "P6", "name": "極值燈芯", "topic": "二次函數的極值", "file": "level_poly6_wick.gd", "bank": "poly6_bank.gd", "color": UITheme.LIME},
 		{"id": "P7", "name": "對稱水晶", "topic": "三次函數的圖形", "file": "level_poly7_crystal.gd", "bank": "poly7_bank.gd", "color": UITheme.VIOLET},
-		{"id": "P8", "name": "符號地下河", "topic": "多項式不等式", "file": "", "bank": "", "color": UITheme.PINK},
+		{"id": "P8", "name": "符號地下河", "topic": "多項式不等式", "file": "level_poly8_river.gd", "bank": "poly8_bank.gd", "color": UITheme.PINK},
 	 ]},
 	{"id": "h1seq", "term": "高一下", "title": "數列與級數", "exam": "", "color": UITheme.GOOD, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
