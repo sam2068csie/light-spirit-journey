@@ -5,7 +5,7 @@ extends "res://data/levels/poly/level_poly5_lake.gd"
 ## 新的 graph 步驟：
 ##   wick    燈芯沿著拋物線走（可以有燈罩 win、不能走的 gap、只停整數 int），依序點亮 goals 指定的最高／最低點
 ##   window  拖動燈罩 [p, p + width]：依序讓罩子裡的最小值（或最大值）發生在 left／vertex／right
-## 每一步中間的推導紀錄都寫出「求：…」，右邊有 ◀ ▶ 可以一格一格調。
+## 每一步中間的推導紀錄都寫出「求：…」，右邊的旋鈕滑桿（‹ › 一格一格調）也能調整。
 
 const BankP6 := preload("res://data/levels/poly/poly6_bank.gd")
 const WICK_C := Color("ffd27a")
@@ -76,40 +76,19 @@ func _wv() -> WickView:
 func _build_graph(st: Dictionary) -> void:
 	super(st)
 	var mode := String(st.mode)
-	if mode == "match" and st.get("a_list", []).size() <= 1:
-		for ch in rank_box.get_children():
-			if ch is HBoxContainer and ch.get_child_count() > 0 and ch.get_child(0) is Label and (ch.get_child(0) as Label).text == "開口 a":
-				ch.queue_free()
 	if not (mode in ["wick", "window"]):
 		return
 	var lv := _wv()
-	var cap_txt := "燈罩" if mode == "window" else String(st.get("xname", "x"))
-	var key := "p" if mode == "window" else "x"
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	rank_box.add_child(row)
-	var cap := Label.new()
-	cap.text = cap_txt
-	cap.custom_minimum_size = Vector2(56, 0)
-	cap.add_theme_font_size_override("font_size", UITheme.fs(17))
-	cap.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	row.add_child(cap)
-	for bd in [["◀", -1], ["▶", 1]]:
-		var b := Button.new()
-		b.text = bd[0]
-		b.custom_minimum_size = Vector2(0, 46)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", UITheme.fs(20))
-		var d: int = bd[1]
-		b.pressed.connect(func():
-			if not busy:
-				lv.nudge_graph(key, d))
-		row.add_child(b)
+	var vw := lv._view()
+	var vx_: Vector2 = vw.x
+	if mode == "wick":
+		_add_slider(String(st.get("xname", "x")), "x", maxf(lv._lo(), vx_.x), minf(lv._hi(), vx_.y), lv._step())
+	else:
+		_add_slider("燈罩", "p", vx_.x, vx_.y - float(st.get("width", 2)), LakeView.q(st.get("snap", "1")))
 	go_btn.text = "就是這裡" if mode == "window" else "點亮"
 	if mode == "wick":
 		task_label.text = hl_word(String(st.q))
-	fview.live_q = "在下方的湖面上拖動（或按右邊的按鈕），再按「%s」。" % go_btn.text
+	fview.live_q = "在下方的湖面上拖動（或拉右邊的滑桿），再按「%s」。" % go_btn.text
 	_on_graph_move()
 
 
@@ -397,6 +376,22 @@ class WickView extends LakeView:
 				_moved()
 			_:
 				super(key, d)
+
+	func get_param(key: String) -> float:
+		if key == "x" or key == "p":
+			return gh
+		return super(key)
+
+	func set_param(key: String, v: float) -> void:
+		match key:
+			"x":
+				gh = _wclamp(v, signi(int(signf(v - gh))))
+				_moved()
+			"p":
+				gh = _pclamp(v)
+				_moved()
+			_:
+				super(key, v)
 
 	func _pclamp(p: float) -> float:
 		var vw := _view()

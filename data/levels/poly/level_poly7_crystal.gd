@@ -73,50 +73,30 @@ func _build_graph(st: Dictionary) -> void:
 	if not (mode in MODES_P7):
 		return
 	var lv := _cv()
-	var rows := []
+	var vw := lv._view()
+	var vx_: Vector2 = vw.x
+	var vy_: Vector2 = vw.y
 	match mode:
 		"cmatch":
-			if st.get("a_list", []).size() > 1:
-				rows.append(["a", [["◀", "a", -1], ["▶", "a", 1]]])
-			if st.get("p_list", []).size() > 1:
-				rows.append(["p", [["◀", "p", -1], ["▶", "p", 1]]])
+			_add_slider("a", "a", 0, 0, 1, st.get("a_list", []))
+			_add_slider("p", "p", 0, 0, 1, st.get("p_list", []))
 			if not bool(st.get("lock", false)):
-				rows.append(["水晶", [["◀", "h", -1], ["▲", "k", 1], ["▼", "k", -1], ["▶", "h", 1]]])
+				_add_slider("h", "h", ceilf(vx_.x), floorf(vx_.y), 1)
+				_add_slider("k", "k", ceilf(vy_.x), floorf(vy_.y), 1)
 		"mirror":
-			rows.append(["B", [["◀", "bx", -1], ["▲", "by", 1], ["▼", "by", -1], ["▶", "bx", 1]]])
+			_add_slider("B 的 x", "bx", ceilf(vx_.x), floorf(vx_.y), 1)
+			_add_slider("B 的 y", "by", ceilf(vy_.x), floorf(vy_.y), 1)
 		"far":
-			rows.append(["拉遠", [["◀", "z", -1], ["▶", "z", 1]]])
+			_add_slider("拉遠", "z", 0, int(st.get("zmax", 4)), 1)
 		"tangent":
-			rows.append(["m", [["◀", "m", -1], ["▶", "m", 1]]])
-			rows.append(["放大", [["◀", "z", -1], ["▶", "z", 1]]])
+			_add_slider("m", "m", -8, 8, LakeView.q(st.get("mstep", "1")))
+			_add_slider("放大", "z", 0, int(st.get("zmax", 4)), 1)
 		"chline":
-			rows.append(["k", [["▼", "k", -1], ["▲", "k", 1]]])
-	for rw in rows:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		rank_box.add_child(row)
-		var cap := Label.new()
-		cap.text = rw[0]
-		cap.custom_minimum_size = Vector2(56, 0)
-		cap.add_theme_font_size_override("font_size", UITheme.fs(17))
-		cap.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		row.add_child(cap)
-		for bd in rw[1]:
-			var b := Button.new()
-			b.text = bd[0]
-			b.custom_minimum_size = Vector2(0, 46)
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.focus_mode = Control.FOCUS_NONE
-			b.add_theme_font_size_override("font_size", UITheme.fs(20))
-			var key: String = bd[1]
-			var d: int = bd[2]
-			b.pressed.connect(func():
-				if not busy:
-					lv.nudge_graph(key, d))
-			row.add_child(b)
+			var rg: Array = st.get("range", [-5, 5])
+			_add_slider("k", "k", float(rg[0]), float(rg[1]), 1)
 	go_btn.text = {"cmatch": "就是這條" if bool(st.get("sign_only", false)) else "對準了", "mirror": "轉到了", "far": "確定",
 		"tangent": "貼住了", "chline": "確定"}[mode]
-	fview.live_q = "在下方的圖上拖動（或按右邊的按鈕），再按「%s」。" % go_btn.text
+	fview.live_q = "在下方的圖上拖動（或拉右邊的滑桿），再按「%s」。" % go_btn.text
 	_on_graph_move()
 
 
@@ -161,7 +141,7 @@ func _graph_submit(st: Dictionary) -> void:
 			if LakeView.same(lv.gm, float(st.target)):
 				_graph_done(st)
 				return
-			_wrong(st, "m = %s 的直線還沒貼住：按「放大」湊近看，曲線從哪一邊離開直線？提示：%s" % [LakeView.qs(lv.gm), st.nudge])
+			_wrong(st, "m = %s 的直線還沒貼住：拉「放大」滑桿湊近看，曲線從哪一邊離開直線？提示：%s" % [LakeView.qs(lv.gm), st.nudge])
 		"chline":
 			var goal: int = int(st.goals[lv.gstage])
 			var ks: Array = st.get("ks", [])
@@ -506,6 +486,51 @@ class CrystalView extends LakeView:
 				gz = clampi(gz + d, 0, zmax)
 			"m":
 				gm = clampf(gm + d * q(gst.get("mstep", "1")), -8.0, 8.0)
+		_moved()
+
+	func get_param(key: String) -> float:
+		if not _mine():
+			return super(key)
+		match key:
+			"a":
+				return ga
+			"p":
+				return gp
+			"h":
+				return gh
+			"k":
+				return gk
+			"bx":
+				return bx
+			"by":
+				return by
+			"z":
+				return float(gz)
+			"m":
+				return gm
+		return 0.0
+
+	func set_param(key: String, v: float) -> void:
+		if not _mine():
+			super(key, v)
+			return
+		match key:
+			"a":
+				ga = v
+			"p":
+				gp = v
+			"h":
+				gh = v
+			"k":
+				gk = v
+			"bx":
+				bx = v
+			"by":
+				by = v
+			"z":
+				gz = int(roundf(v))
+			"m":
+				gm = v
 		_moved()
 
 	func _gpad_input(e: InputEvent) -> void:

@@ -7,7 +7,7 @@ extends "res://data/levels/poly/level_poly3_echo.gd"
 ##   quad   只經過指定的象限（燈塔），也有做不到的題目　roots  在湖面上拖兩個根
 ##   slide  轉動 k，標記剛好碰到湖面（或直線）的 k　　hline  y = |f(x)| 和水平線 y = k 的交點個數
 ## 題目帶 "lake" 時，整段旅程的下方都畫著那條拋物線（看圖判斷係數、對稱比大小），步驟的 "hl" 標出這一步要看的地方。
-## 每一步中間的推導紀錄都寫出「求：…」，右邊有 ◀ ▶ 可以一格一格調（手機上拖不準時用）。
+## 每一步中間的推導紀錄都寫出「求：…」，右邊的旋鈕滑桿（‹ › 一格一格調，手機上拖不準時用）也能調整。
 
 const BankP5 := preload("res://data/levels/poly/poly5_bank.gd")
 const LAKE_C := Color("7fd4ff")
@@ -101,47 +101,25 @@ func _build_graph(st: Dictionary) -> void:
 	g_lbl.add_theme_color_override("font_color", LAKE_C.lightened(0.3))
 	rank_box.add_child(g_lbl)
 	var mode := String(st.mode)
-	var rows := []
+	g_sliders = []
+	var vw := lv._view()
+	var vx_: Vector2 = vw.x
+	var vy_: Vector2 = vw.y
+	var snap := LakeView.q(st.get("snap", "1"))
 	match mode:
 		"match", "quad":
-			rows = [["開口 a", "a"], ["頂點", "hk"]]
+			_add_slider("a", "a", 0, 0, 1, st.get("a_list", []))
+			_add_slider("h", "h", vx_.x, vx_.y, snap)
+			_add_slider("k", "k", vy_.x, vy_.y, snap)
 		"gems":
-			rows = [["頂點", "hk"]]
+			_add_slider("h", "h", vx_.x, vx_.y, snap)
+			_add_slider("k", "k", vy_.x, vy_.y, snap)
 		"roots":
-			rows = [["α", "r0"], ["β", "r1"]]
+			_add_slider("α", "r0", ceilf(vx_.x), floorf(vx_.y), 1)
+			_add_slider("β", "r1", ceilf(vx_.x), floorf(vx_.y), 1)
 		"slide", "hline":
-			rows = [["k", "k"]]
-	for rw in rows:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		rank_box.add_child(row)
-		var cap := Label.new()
-		cap.text = rw[0]
-		cap.custom_minimum_size = Vector2(56, 0)
-		cap.add_theme_font_size_override("font_size", UITheme.fs(17))
-		cap.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		row.add_child(cap)
-		var what: String = rw[1]
-		var btns := []
-		if what == "hk":
-			btns = [["◀", "h", -1], ["▲", "k", 1], ["▼", "k", -1], ["▶", "h", 1]]
-		elif what == "k" and mode == "hline":
-			btns = [["▼", "k", -1], ["▲", "k", 1]]
-		else:
-			btns = [["◀", what, -1], ["▶", what, 1]]
-		for bd in btns:
-			var b := Button.new()
-			b.text = bd[0]
-			b.custom_minimum_size = Vector2(0, 46)
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.focus_mode = Control.FOCUS_NONE
-			b.add_theme_font_size_override("font_size", UITheme.fs(20))
-			var key: String = bd[1]
-			var d: int = bd[2]
-			b.pressed.connect(func():
-				if not busy:
-					lv.nudge_graph(key, d))
-			row.add_child(b)
+			var rg: Array = st.get("range", [-5, 5])
+			_add_slider("k", "k", float(rg[0]), float(rg[1]), LakeView.q(st.get("step", "1")) if mode == "hline" else 1.0)
 	g_impossible = null
 	if mode == "quad":
 		g_impossible = Button.new()
@@ -156,8 +134,77 @@ func _build_graph(st: Dictionary) -> void:
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = {"match": "對準了", "gems": "穿過了", "quad": "就是這樣", "roots": "就是這兩根", "slide": "標記這個 k", "hline": "確定"}.get(mode, "確定")
-	fview.live_q = "在下方的湖面上拖動（或按右邊的按鈕），再按「%s」。" % go_btn.text
+	fview.live_q = "在下方的湖面上拖動（或拉右邊的滑桿），再按「%s」。" % go_btn.text
 	_on_graph_move()
+
+
+## 旋鈕滑桿：左右拖動（或按 ‹ ›）調整；list 不是空的就在這些值之間跳（例如 a = −2、−1、−\frac{1}{2}…）
+var g_sliders: Array = []
+
+func _add_slider(cap: String, key: String, lo: float, hi: float, step: float, list: Array = []) -> void:
+	if not list.is_empty() and list.size() <= 1:
+		return
+	var lv := _lv()
+	var c := step_color().lightened(0.2)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	rank_box.add_child(row)
+	var name_l := Label.new()
+	name_l.text = cap
+	name_l.custom_minimum_size = Vector2(40, 0)
+	name_l.add_theme_font_size_override("font_size", UITheme.fs(17))
+	name_l.add_theme_color_override("font_color", c)
+	row.add_child(name_l)
+	var s := UITheme.touch_slider()
+	if list.is_empty():
+		s.min_value = lo
+		s.max_value = hi
+		s.step = step
+	else:
+		s.min_value = 0
+		s.max_value = list.size() - 1
+		s.step = 1
+		s.tick_count = list.size()
+		s.ticks_on_borders = true
+	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	s.custom_minimum_size = Vector2(0, 28)
+	UITheme.tint_slider(s, c)
+	row.add_child(s)
+	UITheme.add_step_buttons(s, c)
+	var val_l := Label.new()
+	val_l.custom_minimum_size = Vector2(52, 0)
+	val_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	val_l.add_theme_font_size_override("font_size", UITheme.fs(17))
+	val_l.add_theme_color_override("font_color", c)
+	row.add_child(val_l)
+	var ent := {"s": s, "key": key, "list": list, "lbl": val_l}
+	g_sliders.append(ent)
+	s.value_changed.connect(func(v: float):
+		if busy:
+			_sync_sliders()
+			return
+		lv.set_param(key, LakeView.q(list[int(v)]) if not list.is_empty() else v))
+
+
+## 圖上拖動之後，滑桿跟著移到同樣的值
+func _sync_sliders() -> void:
+	var lv := _lv()
+	for ent in g_sliders:
+		var s: HSlider = ent.s
+		if not is_instance_valid(s):
+			continue
+		var v: float = lv.get_param(String(ent.key))
+		var lst: Array = ent.list
+		if lst.is_empty():
+			s.set_value_no_signal(v)
+		else:
+			var idx := 0
+			for i in lst.size():
+				if LakeView.same(LakeView.q(lst[i]), v):
+					idx = i
+			s.set_value_no_signal(idx)
+		(ent.lbl as Label).text = LakeView.qs(v)
 
 
 func _on_graph_move() -> void:
@@ -166,6 +213,7 @@ func _on_graph_move() -> void:
 		return
 	if g_lbl != null and is_instance_valid(g_lbl):
 		g_lbl.text = lv.readout()
+	_sync_sliders()
 	fview.live_fill = lv.center_text()
 	fview.queue_redraw()
 	Game.of(self).play("blip", 1.0, -18.0)
@@ -498,6 +546,36 @@ class LakeView extends EchoView:
 				r0 += d
 			"r1":
 				r1 += d
+		_clamp_graph()
+		_moved()
+
+	## 滑桿用：讀出／設定某一個參數
+	func get_param(key: String) -> float:
+		match key:
+			"a":
+				return ga
+			"h":
+				return gh
+			"k":
+				return gk
+			"r0":
+				return r0
+			"r1":
+				return r1
+		return 0.0
+
+	func set_param(key: String, v: float) -> void:
+		match key:
+			"a":
+				ga = v
+			"h":
+				gh = v
+			"k":
+				gk = v
+			"r0":
+				r0 = v
+			"r1":
+				r1 = v
 		_clamp_graph()
 		_moved()
 
