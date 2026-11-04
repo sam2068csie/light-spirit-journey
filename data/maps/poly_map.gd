@@ -39,7 +39,7 @@ const SITES := [
 	{"id": "P2", "kind": "tun", "at": 440.0, "xr": Vector2(320, 565)},
 	{"id": "P3", "kind": "tun", "at": 690.0, "xr": Vector2(565, 815)},
 	{"id": "P4", "kind": "tun", "at": 940.0, "xr": Vector2(815, 1080)},
-	{"id": "P5", "kind": "lake", "p": Vector2(1042, 468), "lab": Vector2(1042, 412)},
+	{"id": "P5", "kind": "lake", "p": Vector2(1042, 468), "lab": Vector2(1042, 412), "ur": Vector2(2.3, U1)},   # ur：流進鏡湖的那段岩脊
 	{"id": "P6", "kind": "ridge", "at": 1.5, "ur": Vector2(0.75, 2.3), "lab": Vector2(0, 66)},
 	{"id": "P7", "kind": "ridge", "at": 0.0, "ur": Vector2(-0.75, 0.75), "lab": Vector2(0, 74)},
 	{"id": "P8", "kind": "bridge", "at": -ROOT_U, "ur": Vector2(U0, -2.0), "lab": Vector2(-8, -72)},
@@ -211,7 +211,7 @@ static func region_at(p: Vector2) -> int:
 		var xr: Vector2 = SITES[i].xr
 		if p.x >= xr.x and p.x <= xr.y and absf(p.y - tun_y(p.x)) <= TUN_W / 2.0:
 			return i
-	for i in [5, 6, 7]:
+	for i in [4, 5, 6, 7]:
 		var ur: Vector2 = SITES[i].ur
 		var u := (p.x - CX) / SX
 		if u >= ur.x and u <= ur.y and absf(p.y - ridge_p(u).y) <= RIDGE_W:
@@ -351,7 +351,7 @@ func _draw_land(layer: CanvasItem) -> void:
 	var rp := ridge_pts(U0, U1)
 	L.draw_polyline(rp, RIDGE, RIDGE_W + 4.0, true)
 	L.draw_polyline(rp, RIDGE_HI, 8.0, true)
-	for i in [5, 6, 7]:
+	for i in [4, 5, 6, 7]:          # 鏡湖（第五關）也包含流進湖裡的那段岩脊
 		_draw_ridge_fill(L, i)
 	# 水
 	var wp := _water_poly()
@@ -462,6 +462,13 @@ func _draw_region_ring(i: int) -> void:
 				var a := PI * k / 24.0
 				lk.append(Vector2(st.p) + Vector2(-cos(a) * 34.0, -sin(a) * 6.0 - 2.0))
 			lines = [lk]
+			# 流進湖裡的那段岩脊（水面上的部分）也有發光邊
+			var keep2 := PackedVector2Array()
+			for q in ridge_pts(st.ur.x, st.ur.y):
+				if q.y <= WY:
+					keep2.append(q)
+			if keep2.size() > 1:
+				lines.append(offset_line(keep2, -RIDGE_W / 2.0 - 2.0))
 		_:
 			var pts2 := ridge_pts(st.ur.x, st.ur.y)
 			var keep := PackedVector2Array()

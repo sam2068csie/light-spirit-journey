@@ -201,13 +201,17 @@ static func wave_edge(a: float, b: float, side: float, pad: float = 0.0) -> Pack
 static func coast_band(a: float, b: float, half: float) -> PackedVector2Array:
 	var top := PackedVector2Array()
 	var bot := PackedVector2Array()
+	var xs := []
 	var x := a
-	while x < b + 0.01:
-		var c := wave_p(minf(x, b))
-		var n := wave_n(minf(x, b))
+	while x < b - 0.01:
+		xs.append(x)
+		x += 4.0
+	xs.append(b)          # 最後一點一定剛好在 b：相鄰兩段的切口才會完全重合
+	for xx in xs:
+		var c := wave_p(xx)
+		var n := wave_n(xx)
 		top.append(_outside_ring(c + n * half))
 		bot.append(_outside_ring(c - n * half))
-		x += 4.0
 	bot.reverse()
 	top.append_array(bot)
 	return top
@@ -427,14 +431,10 @@ func _draw_region_fill(L: CanvasItem, i: int) -> void:
 			L.draw_arc(O, R, -st.a.y, -st.a.x, 64, c1, RW, true)
 			L.draw_arc(O, R, -st.a.y, -st.a.x, 64, c2, RW - 18.0, true)
 		"coast":
-			if float(st.x.x) <= WX0 + 1.0:
-				# 從圓環接出來的那一段：沿著圓環外緣切齊，不留縫
-				L.draw_colored_polygon(coast_band(WX0, minf(st.x.y, X_END), CW / 2.0), c1)
-				L.draw_colored_polygon(coast_band(WX0, minf(st.x.y, X_END), CW / 2.0 - 9.0), c2)
-			else:
-				var pts := wave_pts(st.x.x, minf(st.x.y, X_END))
-				L.draw_polyline(pts, c1, CW, false)
-				L.draw_polyline(pts, c2, CW - 18.0, false)
+			# 用多邊形畫（切口和波的方向垂直）：相鄰兩段剛好接在一起，不會重疊出一條深色的線
+			var x0: float = WX0 if float(st.x.x) <= WX0 + 1.0 else float(st.x.x)
+			L.draw_colored_polygon(coast_band(x0, minf(st.x.y, X_END), CW / 2.0), c1)
+			L.draw_colored_polygon(coast_band(x0, minf(st.x.y, X_END), CW / 2.0 - 9.0), c2)
 		"dial":
 			L.draw_colored_polygon(dial_half(st.side), c1)
 			L.draw_colored_polygon(dial_half(st.side, DR - 9.0), c2)
