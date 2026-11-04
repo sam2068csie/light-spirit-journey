@@ -410,7 +410,7 @@ class RiverView extends CrystalView:
 			return clampf(_to(0, 0).y, ar.position.y + 10.0, ar.end.y - 10.0)
 		var nl: int = src.get("layers", []).size()
 		if nl == 0:
-			return ar.position.y + ar.size.y * 0.55
+			return ar.position.y + ar.size.y * (0.6 if src.has("expr") else 0.55)
 		return minf(ar.position.y + 18.0 + 30.0 * nl + 30.0, ar.end.y - 34.0)
 
 	func _gpad_input(e: InputEvent) -> void:
@@ -566,7 +566,17 @@ class RiverView extends CrystalView:
 				var lp := _to(float(lay.pts[k]), 0)
 				MathLabel.draw_on(self, font, lp.x, yy - 8.0, String(llb[k]), UITheme.fs(11), Color(1, 1, 1, 0.6))
 			for k in lay.pts.size():
+				if not _layer_gate_on(lay, k):
+					continue
 				draw_dashed_line(Vector2(_to(float(lay.pts[k]), 0).x, yy + 6.0), Vector2(_to(float(lay.pts[k]), 0).x, ly - 8.0), Color(1, 1, 1, 0.12), 1.0, 4.0)
+		# 要判斷的式子（寫在圖的上方，放水時可以對照每個因式的次方）
+		if src.has("expr") and layers.is_empty() and not src.has("poly"):
+			var ex := String(src.expr)
+			var efs := UITheme.fs(20)
+			while efs > UITheme.fs(13) and MathLabel.text_width(font, ex, efs) > ar.size.x - 24.0:
+				efs -= 1
+			var up := MathLabel.line_extra(font, ex, efs).x
+			MathLabel.draw_on(self, font, ar.get_center().x, ar.position.y + 22.0 + up, ex, efs, Color(1, 0.95, 0.8))
 		# 水流（奇穿偶彈）
 		if src.has("mult") and (mode == "wave" or mode == "pick"):
 			_draw_wave(src, ly, mode == "wave")
@@ -663,7 +673,16 @@ class RiverView extends CrystalView:
 				draw_line(Vector2(gx - 4, y - 4), Vector2(gx + 4, y + 4), Color(1, 0.5, 0.5), 2.0, true)
 				draw_line(Vector2(gx - 4, y + 4), Vector2(gx + 4, y - 4), Color(1, 0.5, 0.5), 2.0, true)
 				continue
-			_gate(gx, y, i < ptsin.size() and bool(ptsin[i]), small)
+			var filled: bool = i < ptsin.size() and bool(ptsin[i])
+			# 參考的河：沒亮、也不在亮的河段旁邊的閘門不畫（免得看起來像有亮）
+			if small and not filled and not (i < segs.size() and bool(segs[i])) and not (i + 1 < segs.size() and bool(segs[i + 1])):
+				continue
+			_gate(gx, y, filled, small)
+
+	static func _layer_gate_on(lay: Dictionary, k: int) -> bool:
+		var segs: Array = lay.segs
+		var ptsin: Array = lay.ptsin
+		return (k < ptsin.size() and bool(ptsin[k])) or bool(segs[k]) or (k + 1 < segs.size() and bool(segs[k + 1]))
 
 	func _gate(x: float, y: float, filled: bool, small: bool) -> void:
 		var r := 4.5 if small else 7.5
@@ -680,7 +699,8 @@ class RiverView extends CrystalView:
 		var mult: Array = src.mult
 		var lead := int(src.lead)
 		var n := pts.size()
-		var amp := minf(34.0, (ly - ar.position.y) * 0.5 - 6.0)
+		var top := ar.position.y + (34.0 if src.has("expr") else 0.0)
+		var amp := minf(34.0, (ly - top) * 0.5 - 6.0)
 		if not src.get("layers", []).is_empty() or src.has("poly"):
 			return
 		var xs := [ar.position.x + 6.0]
