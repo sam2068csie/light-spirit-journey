@@ -303,11 +303,13 @@ static func tower_pick(floor_n: int, recent: Array, unit: String = Units.DEFAULT
 	var used := {}
 	for it in recent.slice(maxi(0, recent.size() - 12)):
 		used[String(it.level) + "/" + String(it.slot)] = true
+	# 段考風格的新題目：同一輪攀登裡都不重複（出完了就改出八大關的舊題型）
+	for it in recent:
+		if String(it.level) == "T":
+			used["T/" + String(it.slot)] = true
 	var last: Dictionary = recent.back() if not recent.is_empty() else {}
 	if floor_n % 5 == 0:
 		# 試煉層：同一輪攀登裡不重複（用完就是塔頂，見 tower_top）
-		for it in recent:
-			used[String(it.level) + "/" + String(it.slot)] = true
 		return _tower_new(floor_n, used, last, true)
 	if floor_n == 1 or randf() < 0.7:
 		var it := _tower_new(floor_n, used, last, false)
@@ -329,10 +331,9 @@ static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: b
 	if boss and cands.is_empty():
 		# 試煉層：難度合適的都出過了，就從還沒出過的試煉題裡挑（一輪之內絕不重複）
 		cands = TowerBank.items().filter(func(q): return q.kind == "boss" and not used.has("T/" + q.id))
-	if cands.is_empty():
-		cands = pool.filter(func(q): return q.kind != last_kind)
-	if cands.is_empty():
-		cands = pool
+	if cands.is_empty() and not boss:
+		# 換一種題型也沒有了：只要沒出過，同一種題型也可以
+		cands = pool.filter(func(q): return not used.has("T/" + q.id))
 	if cands.is_empty():
 		return {}
 	# 高樓層偏好難一點的題目

@@ -15,6 +15,8 @@ const STAGE_W := 700.0
 const STAGE_H := 556.0
 const INNER_W := 652.0      # 題目板內容寬（扣掉左右內距）
 const CARD_W := 348.0       # 右邊作答區內容寬
+const PLOT_W := 250.0       # 題目板右邊小座標圖的寬
+const CARD_MAX_H := 556.0   # 右邊作答區最高多高（再高就超出畫面）
 const MAX_HEARTS := 3
 
 var item: Dictionary = {}
@@ -51,6 +53,9 @@ var hint_panel: PanelContainer
 var hint_label: MathLabel
 var next_btn: Button
 var card_plot_holder: Control
+var more_btn: Button          # 推導板下面還有東西時的「▼ 往下滑還有」
+var answer_card: PanelContainer
+var fail_at := -1             # 沒通過時從第幾步開始是示範的（步驟列顯示 ✗）
 
 # 各題型的狀態
 var judge_rows: Array = []      # [{row, pick, btns, why, card}]
@@ -169,26 +174,58 @@ func _build_ui() -> void:
 	stem_label.max_width = INNER_W
 	stem_label.color = UITheme.TEXT
 	scol.add_child(stem_label)
-	# 推導板：寫的行數多了可以上下捲動（新寫的一行會自動捲到看得見）
-	board_scroll = ScrollContainer.new()
-	board_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	board_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	board_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER   # 不佔寬度；用手指拖動或滾輪捲
-	scol.add_child(board_scroll)
+	# 推導板：寫的行數多了可以上下捲動（新寫的一行會自動捲到看得見）；
+	# 右邊的小座標圖固定不動，不跟著推導板一起捲走
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 14)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	board_scroll.add_child(body)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scol.add_child(body)
+	var scroll_box := Control.new()      # 推導板＋「往下還有」的提示
+	scroll_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_box.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(scroll_box)
+	board_scroll = ScrollContainer.new()
+	board_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	board_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	board_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER   # 不佔寬度；用手指拖動或滾輪捲
+	scroll_box.add_child(board_scroll)
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 10)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_child(left)
+	board_scroll.add_child(left)
 	board = VBoxContainer.new()
 	board.add_theme_constant_override("separation", 2)
 	left.add_child(board)
 	widget_box = VBoxContainer.new()
 	widget_box.add_theme_constant_override("separation", 6)
 	left.add_child(widget_box)
+	# 下面還有東西（被捲到看不到）時，底部中間出現「▼ 往下滑」，點一下往下捲
+	more_btn = Button.new()
+	more_btn.text = "▼ 下面還有"
+	more_btn.focus_mode = Control.FOCUS_NONE
+	more_btn.add_theme_font_size_override("font_size", UITheme.fs(15))
+	more_btn.add_theme_color_override("font_color", UITheme.ACCENT)
+	var mb := UITheme.box(Color(0.1, 0.07, 0.22, 0.94), 14, Color(UITheme.ACCENT.r, UITheme.ACCENT.g, UITheme.ACCENT.b, 0.6), 1, 6)
+	mb.content_margin_left = 14
+	mb.content_margin_right = 14
+	for st in ["normal", "hover", "pressed"]:
+		more_btn.add_theme_stylebox_override(st, mb)
+	more_btn.anchor_left = 1.0         # 右下角（左下角是光靈說話的地方）
+	more_btn.anchor_right = 1.0
+	more_btn.anchor_top = 1.0
+	more_btn.anchor_bottom = 1.0
+	more_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	more_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	more_btn.offset_right = -2
+	more_btn.offset_bottom = -4
+	more_btn.visible = false
+	more_btn.pressed.connect(func():
+		var sb2 := board_scroll.get_v_scroll_bar()
+		var to := mini(int(sb2.max_value - sb2.page), board_scroll.scroll_vertical + int(board_scroll.size.y * 0.7))
+		board_scroll.create_tween().tween_property(board_scroll, "scroll_vertical", to, 0.25))
+	scroll_box.add_child(more_btn)
 	var has_plot: bool = item.has("plot")
 	if has_plot:
 		plot = Plot.new()
@@ -196,13 +233,13 @@ func _build_ui() -> void:
 		if item.kind == "judge":
 			plot.custom_minimum_size = Vector2(CARD_W, 210)
 		else:
-			plot.custom_minimum_size = Vector2(270, 250)
+			plot.custom_minimum_size = Vector2(PLOT_W, 250)
 			plot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			plot.mouse_filter = Control.MOUSE_FILTER_PASS
 			body.add_child(plot)
 
 	# 右：作答區
 	var card := PanelContainer.new()
+	answer_card = card
 	card.position = Vector2(744, 70)
 	card.custom_minimum_size = Vector2(384, STAGE_H)
 	card.add_theme_stylebox_override("panel", UITheme.box(Color(UITheme.PANEL.r, UITheme.PANEL.g, UITheme.PANEL.b, 0.86), 18, Color(1, 1, 1, 0.07), 1, 18))
@@ -278,16 +315,19 @@ func _update_hud() -> void:
 
 func _step_bar() -> String:
 	var parts := PackedStringArray()
-	var nums := ["①", "②", "③", "④", "⑤", "⑥", "⑦"]
+	var nums := ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫"]
 	for i in steps.size():
-		var nm: String = nums[mini(i, nums.size() - 1)]
-		if i < si or done:
+		var nm: String = nums[i] if i < nums.size() else str(i + 1)
+		if fail_at >= 0 and i >= fail_at:
+			parts.append("[color=#ff6b7a]✗[/color]")      # 沒通過：示範的步驟
+		elif i < si or done:
 			parts.append("[color=#6ee7a0]✓[/color]")
 		elif i == si:
 			parts.append("[color=#ffcf5a]%s[/color]" % nm)
 		else:
 			parts.append(nm)
-	return "  ›  ".join(parts)
+	# 步驟多的大題：箭頭間距縮小，一行放得下
+	return (" › " if steps.size() > 7 else "  ›  ").join(parts)
 
 
 # ================= 流程 =================
@@ -328,6 +368,7 @@ func _show_step() -> void:
 	part_label.text = "小題 %s" % s.get("part", "")
 	prompt_label.text = s.q
 	_clear(opts_box)
+	_unfit_card()
 	hint_panel.visible = false
 	action_btn.visible = false
 	action_btn.disabled = false
@@ -335,7 +376,9 @@ func _show_step() -> void:
 		plot.stage = si
 	match s.t:
 		"choice":
-			_clear(widget_box)
+			# 數線留著當參考（例如最後算「範圍內有幾個整數」）；其他互動區清掉
+			if numline == null or not is_instance_valid(numline):
+				_clear(widget_box)
 			_build_choice(s)
 		"judge":
 			_build_judge(s)
@@ -360,7 +403,7 @@ func _write(line: String, dim := false) -> void:
 		return
 	var l := MathLabel.new()
 	l.font_size = UITheme.fs(20)
-	l.max_width = INNER_W - (284.0 if plot and plot.get_parent() != null and item.kind != "judge" else 0.0)
+	l.max_width = INNER_W - (PLOT_W + 14.0 if plot and plot.get_parent() != null and item.kind != "judge" else 0.0)
 	l.color = UITheme.TEXT_DIM if dim else UITheme.CYAN_PALE
 	l.text = line
 	l.mouse_filter = Control.MOUSE_FILTER_PASS     # 手指按在字上也能拖動捲動
@@ -381,6 +424,22 @@ func _scroll_board_end() -> void:
 	if is_instance_valid(board_scroll):
 		var sb := board_scroll.get_v_scroll_bar()
 		board_scroll.create_tween().tween_property(board_scroll, "scroll_vertical", int(sb.max_value), 0.25)
+
+
+## 捲到看得見某個東西（等排版算好再捲）
+func _scroll_to(ctl: Control) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_instance_valid(ctl) or not is_instance_valid(board_scroll):
+		return
+	var top := ctl.global_position.y - board_scroll.global_position.y + board_scroll.scroll_vertical
+	var bottom := top + ctl.size.y
+	var to := board_scroll.scroll_vertical
+	if bottom > board_scroll.scroll_vertical + board_scroll.size.y:
+		to = int(bottom - board_scroll.size.y + 8.0)
+	if top < to:
+		to = int(maxf(0.0, top - 8.0))
+	board_scroll.create_tween().tween_property(board_scroll, "scroll_vertical", to, 0.25)
 
 
 ## 答錯：扣一顆心
@@ -409,6 +468,7 @@ func _out_of_hearts() -> bool:
 
 ## 結束這一層：把剩下的推導都寫上去
 func _reveal_all(msg: String) -> void:
+	fail_at = si
 	for i in range(si, steps.size()):
 		_write_pre(i, true)
 		_write(String(steps[i].get("write", "")), true)
@@ -472,6 +532,8 @@ func _on_next() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_more()
+	_fit_card()
 	if done or waiting or get_tree().paused:
 		return
 	time_left -= delta
@@ -490,6 +552,45 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e.is_action_pressed("ui_cancel") and not pause_menu.is_open():
 		pause_menu.open()
 		get_viewport().set_input_as_handled()
+
+
+## 推導板下面還有看不到的東西：顯示「▼ 往下滑還有」
+func _update_more() -> void:
+	if more_btn == null:
+		return
+	var sb := board_scroll.get_v_scroll_bar()
+	var hidden := sb.max_value - sb.page - float(board_scroll.scroll_vertical)
+	more_btn.visible = hidden > 24.0
+
+
+## 右邊作答區太高（選項是分數、提示又很長）會超出畫面：先縮小間距，再把選項按鈕壓矮一點
+func _fit_card() -> void:
+	if answer_card == null:
+		return
+	var over := answer_card.get_combined_minimum_size().y - CARD_MAX_H
+	if over <= 0.5:
+		if answer_card.size.y > CARD_MAX_H + 0.5:
+			answer_card.reset_size()
+		return
+	var col := answer_card.get_child(0) as Control
+	if opts_box.get_theme_constant("separation") > 4:
+		opts_box.add_theme_constant_override("separation", 4)
+		col.add_theme_constant_override("separation", 6)
+		return
+	var btns := opts_box.get_children().filter(func(b): return b is Button and b.custom_minimum_size.y > 42.0)
+	if btns.is_empty():
+		return
+	var cut := ceilf(over / btns.size())
+	for bt in btns:
+		bt.custom_minimum_size.y = maxf(42.0, bt.custom_minimum_size.y - cut)
+
+
+## 換下一步：作答區的間距恢復原樣
+func _unfit_card() -> void:
+	opts_box.add_theme_constant_override("separation", 8)
+	if answer_card:
+		(answer_card.get_child(0) as Control).add_theme_constant_override("separation", 10)
+		answer_card.reset_size()
 
 
 ## 右邊大按鈕：送出審判／確認／繼續
@@ -659,6 +760,11 @@ func _check_judge() -> void:
 			b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			if not b.button_pressed:
 				b.modulate.a = 0.35
+	# 捲到第一張判錯的卡片，讓學生看得到理由
+	for jr in judge_rows:
+		if (jr.pick == 1) != bool(jr.card.ok):
+			_scroll_to(jr.panel)
+			break
 	if wrong == 0:
 		Game.of(self).sfx("correct")
 		_hint("全部判斷正確！", "good")
@@ -709,6 +815,7 @@ func _build_roots(s: Dictionary) -> void:
 	whys.add_child(tip)
 	action_btn.text = "確認"
 	action_btn.visible = true
+	_scroll_board_end()
 
 
 func _check_roots() -> void:
@@ -747,7 +854,9 @@ func _check_roots() -> void:
 # ================= 數線封印 =================
 
 func _build_line(s: Dictionary) -> void:
-	var prev_line := si > 0 and String(steps[si - 1].t) == "line" and numline != null
+	# 同一題的數線共用：前面封印過的列（例如定義域）留著，中間隔了選擇題也一樣
+	var prev_line: bool = numline != null and is_instance_valid(numline) and numline.get_parent() == widget_box \
+		and numline.marks == s.marks
 	if not prev_line:
 		_clear(widget_box)
 		numline = NumLine.new()
@@ -758,6 +867,7 @@ func _build_line(s: Dictionary) -> void:
 	action_btn.text = "封印！"
 	action_btn.visible = true
 	_hint("點數線上的「區段」選範圍，點「端點」決定要不要包含（實心＝包含）。", "info")
+	_scroll_board_end()
 
 
 func _check_line() -> void:

@@ -1107,7 +1107,11 @@ func _show_tower_result(res: Dictionary) -> void:
 		tl.text = "星塵 +%d（%s）" % [int(rw.dust), span]
 		tl.add_theme_color_override("font_color", UITheme.ACCENT)
 	elif floors > 0:
-		tl.text = "今天第 1～%d 層的星塵已經領過了，爬得更高才有新的星塵" % int(rw.get("paid", floors))
+		var paid := int(rw.get("paid", floors))
+		if paid >= Center.tower_top():
+			tl.text = "今天整座塔的星塵都領過了，明天再來領新的星塵"
+		else:
+			tl.text = "今天第 1～%d 層的星塵已經領過了，爬得更高才有新的星塵" % paid
 		tl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		tl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	else:
