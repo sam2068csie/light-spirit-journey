@@ -266,8 +266,8 @@ static func gen_river(kind: String, n: int) -> Array:
 						yes = val > 0
 					"≥":
 						yes = val >= 0
-			pb = {"eq": "%s %s 0\nx = %d 是它的解嗎？" % [ftxt, op, t], "choices": ["是", "不是"], "correct": 0 if yes else 1, "ans": "",
-				"q": "代進去只看每個因式的正負。", "nudge": "分母是 0 不行；偶次方 ≥ 0；等於 0 要看有沒有等號。", "tag": BankP8.T_HIGH}
+			pb = {"eq": "%s %s 0\nx = %d 是它的解嗎？" % [ftxt, op, t], "choices": ["○", "✕"], "correct": 0 if yes else 1, "ans": "",
+				"q": "○ 是解、✕ 不是解。代進去只看每個因式的正負。", "nudge": "分母是 0 不行；偶次方 ≥ 0；等於 0 要看有沒有等號。", "tag": BankP8.T_HIGH}
 		else:
 			if out.size() % 3 == 2:
 				var h := randi_range(-5, 5)

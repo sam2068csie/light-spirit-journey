@@ -205,6 +205,13 @@ func _speed_show() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.clip_text = true
 		b.add_theme_font_size_override("font_size", UITheme.fs(22 if many else 28))
+		# ○（紅）、✕（藍）：判斷是不是解，比大大的「是／不是」輕鬆
+		var mark := String(pb.choices[i])
+		if mark == "○" or mark == "✕":
+			var mc: Color = Color("ff6b6b") if mark == "○" else Color("5aa9ff")
+			b.add_theme_font_size_override("font_size", UITheme.fs(40))
+			for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+				b.add_theme_color_override(key, mc)
 		var idx: int = i
 		b.pressed.connect(func(): _speed_pick(idx))
 		row.add_child(b)

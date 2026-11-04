@@ -69,15 +69,6 @@ func _scan(v, where: String, key := "") -> void:
 		for k in v:
 			if str(k) in SKIP_KEYS:
 				continue
-			if str(k) == "cands":
-				for c in v[k]:
-					if c is Dictionary:
-						_scan(c, where, "cands")
-						continue
-					var cs := str(c).replace("√{", "√")      # 按鈕會把 √{6} 寫成 √6
-					if cs.contains("{") or cs.contains("\\") or cs.contains("^"):
-						_report(where, cs, "篩選按鈕是一般文字，不能有排版符號")
-				continue
 			_scan(v[k], where, str(k))
 	elif v is Array:
 		for e in v:

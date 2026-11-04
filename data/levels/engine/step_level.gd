@@ -920,8 +920,12 @@ func _build_filter(st: Dictionary) -> void:
 	filter_btns = []
 	# 候選值太多時排成兩行以上（一行最多 3 個），才不會超出右邊的卡片
 	var many: bool = st.cands.size() > 3
+	# 候選值的字比較長（例如 sin x + cos x）：一行只排 2 個
+	var longest := 0
+	for c in st.cands:
+		longest = maxi(longest, str(c).length())
 	var row := GridContainer.new()
-	row.columns = 3 if many else maxi(1, st.cands.size())
+	row.columns = (2 if longest > 8 else 3) if many else maxi(1, st.cands.size())
 	row.add_theme_constant_override("h_separation", 8 if many else 10)
 	row.add_theme_constant_override("v_separation", 8)
 	rank_box.add_child(row)
@@ -932,7 +936,17 @@ func _build_filter(st: Dictionary) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.focus_mode = Control.FOCUS_NONE
 		b.clip_text = true
-		b.add_theme_font_size_override("font_size", UITheme.fs(15 if many else 18))
+		b.clip_contents = true
+		# 按鈕上的字用數學排版（√2 上面才有橫線）
+		var m := MathLabel.new()
+		m.name = "Math"
+		m.font_size = UITheme.fs(15 if many else 18)
+		m.set_meta("fs0", m.font_size)
+		m.align_center = true
+		m.valign_center = true
+		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.add_child(m)
 		var idx: int = i
 		b.pressed.connect(func():
 			filter_keep[idx] = not filter_keep[idx]
@@ -951,16 +965,22 @@ func _build_filter(st: Dictionary) -> void:
 
 
 func _refresh_filter() -> void:
+	_fit_filter.call_deferred()
 	var st: Dictionary = steps[si]
 	for i in filter_btns.size():
 		var b: Button = filter_btns[i]
 		var keep: bool = filter_keep[i]
 		var word: String = st.get("keep_word", "✓ 保留") if keep else st.get("drop_word", "✗ 丟掉")
-		if st.get("bare", false):      # bare：按鈕上只寫候選值本身（例如「x − 1」），不寫「t = 」
-			b.text = "%s\n%s" % [_plain_root(str(st.cands[i])), word]
-		else:
-			b.text = "%s = %s\n%s" % [st.get("var", "t"), _plain_root(str(st.cands[i])).replace("-", "−"), word]
 		var c := UITheme.GOOD if keep else UITheme.BAD
+		var val := str(st.cands[i]).replace("-", "−")
+		var top := val if st.get("bare", false) else "%s = %s" % [st.get("var", "t"), val]   # bare：只寫候選值本身，不寫「t = 」
+		var m: Control = b.get_node_or_null("Math")
+		if m != null:
+			b.text = ""
+			m.text = "[color=#%s]%s\n%s[/color]" % [c.lightened(0.3).to_html(false), top, word]
+			m.set_meta("top", top)
+		else:
+			b.text = "%s\n%s" % [_plain_root(top), word]
 		var sb := UITheme.box(Color(c.r, c.g, c.b, 0.14), 12, c, 2, 6)
 		b.add_theme_stylebox_override("normal", sb)
 		b.add_theme_stylebox_override("hover", sb)
@@ -968,6 +988,23 @@ func _refresh_filter() -> void:
 		b.add_theme_color_override("font_color", c.lightened(0.3))
 		b.add_theme_color_override("font_hover_color", c.lightened(0.3))
 		b.add_theme_color_override("font_pressed_color", c.lightened(0.3))
+
+
+## 篩選按鈕的字太長就縮小，放得進按鈕（按鈕排好之後才量得到寬度）
+func _fit_filter() -> void:
+	for b in filter_btns:
+		if not is_instance_valid(b):
+			continue
+		var m: Control = b.get_node_or_null("Math")
+		if m == null or b.size.x < 10.0:
+			continue
+		var font: Font = b.get_theme_default_font()
+		var top := String(m.get_meta("top", ""))
+		var fs: int = int(m.get_meta("fs0", UITheme.fs(18)))
+		while fs > UITheme.fs(11) and MathLabel.text_width(font, top, fs) > b.size.x - 14.0:
+			fs -= 1
+		if m.font_size != fs:
+			m.font_size = fs
 
 
 ## 按鈕是一般文字：把 √{6} 寫成 √6

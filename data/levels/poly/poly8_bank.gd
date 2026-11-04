@@ -60,6 +60,12 @@ static func _g(mode: String, name: String, q: String, data: Dictionary, line: St
 	return st
 
 
+## 篩選按鈕只寫數字本身（不寫「t = 」）
+static func _bare(st: Dictionary) -> Dictionary:
+	st["bare"] = true
+	return st
+
+
 static func _pick(name: String, q: String, data: Dictionary, line: String, nudge: String, tag: String) -> Dictionary:
 	return _g("pick", name, q, data, line, nudge, tag)
 
@@ -485,8 +491,8 @@ static func _slots() -> Array:
 					{"expr": "(x − 1)^{2}(x + 2)(x − 2) ≤ 0", "pts": [-2, 1, 2], "labels": ["−2", "1", "2"], "segs": [false, true, true, false], "ptsin": [true, true, true], "op": "<=", "mult": [1, 2, 1], "lead": 1,
 					 "view": {"x": [-4, 4], "y": [-1, 1]}},
 					"−2 ≤ x ≤ 2", "1 彈回在水面上：= 0 也算。", T_SAME),
-				SB.filter("挑出解", "哪些數在 −2 ≤ x ≤ 2 裡？", ["π", "−3", "1", "√2", "−√2"], [false, false, true, true, true],
-					"1、√2、−√2 是解", "π ≈ 3.14；√2 ≈ 1.41。", T_SAME),
+				_bare(SB.filter("挑出解", "哪些數在 −2 ≤ x ≤ 2 裡？", ["π", "−3", "1", "√2", "−√2"], [false, false, true, true, true],
+					"1、√2、−√2 是解", "π ≈ 3.14，√2 ≈ 1.41。", T_SAME)),
 			 ]},
 		 ]},
 

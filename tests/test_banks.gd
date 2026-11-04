@@ -33,8 +33,9 @@ func _tour_level(lid: String, file: String, bank) -> void:
 	g.goto(file)
 	await wait(0.8)
 	var lv = current_scene
-	ok(lv != null, "%s 開得起來" % lid)
-	if lv == null:
+	# 腳本有語法錯誤時，場景還是會建出來（只是沒有腳本）：要確認真的是關卡
+	ok(lv != null and lv.has_method("make_round"), "%s 開得起來（腳本有載入）" % lid)
+	if lv == null or not lv.has_method("make_round"):
 		return
 	# 關掉開場的章節選單
 	for n in lv.get_children():
