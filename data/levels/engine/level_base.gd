@@ -707,7 +707,7 @@ func _show_menu() -> void:
 		var cb := _concept_button()
 		cb.pressed.connect(func():
 			layer.queue_free()
-			_show_concepts(0))
+			_show_concepts(-1))
 		col.add_child(cb)
 	var g = Game.of(self)
 	for item in level_chapters():
@@ -3311,7 +3311,12 @@ func _concept_button() -> Button:
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(t)
 	var sub := Label.new()
-	sub.text = "先猜再揭曉、答題、拼流程：%d 張卡片" % concept_cards().size()
+	var done := 0
+	var g = Game.of(self)
+	for cd in concept_cards():
+		if g != null and (g.concepts as Dictionary).has("%s|%s" % [level_id(), String(cd.title)]):
+			done += 1
+	sub.text = "拖積木填空、隨堂小測：%d 張卡片（已完成 %d 張）" % [concept_cards().size(), done]
 	sub.add_theme_font_size_override("font_size", UITheme.fs(13))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3326,17 +3331,17 @@ func _concept_button() -> Button:
 	return b
 
 
-var _concept_progress := {}   # 觀念整理：每張卡片揭開到哪裡（同一次遊玩中保留）
+var _concept_progress := {}   # 觀念整理：每張卡片填到哪裡（同一次遊玩中保留；完成過的記在 Game.concepts）
 
 
-func _show_concepts(idx: int = 0) -> void:
+func _show_concepts(idx: int = -1) -> void:
 	var c := _concept_color()
-	var o := UITheme.modal(self, Color(c.r, c.g, c.b, 0.5), 820)
+	var o := UITheme.modal(self, Color(c.r, c.g, c.b, 0.5), 1110)
 	Game.of(self).sfx("open")
 	var layer: Control = o[0]
 	var col: VBoxContainer = o[1]
 	var deck := ConceptDeck.new()
-	deck.setup(level_title(), concept_cards(), c, _concept_progress, idx)
+	deck.setup(level_title(), concept_cards(), c, _concept_progress, idx, level_id())
 	deck.closed.connect(func(_start: bool):
 		layer.queue_free()
 		_show_menu())

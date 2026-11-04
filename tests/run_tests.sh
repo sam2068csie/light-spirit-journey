@@ -10,7 +10,7 @@ set -u
 cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"
 if [ -n "${SHOTS:-}" ]; then MODE=(--rendering-driver opengl3); else MODE=(--headless); fi
-WHICH="${1:-load save economy banks scenes markup}"
+WHICH="${1:-load save economy banks scenes markup concepts}"
 status=0
 # 第一次在乾淨的環境跑：先匯入資源（字型、圖片），否則 load 會失敗
 "$GODOT" --headless --path . --import >/dev/null 2>&1 || true

@@ -1,22 +1,35 @@
 extends VBoxContainer
 ## 觀念整理：互動式卡片
-##   一般卡片：一行一行揭開；有「?{…}」的地方先藏起來，學生想一想再點開
-##   隨堂小測：每張卡片揭開完，答對一題才能往下
-##   解題流程：把思考步驟按照順序點出來（拼積木）
+##   先看到卡片清單（像選關畫面），想看哪張就點哪張
+##   一般卡片：內容一開始就全部亮出來；空格要填的東西變成積木，散在下面的積木區，要拖進對應的空格
+##     有一兩塊是「干擾積木」（卡片的 decoys），放哪裡都不對；放錯不扣分，積木彈回去，那一行亮起來提醒再讀一次
+##     同一張卡片裡可以互換的空格寫在 swap（例如 cos 2θ 的三種寫法），答案一樣的積木放哪一格都可以
+##   隨堂小測：積木填完之後，答對一題才算完成
+##   解題流程：把步驟積木照順序拖進編號格子（decoys 是一個錯的步驟）
+##   第一次完成一張卡片：星塵 +5（記在 Game.concepts，不會重複領）
 ## 內容寫在各單元的卡片檔（指數與對數是 concepts_exp.gd，入口 concept_cards.gd）
 
 const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
 
-signal closed(start: bool)   # start = true：按了最後的「開始挑戰」
+signal closed(start: bool)   # start = true：按了清單上的「開始挑戰」
+
+const REWARD := 5            # 第一次完成一張卡片的星塵
+const HINTS := [
+	"這一塊不是放這裡——再讀一次亮起來的這一行，前後的條件是什麼？",
+	"看看這一行前半句在說什麼，再想想哪一塊才會讓它成立。",
+	"先別急著放：把亮起來的這一行完整讀一遍。",
+	"有一兩塊積木是多出來的陷阱，不是每一塊都用得到喔！",
+]
 
 var cards: Array = []
 var color := Color.WHITE
 var level_name := ""
-var progress: Dictionary = {}   # 卡片編號 -> {"n": 已揭開幾行, "check": 小測答對, "order": 流程完成}
+var lid := ""                   # 大關的代號（存檔用）
+var progress: Dictionary = {}   # 卡片編號 -> {"fill": {空格編號: 放進去的積木}, "check": 小測答對, "order": [依序放好的步驟]}
 var idx := 0
-var mode := "card"              # card / check / order
+var mode := "list"              # list / card / check / order
 
 var _body: PanelContainer
 var _slide: MarginContainer
@@ -24,29 +37,44 @@ var _deco: ConceptGlyph
 var _dots: ConceptDots
 var _primary: Button
 var _prev: Button
+var _back: Button
+var _redo: Button
 var _counter: Label
 var _feedback: MathLabel
-var _items: Array = []
 var _rows: Array = []
-var _rows_box: VBoxContainer
-var _order_next := 0
-var _pointer: ConceptPointer     # 新手引導：在主要按鈕上方上下浮動的提示
-var _idle := 0.0                 # 多久沒操作了
-static var _taps := 0            # 這次開遊戲以來按過幾次「繼續」（前幾次一定會顯示引導）
-const GUIDE_TAPS := 3            # 前 3 次操作一直顯示引導
-const GUIDE_IDLE := 5.0          # 之後只要 5 秒沒動，引導又會出現
+var _slots: Array = []          # 這張卡片的空格
+var _tiles: Array = []          # 積木區裡的積木
+var _tray: Control
+var _drag: ConceptTile
+var _gen := 0                   # 換頁就 +1（非同步排版時用來判斷還是不是同一張）
+var _hint_i := 0
+var _pointer: ConceptPointer
+var _idle := 0.0
+static var _taps := 0
+const GUIDE_TAPS := 3
+const GUIDE_IDLE := 5.0
 
 
-func setup(title: String, deck: Array, c: Color, prog: Dictionary, start := 0) -> void:
+func setup(title: String, deck: Array, c: Color, prog: Dictionary, start := -1, level_id := "") -> void:
 	level_name = title
 	cards = deck
 	color = c
 	progress = prog
-	idx = clampi(start, 0, cards.size() - 1)
+	lid = level_id
+	idx = start
 
 
 func _ready() -> void:
-	add_theme_constant_override("separation", 12)
+	add_theme_constant_override("separation", 8)
+	# 外框留白少一點：卡片內容、積木區都要放得下
+	var card := get_parent().get_parent() as PanelContainer if get_parent() != null else null
+	if card != null and card.get_theme_stylebox("panel") is StyleBoxFlat:
+		var csb: StyleBoxFlat = card.get_theme_stylebox("panel").duplicate()
+		csb.content_margin_top = 14
+		csb.content_margin_bottom = 12
+		csb.content_margin_left = 20
+		csb.content_margin_right = 20
+		card.add_theme_stylebox_override("panel", csb)
 	var top := HBoxContainer.new()
 	add_child(top)
 	var lt := Label.new()
@@ -61,12 +89,12 @@ func _ready() -> void:
 	top.add_child(_dots)
 
 	_body = PanelContainer.new()
-	var sb := UITheme.box(UITheme.PANEL_LIGHT, 18, Color(color.r, color.g, color.b, 0.35), 1, 20)
+	var sb := UITheme.box(UITheme.PANEL_LIGHT, 18, Color(color.r, color.g, color.b, 0.35), 1, 14)
 	sb.border_width_left = 6
 	sb.border_color = color
 	_body.add_theme_stylebox_override("panel", sb)
-	_body.custom_minimum_size = Vector2(760, 0)
-	_body.gui_input.connect(_on_body_input)
+	_body.custom_minimum_size = Vector2(1040, 0)
+	_body.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed: _idle = 0.0)
 	add_child(_body)
 	_deco = ConceptGlyph.new()
 	_deco.color = color
@@ -79,10 +107,10 @@ func _ready() -> void:
 	var nav := HBoxContainer.new()
 	nav.add_theme_constant_override("separation", 12)
 	add_child(nav)
-	var back := UITheme.ghost_button("回到章節", 15)
-	back.icon = UITheme.icon("back", 15, UITheme.TEXT_DIM)
-	back.pressed.connect(func(): closed.emit(false))
-	nav.add_child(back)
+	_back = UITheme.ghost_button("回到章節", 15)
+	_back.icon = UITheme.icon("back", 15, UITheme.TEXT_DIM)
+	_back.pressed.connect(_on_back)
+	nav.add_child(_back)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nav.add_child(sp)
@@ -91,7 +119,10 @@ func _ready() -> void:
 	_counter.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_counter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nav.add_child(_counter)
-	_prev = UITheme.ghost_button("‹ 上一張", 16)
+	_redo = UITheme.ghost_button("↺ 重新練習", 15)
+	_redo.pressed.connect(_on_redo)
+	nav.add_child(_redo)
+	_prev = UITheme.ghost_button("‹ 回卡片", 16)
 	_prev.pressed.connect(_on_prev)
 	nav.add_child(_prev)
 	_primary = Button.new()
@@ -102,38 +133,65 @@ func _ready() -> void:
 	nav.add_child(_primary)
 	_pointer = ConceptPointer.new()
 	_pointer.color = UITheme.ACCENT
-	_pointer.top_level = true          # 不參與排版，自己定位在按鈕上方
+	_pointer.top_level = true
 	_pointer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pointer.z_index = 10
 	add_child(_pointer)
-	_show(idx, 0)
+	if idx >= 0 and idx < cards.size():
+		_show(idx, 0)
+	else:
+		_show_list()
 
 
 func _process(delta: float) -> void:
 	_idle += delta
+	_fit()
 	_update_guide()
 
 
-## 引導：下一行要揭開的地方發亮；主要按鈕上方的浮標告訴學生現在該做什麼
+## 卡片內容比畫面高的時候（例如空格很多的卡片）：整個視窗等比例縮小到放得下
+func _fit() -> void:
+	var card := get_parent().get_parent() as Control if get_parent() != null else null
+	if card == null or not (card is PanelContainer):
+		return
+	var need := card.get_combined_minimum_size().y
+	var avail := get_viewport_rect().size.y - 10.0
+	var f := clampf(avail / maxf(1.0, need), 0.7, 1.0)
+	# 縮小之後要剛好在畫面正中間：放大縮小的支點照卡片現在的位置算
+	var vh := get_viewport_rect().size.y
+	var py := card.size.y / 2.0
+	if f < 0.999:
+		py = ((vh - card.size.y * f) / 2.0 - card.position.y) / (1.0 - f)
+	card.pivot_offset = Vector2(card.size.x / 2.0, py)
+	if absf(card.scale.x - f) > 0.002:
+		card.scale = Vector2(f, f)
+
+
+## 現在整個視窗縮放了多少（拖曳中的積木要跟著）
+func _sc() -> float:
+	var card := get_parent().get_parent() as Control if get_parent() != null else null
+	return card.scale.x if card != null else 1.0
+
+
+## 引導：主要按鈕上方的浮標告訴學生現在該做什麼
 func _update_guide() -> void:
 	if _pointer == null or not is_instance_valid(_primary):
 		return
 	var text := ""
-	if mode == "card":
-		var cur := _current_item()
-		if cur >= 0:
-			text = "先想一想，再揭曉答案" if _items[cur].state == 1 else "點這裡，揭開下一行"
-		elif cards[idx].has("check") and not _prog(idx).check:
-			text = "最後來一題小測驗"
-		else:
-			text = "看完了，前往下一張" if idx < cards.size() - 1 else "準備好就開始挑戰！"
-	elif mode == "order":
-		text = ""
+	match mode:
+		"list":
+			text = ""
+		"card":
+			if not _filled_all():
+				text = ""
+			elif cards[idx].has("check") and not _prog(idx).check:
+				text = "最後來一題小測驗"
+			else:
+				text = "完成了！前往下一張" if idx < cards.size() - 1 else "回清單看看還有哪幾張"
 	var show := text != "" and not _primary.disabled and (_taps < GUIDE_TAPS or _idle >= GUIDE_IDLE)
 	_pointer.target = _primary.get_global_rect()
 	_pointer.set_text(text)
 	_pointer.want = show
-	# 浮標出現時，主要按鈕也跟著呼吸發光
 	var glow := 0.0
 	if _pointer.alpha > 0.01:
 		glow = (0.5 + 0.5 * sin(_pointer.t * 4.0)) * 0.22 * _pointer.alpha
@@ -147,47 +205,219 @@ func _guide_tap() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo \
-			and (event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_DOWN):
+			and (event.keycode == KEY_SPACE or event.keycode == KEY_ENTER):
 		if not _primary.disabled:
 			_on_primary()
 		get_viewport().set_input_as_handled()
 
 
-# ───────────────────────── 換頁 ─────────────────────────
+# ───────────────────────── 進度、存檔 ─────────────────────────
+
+func _key(i: int) -> String:
+	return "%s|%s" % [lid, String(cards[i].title)]
+
+
+func _saved(i: int) -> bool:
+	var g = Game.of(self)
+	return g != null and (g.concepts as Dictionary).has(_key(i))
+
 
 func _prog(i: int) -> Dictionary:
 	if not progress.has(i):
-		progress[i] = {"n": 0, "check": false, "order": false}
-	return progress[i]
+		progress[i] = {"fill": {}, "check": false, "order": []}
+	var p: Dictionary = progress[i]
+	for k in [["fill", {}], ["check", false], ["order", []]]:
+		if not p.has(k[0]):
+			p[k[0]] = k[1]
+	return p
 
 
 func card_done(i: int) -> bool:
+	if _saved(i):
+		return true
 	var cd: Dictionary = cards[i]
 	var p := _prog(i)
 	if cd.get("kind", "") == "order":
-		return p.order
-	return p.n >= _item_count(cd) and (not cd.has("check") or p.check)
+		return (p.order as Array).size() >= (cd.steps as Array).size()
+	return (p.fill as Dictionary).size() >= blank_count(cd) and (not cd.has("check") or p.check)
 
 
-static func _item_count(cd: Dictionary) -> int:
-	var n: int = cd.get("formulas", []).size() + cd.get("notes", []).size()
-	for k in ["example", "trap"]:
-		if cd.has(k):
-			n += 1
+static func blank_count(cd: Dictionary) -> int:
+	var n := 0
+	for m in _lines(cd):
+		for sg in _parse(m):
+			if sg.h:
+				n += 1
 	return n
 
+
+static func _lines(cd: Dictionary) -> Array:
+	var out: Array = []
+	out.append_array(cd.get("formulas", []))
+	out.append_array(cd.get("notes", []))
+	for k in ["example", "trap"]:
+		if cd.has(k):
+			out.append(cd[k])
+	return out
+
+
+## 第一次完成：存檔、給星塵
+func _complete(i: int) -> void:
+	if _saved(i):
+		return
+	var g = Game.of(self)
+	if g == null:
+		return
+	g.concepts[_key(i)] = true
+	g.inv["dust"] = int(g.inv.get("dust", 0)) + REWARD
+	g.save_review()
+	g.sfx("success")
+	if _feedback != null:
+		_feedback.text += "　[color=#ffd36e]✦ 星塵 +%d[/color]" % REWARD
+	_burst(_primary.get_global_rect().get_center(), 22)
+	# 卡片中間飄出「+5 星塵」
+	var pop := Label.new()
+	pop.text = "✦ 星塵 +%d" % REWARD
+	pop.add_theme_font_size_override("font_size", UITheme.fs(30))
+	pop.add_theme_color_override("font_color", Color("ffd36e"))
+	pop.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.12))
+	pop.add_theme_constant_override("outline_size", 10)
+	pop.top_level = true
+	pop.z_index = 60
+	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pop)
+	var c := _body.get_global_rect().get_center()
+	pop.global_position = c - Vector2(90, 20)
+	var tw := pop.create_tween().set_parallel(true)
+	tw.tween_property(pop, "global_position:y", c.y - 90.0, 1.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(pop, "modulate:a", 0.0, 0.5).set_delay(0.8)
+	tw.chain().tween_callback(pop.queue_free)
+
+
+# ───────────────────────── 卡片清單 ─────────────────────────
+
+func _clear_slide() -> void:
+	_gen += 1
+	for ch in _slide.get_children():
+		ch.queue_free()
+	_rows.clear()
+	_slots.clear()
+	_tiles.clear()
+	_feedback = null
+	_tray = null
+	_drag = null
+
+
+func _show_list() -> void:
+	mode = "list"
+	_clear_slide()
+	_deco.text = ""
+	var inner := VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 12)
+	_slide.add_child(inner)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	inner.add_child(head)
+	var t := Label.new()
+	t.text = "觀念卡片"
+	t.add_theme_font_size_override("font_size", UITheme.fs(24))
+	t.add_theme_color_override("font_color", UITheme.TEXT)
+	head.add_child(t)
+	var sub := Label.new()
+	sub.text = "想看哪一張就點哪一張　·　第一次完成一張：星塵 +%d" % REWARD
+	sub.add_theme_font_size_override("font_size", UITheme.fs(14))
+	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(sub)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 10)
+	inner.add_child(grid)
+	for i in cards.size():
+		var b := _list_tile(i)
+		var ii: int = i
+		b.pressed.connect(func():
+			_guide_tap()
+			Game.of(self).play("blip", 1.1, -12.0)
+			_show(ii, 1))
+		grid.add_child(b)
+	_update_nav()
+
+
+func _list_tile(i: int) -> Button:
+	var cd: Dictionary = cards[i]
+	var done := card_done(i)
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(368, 70)
+	var bc := UITheme.GOOD if done else color
+	var normal := UITheme.box(Color(0.05, 0.06, 0.14, 0.6), 14, Color(bc.r, bc.g, bc.b, 0.35), 1, 12)
+	normal.border_width_left = 5
+	normal.border_color = bc
+	var hover := UITheme.box(Color(bc.r, bc.g, bc.b, 0.16), 14, bc, 2, 12)
+	hover.border_width_left = 5
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", hover)
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = 16
+	row.offset_right = -14
+	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var num := Label.new()
+	num.text = "✔" if done else str(i + 1)
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.custom_minimum_size = Vector2(36, 36)
+	num.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	num.add_theme_font_size_override("font_size", UITheme.fs(18))
+	num.add_theme_color_override("font_color", UITheme.PANEL)
+	num.add_theme_stylebox_override("normal", UITheme.box(bc, 18, Color(0, 0, 0, 0), 0, 0))
+	row.add_child(num)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	var tl := MathLabel.new()
+	tl.font_size = UITheme.fs(18)
+	tl.color = UITheme.TEXT
+	tl.max_width = 210
+	tl.text = cd.title
+	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(tl)
+	var tg := Label.new()
+	tg.text = "拼出流程" if cd.get("kind", "") == "order" else String(cd.get("tag", ""))
+	tg.add_theme_font_size_override("font_size", UITheme.fs(12))
+	tg.add_theme_color_override("font_color", Color(bc.r, bc.g, bc.b, 0.9))
+	tg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(tg)
+	var st := Label.new()
+	st.text = "已完成" if done else "+%d 星塵" % REWARD
+	st.add_theme_font_size_override("font_size", UITheme.fs(13))
+	st.add_theme_color_override("font_color", UITheme.GOOD if done else Color("ffd36e"))
+	st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(st)
+	return b
+
+
+# ───────────────────────── 換頁、按鈕 ─────────────────────────
 
 func _show(i: int, dir: int, as_check := false) -> void:
 	idx = i
 	var cd: Dictionary = cards[idx]
-	for ch in _slide.get_children():
-		ch.queue_free()
-	_items.clear()
-	_rows.clear()
-	_feedback = null
+	_clear_slide()
+	# 以前完成過的卡片：直接顯示填好的樣子（複習）
+	if _saved(idx) and not _prog(idx).has("redo"):
+		_fill_saved(idx)
 	_deco.text = "" if cd.get("kind", "") == "order" else cd.get("glyph", "")
 	var inner := VBoxContainer.new()
-	inner.add_theme_constant_override("separation", 12)
+	inner.add_theme_constant_override("separation", 10)
 	inner.mouse_filter = Control.MOUSE_FILTER_PASS
 	_slide.add_child(inner)
 	if cd.get("kind", "") == "order":
@@ -212,6 +442,25 @@ func _show(i: int, dir: int, as_check := false) -> void:
 		tw.tween_method(sl, 36.0 * dir, 0.0, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
+## 完成過的卡片：每一格都填上正確答案、小測算答對
+func _fill_saved(i: int) -> void:
+	var cd: Dictionary = cards[i]
+	var p := _prog(i)
+	if cd.get("kind", "") == "order":
+		if (p.order as Array).size() < (cd.steps as Array).size():
+			p.order = range((cd.steps as Array).size())
+		return
+	var k := 0
+	var fill := {}
+	for m in _lines(cd):
+		for sg in _parse(m):
+			if sg.h:
+				fill[k] = sg.t
+				k += 1
+	p.fill = fill
+	p.check = true
+
+
 func _head(inner: VBoxContainer, badge: String, title: String, tag: String) -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
@@ -220,13 +469,13 @@ func _head(inner: VBoxContainer, badge: String, title: String, tag: String) -> v
 	num.text = badge
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	num.custom_minimum_size = Vector2(40, 40)
-	num.add_theme_font_size_override("font_size", UITheme.fs(20))
+	num.custom_minimum_size = Vector2(36, 36)
+	num.add_theme_font_size_override("font_size", UITheme.fs(19))
 	num.add_theme_color_override("font_color", UITheme.PANEL)
-	num.add_theme_stylebox_override("normal", UITheme.box(color, 20, Color(0, 0, 0, 0), 0, 0))
+	num.add_theme_stylebox_override("normal", UITheme.box(color, 18, Color(0, 0, 0, 0), 0, 0))
 	head.add_child(num)
 	var tl := MathLabel.new()
-	tl.font_size = UITheme.fs(24)
+	tl.font_size = UITheme.fs(22)
 	tl.color = UITheme.TEXT
 	tl.text = title
 	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -243,52 +492,58 @@ func _head(inner: VBoxContainer, badge: String, title: String, tag: String) -> v
 
 
 func _next_label() -> String:
-	return "下一張 ›" if idx < cards.size() - 1 else "開始挑戰  ▶"
+	return "下一張 ›" if idx < cards.size() - 1 else "回卡片清單"
 
 
 func _update_nav() -> void:
 	_dots.queue_redraw()
-	_prev.visible = idx > 0 or mode == "check"
-	_prev.text = "‹ 回卡片" if mode == "check" else "‹ 上一張"
+	_back.text = "回到章節" if mode == "list" else "☰ 卡片清單"
+	_back.icon = UITheme.icon("back", 15, UITheme.TEXT_DIM) if mode == "list" else null
+	_prev.visible = mode == "check"
+	_redo.visible = mode in ["card", "order"] and _saved(idx)
 	_primary.disabled = false
 	_counter.text = ""
-	var cd: Dictionary = cards[idx]
 	match mode:
+		"list":
+			var n := 0
+			for i in cards.size():
+				if card_done(i):
+					n += 1
+			_counter.text = "完成 %d / %d 張" % [n, cards.size()]
+			_primary.text = "開始挑戰  ▶"
 		"card":
-			var cur := _current_item()
-			var total := _items.size()
-			_counter.text = "已揭開 %d / %d 行" % [_prog(idx).n, total]
-			for i in total:
-				_items[i].veil.active = i == cur and _items[i].state == 0
-			if cur >= 0:
-				_primary.text = "揭曉答案  ？" if _items[cur].state == 1 else "繼續  ▼"
+			var cd: Dictionary = cards[idx]
+			var total := _slots.size()
+			var got := (_prog(idx).fill as Dictionary).size()
+			if got < total:
+				_counter.text = "已填 %d / %d 格" % [got, total]
+				_primary.text = "把積木拖進空格"
+				_primary.disabled = true
 			elif cd.has("check") and not _prog(idx).check:
 				_primary.text = "隨堂小測  ✦"
-				_counter.text = ""
 			else:
 				_primary.text = _next_label()
-				_counter.text = "✔ 完成" if cd.has("check") else ""
+				_counter.text = "✔ 完成"
 		"check":
 			_primary.text = _next_label() if _prog(idx).check else "選出答案"
 			_primary.disabled = not _prog(idx).check
 		"order":
-			_primary.text = _next_label() if _prog(idx).order else "排好才能繼續"
-			_primary.disabled = not _prog(idx).order
-			if not _prog(idx).order:
-				_counter.text = "%d / %d" % [_order_next, _rows.size()]
+			var placed := (_prog(idx).order as Array).size()
+			var n: int = (cards[idx].steps as Array).size()
+			_primary.text = _next_label() if placed >= n else "排好才能繼續"
+			_primary.disabled = placed < n
+			if placed < n:
+				_counter.text = "%d / %d 步" % [placed, n]
 
 
 func _on_primary() -> void:
 	_guide_tap()
 	match mode:
+		"list":
+			closed.emit(true)
+			return
 		"card":
-			var cur := _current_item()
-			if cur >= 0:
-				if _items[cur].state == 1:
-					_reveal(cur)
-				else:
-					_reach(cur)
-				_update_nav()
+			if not _filled_all():
 				return
 			if cards[idx].has("check") and not _prog(idx).check:
 				Game.of(self).play("blip", 1.25, -10.0)
@@ -302,41 +557,56 @@ func _go_next() -> void:
 		Game.of(self).play("blip", 1.1, -12.0)
 		_show(idx + 1, 1)
 	else:
-		closed.emit(true)
+		Game.of(self).play("blip", 0.95, -12.0)
+		_show_list()
 
 
 func _on_prev() -> void:
 	Game.of(self).play("blip", 0.9, -12.0)
 	if mode == "check":
 		_show(idx, -1)
-	elif idx > 0:
-		_show(idx - 1, -1)
 
 
-func _on_body_input(event: InputEvent) -> void:
-	# 點卡片任何地方也可以往下揭開
-	if event is InputEventMouseButton and event.pressed:
-		_idle = 0.0
-	if mode == "card" and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _current_item() >= 0:
-			_on_primary()
+func _on_back() -> void:
+	if mode == "list":
+		closed.emit(false)
+	else:
+		Game.of(self).play("blip", 0.9, -12.0)
+		_show_list()
 
 
-# ───────────────────────── 一般卡片：一行一行揭開 ─────────────────────────
+## 複習時想再練一次：清掉這張的進度重新排（不會再給星塵）
+func _on_redo() -> void:
+	progress[idx] = {"fill": {}, "check": false, "order": [], "redo": true}
+	Game.of(self).play("blip", 1.0, -10.0)
+	_show(idx, 0)
 
-func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
-	_head(inner, str(idx + 1), cd.title, cd.get("tag", ""))
+
+# ───────────────────────── 一般卡片：拖積木填空 ─────────────────────────
+
+func _build_card(inner0: VBoxContainer, cd: Dictionary) -> void:
+	_head(inner0, str(idx + 1), cd.title, cd.get("tag", ""))
+	# 左邊是卡片內容，右邊是積木區（畫面是寬的，上下放不下）
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 18)
+	split.mouse_filter = Control.MOUSE_FILTER_PASS
+	inner0.add_child(split)
+	var inner := VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 10)
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.mouse_filter = Control.MOUSE_FILTER_PASS
+	split.add_child(inner)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	inner.add_child(row)
 	var left := VBoxContainer.new()
-	left.add_theme_constant_override("separation", 10)
+	left.add_theme_constant_override("separation", 9)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(left)
 	var has_plot: bool = cd.has("plot")
-	var wmax := 470.0 if has_plot else 690.0
+	var wmax := 450.0 if has_plot else 660.0
 	var fs: Array = cd.get("formulas", [])
 	var short := true
 	for f in fs:
@@ -352,14 +622,13 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		var fp := PanelContainer.new()
 		fp.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.06, 0.14, 0.7), 12, Color(color.r, color.g, color.b, 0.45), 1, 10))
 		fp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var fw := (wmax - 40) / (2.0 if fgrid.columns == 2 else 1.0)
-		# 公式盡量一行放完：太長就把字縮小一點，不要在框裡換行
 		var fsz := 21
 		while fsz > 15 and _text_w(_full(f, color), fsz) > fw - 24.0:
 			fsz -= 1
-		var it := _swap(f, fsz, true, fw, Color(1, 0.96, 0.85))
-		fp.add_child(it.stack)
-		_add_item(fgrid, fp, it, true)
+		fp.add_child(_line(f, fsz, true, fw - 20.0, Color(1, 0.96, 0.85)))
+		fgrid.add_child(fp)
 	for n in cd.get("notes", []):
 		var nr := HBoxContainer.new()
 		nr.add_theme_constant_override("separation", 8)
@@ -368,10 +637,10 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		bullet.text = "▸"
 		bullet.add_theme_color_override("font_color", color)
 		bullet.add_theme_font_size_override("font_size", UITheme.fs(15))
+		bullet.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		nr.add_child(bullet)
-		var it := _swap(n, 17, false, wmax - 30, UITheme.TEXT)
-		nr.add_child(it.stack)
-		_add_item(left, nr, it, false)
+		nr.add_child(_line(n, 17, false, wmax - 30, UITheme.TEXT))
+		left.add_child(nr)
 	for key in ["example", "trap"]:
 		if not cd.has(key):
 			continue
@@ -386,10 +655,10 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		badge.text = "例" if key == "example" else "⚠ 小心"
 		badge.add_theme_font_size_override("font_size", UITheme.fs(15))
 		badge.add_theme_color_override("font_color", bc)
+		badge.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		br.add_child(badge)
-		var it := _swap(cd[key], 16, false, wmax - 70, UITheme.TEXT)
-		br.add_child(it.stack)
-		_add_item(left, bp, it, false)
+		br.add_child(_line(cd[key], 16, false, wmax - 70, UITheme.TEXT))
+		left.add_child(bp)
 	if has_plot:
 		var pl := ConceptPlot.new()
 		pl.curves = cd.plot
@@ -397,209 +666,443 @@ func _build_card(inner: VBoxContainer, cd: Dictionary) -> void:
 		pl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(pl)
-	# 回復進度：已揭開的直接顯示，接著自動打開下一行
-	var p := _prog(idx)
-	for i in _items.size():
-		if i < p.n:
-			_set_state(i, 2, false)
-	if p.n < _items.size():
-		_reach(p.n, false)
+	# 回復進度：已經放好的格子
+	var fill: Dictionary = _prog(idx).fill
+	for k in fill:
+		if int(k) < _slots.size():
+			(_slots[int(k)] as ConceptSlot).set_filled(String(fill[k]), false)
+	_feedback = MathLabel.new()
+	_feedback.font_size = UITheme.fs(15)
+	_feedback.color = UITheme.TEXT
+	_feedback.max_width = 680
+	_feedback.custom_minimum_size = Vector2(0, 24)
+	_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(_feedback)
+	# 積木區（右邊一欄）：還沒放的答案 + 干擾積木
+	var texts: Array = []
+	for s in _slots:
+		var sl: ConceptSlot = s
+		if not sl.filled:
+			texts.append([sl.answer, -1])
+	if not texts.is_empty():
+		for d in cd.get("decoys", []):
+			texts.append([String(d), -1])
+		_feedback.text = "[color=#9aa3c7]把右邊的積木拖進對應的空格。小心：有一兩塊是多出來的！[/color]"
+		_make_tray(split, texts, 300.0)
+	else:
+		_feedback.text = "[color=#6ee7a0]✔ 全部填好了！[/color]" + ("" if not cd.has("check") or _prog(idx).check else "　[color=#9aa3c7]最後來一題小測驗。[/color]")
 
 
-## 把 "a > 1：?{遞增}" 拆成段落：[{t, h}]，h = 要藏起來的部分
-static func _parse(m: String) -> Array:
-	var segs: Array = []
-	var buf := ""
-	var i := 0
-	while i < m.length():
-		if m.substr(i, 2) == "?{":
-			if buf != "":
-				segs.append({"t": buf, "h": false})
-				buf = ""
-			var depth := 1
-			var j := i + 2
-			while j < m.length() and depth > 0:
-				if m[j] == "{":
-					depth += 1
-				elif m[j] == "}":
-					depth -= 1
-				j += 1
-			segs.append({"t": m.substr(i + 2, j - i - 3), "h": true})
-			i = j
-		else:
-			buf += m[i]
-			i += 1
-	if buf != "":
-		segs.append({"t": buf, "h": false})
-	return segs
-
-
-static func _hl(text: String, c: Color) -> String:
-	return text.replace("[b]", "[color=#%s]" % c.lightened(0.2).to_html(false)).replace("[/b]", "[/color]")
-
-
-static func _ans_color(c: Color) -> Color:
-	return c.lightened(0.45)
-
-
-## 揭開後的完整文字（藏起來的部分用亮色）
-static func _full(m: String, c: Color) -> String:
-	var s := ""
-	for sg in _parse(m):
-		if sg.h:
-			s += "[color=#%s]%s[/color]" % [_ans_color(c).to_html(false), sg.t.replace("[b]", "").replace("[/b]", "")]
-		else:
-			s += _hl(sg.t, c)
-	return s
-
-
-func _text_w(markup: String, fs: int) -> float:
-	return MathLabel.text_width(get_theme_default_font(), markup, UITheme.fs(fs))
-
-
-## 一行內容：B = 完整的字，A = 前半段 + 「？」按鈕（疊在同一格，高度取大的）
-func _swap(m: String, fs: int, centered: bool, max_w: float, base: Color) -> Dictionary:
+## 一行內容：文字和空格排在一起（太長會換行）
+func _line(m: String, fs: int, centered: bool, max_w: float, base: Color) -> Control:
 	fs = UITheme.fs(fs)
-	var segs := _parse(m)
-	var hidden := false
-	for sg in segs:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 4)
+	flow.alignment = FlowContainer.ALIGNMENT_CENTER if centered else FlowContainer.ALIGNMENT_BEGIN
+	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	flow.custom_minimum_size = Vector2(minf(max_w, 120.0), 0)
+	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for sg in _parse(m):
+		var t: String = sg.t
 		if sg.h:
-			hidden = true
-	var stack := MarginContainer.new()
-	stack.mouse_filter = Control.MOUSE_FILTER_PASS
-	if not centered:
-		stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var b := MathLabel.new()
-	b.font_size = fs
-	b.color = base
-	b.align_center = centered
-	b.max_width = max_w
-	b.text = _full(m, color)
-	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack.add_child(b)
-	var a: HBoxContainer = null
-	var chips: Array = []
-	if hidden:
-		a = HBoxContainer.new()
-		a.add_theme_constant_override("separation", 6)
-		a.alignment = BoxContainer.ALIGNMENT_CENTER if centered else BoxContainer.ALIGNMENT_BEGIN
-		a.mouse_filter = Control.MOUSE_FILTER_PASS
-		stack.add_child(a)
-		for sg in segs:
-			if sg.h:
-				var chip := Button.new()
-				chip.text = "？"
-				chip.focus_mode = Control.FOCUS_NONE
-				chip.custom_minimum_size = Vector2(58, int(fs * 1.6))
-				chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-				chip.add_theme_font_size_override("font_size", fs)
-				chip.add_theme_color_override("font_color", _ans_color(color))
-				chip.add_theme_color_override("font_hover_color", Color.WHITE)
-				chip.add_theme_stylebox_override("normal", UITheme.box(Color(color.r, color.g, color.b, 0.18), 10, Color(color.r, color.g, color.b, 0.8), 1, 4))
-				chip.add_theme_stylebox_override("hover", UITheme.box(Color(color.r, color.g, color.b, 0.32), 10, Color.WHITE, 1, 4))
-				chip.add_theme_stylebox_override("pressed", UITheme.box(Color(color.r, color.g, color.b, 0.45), 10, Color.WHITE, 1, 4))
-				a.add_child(chip)
-				chips.append(chip)
-			else:
-				var l := MathLabel.new()
-				l.font_size = fs
-				l.color = base
-				l.text = _hl(sg.t.strip_edges(), color)
-				l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-				a.add_child(l)
-	return {"stack": stack, "b": b, "a": a, "chips": chips, "hidden": hidden}
+			var s := ConceptSlot.new()
+			s.answer = t
+			s.fs = fs
+			s.color = color
+			s.line = flow
+			s.index = _slots.size()
+			s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			_slots.append(s)
+			flow.add_child(s)
+			continue
+		t = t.strip_edges()
+		if t == "":
+			continue
+		var l := MathLabel.new()
+		l.font_size = fs
+		l.color = base
+		l.text = _hl(t, color)
+		if MathLabel.text_width(get_theme_default_font(), l.text, fs) > max_w:
+			l.max_width = max_w
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		flow.add_child(l)
+	return flow
 
 
-## 包一層：內容 + 還沒揭開時的虛線框
-func _add_item(parent: Control, content: Control, it: Dictionary, expand: bool) -> void:
-	var root := MarginContainer.new()
-	root.mouse_filter = Control.MOUSE_FILTER_PASS
-	if expand:
-		root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(root)
-	root.add_child(content)
-	var veil := ConceptVeil.new()
-	veil.color = color
-	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(veil)
-	var i := _items.size()
-	it["root"] = root
-	it["content"] = content
-	it["veil"] = veil
-	it["state"] = 0
-	_items.append(it)
-	for chip in it.chips:
-		chip.pressed.connect(func():
-			if _items.size() > i and _items[i].state == 1:
-				_guide_tap()
-				_reveal(i)
-				_update_nav())
-	content.modulate.a = 0.0
-	if it.a != null:
-		it.a.modulate.a = 0.0
-		it.a.visible = false
+func _filled_all() -> bool:
+	return (_prog(idx).fill as Dictionary).size() >= _slots.size()
 
 
-func _current_item() -> int:
-	for i in _items.size():
-		if _items[i].state < 2:
-			return i
-	return -1
+## 積木區：積木亂亂地散著（不重疊、不蓋到卡片內容）
+func _make_tray(parent: Control, texts: Array, width: float) -> void:
+	_tray = Control.new()
+	_tray.custom_minimum_size = Vector2(width, 90)
+	_tray.size_flags_vertical = Control.SIZE_FILL
+	if width <= 0.0:
+		_tray.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tray.mouse_filter = Control.MOUSE_FILTER_PASS
+	_tray.draw.connect(_draw_tray.bind(_tray))
+	parent.add_child(_tray)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var order := range(texts.size())
+	for i in range(order.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = order[i]
+		order[i] = order[j]
+		order[j] = tmp
+	for k in order:
+		var tl := ConceptTile.new()
+		tl.text = texts[k][0]
+		tl.step = int(texts[k][1])
+		tl.color = color
+		tl.fs = UITheme.fs(17 if mode == "card" else 15)
+		tl.deck = self
+		tl.modulate.a = 0.0
+		_tray.add_child(tl)
+		_tiles.append(tl)
+	_scatter(_gen, rng)
 
 
-func _reach(i: int, anim := true) -> void:
-	var it: Dictionary = _items[i]
-	if anim:
-		Game.of(self).play("blip", 1.0 + 0.04 * i, -14.0)
-	_set_state(i, 1 if it.hidden else 2, anim)
+func _draw_tray(tray: Control) -> void:
+	if not is_instance_valid(tray):
+		return
+	var r := Rect2(Vector2.ZERO, tray.size)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.03, 0.04, 0.1, 0.45)
+	sb.set_corner_radius_all(14)
+	sb.border_color = Color(color.r, color.g, color.b, 0.25)
+	sb.set_border_width_all(1)
+	tray.draw_style_box(sb, r)
+	var font := get_theme_default_font()
+	tray.draw_string(font, Vector2(14, r.end.y - 10), "積木區", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(color.r, color.g, color.b, 0.45))
 
 
-func _reveal(i: int) -> void:
-	Game.of(self).play("blip", 1.35, -9.0)
-	_set_state(i, 2, true)
-	var it: Dictionary = _items[i]
-	_burst(it.b.get_global_rect().get_center(), 10)
+func _scatter(gen: int, rng: RandomNumberGenerator) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if gen != _gen or _tray == null or not is_instance_valid(_tray):
+		return
+	var w := maxf(_tray.size.x, _tray.custom_minimum_size.x)
+	if w < 100.0:
+		w = 980.0
+	# 一排一排擺，但每塊之間的距離、高低、角度都隨機：看起來是散的，又不會太佔空間
+	var rows: Array = []
+	var cur: Array = []
+	var x := 12.0
+	for t in _tiles:
+		var tl: ConceptTile = t
+		tl.fit()
+		var gap := rng.randf_range(14.0, 46.0)
+		if x + tl.size.x > w - 12.0 and not cur.is_empty():
+			rows.append(cur)
+			cur = []
+			x = 12.0
+		cur.append([tl, x])
+		x += tl.size.x + gap
+	if not cur.is_empty():
+		rows.append(cur)
+	var y := 8.0
+	var k := 0
+	for row in rows:
+		var rh := 0.0
+		var used := 0.0
+		for e in row:
+			rh = maxf(rh, (e[0] as ConceptTile).size.y)
+			used = float(e[1]) + (e[0] as ConceptTile).size.x
+		var shift := rng.randf_range(0.0, maxf(0.0, w - 12.0 - used))     # 整排往右推一點，不要每排都貼齊左邊
+		for e in row:
+			var tl: ConceptTile = e[0]
+			var jy := rng.randf_range(0.0, 6.0)
+			tl.home = Vector2(float(e[1]) + shift, y + jy + (rh - tl.size.y) / 2.0)
+			tl.home_rot = rng.randf_range(-0.06, 0.06)
+			tl.position = tl.home
+			tl.pivot_offset = tl.size / 2.0
+			tl.rotation = tl.home_rot
+			tl.scale = Vector2(0.7, 0.7)
+			var tw := tl.create_tween().set_parallel(true)
+			tw.tween_property(tl, "modulate:a", 1.0, 0.25).set_delay(0.04 * k)
+			tw.tween_property(tl, "scale", Vector2.ONE, 0.3).set_delay(0.04 * k).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			k += 1
+		y += rh + 12.0
+	_tray.custom_minimum_size.y = y + 14.0
+	_tray.queue_redraw()
 
 
-func _set_state(i: int, s: int, anim: bool) -> void:
-	var it: Dictionary = _items[i]
-	var old: int = it.state
-	it.state = s
-	var content: Control = it.content
-	var veil: Control = it.veil
-	var a: Control = it.a
-	var b: Control = it.b
-	if s >= 1 and old == 0:
-		if anim:
-			var tw := content.create_tween().set_parallel(true)
-			tw.tween_property(veil, "modulate:a", 0.0, 0.15)
-			tw.tween_property(content, "modulate:a", 1.0, 0.25)
+# ───────────────────────── 拖曳 ─────────────────────────
+
+func begin_drag(tl: ConceptTile) -> void:
+	if _drag != null or tl.used:
+		return
+	_guide_tap()
+	_drag = tl
+	var gp := tl.global_position
+	tl.rotation = 0.0
+	tl.top_level = true
+	tl.global_position = gp
+	tl.z_index = 50
+	tl.pivot_offset = Vector2.ZERO
+	tl.scale = Vector2(1.06, 1.06) * _sc()
+	Game.of(self).play("blip", 1.3, -16.0)
+
+
+func end_drag(tl: ConceptTile, at: Vector2) -> void:
+	if _drag != tl:
+		return
+	_drag = null
+	for s in _slots:
+		(s as ConceptSlot).hot = false
+	var s := _slot_at(at)
+	if s == null:
+		_send_home(tl)
+		return
+	try_place(tl, s)
+
+
+## 把積木放進這一格（測試也直接呼叫這個）：放對就填上，放錯就彈回去並提示
+func try_place(tl: ConceptTile, s: ConceptSlot) -> bool:
+	var ok := false
+	var why := ""
+	if mode == "order":
+		var placed: Array = _prog(idx).order
+		if s.index != placed.size():
+			why = "[color=#ffb35a]先放第 %d 步喔！[/color]　[color=#9aa3c7]從最上面的空格開始，一步一步往下排。[/color]" % (placed.size() + 1)
+		elif tl.step >= 0 and _order_ok(cards[idx], tl.step, placed):
+			ok = true
 		else:
-			veil.modulate.a = 0.0
-			content.modulate.a = 1.0
-	if s == 1:
-		b.modulate.a = 0.0
-		a.visible = true
-		a.modulate.a = 1.0
-		for chip in it.chips:
-			var c2: Button = chip
-			var tw2 := c2.create_tween().set_loops()
-			tw2.tween_property(c2, "modulate", Color(1.25, 1.25, 1.25), 0.55)
-			tw2.tween_property(c2, "modulate", Color(1, 1, 1), 0.55)
-	if s == 2:
-		if a != null:
-			a.visible = false
-		b.modulate.a = 1.0
-		if anim and old == 1:
-			b.pivot_offset = b.size / 2.0
-			b.scale = Vector2(1.08, 1.08)
-			b.modulate = Color(1.6, 1.6, 1.6, 1.0)
-			var tw3 := b.create_tween().set_parallel(true)
-			tw3.tween_property(b, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			tw3.tween_property(b, "modulate", Color(1, 1, 1, 1), 0.4)
-		var p := _prog(idx)
-		p.n = maxi(p.n, i + 1)
+			why = "[color=#ff9a7a]還不是這一步！[/color]　[color=#9aa3c7]第 %d 步要先做什麼？再讀一次題目。[/color]" % (placed.size() + 1)
+	else:
+		ok = _accepts(s, tl.text)
+	if not ok:
+		_send_home(tl)
+		_wrong(s, why)
+		return false
+	tl.used = true
+	_tiles.erase(tl)
+	Game.of(self).play("blip", 1.0 + 0.06 * (_prog(idx).fill as Dictionary).size(), -8.0)
+	if mode == "order":
+		(_prog(idx).order as Array).append(tl.step)
+		s.set_filled(tl.text, true)
+		_refresh_order_slots()
+	else:
+		_prog(idx).fill[s.index] = tl.text
+		s.set_filled(tl.text, true)
+	_burst(s.get_global_rect().get_center(), 10)
+	# 積木飛進格子裡消失
+	if is_instance_valid(tl):
+		if not tl.top_level:
+			var gp := tl.global_position
+			tl.top_level = true
+			tl.global_position = gp
+			tl.pivot_offset = Vector2.ZERO
+			tl.scale = Vector2.ONE * _sc()
+		var tw := tl.create_tween().set_parallel(true)
+		tw.tween_property(tl, "global_position", s.get_global_rect().get_center() - tl.size * tl.scale / 2.0, 0.16)
+		tw.tween_property(tl, "modulate:a", 0.0, 0.18)
+		tw.chain().tween_callback(tl.queue_free)
+	_after_place()
+	return true
+
+
+func _after_place() -> void:
+	var cd: Dictionary = cards[idx]
+	if mode == "order":
+		var placed: Array = _prog(idx).order
+		if placed.size() >= (cd.steps as Array).size():
+			Game.of(self).sfx("correct")
+			_feedback.text = "[color=#6ee7a0]✔ 流程完成！[/color]　" + _hl(cd.get("done", ""), color)
+			_fade_extras()
+			_complete(idx)
+		else:
+			_feedback.text = "[color=#6ee7a0]第 %d 步 ✔[/color]　[color=#9aa3c7]接下來呢？[/color]" % placed.size()
+	elif (_prog(idx).fill as Dictionary).size() >= _slots.size():
+		Game.of(self).sfx("correct")
+		_fade_extras()
+		if cd.has("check") and not _prog(idx).check:
+			_feedback.text = "[color=#6ee7a0]✔ 全部填好了！[/color]　[color=#9aa3c7]最後來一題小測驗。[/color]"
+		else:
+			_feedback.text = "[color=#6ee7a0]✔ 全部填好了！[/color]"
+			_complete(idx)
+	else:
+		_feedback.text = "[color=#6ee7a0]✔ 放對了！[/color]　[color=#9aa3c7]還有 %d 格。[/color]" % (_slots.size() - (_prog(idx).fill as Dictionary).size())
+	_update_nav()
+
+
+## 填完之後，剩下的（干擾）積木變淡
+func _fade_extras() -> void:
+	for t in _tiles:
+		var tl: ConceptTile = t
+		tl.used = true
+		tl.create_tween().tween_property(tl, "modulate:a", 0.28, 0.4)
+
+
+func _accepts(s: ConceptSlot, text: String) -> bool:
+	if s.filled:
+		return false
+	if text == s.answer:
+		return true
+	for grp in cards[idx].get("swap", []):
+		if (grp as Array).has(text) and (grp as Array).has(s.answer):
+			# 可以互換的一組：還要確認這一塊沒有被別的格子「指定」用掉（數量要對得上）
+			return true
+	return false
+
+
+func _send_home(tl: ConceptTile) -> void:
+	if not is_instance_valid(tl) or _tray == null or not is_instance_valid(_tray):
+		return
+	tl.scale = Vector2.ONE * _sc()
+	var target := _tray.get_global_transform() * tl.home
+	var tw := tl.create_tween()
+	tw.tween_property(tl, "global_position", target, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func():
+		if is_instance_valid(tl) and not tl.used:
+			tl.top_level = false
+			tl.scale = Vector2.ONE
+			tl.position = tl.home
+			tl.pivot_offset = tl.size / 2.0
+			tl.z_index = 0
+			tl.rotation = tl.home_rot)
+
+
+## 放錯：不扣分，那一行亮起來、旁邊一句提示
+func _wrong(s: ConceptSlot, why := "") -> void:
+	Game.of(self).play("blip", 0.62, -12.0)
+	s.flash = 1.0
+	var line: Control = s.line if s.line != null else s
+	if is_instance_valid(line):
+		var tw := line.create_tween()
+		for k in 2:
+			tw.tween_property(line, "modulate", Color(1.45, 1.3, 0.8), 0.16)
+			tw.tween_property(line, "modulate", Color.WHITE, 0.22)
+	if _feedback != null:
+		if why == "":
+			why = "[color=#ffb35a]再想想！[/color]　[color=#c9d1f0]%s[/color]" % HINTS[_hint_i % HINTS.size()]
+			_hint_i += 1
+		_feedback.text = why
+
+
+func _slot_at(at: Vector2) -> ConceptSlot:
+	var best: ConceptSlot = null
+	var bd := INF
+	for s in _slots:
+		var sl: ConceptSlot = s
+		if sl.filled:
+			continue
+		var r := sl.get_global_rect().grow(16.0)
+		if r.has_point(at):
+			var d := r.get_center().distance_to(at)
+			if d < bd:
+				bd = d
+				best = sl
+	return best
+
+
+func _drag_over(at: Vector2) -> void:
+	var s := _slot_at(at)
+	for t in _slots:
+		(t as ConceptSlot).hot = t == s
+
+
+# ───────────────────────── 解題流程：把步驟拖進編號格子 ─────────────────────────
+
+func _build_order(inner: VBoxContainer, cd: Dictionary) -> void:
+	_head(inner, str(idx + 1), cd.title, cd.get("tag", "思考"))
+	var bp := PanelContainer.new()
+	bp.add_theme_stylebox_override("panel", UITheme.box(Color(color.r, color.g, color.b, 0.10), 12, Color(color.r, color.g, color.b, 0.45), 1, 10))
+	inner.add_child(bp)
+	var br := HBoxContainer.new()
+	br.add_theme_constant_override("separation", 10)
+	bp.add_child(br)
+	var badge := Label.new()
+	badge.text = "題"
+	badge.add_theme_font_size_override("font_size", UITheme.fs(15))
+	badge.add_theme_color_override("font_color", color)
+	br.add_child(badge)
+	var pq := MathLabel.new()
+	pq.font_size = UITheme.fs(19)
+	pq.color = Color(1, 0.96, 0.85)
+	pq.max_width = 940
+	pq.text = _hl(cd.prompt, color)
+	br.add_child(pq)
+	# 解題流程：步驟很長，編號格子在上面、積木區在下面（積木一排可以放三塊）
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 8)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_child(left)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 5)
+	left.add_child(col)
+	var steps: Array = cd.steps
+	var placed: Array = _prog(idx).order
+	for k in steps.size():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		col.add_child(row)
+		var nb := Label.new()
+		nb.text = str(k + 1)
+		nb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		nb.custom_minimum_size = Vector2(30, 30)
+		nb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		nb.add_theme_font_size_override("font_size", UITheme.fs(15))
+		nb.add_theme_color_override("font_color", UITheme.PANEL)
+		nb.add_theme_stylebox_override("normal", UITheme.box(Color(color.r, color.g, color.b, 0.85), 15, Color(0, 0, 0, 0), 0, 0))
+		row.add_child(nb)
+		var s := ConceptSlot.new()
+		s.answer = ""
+		s.fs = UITheme.fs(16)
+		s.color = color
+		s.wide = true
+		s.index = k
+		s.line = row
+		s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(s)
+		_slots.append(s)
+		if k < placed.size():
+			s.set_filled(String(steps[int(placed[k])]), false)
+	_refresh_order_slots()
+	_feedback = MathLabel.new()
+	_feedback.font_size = UITheme.fs(15)
+	_feedback.color = UITheme.TEXT
+	_feedback.max_width = 940
+	_feedback.custom_minimum_size = Vector2(0, 24)
+	_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	left.add_child(_feedback)
+	if placed.size() >= steps.size():
+		_feedback.text = "[color=#6ee7a0]✔ 流程完成！[/color]　" + _hl(cd.get("done", ""), color)
+		return
+	_feedback.text = "[color=#9aa3c7]照思考的順序，把下面的步驟拖進 1、2、3…的格子。有一塊是錯的步驟！[/color]"
+	var texts: Array = []
+	for si in steps.size():
+		if not placed.has(si):
+			texts.append([String(steps[si]), si])
+	for d in cd.get("decoys", []):
+		texts.append([String(d), -1])
+	_make_tray(inner, texts, 0.0)
+
+
+func _refresh_order_slots() -> void:
+	var n := (_prog(idx).order as Array).size()
+	for s in _slots:
+		var sl: ConceptSlot = s
+		sl.active = sl.index == n and not sl.filled
+		sl.queue_redraw()
+
+
+## 這一步現在可以放嗎：卡片有 "pre"（每一步要先完成哪幾步）時照它判斷，
+## 例如「右移」和「上移」誰先都可以；沒有的話就要照順序
+func _order_ok(cd: Dictionary, si: int, placed: Array) -> bool:
+	if placed.has(si):
+		return false
+	if not cd.has("pre"):
+		return si == placed.size()
+	for need in cd.pre[si]:
+		if not placed.has(int(need)):
+			return false
+	return true
 
 
 # ───────────────────────── 隨堂小測 ─────────────────────────
@@ -665,6 +1168,7 @@ func _on_check(rb: Button, right: bool, ck: Dictionary) -> void:
 		_pop(rb)
 		_burst(rb.get_global_rect().get_center(), 18)
 		_feedback.text = "[color=#6ee7a0]✔ 答對了！[/color]　" + _hl(ck.why, color)
+		_complete(idx)
 	else:
 		Game.of(self).sfx("wrong")
 		_style_row(rb, UITheme.BAD)
@@ -733,114 +1237,6 @@ static func _shuffled(n: int, seed_v: int) -> Array:
 	return arr
 
 
-# ───────────────────────── 解題流程：拼積木 ─────────────────────────
-
-func _build_order(inner: VBoxContainer, cd: Dictionary) -> void:
-	_head(inner, str(idx + 1), cd.title, cd.get("tag", "思考"))
-	var bp := PanelContainer.new()
-	bp.add_theme_stylebox_override("panel", UITheme.box(Color(color.r, color.g, color.b, 0.10), 12, Color(color.r, color.g, color.b, 0.45), 1, 10))
-	inner.add_child(bp)
-	var br := HBoxContainer.new()
-	br.add_theme_constant_override("separation", 10)
-	bp.add_child(br)
-	var badge := Label.new()
-	badge.text = "題"
-	badge.add_theme_font_size_override("font_size", UITheme.fs(15))
-	badge.add_theme_color_override("font_color", color)
-	br.add_child(badge)
-	var pq := MathLabel.new()
-	pq.font_size = UITheme.fs(20)
-	pq.color = Color(1, 0.96, 0.85)
-	pq.max_width = 650
-	pq.text = _hl(cd.prompt, color)
-	br.add_child(pq)
-	_rows_box = VBoxContainer.new()
-	_rows_box.add_theme_constant_override("separation", 6)
-	inner.add_child(_rows_box)
-	var steps: Array = cd.steps
-	var done: bool = _prog(idx).order
-	var order: Array = range(steps.size()) if done else _shuffled(steps.size(), idx * 13 + steps.size())
-	_order_next = steps.size() if done else 0
-	for k in order:
-		var si: int = k
-		var rb := _row_button("?", steps[si])
-		rb.custom_minimum_size = Vector2(0, 40)
-		rb.set_meta("step", si)
-		_rows_box.add_child(rb)
-		_rows.append(rb)
-		if done:
-			_lock_row(rb, si, false)
-		rb.pressed.connect(func(): _on_order(rb))
-	_feedback = MathLabel.new()
-	_feedback.font_size = UITheme.fs(15)
-	_feedback.color = UITheme.TEXT
-	_feedback.max_width = 700
-	_feedback.custom_minimum_size = Vector2(0, 26)
-	_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_feedback.text = ("[color=#6ee7a0]✔ 流程完成！[/color]　" + _hl(cd.get("done", ""), color)) if done \
-		else "[color=#9aa3c7]照思考順序，一塊一塊點出來。[/color]"
-	inner.add_child(_feedback)
-
-
-func _on_order(rb: Button) -> void:
-	if _prog(idx).order or rb.has_meta("locked"):
-		return
-	var si: int = rb.get_meta("step")
-	var cd: Dictionary = cards[idx]
-	if _order_ok(cd, si):
-		Game.of(self).play("blip", 1.0 + 0.1 * _order_next, -8.0)
-		_rows_box.move_child(rb, _order_next)
-		_lock_row(rb, _order_next, true)
-		_order_next += 1
-		if _order_next >= _rows.size():
-			_prog(idx).order = true
-			Game.of(self).sfx("correct")
-			_feedback.text = "[color=#6ee7a0]✔ 流程完成！[/color]　" + _hl(cd.get("done", ""), color)
-			_burst(_rows_box.get_global_rect().get_center(), 24)
-		else:
-			_feedback.text = "[color=#6ee7a0]第 %d 步 ✔[/color]　[color=#9aa3c7]接下來呢？[/color]" % _order_next
-	else:
-		Game.of(self).sfx("wrong")
-		_wobble(rb)
-		var old: StyleBox = rb.get_theme_stylebox("normal")
-		_style_row(rb, UITheme.BAD)
-		get_tree().create_timer(0.45).timeout.connect(func():
-			if is_instance_valid(rb) and not rb.has_meta("locked"):
-				rb.add_theme_stylebox_override("normal", old)
-				_style_row(rb, Color(0, 0, 0, 0)))
-		_feedback.text = "[color=#ff6b7a]還不是這一步！[/color]　[color=#9aa3c7]第 %d 步要先做什麼？[/color]" % (_order_next + 1)
-	_update_nav()
-
-
-## 這一步現在可以放嗎：卡片有 "pre"（每一步要先完成哪幾步）時照它判斷，
-## 例如「右移」和「上移」誰先都可以；沒有的話就要照順序
-func _order_ok(cd: Dictionary, si: int) -> bool:
-	var placed := {}
-	for r in _rows:
-		if r.has_meta("locked"):
-			placed[int(r.get_meta("step"))] = true
-	if placed.has(si):
-		return false
-	if not cd.has("pre"):
-		return si == _order_next
-	for need in cd.pre[si]:
-		if not placed.has(int(need)):
-			return false
-	return true
-
-
-func _lock_row(rb: Button, si: int, anim: bool) -> void:
-	rb.set_meta("locked", true)
-	_style_row(rb, color)
-	var bl: Label = rb.find_child("Badge", true, false)
-	bl.text = str(si + 1)
-	bl.add_theme_color_override("font_color", UITheme.PANEL)
-	bl.add_theme_stylebox_override("normal", UITheme.box(color, 13, Color(0, 0, 0, 0), 0, 0))
-	rb.mouse_default_cursor_shape = Control.CURSOR_ARROW
-	if anim:
-		_pop(rb)
-
-
 # ───────────────────────── 小動畫 ─────────────────────────
 
 func _pop(c: Control) -> void:
@@ -866,9 +1262,61 @@ func _burst(at: Vector2, n: int) -> void:
 	bu.global_position = at
 
 
+## 把 "a > 1：?{遞增}" 拆成段落：[{t, h}]，h = 要藏起來的部分
+static func _parse(m: String) -> Array:
+	var segs: Array = []
+	var buf := ""
+	var i := 0
+	while i < m.length():
+		if m.substr(i, 2) == "?{":
+			if buf != "":
+				segs.append({"t": buf, "h": false})
+				buf = ""
+			var depth := 1
+			var j := i + 2
+			while j < m.length() and depth > 0:
+				if m[j] == "{":
+					depth += 1
+				elif m[j] == "}":
+					depth -= 1
+				j += 1
+			segs.append({"t": m.substr(i + 2, j - i - 3), "h": true})
+			i = j
+		else:
+			buf += m[i]
+			i += 1
+	if buf != "":
+		segs.append({"t": buf, "h": false})
+	return segs
+
+
+static func _hl(text: String, c: Color) -> String:
+	return text.replace("[b]", "[color=#%s]" % c.lightened(0.2).to_html(false)).replace("[/b]", "[/color]")
+
+
+static func _ans_color(c: Color) -> Color:
+	return c.lightened(0.45)
+
+
+## 揭開後的完整文字（藏起來的部分用亮色）
+static func _full(m: String, c: Color) -> String:
+	var s := ""
+	for sg in _parse(m):
+		if sg.h:
+			s += "[color=#%s]%s[/color]" % [_ans_color(c).to_html(false), sg.t.replace("[b]", "").replace("[/b]", "")]
+		else:
+			s += _hl(sg.t, c)
+	return s
+
+
+func _text_w(markup: String, fs: int) -> float:
+	return MathLabel.text_width(get_theme_default_font(), markup, UITheme.fs(fs))
+
+
+
 # ───────────────────────── 繪圖小元件 ─────────────────────────
 
-## 上方的進度點：完成的實心、目前的變成長條
+## 上方的進度點：完成的實心打勾、目前的變成長條
 class ConceptDots extends Control:
 	var deck = null
 
@@ -884,7 +1332,7 @@ class ConceptDots extends Control:
 		var c: Color = deck.color
 		var cy := 7.0
 		for i in deck.cards.size():
-			var cur: bool = i == deck.idx
+			var cur: bool = i == deck.idx and deck.mode != "list"
 			var done: bool = deck.card_done(i)
 			if cur:
 				draw_rect(Rect2(x + 5, cy - 5, 14, 10), c)
@@ -901,52 +1349,188 @@ class ConceptDots extends Control:
 			x += 16.0
 
 
-## 還沒揭開的那一行：淡淡的虛線框
-class ConceptVeil extends Control:
+## 卡片裡的空格：還沒填是虛線框（拖著積木經過時發亮）；填好就顯示答案
+class ConceptSlot extends Control:
+	const MathLabel := preload("res://data/ui/math_text.gd")
+	var answer := ""
+	var fs := 17
 	var color := Color.WHITE
-	var active := false:          # 下一行要揭開的就是這一行：邊框發亮、寫上「點一下揭開」
+	var index := 0
+	var line: Control = null
+	var wide := false            # 解題流程：一整行寬的格子
+	var filled := false
+	var active := false          # 解題流程：下一個要放的格子
+	var hot := false:
 		set(v):
-			active = v
-			queue_redraw()
-	var t := 0.0
+			if v != hot:
+				hot = v
+				queue_redraw()
+	var flash := 0.0
+	var _label: MathLabel
+	var _t := 0.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func set_filled(text: String, anim: bool) -> void:
+		filled = true
+		if _label == null:
+			_label = MathLabel.new()
+			_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			add_child(_label)
+		_label.font_size = fs
+		_label.color = color.lightened(0.45) if not wide else UITheme.TEXT
+		_label.text = text
+		if wide:
+			_label.max_width = 900
+		update_minimum_size()
+		_place.call_deferred()
+		if anim:
+			pivot_offset = size / 2.0
+			scale = Vector2(1.12, 1.12)
+			modulate = Color(1.6, 1.6, 1.6)
+			var tw := create_tween().set_parallel(true)
+			tw.tween_property(self, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(self, "modulate", Color.WHITE, 0.4)
+		queue_redraw()
+
+	func _place() -> void:
+		if _label == null:
+			return
+		var ms := _label.get_combined_minimum_size()
+		_label.size = ms
+		_label.position = Vector2(12.0, (size.y - ms.y) / 2.0) if wide else (size - ms) / 2.0
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_RESIZED:
+			_place()
+
+	func _get_minimum_size() -> Vector2:
+		var h := fs * 1.75
+		if filled and _label != null:
+			var ms := _label.get_combined_minimum_size()
+			return Vector2(0.0 if wide else ms.x + 20.0, maxf(h, ms.y + 10.0))
+		return Vector2(0.0 if wide else 96.0, h + (4.0 if wide else 0.0))
 
 	func _process(delta: float) -> void:
-		if active and modulate.a > 0.01:
-			t += delta
+		_t += delta
+		if flash > 0.0:
+			flash = maxf(0.0, flash - delta * 1.6)
+			queue_redraw()
+		elif active and not filled:
 			queue_redraw()
 
 	func _draw() -> void:
 		var r := Rect2(Vector2(1, 1), size - Vector2(2, 2))
-		var pulse := 0.5 + 0.5 * sin(t * 3.2) if active else 0.0
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(color.r, color.g, color.b, 0.04 + 0.08 * pulse if active else 0.04)
+		sb.set_corner_radius_all(9)
+		sb.anti_aliasing = true
+		if filled:
+			sb.bg_color = Color(color.r, color.g, color.b, 0.16 if not wide else 0.12)
+			sb.border_color = Color(color.r, color.g, color.b, 0.55)
+			sb.set_border_width_all(1)
+			draw_style_box(sb, r)
+			return
+		var pulse := 0.5 + 0.5 * sin(_t * 3.2)
+		sb.bg_color = Color(color.r, color.g, color.b, 0.26 if hot else (0.08 + 0.06 * pulse if active else 0.06))
+		if hot:
+			sb.border_color = Color(1, 1, 1, 0.9)
+			sb.set_border_width_all(2)
+		elif flash > 0.0:
+			sb.border_color = Color(1.0, 0.55, 0.4, flash)
+			sb.set_border_width_all(2)
+		elif active:
+			sb.border_color = Color(color.r, color.g, color.b, 0.5 + 0.4 * pulse)
+			sb.set_border_width_all(2)
+		else:
+			sb.border_color = Color(color.r, color.g, color.b, 0.6)
+			sb.set_border_width_all(1)
+		draw_style_box(sb, r)
+		var font := get_theme_default_font()
+		if wide:
+			if active:
+				draw_string(font, Vector2(14, r.get_center().y + 6), "把第 %d 步拖到這裡" % (index + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(color.r, color.g, color.b, 0.6 + 0.3 * pulse))
+		else:
+			draw_string(font, Vector2(0, r.get_center().y + fs * 0.35), "？", HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, Color(color.r, color.g, color.b, 0.55))
+
+
+## 積木：按住就能拖；放對了吸進格子，放錯彈回原位
+class ConceptTile extends Control:
+	const MathLabel := preload("res://data/ui/math_text.gd")
+	var text := ""
+	var step := -1               # 解題流程：這是第幾個步驟（−1：干擾積木）
+	var color := Color.WHITE
+	var fs := 17
+	var deck = null
+	var home := Vector2.ZERO
+	var home_rot := 0.0
+	var used := false
+	var _label: MathLabel
+	var _grab := Vector2.ZERO
+	var _down := false
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_DRAG
+		_label = MathLabel.new()
+		_label.font_size = fs
+		_label.color = Color("1a1530")
+		_label.text = text
+		if deck.mode == "order":
+			_label.max_width = 430
+		_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_label)
+		fit()
+
+	func fit() -> void:
+		if _label == null:
+			return
+		var ms := _label.get_combined_minimum_size()
+		size = ms + Vector2(26, 14)
+		_label.size = ms
+		_label.position = Vector2(13, 7)
+
+	func _gui_input(e: InputEvent) -> void:
+		if used:
+			return
+		# 用事件本身帶的位置（觸控、沒有滑鼠的環境也一樣準）
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+			var gp: Vector2 = _ev_pos(e)
+			if e.pressed:
+				_down = true
+				_grab = gp - global_position
+				deck.begin_drag(self)
+				accept_event()
+			elif _down:
+				_down = false
+				deck.end_drag(self, gp)
+				accept_event()
+		elif e is InputEventMouseMotion and _down and deck._drag == self:
+			var gp := _ev_pos(e)
+			global_position = gp - _grab
+			deck._drag_over(gp)
+			accept_event()
+
+	## 事件在畫面上的位置（_gui_input 給的 position 是這個控制項自己的座標）
+	func _ev_pos(e: InputEventMouse) -> Vector2:
+		return get_global_transform() * e.position
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		var sh := StyleBoxFlat.new()
+		sh.bg_color = Color(0, 0, 0, 0.35)
+		sh.set_corner_radius_all(10)
+		draw_style_box(sh, Rect2(r.position + Vector2(0, 4), r.size))
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = color.lightened(0.35)
 		sb.set_corner_radius_all(10)
 		sb.anti_aliasing = true
-		if active:
-			sb.border_color = Color(color.r, color.g, color.b, 0.45 + 0.4 * pulse)
-			sb.set_border_width_all(2)
+		sb.border_color = color.lightened(0.6)
+		sb.set_border_width_all(1)
 		draw_style_box(sb, r)
-		var cy := r.get_center().y
-		if active:
-			var font := get_theme_default_font()
-			var c := Color(color.r, color.g, color.b, 0.75 + 0.25 * pulse)
-			draw_string(font, Vector2(r.position.x + 18, cy + 6), "點一下，揭開這一行", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), c)
-			# 右邊一個往下點的小箭頭
-			var ax := r.end.x - 26.0
-			var ay := cy - 3.0 + 3.0 * sin(t * 4.0)
-			draw_colored_polygon(PackedVector2Array([Vector2(ax - 7, ay - 3), Vector2(ax + 7, ay - 3), Vector2(ax, ay + 5)]), c)
-			return
-		var col := Color(color.r, color.g, color.b, 0.28)
-		var dash := 7.0
-		var gap := 6.0
-		var x := r.position.x + 10.0
-		while x < r.end.x - 10.0:
-			var x2 := minf(x + dash, r.end.x - 10.0)
-			draw_line(Vector2(x, r.position.y), Vector2(x2, r.position.y), col, 1.0)
-			draw_line(Vector2(x, r.end.y), Vector2(x2, r.end.y), col, 1.0)
-			x += dash + gap
-		for k in 3:
-			UITheme.dot(self, Vector2(r.position.x + 22 + k * 12, cy), 2.5, Color(color.r, color.g, color.b, 0.35))
+		# 積木上面的兩個小圓點（看起來像可以拿起來的積木）
+		UITheme.dot(self, Vector2(8, 8), 2.2, Color(1, 1, 1, 0.55))
+		UITheme.dot(self, Vector2(size.x - 8, 8), 2.2, Color(1, 1, 1, 0.55))
 
 
 ## 新手引導的浮標：一個往上指著按鈕的小對話框，在主要按鈕下方上下浮動，淡入淡出

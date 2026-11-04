@@ -137,6 +137,7 @@ var house := {}                        # 光靈小屋：{owned:[], placed:{格�
 
 
 var world11 := {}                      # 高二世界地圖（光潮群島）：{pos, visited, eggs, ret}
+var concepts := {}                     # 觀念卡片完成過哪些（"大關|卡片標題": true）：第一次完成給星塵，之後不再給
 
 
 var world10 := {}                      # 高一世界地圖（曦光大陸）：{stones: 啟用的傳送石, visited: 去過的地區, eggs: 找到的彩蛋, pos: [x, y]}
@@ -409,6 +410,7 @@ const SAVE_FIELDS := [
 	["main_rw", "main_rw", {"slots": {}, "types": {}, "star3": {}, "chests": {}, "tower_day": {}}],
 	["world10", "world10", {}],
 	["world11", "world11", {}],
+	["concepts", "concepts", {}],
 	["house", "house", {}],
 	["tut", "tut", {}],
 	["grade_pick", "grade_pick", ""],
