@@ -9,7 +9,6 @@ const SettingsPanel := preload("res://data/ui/settings_panel.gd")
 const Center := preload("res://data/core/review_center.gd")
 const WorldMap := preload("res://data/maps/exp_map.gd")     # 單元沒有指定地圖時的預設
 const TowerView := preload("res://data/levels/tower/tower_view.gd")
-const TowerBank := preload("res://data/levels/tower/tower_bank.gd")
 const QuestPanel := preload("res://data/ui/quest_panel.gd")
 const GachaPage := preload("res://data/ui/gacha_page.gd")
 
@@ -841,7 +840,7 @@ func _show_summary(results: Array, kind: String) -> void:
 		var dot := ColorRect.new()
 		dot.color = info.color
 		if rr.level == "T":
-			dot.color = TowerBank.KIND_COLOR.get(rr.get("type", ""), info.color)
+			dot.color = Center.tower_kind_color(String(rr.get("type", "")), info.color)
 		dot.custom_minimum_size = Vector2(6, 26)
 		row.add_child(dot)
 		var nm := Label.new()
@@ -1005,7 +1004,7 @@ func _refresh_tower() -> void:
 
 	var tv := TowerView.new()
 	tv.best = g.tower_best
-	tv.top_floor = Center.tower_top()
+	tv.top_floor = Center.tower_top(g.cur_unit)
 	tv.position = Vector2(40, 98)
 	tv.size = Vector2(470, 524)
 	_tower_body.add_child(tv)
@@ -1019,7 +1018,7 @@ func _refresh_tower() -> void:
 	col.add_theme_constant_override("separation", 10)
 	p.add_child(col)
 	col.add_child(_h("挑戰規則", UITheme.ROSE))
-	for rule in [["▲", "共 %d 層，每層一題，段考題型與八大關混合" % Center.tower_top()],
+	for rule in [["▲", "共 %d 層，每層一題，段考題型與八大關混合" % Center.tower_top(g.cur_unit)],
 			["◷", "每層限時，從 260 秒開始越來越短"],
 			["♥", "只有三顆心：答錯、超時扣一顆（真假審判錯 2 張以上才扣）"],
 			["✦", "每 5 層是「試煉層」大題，同一趟不重複"],
@@ -1044,7 +1043,7 @@ func _refresh_tower() -> void:
 	var rec := HBoxContainer.new()
 	rec.add_theme_constant_override("separation", 30)
 	col.add_child(rec)
-	for pair in [["最高紀錄", ("登頂！（%d 層）" % g.tower_best if g.tower_best >= Center.tower_top() else "第 %d 層" % g.tower_best) if g.tower_best > 0 else "還沒有"], ["累積攀登", "%d 次" % g.tower_runs],
+	for pair in [["最高紀錄", ("登頂！（%d 層）" % g.tower_best if g.tower_best >= Center.tower_top(g.cur_unit) else "第 %d 層" % g.tower_best) if g.tower_best > 0 else "還沒有"], ["累積攀登", "%d 次" % g.tower_runs],
 			["今日星塵", ("領到第 %d 層" % g.tower_paid_today()) if g.tower_paid_today() > 0 else "還沒領"]]:
 		var v := VBoxContainer.new()
 		var l1 := Label.new()
@@ -1108,7 +1107,7 @@ func _show_tower_result(res: Dictionary) -> void:
 		tl.add_theme_color_override("font_color", UITheme.ACCENT)
 	elif floors > 0:
 		var paid := int(rw.get("paid", floors))
-		if paid >= Center.tower_top():
+		if paid >= Center.tower_top(Game.of(self).cur_unit):
 			tl.text = "今天整座塔的星塵都領過了，明天再來領新的星塵"
 		else:
 			tl.text = "今天第 1～%d 層的星塵已經領過了，爬得更高才有新的星塵" % paid
@@ -1127,7 +1126,7 @@ func _show_tower_result(res: Dictionary) -> void:
 		var dot := ColorRect.new()
 		dot.color = info.color
 		if rr.level == "T":
-			dot.color = TowerBank.KIND_COLOR.get(rr.get("type", ""), info.color)
+			dot.color = Center.tower_kind_color(String(rr.get("type", "")), info.color)
 		dot.custom_minimum_size = Vector2(6, 24)
 		row.add_child(dot)
 		var nm := Label.new()

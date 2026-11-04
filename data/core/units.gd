@@ -26,7 +26,7 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# 多項式：P1～P8 全部做好，正式開放
 	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": true,
-	 "world": "光靈的旅程：根之洞窟", "map": "poly_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_poly.gd",
+	 "world": "光靈的旅程：根之洞窟", "map": "poly_map.gd", "tower": "poly_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_poly.gd",
 	 "levels": [
 		{"id": "P1", "name": "係數礦燈", "topic": "多項式與係數", "file": "level_poly1_lamp.gd", "bank": "poly1_bank.gd", "color": UITheme.GOLD},
 		{"id": "P2", "name": "綜合除法水車", "topic": "多項式的除法", "file": "level_poly2_wheel.gd", "bank": "poly2_bank.gd", "color": UITheme.CYAN},
@@ -144,7 +144,7 @@ static func level_ids(uid: String) -> Array:
 	return unit(uid).levels.map(func(l): return l.id)
 
 
-## 這一大關屬於哪個單元（終焉之塔的題目 "T" 算在指數與對數）
+## 這一大關屬於哪個單元（終焉之塔的題目 "T" 不屬於任何大關，回傳預設單元）
 static func unit_of_level(level_id: String) -> String:
 	for u in UNITS:
 		for l in u.levels:

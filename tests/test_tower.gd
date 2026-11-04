@@ -4,10 +4,13 @@ extends "test_play.gd"
 ##   wrong：每一步先答錯一次再答對（看提示有沒有擠出畫面、心有沒有正確扣）
 ##   lose ：三顆心用完、時間到，都要示範完整解法並出現「看攀登結果」
 ##   run  ：從第 1 層爬到塔頂（舊題型也照正確答案玩），檢查樓層、心、試煉層、結算畫面
-## 環境變數 TMODE=items,wrong 只跑某幾種；ONLY=j_rules,b_drug 只玩某幾題；SHOTS=資料夾 存截圖
+## 環境變數 TMODE=items,wrong 只跑某幾種；ONLY=j_rules,b_drug 只玩某幾題；UNITS=exp,h1poly 只測某幾個單元；SHOTS=資料夾 存截圖
+## 題型：choice、judge、roots、line、sign（數線標正負號）、pick（選圖）、fill（數字鍵盤）都會照學生的方式操作
 
-const Bank := preload("res://data/levels/tower/tower_bank.gd")
 const Center := preload("res://data/core/review_center.gd")
+const MathLabel := preload("res://data/ui/math_text.gd")
+var Bank: Script
+var unit := "exp"
 const VP := Vector2(1152, 648)
 
 var _all_shots := false
@@ -15,23 +18,31 @@ var _all_shots := false
 
 func _initialize() -> void:
 	await setup()
-	g.cur_unit = "exp"
 	_all_shots = OS.get_environment("ALLSHOTS") != ""
 	var modes := OS.get_environment("TMODE")
 	if modes == "":
 		modes = "items,wrong,lose,run"
 	var only := OS.get_environment("ONLY")
-	for it in Bank.items():
-		if only != "" and not (String(it.id) in only.split(",")):
+	var units := OS.get_environment("UNITS")
+	for u in Units.UNITS:
+		if String(u.get("tower", "")) == "" or (units != "" and not (String(u.id) in units.split(","))):
 			continue
-		if "items" in modes:
-			await _play_item(String(it.id), false)
-		if "wrong" in modes:
-			await _play_item(String(it.id), true)
-	if "lose" in modes:
-		await _lose_cases()
-	if "run" in modes:
-		await _climb()
+		unit = String(u.id)
+		g.cur_unit = unit
+		Bank = Center.tower_bank(unit)
+		cur_tag = unit + " 題庫"
+		_check_bank()
+		for it in Bank.items():
+			if only != "" and not (String(it.id) in only.split(",")):
+				continue
+			if "items" in modes:
+				await _play_item(String(it.id), false)
+			if "wrong" in modes:
+				await _play_item(String(it.id), true)
+		if "lose" in modes and only == "":
+			await _lose_cases()
+		if "run" in modes and only == "":
+			await _climb()
 	ok(issues == 0, "終焉之塔沒有發現問題（%d 個）" % issues)
 	finish("TOWER")
 
@@ -40,7 +51,7 @@ func _initialize() -> void:
 
 func _open(id: String, hearts := 3, time := 900.0):
 	g.session = {}          # 不是真的在攀登：按「前往下一層」不會跳走
-	g.goto("boss_tower.gd", {"review": {"level": "T", "slot": id}, "tower_floor": 7, "tower_hearts": hearts, "tower_time": time})
+	g.goto("boss_tower.gd", {"review": {"level": "T", "slot": id}, "tower_floor": 7, "tower_hearts": hearts, "tower_time": time, "unit": unit})
 	await wait(0.9)
 	var bt = current_scene
 	if bt == null or bt.get("steps") == null or String(bt.item.get("id", "")) != id:
@@ -134,6 +145,108 @@ func _answer(bt, st: Dictionary) -> void:
 			await _set_line(bt, st.seg, st.pt)
 			await _bcheck(bt, "%02d 數線點好" % bt.si)
 			bt.action_btn.pressed.emit()
+		"sign":
+			await _set_signs(bt, st.signs)
+			await _bcheck(bt, "%02d 正負號標好" % bt.si)
+			bt.action_btn.pressed.emit()
+		"pick":
+			var t := _pick_tile(bt, 0)
+			if t == null:
+				_issue("選圖題找不到正確的那張圖")
+				return
+			t.pressed.emit()
+		"fill":
+			await _type_fill(bt, st.ans)
+			await _bcheck(bt, "%02d 數字填好" % bt.si)
+			if bt.action_btn.disabled:
+				_issue("每一格都填了，「送出答案」還是不能按")
+			bt.action_btn.pressed.emit()
+
+
+func _pick_tile(bt, k: int) -> Button:
+	for t in bt.pick_tiles:
+		if int(t.get_meta("k", -1)) == k and not t.disabled:
+			return t
+	return null
+
+
+## 用數字鍵盤輸入（和學生一樣按鍵）
+func _type_fill(bt, vals: Array) -> void:
+	for i in vals.size():
+		while int(bt.fill_cur) != i:
+			bt._on_key("▶")
+		while String(bt.fill_vals[i]) != "":
+			bt._on_key("⌫")
+		for ch in String(vals[i]).replace("-", "−"):
+			if not ch in bt.KEYS:
+				_issue("答案 %s 有鍵盤打不出來的字「%s」" % [vals[i], ch])
+				return
+			bt._on_key(ch)
+	await frames(2)
+
+
+## 數線的正負號：每點一下 空白 → ＋ → −
+func _set_signs(bt, signs: Array) -> void:
+	var nl = bt.numline
+	await frames(2)
+	var r: Dictionary = nl.rows.back()
+	var xs: Array = nl._xs()
+	var y: float = nl._row_y(nl.rows.size() - 1)
+	for i in signs.size():
+		var guard := 0
+		while int(r.seg[i]) != int(signs[i]) and guard < 3:
+			guard += 1
+			var sp: Vector2 = nl._seg_span(i, xs)
+			_click(nl, Vector2((sp.x + sp.y) / 2.0, y))
+		if int(r.seg[i]) != int(signs[i]):
+			_issue("數線第 %d 段點不出 %s" % [i + 1, "＋" if int(signs[i]) > 0 else "−"])
+	await frames(1)
+
+
+## 題庫本身的檢查：選項不重複、正解在選項裡、填空答案打得出來、排版正確
+func _check_bank() -> void:
+	var ids := {}
+	for it in Bank.items():
+		var id := String(it.id)
+		if ids.has(id):
+			_issue("題目代號重複：%s" % id)
+		ids[id] = true
+		if not Bank.KIND_NAME.has(it.kind):
+			_issue("%s 的題型 %s 沒有名字" % [id, it.kind])
+		for st in it.steps:
+			var t := String(st.t)
+			if t == "choice":
+				var seen := {}
+				for o in st.opts:
+					if seen.has(String(o)):
+						_issue("%s：選項重複「%s」" % [id, o])
+					seen[String(o)] = true
+			if t == "pick" and st.graphs.size() != st.get("whys", st.graphs).size():
+				_issue("%s：選圖題的 whys 數量和圖不一樣" % id)
+			if t == "fill":
+				for i in st.ans.size():
+					if not String(st.template).contains("[%d]" % i):
+						_issue("%s：填空的格子 [%d] 不在 template 裡" % [id, i])
+			if t == "sign" and st.signs.size() != st.marks.size() + 1:
+				_issue("%s：正負號的段數不對" % id)
+			if t == "line" and (st.seg.size() != st.marks.size() + 1 or st.pt.size() != st.marks.size()):
+				_issue("%s：數線的段數或端點數不對" % id)
+			if st.has("col") and not it.get("routes", {}).has(st.col):
+				_issue("%s：路線 %s 沒有名字" % [id, st.col])
+		_lint(it, id)
+
+
+func _lint(v, where: String) -> void:
+	if v is Dictionary:
+		for k in v:
+			if not (str(k) in ["id", "kind", "f", "c", "t", "col"]):
+				_lint(v[k], where)
+	elif v is Array:
+		for e in v:
+			_lint(e, where)
+	elif v is String:
+		for p in MathLabel.lint(v):
+			_issue("%s 排版：%s ⇐「%s」" % [where, p, String(v).left(50)])
 
 
 ## 故意答錯一次
@@ -177,6 +290,29 @@ func _answer_wrong(bt, st: Dictionary) -> void:
 			await frames(2)
 			if bt.hearts != h0 - 1:
 				_issue("數線封印錯了卻沒有扣心")
+		"sign":
+			var sg: Array = st.signs.map(func(v): return -int(v))
+			await _set_signs(bt, sg)
+			bt.action_btn.pressed.emit()
+			await frames(2)
+			if bt.hearts != h0 - 1:
+				_issue("正負號標錯了卻沒有扣心")
+		"pick":
+			var t := _pick_tile(bt, 1)
+			if t == null:
+				_issue("選圖題找不到錯的圖")
+				return
+			t.pressed.emit()
+			await frames(2)
+			if bt.hearts != h0 - 1:
+				_issue("選錯圖卻沒有扣心")
+		"fill":
+			var bad: Array = st.ans.map(func(v): return "98765")
+			await _type_fill(bt, bad)
+			bt.action_btn.pressed.emit()
+			await frames(2)
+			if bt.hearts != h0 - 1:
+				_issue("填錯數字卻沒有扣心")
 
 
 func _choice_btn(bt, markup: String) -> Button:
@@ -255,7 +391,8 @@ func _bcheck(bt, when: String) -> void:
 
 func _lose_cases() -> void:
 	# 1. 只剩一顆心時答錯：示範解法、看攀登結果
-	for id in ["r_logsum", "j_rules", "l_twolog", "b_ineq"]:
+	var lose_ids := ["r_logsum", "j_rules", "l_twolog", "b_ineq"] if unit == "exp" else ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"]
+	for id in lose_ids:
 		cur_tag = id + "（心用完）"
 		var bt = await _open(id, 1)
 		if bt == null:
@@ -269,9 +406,9 @@ func _lose_cases() -> void:
 		if bt.board.get_child_count() < bt.steps.size() - 1:
 			_issue("心用完後，推導板只寫了 %d 行" % bt.board.get_child_count())
 		await _bcheck(bt, "心用完")
-		await shot("lose_" + id)
+		await shot(unit + "_lose_" + id)
 	# 2. 時間到
-	for id in ["e_closed", "q_bact"]:
+	for id in (["e_closed", "q_bact"] if unit == "exp" else ["pp_twoway", "pg_pair"]):
 		cur_tag = id + "（時間到）"
 		var bt = await _open(id, 3, 2.0)
 		if bt == null:
@@ -282,10 +419,11 @@ func _lose_cases() -> void:
 		elif bt.next_btn.text.find("第 8 層") < 0:
 			_issue("時間到但還有心，按鈕卻是「%s」" % bt.next_btn.text)
 		await _bcheck(bt, "時間到")
-		await shot("timeout_" + id)
+		await shot(unit + "_timeout_" + id)
 	# 3. 審判錯一張不扣心、錯兩張扣一顆
-	cur_tag = "j_value（錯一張）"
-	var bj = await _open("j_value")
+	var jid := "j_value" if unit == "exp" else "pj_tworem"
+	cur_tag = jid + "（錯一張）"
+	var bj = await _open(jid)
 	if bj != null:
 		for k in bj.judge_rows.size():
 			var jr: Dictionary = bj.judge_rows[k]
@@ -297,7 +435,7 @@ func _lose_cases() -> void:
 		if bj.hearts != 3:
 			_issue("錯一張卻扣了心")
 		await _bcheck(bj, "錯一張")
-		await shot("judge_one_wrong")
+		await shot(unit + "_judge_one_wrong")
 		bj.action_btn.pressed.emit()
 		await frames(3)
 		if not bj.done or int(bj._stars) != 2:
@@ -307,8 +445,8 @@ func _lose_cases() -> void:
 # ================= 從第 1 層爬到塔頂 =================
 
 func _climb() -> void:
-	var top := Center.tower_top()
-	cur_tag = "攀登"
+	var top := Center.tower_top(unit)
+	cur_tag = unit + " 攀登"
 	g.tower_best = 0
 	g.start_tower()
 	await wait(1.0)
@@ -347,7 +485,7 @@ func _climb() -> void:
 				_issue("樓層顯示「%s」" % sc.floor_label.text)
 			await _play_bt_quick(sc)
 			if f == 1:
-				await shot("climb_floor1")
+				await shot(unit + "_climb_floor1")
 		else:
 			await _play_old(sc, it)
 		last_floor = f
@@ -366,7 +504,7 @@ func _climb() -> void:
 	if g.tower_best != top:
 		_issue("最高紀錄是 %d，應該是 %d" % [g.tower_best, top])
 	await wait(1.2)
-	await shot("climb_result")
+	await shot(unit + "_climb_result")
 	# 心會一層一層帶上去：第 1 層答錯一次，第 2 層開始只剩兩顆
 	cur_tag = "帶心"
 	g.start_tower()
@@ -386,14 +524,14 @@ func _climb() -> void:
 		var h2 = s2.get("hearts") if s2.get("hearts") != null else s2.get("energy")
 		if int(h2) != 2:
 			_issue("第 1 層扣了一顆心，第 2 層卻有 %d 顆" % int(h2))
-		await shot("climb_floor2_hearts")
+		await shot(unit + "_climb_floor2_hearts")
 		s2.pause_menu.list_action.call()
 		await wait(1.0)
 		if String(current_scene.get_script().resource_path).get_file() != "main_menu.gd":
 			_issue("放棄攀登沒有回到結算畫面")
 		else:
 			await wait(1.0)
-			await shot("climb_abort_result")
+			await shot(unit + "_climb_abort_result")
 
 
 func _play_bt_quick(bt) -> void:

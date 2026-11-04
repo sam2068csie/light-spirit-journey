@@ -8,7 +8,23 @@ const Paths := preload("res://data/core/paths.gd")
 const UITheme := preload("res://data/ui/game_theme.gd")
 
 const QuizInfo := preload("res://data/core/quiz_manager.gd")
-const TowerBank := preload("res://data/levels/tower/tower_bank.gd")
+
+
+## 這個單元的終焉之塔題庫（units.gd 的 "tower"）；沒有就是 null
+static func tower_bank(unit: String = Units.DEFAULT) -> Script:
+	var f := String(Units.unit(unit).get("tower", ""))
+	if f == "":
+		return null
+	return load(Paths.of(f))
+
+
+## 塔的題型顏色（所有單元的題庫都找一遍，結算畫面用）
+static func tower_kind_color(kind: String, fallback: Color) -> Color:
+	for u in Units.UNITS:
+		var b := tower_bank(String(u.id)) if String(u.get("tower", "")) != "" else null
+		if b != null and b.KIND_COLOR.has(kind):
+			return b.KIND_COLOR[kind]
+	return fallback
 
 ## 終焉之塔的段考風格題目（不在八大關裡，level 記成 "T"）
 const TOWER_INFO := {"id": "T", "name": "終焉之塔", "file": "boss_tower.gd", "bank": "", "color": UITheme.ROSE}
@@ -310,9 +326,9 @@ static func tower_pick(floor_n: int, recent: Array, unit: String = Units.DEFAULT
 	var last: Dictionary = recent.back() if not recent.is_empty() else {}
 	if floor_n % 5 == 0:
 		# 試煉層：同一輪攀登裡不重複（用完就是塔頂，見 tower_top）
-		return _tower_new(floor_n, used, last, true)
+		return _tower_new(floor_n, used, last, true, unit)
 	if floor_n == 1 or randf() < 0.7:
-		var it := _tower_new(floor_n, used, last, false)
+		var it := _tower_new(floor_n, used, last, false, unit)
 		if not it.is_empty():
 			return it
 	return _tower_old(floor_n, used, last, unit)
@@ -322,15 +338,18 @@ static func tower_max_tier(floor_n: int) -> int:
 	return 1 if floor_n <= 4 else (2 if floor_n <= 10 else 3)
 
 
-static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: bool) -> Dictionary:
+static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: bool, unit: String = Units.DEFAULT) -> Dictionary:
+	var bank := tower_bank(unit)
+	if bank == null:
+		return {}
 	var tier := tower_max_tier(floor_n)
 	var last_kind := String(last.get("type", ""))
-	var pool := TowerBank.items().filter(func(q):
+	var pool: Array = bank.items().filter(func(q):
 		return (q.kind == "boss") == boss and int(q.tier) <= maxi(tier, 2 if boss else 1))
 	var cands := pool.filter(func(q): return not used.has("T/" + q.id) and q.kind != last_kind)
 	if boss and cands.is_empty():
 		# 試煉層：難度合適的都出過了，就從還沒出過的試煉題裡挑（一輪之內絕不重複）
-		cands = TowerBank.items().filter(func(q): return q.kind == "boss" and not used.has("T/" + q.id))
+		cands = bank.items().filter(func(q): return q.kind == "boss" and not used.has("T/" + q.id))
 	if cands.is_empty() and not boss:
 		# 換一種題型也沒有了：只要沒出過，同一種題型也可以
 		cands = pool.filter(func(q): return not used.has("T/" + q.id))
@@ -339,7 +358,7 @@ static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: b
 	# 高樓層偏好難一點的題目
 	var top := cands.filter(func(q): return int(q.tier) == tier)
 	var q: Dictionary = (top if not top.is_empty() and randf() < 0.6 else cands).pick_random()
-	return {"level": "T", "slot": q.id, "vi": 0, "title": TowerBank.KIND_NAME[q.kind] + "・" + q.title,
+	return {"level": "T", "slot": q.id, "vi": 0, "title": bank.KIND_NAME[q.kind] + "・" + q.title,
 		"type": q.kind, "tmul": float(q.get("tmul", 1.0)), "tag": ""}
 
 
@@ -358,8 +377,11 @@ static func _tower_old(floor_n: int, used: Dictionary, last: Dictionary, unit: S
 
 
 ## 塔頂：每 5 層一個試煉層，試煉題用完（一輪不重複）就是塔頂
-static func tower_top() -> int:
-	return 5 * TowerBank.items().filter(func(q): return q.kind == "boss").size()
+static func tower_top(unit: String = Units.DEFAULT) -> int:
+	var bank := tower_bank(unit)
+	if bank == null:
+		return 0
+	return 5 * bank.items().filter(func(q): return q.kind == "boss").size()
 
 
 ## 每一層的限時（越高越短）
