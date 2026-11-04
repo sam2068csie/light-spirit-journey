@@ -24,8 +24,8 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	# 多項式：建造中（地圖、P1、P2 做好了）。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看
-	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": false, "preview": true,
+	# 多項式：P1～P8 全部做好，正式開放
+	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": true,
 	 "world": "光靈的旅程：根之洞窟", "map": "poly_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_poly.gd",
 	 "levels": [
 		{"id": "P1", "name": "係數礦燈", "topic": "多項式與係數", "file": "level_poly1_lamp.gd", "bank": "poly1_bank.gd", "color": UITheme.GOLD},
@@ -48,8 +48,8 @@ const UNITS := [
 	{"id": "h1trig", "term": "高一下", "title": "三角比", "exam": "", "color": UITheme.GOLD, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# ======================= 高二上 =======================
-	# 三角函數：建造中。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看（學生看不到）
-	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": false, "preview": true,
+	# 三角函數：G1～G7 全部做好，正式開放
+	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": true,
 	 "world": "光靈的旅程：月輪島與正弦海岸", "map": "trig_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_trig.gd",
 	 "levels": [
 		{"id": "G1", "name": "弧之渡口", "topic": "弧度量", "file": "level_trig1_arc.gd", "bank": "trig1_bank.gd", "color": UITheme.CYAN},
