@@ -59,7 +59,7 @@ static func conc_final(q: String, ans: String, why: String, cond := "") -> Dicti
 static func _boss_a(ys: String, diffs: String, a: String, opts: Array) -> Dictionary:
 	return {"q": "寶石由左到右的 y 是 %s，相鄰兩顆差 %s。每往右一格，差距乘上多少？（這就是底數 a）" % [ys, diffs],
 		"options": opts, "correct": 0, "why": "差距的比值就是底數：a = %s。" % a,
-		"nudge": "後一個差距 除以 前一個差距。", "tag": "exp_ratio"}
+		"nudge": "後一個差距除以前一個差距。", "tag": "exp_ratio"}
 
 
 static func _boss_k(a: String, k: String, opts: Array, why: String) -> Dictionary:
@@ -212,7 +212,7 @@ static func slots() -> Array:
 			 "options": ["2 個", "3 個", "4 個"], "correct": 1, "keep_order": true,
 			 "why": "遞增：左貼 y = k、右進第一象限，最多過 3 個象限。",
 			 "nudge": "曲線一直往上走。左邊會停在哪條線附近？", "tag": "quadrant"}],
-		 "insight": "必過 Ⅰ。b ≥ 0：Ⅰ、Ⅱ\nb < 0：再過 Ⅲ，y 截距決定 Ⅱ 或 Ⅳ（過原點只過 Ⅰ、Ⅲ）。",
+		 "insight": "必過 Ⅰ。k ≥ 0：Ⅰ、Ⅱ\nk < 0：再過 Ⅲ，y 截距決定 Ⅱ 或 Ⅳ（過原點只過 Ⅰ、Ⅲ）。",
 		 "variants": [
 			{"target": [1, 2], "answer": {"h": 0.0, "k": 0.0}},
 			{"target": [1, 2, 3], "answer": {"h": -2.0, "k": -1.0}},
@@ -248,13 +248,13 @@ static func slots() -> Array:
 			 "predicts": [{"q": "8·(1/2)^{x} 可以改寫成？",
 				"options": ["(1/2)^{x−3}", "(1/2)^{x+3}", "4^{x}", "(1/2)^{8x}"], "correct": 0,
 				"why": "8·(1/2)^{x} = (1/2)^{x−3}：向右平移 3。",
-				"nudge": "8 是 1/2 的幾次方？（提示：負的）", "tag": "exp_shift_coef"}]},
+				"nudge": "8 是 1/2 的幾次方？（答案是負的）", "tag": "exp_shift_coef"}]},
 		 ]},
 
 		{"id": "ratio", "chapter": 1, "type": "fit", "title": "衰減追蹤", "form": "exp",
 		 "params": ["m", "a"], "live": false,
 		 "ranges": {"a": [0.02, 4.0, 0.02]},
-		 "insight": "間隔相同、倍率就相同：y₂ 除以 y₁ = a^{x₂ − x₁}。",
+		 "insight": "間隔相同、倍率就相同：\\frac{y₂}{y₁} = a^{x₂ − x₁}。",
 		 "variants": [
 			{"answer": {"m": 1000.0, "a": 0.36}, "xs": [0, 0.5, 1, 1.5],
 			 "view": {"x": Vector2(-0.5, 4), "y": Vector2(-120, 1150)}, "ranges": {"m": [100, 2000, 50]},
@@ -281,7 +281,7 @@ static func slots() -> Array:
 
 		{"id": "convex", "chapter": 1, "type": "chord", "title": "凹口天秤", "form": "exp", "params": [], "tag": "concavity",
 		 "story": "把 P、Q 連成弦：弦的中點和曲線，誰比較高？",
-		 "insight": "指數函數[color=#ffcf5a]凹口向上[/color]：[f(x_{1}) + f(x_{2})]/2 ＞ f((x_{1} + x_{2})/2)，任何底數都成立。",
+		 "insight": "指數函數[color=#ffcf5a]凹口向上[/color]：[f(x_{1}) + f(x_{2})]/2 ＞ f((x_{1} + x_{2})/2)（x_{1} ≠ x_{2}），任何底數都成立。",
 		 "variants": [
 			{"answer": {"a": 2.0}, "eq": "y = 2^{x}", "chord": {"x1": 1.0, "x2": 3.0},
 			 "view": {"x": Vector2(-2.5, 4.5), "y": Vector2(-1.2, 9.8)},
@@ -299,7 +299,7 @@ static func slots() -> Array:
 			 "view": {"x": Vector2(-3.0, 3.5), "y": Vector2(-1.0, 5.5)},
 			 "predicts": [conc_q("y = 2^{x}", true, "往右越來越陡、往左越來越平 ⇒ 凹口向上。")],
 			 "final": conc_final("(2^{x_{1}} + 2^{x_{2}}) / 2 [color=#ff7eb6]？[/color] 2^{(x_{1} + x_{2})/2}", "＞",
-				"凹口向上，任何一條弦都在曲線上方，所以永遠是左邊大。（這其實就是算幾不等式：(A + B)/2 ＞ √{AB}）", "對任意 x_{1} ≠ x_{2}：")},
+				"凹口向上，任何一條弦都在曲線上方，所以永遠是左邊大。（這其實就是算幾不等式：令 A = 2^{x_{1}}、B = 2^{x_{2}}，(A + B)/2 ＞ √{AB}）", "對任意 x_{1} ≠ x_{2}：")},
 		 ]},
 
 		{"id": "cross1", "chapter": 1, "type": "cross", "title": "交點獵人",
