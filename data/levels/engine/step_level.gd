@@ -1885,7 +1885,8 @@ class ForgeView extends Control:
 		var used := 0.0
 		while first > 0:
 			var h := _row_h(first - 1)
-			if used + h > avail and first < lines.size():
+			# 正在作答的框放不下時，連最後一行紀錄也先藏起來（可以往上捲回來看），免得框壓到下面的圖
+			if used + h > avail and (first < lines.size() or (not done and live_fill != "" and _graph_on())):
 				break
 			used += h
 			first -= 1

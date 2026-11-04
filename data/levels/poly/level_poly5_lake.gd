@@ -214,9 +214,24 @@ func _on_graph_move() -> void:
 	if g_lbl != null and is_instance_valid(g_lbl):
 		g_lbl.text = lv.readout()
 	_sync_sliders()
-	fview.live_fill = lv.center_text()
+	fview.live_fill = _cmd_text(lv.center_text())
 	fview.queue_redraw()
 	Game.of(self).play("blip", 1.0, -18.0)
+
+
+## 中間那一行如果是要玩家「做」的動作（點亮、拖、轉…）或是問句，就不寫「求：」
+const ACT_WORDS := ["點亮", "拖", "轉", "把", "一直", "讓", "拼出", "穿過", "掃"]
+
+static func _cmd_text(s: String) -> String:
+	if not s.begins_with("求："):
+		return s
+	var rest := s.substr(2)
+	for w in ACT_WORDS:
+		if rest.begins_with(w):
+			return rest
+	if rest.ends_with("？"):
+		return rest
+	return s
 
 
 func _custom_go() -> void:

@@ -80,7 +80,8 @@ func _build_graph(st: Dictionary) -> void:
 	match mode:
 		"pick":
 			go_btn.text = "就是這些河段"
-			fview.live_q = "點河段讓它亮起來，點閘門切換 ●（取）／○（不取），再按「就是這些河段」。"
+			_pick_guard()
+			fview.live_q = "點河段亮起來，點閘門切換 ●／○，再按確定。"
 		"pgate":
 			var rg: Array = st.get("arange", [-6, 6])
 			_add_slider("a", "a", float(rg[0]), float(rg[1]), 1)
@@ -172,6 +173,25 @@ func _graph_submit(st: Dictionary) -> void:
 			_wrong(st, "還有數不在河段裡（%d／%d）。提示：%s" % [lv.marks_inside(), st.marks.size(), st.nudge])
 		_:
 			super(st)
+
+
+## 防呆：還沒點亮任何河段、也沒點任何閘門時，按鈕先灰掉（題目本來就沒有解時例外）
+func _pick_guard() -> void:
+	if si >= steps.size():
+		return
+	var st: Dictionary = steps[si]
+	if String(st.get("kind", "")) != "graph" or String(st.get("mode", "")) != "pick":
+		return
+	var lv := _rv()
+	var any: bool = lv.sel_seg.has(true) or lv.sel_pt.has(true)
+	var need: bool = st.segs.has(true) or st.ptsin.has(true)
+	go_btn.disabled = not any and need
+	go_btn.text = "就是這些河段" if (any or not need) else "先點亮河段"
+
+
+func _on_graph_move() -> void:
+	super()
+	_pick_guard()
 
 
 # ================= 速算 =================
@@ -463,7 +483,7 @@ class RiverView extends CrystalView:
 	func center_text() -> String:
 		match String(gst.get("mode", "")):
 			"pick":
-				return "求：點亮符合的河段，閘門切換 ●／○"
+				return "點亮符合的河段"
 			"wave":
 				var n: int = gst.pts.size()
 				if wstage == 0:
