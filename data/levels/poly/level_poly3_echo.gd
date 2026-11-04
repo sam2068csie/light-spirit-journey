@@ -6,7 +6,7 @@ extends "res://data/levels/poly/level_poly2_wheel.gd"
 ##   ・喊話（題庫的 _shout，畫面上是選擇題）：答對時聲波從左邊飛向深谷，波上寫著喊出去的 x = a
 ##   ・回音（填空帶 "echo"）：答對時回音帶著 f(a) 的值彈回來；f(a) = 0 時谷底一片安靜，跳出「x − a 是因式」
 ##   ・峽谷石廊的背景（兩側的岩壁、垂下來的鐘乳石）
-##   ・回音石（題庫的 probe 步驟）：下方有一條數線，學生拖動喊話點（或按右邊的 ◀ ▶），石壁即時顯示回音 f(x)。
+##   ・回音石（題庫的 probe 步驟）：下方有一條數線，學生拖動喊話點（或右邊的滑桿），石壁即時顯示回音 f(x)。
 ##     算術由遊戲來做，學生只要決定「在哪裡喊」：
 ##       find  喊對除式要的那個數　roots  找出所有安靜的地方（因式）　tune  x 固定，轉動 k 讓回音變成要的值
 ##   ・速算：看除式喊出要代的數、x = ±1 的餘式（一步就能算完）
@@ -85,6 +85,7 @@ func _step_done(st: Dictionary, why: String) -> void:
 # ================= 回音石（probe） =================
 
 var probe_lbl: Label
+var probe_slider: HSlider
 var probe_found: Label
 
 func _forge_step() -> void:
@@ -107,28 +108,42 @@ func _build_probe(st: Dictionary) -> void:
 	task_label.text = st.q
 	var ev := _ev()
 	ev.start_probe(st, _on_probe_move)
+	# 旋鈕滑桿（和指對數、第五關以後一樣）：拖動滑桿或數線都可以，兩邊同步
+	var c := ECHO_C.lightened(0.3)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 4)
 	rank_box.add_child(row)
-	var mk := func(txt: String, d: int) -> Button:
-		var b := Button.new()
-		b.text = txt
-		b.custom_minimum_size = Vector2(64, 56)
-		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", UITheme.fs(22))
-		b.pressed.connect(func():
-			if not busy:
-				ev.nudge_probe(d))
-		return b
-	row.add_child(mk.call("◀", -1))
+	var name_l := Label.new()
+	name_l.text = _probe_var(String(st.mode))
+	name_l.custom_minimum_size = Vector2(28, 0)
+	name_l.add_theme_font_size_override("font_size", UITheme.fs(22))
+	name_l.add_theme_color_override("font_color", c)
+	row.add_child(name_l)
+	var s := UITheme.touch_slider()
+	var rg := ev._range()
+	s.min_value = rg.x
+	s.max_value = rg.y
+	s.step = 1.0 / float(st.get("den", 1))
+	s.value = ev.px
+	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	s.custom_minimum_size = Vector2(0, 28)
+	UITheme.tint_slider(s, c)
+	row.add_child(s)
+	UITheme.add_step_buttons(s, c)
+	probe_slider = s
+	s.value_changed.connect(func(v: float):
+		if busy:
+			s.set_value_no_signal(ev.px)
+			return
+		ev.set_probe(v))
 	probe_lbl = Label.new()
-	probe_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	probe_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	probe_lbl.custom_minimum_size = Vector2(76, 0)
+	probe_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	probe_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	probe_lbl.add_theme_font_size_override("font_size", UITheme.fs(26))
-	probe_lbl.add_theme_color_override("font_color", ECHO_C.lightened(0.3))
+	probe_lbl.add_theme_font_size_override("font_size", UITheme.fs(24))
+	probe_lbl.add_theme_color_override("font_color", c)
 	row.add_child(probe_lbl)
-	row.add_child(mk.call("▶", 1))
 	probe_found = Label.new()
 	probe_found.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	probe_found.custom_minimum_size = Vector2(300, 0)
@@ -137,7 +152,7 @@ func _build_probe(st: Dictionary) -> void:
 	probe_found.visible = String(st.mode) in ["roots", "pins"]
 	rank_box.add_child(probe_found)
 	var tip := Label.new()
-	tip.text = "在數線上拖動，或按 ◀ ▶ 移動一格。"
+	tip.text = "在數線上拖動，或轉動上面的滑桿。"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(300, 0)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
@@ -154,7 +169,9 @@ func _on_probe_move() -> void:
 	var ev := _ev()
 	if probe_lbl == null or not is_instance_valid(probe_lbl) or ev.probe.is_empty():
 		return
-	probe_lbl.text = _probe_var(String(ev.probe.mode)) + " = " + EchoView.xs(ev.px, int(ev.probe.get("den", 1)))
+	probe_lbl.text = EchoView.xs(ev.px, int(ev.probe.get("den", 1)))
+	if probe_slider != null and is_instance_valid(probe_slider):
+		probe_slider.set_value_no_signal(ev.px)
 	if probe_found != null and is_instance_valid(probe_found) and String(ev.probe.mode) in ["roots", "pins"]:
 		var need: int = ev.probe.roots.size()
 		var got := ev.marks.map(func(m): return "x = " + EchoView.xs(m, int(ev.probe.get("den", 1))))
@@ -178,7 +195,7 @@ func _probe_btn(mode: String) -> String:
 	return {"find": "喊！", "roots": "標記這裡", "tune": "就是這個 k"}.get(mode, "確定")
 
 func _probe_hint() -> String:
-	return "拖動下方的喊話點（或按右邊的 ◀ ▶），再按「%s」。"
+	return "拖動下方的喊話點（或右邊的滑桿），再按「%s」。"
 
 func _probe_var(mode: String) -> String:
 	return "k" if mode == "tune" else "x"

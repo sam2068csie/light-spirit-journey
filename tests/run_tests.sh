@@ -4,6 +4,7 @@
 #   SHOTS=/tmp/shots xvfb-run -a tests/run_tests.sh     （有畫面，存截圖）
 #   ONLY=L3 tests/run_tests.sh banks                    （只跑題庫測試、只測 L3）
 #   tests/run_tests.sh markup                         （排版檢查：根號、分數、上標有沒有寫對）
+#   ONLY=P3 SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh play  （真的玩一次，檢查每一步的版面）
 #   SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh perf   （效能：各畫面 draw calls 不可超過預算）
 set -u
 cd "$(dirname "$0")/.."
@@ -17,7 +18,7 @@ for t in $WHICH; do
   echo "=== test_$t ==="
   out=$("$GODOT" "${MODE[@]}" --path . -s "tests/test_$t.gd" 2>&1)
   code=$?
-  echo "$out" | grep -E "FAIL:|SCRIPT ERROR|Parse Error|DONE|：.*種題型|at: res://|^MARKUP " | head -200
+  echo "$out" | grep -E "FAIL:|✗|SCRIPT ERROR|Parse Error|DONE|：.*種題型|at: res://|^MARKUP " | head -200
   if [ $code -ne 0 ] || echo "$out" | grep -q "SCRIPT ERROR\|Parse Error"; then
     echo ">>> test_$t 失敗"
     status=1

@@ -82,7 +82,7 @@ func _probe_btn(mode: String) -> String:
 
 
 func _probe_hint() -> String:
-	return "拖動下方的數線（或按右邊的 ◀ ▶），再按「%s」。"
+	return "拖動下方的數線（或右邊的滑桿），再按「%s」。"
 
 
 func _probe_var(mode: String) -> String:

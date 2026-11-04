@@ -1893,6 +1893,15 @@ class ForgeView extends Control:
 	func _head_lines(font: Font, room: float) -> Array:
 		var head := _live_head()
 		var hfs := UITheme.fs(15)
+		# 題目自己有換行（兩個式子分兩行寫）：照原本的換行分開，第二行起縮排
+		if head.contains("\n"):
+			var parts: Array = []
+			for i in head.split("\n").size():
+				var p := head.split("\n")[i].strip_edges()
+				parts.append(p if i == 0 else "　" + p)
+			while hfs > UITheme.fs(11) and parts.any(func(p): return _mw(font, p, hfs) > room):
+				hfs -= 1
+			return [hfs, parts]
 		while hfs > UITheme.fs(13) and _mw(font, head, hfs) > room:
 			hfs -= 1
 		if _mw(font, head, hfs) <= room:
