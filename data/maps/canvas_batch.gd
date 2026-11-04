@@ -10,6 +10,12 @@ extends RefCounted
 
 var ci: CanvasItem
 var keep: Array = []
+## record = true：不直接畫，把要畫的東西（網格、文字…）記在 ops 裡，之後在 _draw 裡照順序重播
+##   → 可以先在別的時間（例如地圖剛打開、還在滑進來的時候）把網格算好，第一次出現在畫面上就不會卡一下
+var record := false
+var ops: Array = []
+## lines_native = true：細線（draw_multiline）直接交給畫布畫（一次一條指令，比在 GDScript 裡拆成三角形快；每幀重畫的那層用）
+var lines_native := false
 var _v := PackedVector2Array()
 var _c := PackedColorArray()
 var _i := PackedInt32Array()
@@ -20,6 +26,7 @@ const AH := 136.0
 ## 貼圖集裡每張圖的位置（左上角 x、邊長），中間留 6 像素空隙，線性取樣才不會吃到隔壁
 const DISC := {128: [2.0, 128.0], 64: [136.0, 64.0], 32: [206.0, 32.0], 16: [244.0, 16.0]}
 const SOFT := [266.0, 128.0]
+const RING := [430.0, 64.0]         # 空心圓（漣漪、船跡）
 const WHITE_UV := Vector2(408.0 / AW, 10.0 / AH)
 
 
@@ -46,6 +53,12 @@ static func atlas() -> Texture2D:
 	for y in 16:
 		for x in 16:
 			img.set_pixel(400 + x, 2 + y, Color.WHITE)
+	var rn := int(RING[1])
+	for y in rn:
+		for x in rn:
+			var d := Vector2(x + 0.5 - rn / 2.0, y + 0.5 - rn / 2.0).length()
+			var a := clampf(1.6 - absf(d - (rn / 2.0 - 3.0)), 0.0, 1.0)
+			img.set_pixel(int(RING[0]) + x, 2 + y, Color(1, 1, 1, a))
 	_atlas = ImageTexture.create_from_image(img)
 	return _atlas
 const HAIR := 1.6          # width = -1（一像素的細線）在世界座標裡的粗細
@@ -67,7 +80,10 @@ func flush() -> void:
 	arr[Mesh.ARRAY_INDEX] = _i
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	ci.draw_mesh(m, atlas())
+	if record:
+		ops.append(m)
+	else:
+		ci.draw_mesh(m, atlas())
 	keep.append(m)
 	_v = PackedVector2Array()
 	_c = PackedColorArray()
@@ -95,24 +111,28 @@ func _quad(r: Rect2, color: Color, x0: float, size: float) -> void:
 
 # ---------- 會用到貼圖的：直接交給真正的畫布 ----------
 
-func draw_texture_rect(tex: Texture2D, rect: Rect2, tile: bool, modulate := Color.WHITE, transpose := false) -> void:
+func _pass(c: Callable) -> void:
 	flush()
-	ci.draw_texture_rect(tex, rect, tile, modulate, transpose)
+	if record:
+		ops.append(c)
+	else:
+		c.call()
+
+
+func draw_texture_rect(tex: Texture2D, rect: Rect2, tile: bool, modulate := Color.WHITE, transpose := false) -> void:
+	_pass(ci.draw_texture_rect.bind(tex, rect, tile, modulate, transpose))
 
 
 func draw_string(font: Font, pos: Vector2, text: String, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0, size := 16, color := Color.WHITE) -> void:
-	flush()
-	ci.draw_string(font, pos, text, align, width, size, color)
+	_pass(ci.draw_string.bind(font, pos, text, align, width, size, color))
 
 
 func draw_string_outline(font: Font, pos: Vector2, text: String, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0, size := 16, ow := 1, color := Color.WHITE) -> void:
-	flush()
-	ci.draw_string_outline(font, pos, text, align, width, size, ow, color)
+	_pass(ci.draw_string_outline.bind(font, pos, text, align, width, size, ow, color))
 
 
 func draw_set_transform(pos: Vector2, rot := 0.0, scale := Vector2.ONE) -> void:
-	flush()
-	ci.draw_set_transform(pos, rot, scale)
+	_pass(ci.draw_set_transform.bind(pos, rot, scale))
 
 
 # ---------- 收進網格的 ----------
@@ -164,6 +184,9 @@ func draw_line(a: Vector2, b: Vector2, color: Color, width := -1.0, aa := false)
 
 
 func draw_multiline(pts: PackedVector2Array, color: Color, width := -1.0, aa := false) -> void:
+	if lines_native:
+		_pass(ci.draw_multiline.bind(pts, color, width, aa))
+		return
 	var w := HAIR if width <= 0.0 else width
 	for k in range(0, pts.size() - 1, 2):
 		_strip(PackedVector2Array([pts[k], pts[k + 1]]), color, w, aa)
@@ -180,10 +203,25 @@ func draw_arc(c: Vector2, r: float, a0: float, a1: float, n: int, color: Color, 
 	_strip(pts, color, HAIR if width <= 0.0 else width, aa)
 
 
+## 已經切好的三角形（點、顏色、索引）
+func tris(pts: PackedVector2Array, cols: PackedColorArray, idx: PackedInt32Array) -> void:
+	var base := _v.size()
+	_v.append_array(pts)
+	_c.append_array(cols)
+	_white(pts.size())
+	for k in idx:
+		_i.append(base + k)
+
+
 ## 實心圓：貼圖集裡的圓（n 和 UITheme.dot_n 一樣，越小的圓用越小的圖，邊緣才不會糊）
 func disc(c: Vector2, r: float, color: Color, n := 128) -> void:
 	var key := 128 if n >= 128 else (64 if n >= 64 else (32 if n >= 32 else 16))
 	_quad(Rect2(c.x - r, c.y - r, 2.0 * r, 2.0 * r), color, DISC[key][0], DISC[key][1])
+
+
+## 空心圓（一個方塊，貼圖集裡的圓圈）
+func ring(c: Vector2, r: float, color: Color) -> void:
+	_quad(Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), color, RING[0], RING[1])
 
 
 ## 柔光橢圓（中間最亮、往外平滑變透明）

@@ -984,7 +984,7 @@ func _process(delta: float) -> void:
 			_seen_open = key
 			for pc in _pieces:
 				if bool(pc.get("dyn", false)):
-					(pc.node as CanvasItem).queue_redraw()
+					pc.node.invalidate()
 	var dir := _key_dir() if active else Vector2.ZERO
 	if dir == Vector2.ZERO and _hold and active:
 		var jv := (_hold_pt - _joy_base) / JOY_R

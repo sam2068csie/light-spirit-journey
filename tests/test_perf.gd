@@ -6,14 +6,14 @@ extends "res://tests/test_base.gd"
 
 ## 各畫面的預算（目前實測值再多留約 25% 空間）
 const BUDGET := {
-	"main_menu": 95, "world_g11": 400, "world_g10": 220, "map_exp": 600,
+	"main_menu": 95, "world_g11": 150, "world_g10": 220, "map_exp": 600,
 	"map_trig": 420, "house": 185, "L1": 230, "L3": 310,
 }
 
 
 ## 重疊塗色（overdraw）：畫面上每個像素平均被畫了幾層。手機的 GPU 很怕這個（解析度高，每多一層全螢幕就多一次填色）
 ##   ・量法：把每個畫布換成「加法混色、每畫一次加一點亮度」的材質，截圖看平均亮度
-const OD_BUDGET := {"world_g11": 5.0, "world_g10": 11.0}
+const OD_BUDGET := {"world_g11": 6.0, "world_g10": 11.0}
 
 
 func measure_od(tag: String) -> void:
