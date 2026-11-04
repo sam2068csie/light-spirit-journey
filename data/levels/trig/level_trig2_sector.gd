@@ -239,7 +239,7 @@ static func _gen_sector() -> Dictionary:
 				"ans": _frac(r * r * k, 24), "nudge": "\\frac{1}{2} × %d² × %s，約分。" % [r, th], "tag": BankG2.T_FORM}
 	var arc := angle_text(r * k, 12)
 	return {"eq": "扇形 r = %d，弧長 = %s，圓心角是？" % [r, arc], "q": "θ = l/r。", "template": "θ = [0]π",
-		"ans": _frac(k, 12), "nudge": "%s ÷ %d。" % [arc, r], "tag": BankG2.T_FORM}
+		"ans": _frac(k, 12), "nudge": "%s 除以 %d。" % [arc, r], "tag": BankG2.T_FORM}
 
 
 # ================= 畫面 =================

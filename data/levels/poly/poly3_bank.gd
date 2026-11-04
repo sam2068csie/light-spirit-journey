@@ -119,7 +119,7 @@ static func _slots() -> Array:
 		# ======================= 第一章．回音入門 =======================
 		{"id": "echo", "chapter": 1, "type": "forge", "title": "回音石",
 		 "story": "對著深谷喊出一個數，就是把這個數代入多項式；谷底傳回來的回音，就是代入的結果 f(a)。",
-		 "insight": "餘式定理：f(x) 除以 x − a 的餘式是 f(a)；除以 ax − b 的餘式是 f(b/a)。先決定代入哪個數，再算出 f(a)。",
+		 "insight": "餘式定理：f(x) 除以 x − a 的餘式是 f(a)\n除以 ax − b 的餘式是 f(b/a)。先決定代入哪個數，再算出 f(a)。",
 		 "variants": [
 			{"eq": "f(x) = x^{3} − 2x^{2} − x + 5\n求 f(x) 除以 x − 2、x + 2 的餘式",
 			 "steps": [
@@ -188,7 +188,7 @@ static func _slots() -> Array:
 
 		{"id": "tune", "chapter": 1, "type": "forge", "title": "調音石",
 		 "story": "石壁上的式子少了一個數 k。先代入對的數，寫出回音和 k 的關係，再轉動 k 確認回音剛好是要的聲音。",
-		 "insight": "x − a 是因式（整除）⇒ f(a) = 0；除以 x − a 的餘式是 r ⇒ f(a) = r。代入 x = a，解出 k。",
+		 "insight": "x − a 是因式（整除）⇒ f(a) = 0\n除以 x − a 的餘式是 r ⇒ f(a) = r。代入 x = a，解出 k。",
 		 "variants": [
 			{"eq": "x − 2 是 f(x) = x^{3} + kx^{2} − 4x + 4 的因式，求 k",
 			 "steps": [
@@ -290,7 +290,7 @@ static func _slots() -> Array:
 
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "回音速算", "time": 170.0,
 		 "story": "石廊裡回音此起彼落！看到除式，馬上喊出要代的數。",
-		 "insight": "除以 x − a：喊 a；除以 ax − b：喊 b/a。除以 x − 1 的餘式是係數和。",
+		 "insight": "除以 x − a：喊 a\n除以 ax − b：喊 b/a。除以 x − 1 的餘式是係數和。",
 		 "variants": [{"gen": "shout", "count": 7}]},
 
 		# ======================= 第二章．雙重回音 =======================
@@ -447,7 +447,7 @@ static func _slots() -> Array:
 
 		{"id": "cube", "chapter": 2, "type": "forge", "title": "三次方的回音",
 		 "story": "除式是 x^{2} + x + 1 時有個好用的回音：乘上 (x − 1) 就是 x^{3} − 1，所以 x^{3} 可以換成 1。",
-		 "insight": "令 x^{2} + x + 1 = 0 ⇒ (x − 1)(x^{2} + x + 1) = 0 ⇒ x^{3} = 1。次方除以 3，只看餘數；最後的 x^{2} 再換成 −x − 1。",
+		 "insight": "令 x^{2} + x + 1 = 0 ⇒ (x − 1)(x^{2} + x + 1) = 0 ⇒ x^{3} = 1。次方除以 3，只看餘數\n最後的 x^{2} 再換成 −x − 1。",
 		 "variants": [
 			{"eq": "x^{20} 除以 x^{2} + x + 1 的餘式",
 			 "steps": [
@@ -471,6 +471,6 @@ static func _slots() -> Array:
 
 		{"id": "speed2", "chapter": 2, "type": "speed", "title": "換換看速算", "time": 170.0,
 		 "story": "令除式 = 0，高次項就能換成簡單的式子。看一眼就說出要換成什麼！",
-		 "insight": "除以 x^{2} − c：x^{2} 換成 c；除以 x^{2} + x + 1：x^{3} 換成 1，次方只看除以 3 的餘數。",
+		 "insight": "除以 x^{2} − c：x^{2} 換成 c\n除以 x^{2} + x + 1：x^{3} 換成 1，次方只看除以 3 的餘數。",
 		 "variants": [{"gen": "swap", "count": 7}]},
 	]

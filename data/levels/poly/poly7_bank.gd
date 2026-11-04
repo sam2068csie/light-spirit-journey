@@ -82,7 +82,7 @@ static func _slots() -> Array:
 		# ======================= 第一章．水晶的對稱 =======================
 		{"id": "mono", "chapter": 1, "type": "forge", "title": "單項的水晶",
 		 "story": "y = ax^{3} 是最簡單的水晶曲線。抓住水晶（對稱中心）拖過去、調整 a，讓它和虛線重合。",
-		 "insight": "y = a(x − h)^{3} + k 是 y = ax^{3} 平移得到：對稱中心 (h, k)；|a| 越大越陡，a < 0 上下翻過來。",
+		 "insight": "y = a(x − h)^{3} + k 是 y = ax^{3} 平移得到：對稱中心 (h, k)\n|a| 越大越陡，a < 0 上下翻過來。",
 		 "variants": [
 			{"eq": "讓水晶曲線和虛線重合，再回答問題",
 			 "steps": [
@@ -111,7 +111,7 @@ static func _slots() -> Array:
 
 		{"id": "four", "chapter": 1, "type": "forge", "title": "四種水晶",
 		 "story": "y = ax^{3} + px 的水晶在原點。a、p 的正負決定它長什麼樣子：一路走，還是有起伏？",
-		 "insight": "y = ax^{3} + px 對稱於原點。a、p 同號：一路往上（a > 0）或一路往下（a < 0）；a、p 異號：中間有起伏，和 x 軸交三點。",
+		 "insight": "y = ax^{3} + px 對稱於原點。a、p 同號：一路往上（a > 0）或一路往下（a < 0）\na、p 異號：中間有起伏，和 x 軸交三點。",
 		 "variants": [
 			{"eq": "水晶固定在原點，調 a、p 拼出 y = x^{3} − 4x",
 			 "steps": [
@@ -167,7 +167,7 @@ static func _slots() -> Array:
 
 		{"id": "mirror", "chapter": 1, "type": "forge", "title": "轉半圈",
 		 "story": "水晶曲線繞著水晶轉半圈會和自己重合。曲線上的一點轉過去，一定落在曲線上。",
-		 "insight": "(s, t) 在圖形上 ⇒ (2h − s, 2k − t) 也在圖形上（兩點的中點是對稱中心 (h, k)）；所以 f(h + t) + f(h − t) = 2k。",
+		 "insight": "(s, t) 在圖形上 ⇒ (2h − s, 2k − t) 也在圖形上（兩點的中點是對稱中心 (h, k)）\n所以 f(h + t) + f(h − t) = 2k。",
 		 "variants": [
 			{"eq": "y = −x^{3} + 3x^{2} − 2x + 1 上有 A(−1, 7)、B(a, b)\nA、B 對稱於對稱中心，求 a + b",
 			 "steps": [
@@ -191,7 +191,7 @@ static func _slots() -> Array:
 
 		{"id": "read", "chapter": 1, "type": "forge", "title": "看圖判斷",
 		 "story": "只給你一張圖。從右邊往哪走、有沒有起伏、水晶在哪裡，判斷係數的正負。",
-		 "insight": "a(x − h)^{3} + p(x − h) + k：右邊往上 a > 0、往下 a < 0；有起伏 ⇔ a、p 異號；水晶 (h, k) 的位置決定 h、k 的正負。",
+		 "insight": "a(x − h)^{3} + p(x − h) + k：右邊往上 a > 0、往下 a < 0\n有起伏 ⇔ a、p 異號\n水晶 (h, k) 的位置決定 h、k 的正負。",
 		 "variants": [
 			{"eq": "y = a(x − h)^{3} + p(x − h) + k 的圖形如下（◆ 是水晶）\n判斷 g(x) = ax^{2} + px + h 的圖形",
 			 "plots": {"view": {"x": [-2, 4], "y": [-3, 6]}, "curves": [{"c": [-1, 3, 0, 0]}], "crystal": [1, 2]},
@@ -220,7 +220,7 @@ static func _slots() -> Array:
 
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "水晶速算", "time": 170.0,
 		 "story": "水晶一顆接一顆亮起來！一步找出對稱中心或對稱點。",
-		 "insight": "h = −\\frac{b}{3a}；a(x − h)^{3} + p(x − h) + k 的中心是 (h, k)；(s, t) 的對稱點是 (2h − s, 2k − t)。",
+		 "insight": "h = −\\frac{b}{3a}\na(x − h)^{3} + p(x − h) + k 的中心是 (h, k)\n(s, t) 的對稱點是 (2h − s, 2k − t)。",
 		 "variants": [{"gen": "crystal", "count": 7}]},
 
 		# ======================= 第二章．遠看與近看 =======================
@@ -282,7 +282,7 @@ static func _slots() -> Array:
 
 		{"id": "build", "chapter": 2, "type": "forge", "title": "水晶的方程式",
 		 "story": "知道通過的點、廣域特徵、對稱中心或局部特徵——這些線索拼起來，就能寫出整條水晶曲線。",
-		 "insight": "廣域特徵 ⇒ a；對稱中心 (h, k) ⇒ h = −\\frac{b}{3a}、f(h) = k；x = 0 附近近似 y = mx + n ⇒ c = m、d = n。",
+		 "insight": "廣域特徵 ⇒ a\n對稱中心 (h, k) ⇒ h = −\\frac{b}{3a}、f(h) = k\nx = 0 附近近似 y = mx + n ⇒ c = m、d = n。",
 		 "variants": [
 			{"eq": "三次函數 y = f(x) 通過 (1, 0)、(−2, 0)，廣域特徵近似 y = 2x^{3}\nf(x) 除以 x − 2 的餘式是 8，求 f(x)",
 			 "steps": [
@@ -338,7 +338,7 @@ static func _slots() -> Array:
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "水晶鑑定",
 		 "story": "水晶鑑定師要一句一句檢查：哪些說法是真的，哪些是假的？",
-		 "insight": "記住四件事：對稱中心 (h, k)；有起伏 ⇔ a、p 異號；廣域特徵近似 ax^{3}；局部特徵用綜合除法看一次項。",
+		 "insight": "記住四件事：對稱中心 (h, k)\n有起伏 ⇔ a、p 異號\n廣域特徵近似 ax^{3}\n局部特徵用綜合除法看一次項。",
 		 "variants": [
 			{"eq": "f(x) = ax^{3} + bx（a ≠ 0）\n判斷每一句的對錯",
 			 "steps": [
@@ -362,6 +362,6 @@ static func _slots() -> Array:
 
 		{"id": "speed2", "chapter": 2, "type": "speed", "title": "遠近速算", "time": 170.0,
 		 "story": "一下拉遠、一下湊近！一步讀出一次近似，或判斷遠處的正負。",
-		 "insight": "x = 0 附近：看最後兩項；x = h 附近：a(x − h)^{3} + b(x − h)^{2} + c(x − h) + d 取 c(x − h) + d；很遠的地方：看最高次項。",
+		 "insight": "x = 0 附近：看最後兩項\nx = h 附近：a(x − h)^{3} + b(x − h)^{2} + c(x − h) + d 取 c(x − h) + d\n很遠的地方：看最高次項。",
 		 "variants": [{"gen": "farnear", "count": 7}]},
 	]

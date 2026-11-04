@@ -477,7 +477,7 @@ static func _gen_mirror() -> Dictionary:
 			hint = "cos 2θ = cos²θ − sin²θ（平方之後正負號不重要）。"
 		_:
 			ans = _frac(2 * a * b * sa * sb, b * b - a * a)
-			hint = "tan 2θ = sin 2θ ÷ cos 2θ。"
+			hint = "tan 2θ = sin 2θ 除以 cos 2θ。"
 	return {"eq": "%s（θ 在%s象限）" % [gtext, QNAME[q]], "q": "求 %s 2θ。" % ask, "template": "%s 2θ = [0]" % ask,
 		"ans": ans, "nudge": hint, "tag": BankG6.T_DBL}
 

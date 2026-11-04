@@ -156,7 +156,7 @@ func _play_forge(lv) -> void:
 			"graph":
 				await _do_graph(lv, st)
 			_:
-				lv._step_done(st, "")
+				await _do_custom(lv, st, nm)
 		await frames(3)
 		if lv.si == si0:
 			_issue("%s：答對了卻沒有進到下一步（%s）" % [nm, kind])
@@ -198,6 +198,333 @@ func _do_probe(lv, st: Dictionary) -> void:
 		_:
 			_issue("不認得的 probe：%s" % st.mode)
 			lv._step_done(st, "")
+
+
+# ---------------- 三角函數（G1～G7）的互動步驟 ----------------
+var _no_play := {}
+
+## 右邊卡片裡的滑桿（照畫面上的順序）
+func _sliders(lv) -> Array:
+	var out := []
+	var stack: Array = [lv.rank_box]
+	while not stack.is_empty():
+		var n: Node = stack.pop_front()
+		for c in n.get_children():
+			if c is HSlider:
+				out.append(c)
+			stack.append(c)
+	return out
+
+
+## 找出第一個在 list 裡、值等於 v 的位置
+func _idx_of(list: Array, v: float) -> int:
+	for i in list.size():
+		if absf(float(list[i]) - v) < 1e-6:
+			return i
+	return -1
+
+
+## 送出這一步（各關的 _custom_go 依步驟種類分派）
+func _go(lv) -> void:
+	lv._custom_go()
+	await frames(2)
+
+
+func _do_custom(lv, st: Dictionary, nm: String) -> void:
+	var kind := String(st.kind)
+	var tv = lv.fview
+	var lid := String(lv.level_id())
+	match kind:
+		"spin":
+			if lid == "G1":
+				tv.set_spin(roundi(float(st.target) / lv.STEP))
+				lv._refresh_spin()
+			else:
+				var sl := _sliders(lv)
+				var lo := float(st.lo)
+				sl[0].value = roundi((float(st.umax) - lo) / 15.0)
+				tv.sp_max = tv.sp_u
+				sl[0].value = roundi((float(st.umin) - lo) / 15.0)
+				tv.sp_min = tv.sp_u
+				lv._refresh_spin()
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		"fan":
+			var rr := float(st.r)
+			var th := float(st.target) / rr if String(st.goal) == "arc" else 2.0 * float(st.target) / (rr * rr)
+			tv.set_fan(th)
+			await _check(lv, nm + " 打開之後")
+			await _go(lv)
+		"wave":
+			if st.has("targets"):
+				for tg in st.targets:
+					tv.set_wave(roundi(float(tg) / lv.STEP))
+					await _go(lv)
+			else:
+				await _solve_tiles(lv, st, nm)
+		"tiles", "eq":
+			await _solve_tiles(lv, st, nm)
+		"dial":
+			var knobs: Array = st.knobs
+			var vals := []
+			var muls := []
+			for k in knobs:
+				vals.append(lv._knob_vals(k))
+				muls.append(PI if String(k.get("unit", "")) == "pi" else 1.0)
+			var idx := []
+			idx.resize(knobs.size())
+			idx.fill(0)
+			var hit := false
+			var guard := 0
+			while guard < 400000:
+				guard += 1
+				var cur: Dictionary = tv.cur.duplicate()
+				for i in knobs.size():
+					cur[String(knobs[i].p)] = float(vals[i][idx[i]]) * float(muls[i])
+				if lv._dial_match(st, cur):
+					hit = true
+					break
+				var j := 0
+				while j < knobs.size():
+					idx[j] += 1
+					if idx[j] < vals[j].size():
+						break
+					idx[j] = 0
+					j += 1
+				if j >= knobs.size():
+					break
+			if not hit:
+				_issue("%s：旋鈕怎麼轉都對不上目標" % nm)
+				lv._step_done(st, "")
+				return
+			var sl2 := _sliders(lv)
+			for i in knobs.size():
+				sl2[i].value = idx[i]
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		"chain":
+			var ops: Array = st.ops
+			var fn := String(st.get("fn", "sin"))
+			var tg: Dictionary = st.target
+			var want := {"f": fn, "a": tg.a, "b": tg.b, "c": tg.c, "d": tg.d}
+			var TV = load("res://data/levels/trig/level_trig4_tide.gd").TideView
+			var best: Array = []
+			var frontier: Array = [[]]
+			for depth in mini(int(st.get("max", 6)), 5):
+				var nxt: Array = []
+				for seq in frontier:
+					for i in ops.size():
+						var s2: Array = seq.duplicate()
+						s2.append(i)
+						var o2: Array = s2.map(func(k): return ops[k])
+						if TV.same_curve(lv.chain_curve(fn, lv.chain_state(o2)), want):
+							best = s2
+							break
+						nxt.append(s2)
+					if not best.is_empty():
+						break
+				if not best.is_empty():
+					break
+				frontier = nxt
+			if best.is_empty():
+				_issue("%s：零件怎麼接都接不出目標" % nm)
+				lv._step_done(st, "")
+				return
+			for i in best:
+				lv._chain_add(i)
+				await frames(1)
+			await _check(lv, nm + " 接好之後")
+			await _go(lv)
+		"ride":
+			for tg2 in st.targets:
+				tv.ride_t = float(tg2)
+				lv._refresh_ride()
+				await _go(lv)
+		"hunt":
+			tv.found = range(tv.hunt_pts.size())
+			lv._refresh_hunt()
+			await _check(lv, nm + " 點好之後")
+			await _go(lv)
+		"rot":
+			var sl3 := _sliders(lv)
+			var stp := float(st.get("step", 15.0))
+			var ar: Array = st.get("arange", [0.0, 360.0])
+			var br: Array = st.get("brange", [0.0, 360.0])
+			var diff := String(st.mode) == "diff"
+			var al: Array = st.get("alphas", [])
+			var be: Array = st.get("betas", [])
+			var ok := false
+			for i in int(sl3[0].max_value) + 1:
+				for j in int(sl3[1].max_value) + 1:
+					var a := float(ar[0]) + i * stp
+					var b := float(br[0]) + j * stp
+					var res := a - b if diff else a + b
+					var off := absf(fposmod(res - float(st.target) + 180.0, 360.0) - 180.0)
+					if st.get("abs", false):
+						off = minf(off, absf(fposmod(-res - float(st.target) + 180.0, 360.0) - 180.0))
+					if off < 1e-6 and (al.is_empty() or lv._deg_in(al, a)) and (be.is_empty() or lv._deg_in(be, b)):
+						sl3[0].value = i
+						sl3[1].value = j
+						ok = true
+						break
+				if ok:
+					break
+			if not ok:
+				_issue("%s：α、β 怎麼轉都到不了目標" % nm)
+				lv._step_done(st, "")
+				return
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		"lines":
+			var sl4 := _sliders(lv)
+			for tg3 in st.targets:
+				var k3 := _idx_of(st.slopes, float(tg3))
+				if k3 < 0:
+					_issue("%s：滑桿上沒有斜率 %s" % [nm, str(tg3)])
+					continue
+				sl4[0].value = k3
+				await _go(lv)
+		"mirror":
+			var sl5 := _sliders(lv)
+			var s5: HSlider = sl5[0]
+			if String(st.mode) == "sweep":
+				s5.value = s5.min_value
+				await frames(1)
+				s5.value = s5.max_value
+				await frames(1)
+				if st.has("ask"):
+					lv.mir_pick = int(st.ask.get("correct", 0))
+			else:
+				var ok5 := false
+				for v in int(s5.max_value) + 1:
+					s5.value = v
+					if absf(fposmod(tv.mir_phi * 2.0 - float(st.target) + 180.0, 360.0) - 180.0) < 1e-6:
+						ok5 = true
+						break
+				if not ok5:
+					_issue("%s：鏡面怎麼轉都到不了目標" % nm)
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		"phasor":
+			var sl6 := _sliders(lv)
+			var want6 := Vector2(float(st.a), float(st.b))
+			var ok6 := false
+			for i in int(sl6[0].max_value) + 1:
+				sl6[0].value = i
+				for j in int(sl6[1].max_value) + 1:
+					sl6[1].value = j
+					if tv.ph_tip(String(st.get("form", "sin"))).distance_to(want6) < 1e-4:
+						ok6 = true
+						break
+				if ok6:
+					break
+			if not ok6:
+				_issue("%s：r、角度怎麼轉都對不上" % nm)
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		"peak":
+			var sl7 := _sliders(lv)
+			var lo7 := float(st.get("dom", [0.0, 360.0])[0])
+			sl7[0].value = roundi((float(st.xs[0]) - lo7) / 15.0)
+			await _check(lv, nm + " 轉好之後")
+			await _go(lv)
+		_:
+			if not _no_play.has(kind):
+				_no_play[kind] = true
+				print("  （%s 步驟沒有實際操作，直接當作答對）" % kind)
+			lv._step_done(st, "")
+
+
+## 拼積木（tiles／eq／拼光束）：用關卡自己的算式，找出和目標相等的積木組合
+func _solve_tiles(lv, st: Dictionary, nm: String) -> void:
+	var kind := String(st.kind)
+	var tv = lv.fview
+	var lid := String(lv.level_id())
+	var samples: Array = []
+	var evalf: Callable
+	var want: Array = []
+	if kind == "tiles":
+		for sm in lv.SAMPLES:
+			var a := deg_to_rad(float(sm[0]))
+			var b := deg_to_rad(float(sm[1]))
+			samples.append([a, b])
+			want.append(lv.tiles_target(String(st.target), a, b))
+		evalf = func(seq: Array) -> Array:
+			return samples.map(func(p): return lv.tiles_value(seq, p[0], p[1]))
+	elif kind == "eq":
+		for d in lv.EQ_SAMPLES:
+			var th := deg_to_rad(float(d))
+			samples.append(th)
+			want.append(lv.eq_target(String(st.target), th))
+		evalf = func(seq: Array) -> Array:
+			return samples.map(func(th): return lv.eq_value(seq, th))
+	else:
+		for d in lv.WV_SAMPLES:
+			samples.append(float(d))
+			want.append(float(st.a) * sin(deg_to_rad(d)) + float(st.b) * cos(deg_to_rad(d)))
+		evalf = func(seq: Array) -> Array:
+			return samples.map(func(d): return tv.wv_value(seq, d))
+	var toks: Array = Array(st.tokens).filter(func(t): return not (String(t) in ["(", ")", "÷"]))
+	var frac := bool(st.get("frac", false))
+	var near := func(xs: Array, ys: Array) -> bool:
+		for i in xs.size():
+			var x: float = xs[i]
+			var y: float = ys[i]
+			if is_nan(x) or is_nan(y) or absf(x - y) > 1e-6 * maxf(1.0, absf(y)):
+				return false
+		return true
+	var found_num: Array = []
+	var found_den: Array = []
+	var key := func(vs: Array) -> String:
+		return ",".join(vs.map(func(x): return "nan" if is_nan(x) else str(snappedf(float(x), 1e-5))))
+	var nums := {}
+	var layer: Array = [[]]
+	for L in 5:
+		var nx: Array = []
+		for sq in layer:
+			for t in toks:
+				var s2: Array = sq.duplicate()
+				s2.append(t)
+				nx.append(s2)
+				var v2: Array = evalf.call(s2)
+				if not frac:
+					if near.call(v2, want):
+						found_num = s2
+						break
+					continue
+				if L < 3 and not nums.has(key.call(v2)):
+					nums[key.call(v2)] = s2
+				# 分數：把 s2 當分母，看需要的分子有沒有出現過
+				if v2.any(func(x): return is_nan(x) or absf(x) < 1e-9):
+					continue
+				var need: Array = []
+				for i in want.size():
+					need.append(float(want[i]) * float(v2[i]))
+				var kk: String = key.call(need)
+				if nums.has(kk):
+					found_num = nums[kk]
+					found_den = s2
+					break
+			if not found_num.is_empty():
+				break
+		if not found_num.is_empty():
+			break
+		layer = nx
+	if found_num.is_empty():
+		_issue("%s：積木怎麼拼都拼不出 %s" % [nm, String(st.get("expr", ""))])
+		lv._step_done(st, "")
+		return
+	if frac:
+		lv.tiles_num = found_num.duplicate()
+		lv.tiles_den = found_den.duplicate()
+		tv.tiles_seq = lv._frac_seq()
+	else:
+		tv.tiles_seq = found_num.duplicate()
+	lv._refresh_tiles()
+	await _check(lv, nm + " 拼好之後")
+	if not tv.matched:
+		_issue("%s：拼出 %s 但關卡判定不對" % [nm, " ".join(found_num)])
+	await _go(lv)
 
 
 func _q(v) -> float:

@@ -72,7 +72,7 @@ static func _slots() -> Array:
 		# ======================= 第一章．鏡湖的倒影 =======================
 		{"id": "align", "chapter": 1, "type": "forge", "title": "對準倒影",
 		 "story": "湖面上浮著一條虛線拋物線。抓住頂點拖過去、調整開口，讓光之拋物線和它重合。",
-		 "insight": "標準式 y = a(x − h)^{2} + k：頂點 (h, k)、對稱軸 x = h；a > 0 開口向上、a < 0 開口向下，|a| 越大開口越窄。",
+		 "insight": "標準式 y = a(x − h)^{2} + k：頂點 (h, k)、對稱軸 x = h\na > 0 開口向上、a < 0 開口向下，|a| 越大開口越窄。",
 		 "variants": [
 			{"eq": "讓拋物線和虛線重合，再回答問題",
 			 "steps": [
@@ -148,7 +148,7 @@ static func _slots() -> Array:
 
 		{"id": "signs", "chapter": 1, "type": "forge", "title": "看圖判斷係數",
 		 "story": "湖面映著一條拋物線，但式子 y = ax^{2} + bx + c 被霧遮住了。從圖形的線索判斷每個係數的正負。",
-		 "insight": "開口看 a；和 y 軸的交點 (0, c) 看 c；頂點 x = −\\frac{b}{2a} 在左（右）⇒ a、b 同號（異號）；和 x 軸的交點個數看 b^{2} − 4ac。",
+		 "insight": "開口看 a\n和 y 軸的交點 (0, c) 看 c\n頂點 x = −\\frac{b}{2a} 在左（右）⇒ a、b 同號（異號）\n和 x 軸的交點個數看 b^{2} − 4ac。",
 		 "variants": [
 			{"eq": "下圖是 y = ax^{2} + bx + c 的圖形\n判斷各數的正負",
 			 "lake": {"coef": [-1, -2, 3], "show": "curve", "view": {"x": [-5, 3], "y": [-4, 5]}},
@@ -221,7 +221,7 @@ static func _slots() -> Array:
 
 		{"id": "symm", "chapter": 1, "type": "forge", "title": "對稱比大小",
 		 "story": "拋物線左右對稱。離對稱軸一樣遠的兩點一樣高；開口向上時，離對稱軸越遠越高。",
-		 "insight": "f(h + t) = f(h − t) ⇔ 對稱軸 x = h。開口向上：離對稱軸越遠，函數值越大；開口向下：越遠越小。",
+		 "insight": "f(h + t) = f(h − t) ⇔ 對稱軸 x = h。開口向上：離對稱軸越遠，函數值越大\n開口向下：越遠越小。",
 		 "variants": [
 			{"eq": "f(x) = x^{2} + ax + b 對任意實數 t 都有 f(2 + t) = f(2 − t)\n比較 f(−1)、f(3)、f(4.5)、f(π)",
 			 "lake": {"coef": [1, -4, 0], "show": "axis", "axis": 2, "marks": [-1, 3, 4.5, 3.14159], "labels": ["−1", "3", "4.5", "π"], "view": {"x": [-2, 6], "y": [-1, 4]}},
@@ -247,7 +247,7 @@ static func _slots() -> Array:
 
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "鏡湖速算", "time": 170.0,
 		 "story": "湖面的漣漪越來越快！看式子，一步讀出頂點、對稱軸或 y 截距。",
-		 "insight": "y = a(x − h)^{2} + k：頂點 (h, k)；y = ax^{2} + bx + c：對稱軸 x = −\\frac{b}{2a}；y 截距 = x 代入 0。",
+		 "insight": "y = a(x − h)^{2} + k：頂點 (h, k)\ny = ax^{2} + bx + c：對稱軸 x = −\\frac{b}{2a}\ny 截距 = x 代入 0。",
 		 "variants": [{"gen": "lake", "count": 7}]},
 
 		# ======================= 第二章．湖面的秘密 =======================
@@ -276,7 +276,7 @@ static func _slots() -> Array:
 
 		{"id": "vieta", "chapter": 2, "type": "forge", "title": "兩根的計算",
 		 "story": "不用解出 α、β，也能算出很多跟兩根有關的值——只要兩根和、兩根積。",
-		 "insight": "α^{2} + β^{2} = (α + β)^{2} − 2αβ；(α − β)^{2} = (α + β)^{2} − 4αβ；拋物線和 x 軸兩交點的距離 = |α − β|。",
+		 "insight": "α^{2} + β^{2} = (α + β)^{2} − 2αβ\n(α − β)^{2} = (α + β)^{2} − 4αβ\n拋物線和 x 軸兩交點的距離 = |α − β|。",
 		 "variants": [
 			{"eq": "x^{2} − 5x + 2 = 0 的兩根為 α、β，且 α > β",
 			 "steps": [
@@ -308,7 +308,7 @@ static func _slots() -> Array:
 
 		{"id": "float", "chapter": 2, "type": "forge", "title": "浮在湖面上",
 		 "story": "轉動 k，拋物線會上下浮動。找出它剛好碰到湖面的那一刻——那就是恆正（恆負）的邊界。",
-		 "insight": "ax^{2} + bx + c 恆正 ⇔ a > 0 且 b^{2} − 4ac < 0；恆負 ⇔ a < 0 且 b^{2} − 4ac < 0。剛好碰到湖面時判別式 = 0。",
+		 "insight": "ax^{2} + bx + c 恆正 ⇔ a > 0 且 b^{2} − 4ac < 0\n恆負 ⇔ a < 0 且 b^{2} − 4ac < 0。剛好碰到湖面時判別式 = 0。",
 		 "variants": [
 			{"eq": "對任意實數 x，x^{2} + kx + 9 > 0 恆成立\n求 k 的範圍",
 			 "steps": [
@@ -358,7 +358,7 @@ static func _slots() -> Array:
 
 		{"id": "write", "chapter": 2, "type": "forge", "title": "寫出拋物線",
 		 "story": "知道對稱軸（或頂點），就先拼出標準式，再代入通過的點求係數。",
-		 "insight": "已知頂點 (h, k)：設 y = a(x − h)^{2} + k；已知對稱軸 x = h：設 y = a(x − h)^{2} + k，再代入兩點求 a、k。",
+		 "insight": "已知頂點 (h, k)：設 y = a(x − h)^{2} + k\n已知對稱軸 x = h：設 y = a(x − h)^{2} + k，再代入兩點求 a、k。",
 		 "variants": [
 			{"eq": "拋物線的對稱軸是 x = −1，通過 (1, 5)、(0, 2)\n求這條拋物線",
 			 "steps": [

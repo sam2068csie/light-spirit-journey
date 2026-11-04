@@ -106,7 +106,7 @@ static func _slots() -> Array:
 
 		{"id": "degree", "chapter": 1, "type": "forge", "title": "次數與領導係數",
 		 "story": "礦脈的深度就是多項式的次數。要讓某一層的礦消失，就要讓那一項的係數等於 0。",
-		 "insight": "多項式的次數看「係數不為 0 的最高次項」；那一項的係數叫領導係數。要它是幾次，就讓更高次的係數全部是 0。",
+		 "insight": "多項式的次數看「係數不為 0 的最高次項」\n那一項的係數叫領導係數。要它是幾次，就讓更高次的係數全部是 0。",
 		 "variants": [
 			{"eq": "f(x) = (a − 2)x^{3} + (b + 1)x^{2} + 3x − 4\n是二次多項式，且領導係數是 5",
 			 "steps": [
@@ -236,13 +236,13 @@ static func _slots() -> Array:
 
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "礦燈速算", "time": 120.0,
 		 "story": "礦車要出發了！不展開，一眼算出係數和與常數項。",
-		 "insight": "係數和：x 代 1；常數項：x 代 0。(ax + b)^{n} 的係數和是 (a + b)^{n}，常數項是 b^{n}。",
+		 "insight": "係數和：x 代 1\n常數項：x 代 0。(ax + b)^{n} 的係數和是 (a + b)^{n}，常數項是 b^{n}。",
 		 "variants": [{"gen": "sum", "count": 8}]},
 
 		# ======================= 第二章．深層礦脈 =======================
 		{"id": "parity", "chapter": 2, "type": "forge", "title": "奇偶雙色礦",
 		 "story": "深層的礦脈有兩種顏色：偶次項是金色、奇次項是藍色。礦燈換到 x = −1，藍色的礦就會翻過來變成負的。",
-		 "insight": "f(1) = 全部係數和；f(−1) = 偶次項和 − 奇次項和。偶次項和 = \\frac{f(1) + f(−1)}{2}，奇次項和 = \\frac{f(1) − f(−1)}{2}。",
+		 "insight": "f(1) = 全部係數和\nf(−1) = 偶次項和 − 奇次項和。偶次項和 = \\frac{f(1) + f(−1)}{2}，奇次項和 = \\frac{f(1) − f(−1)}{2}。",
 		 "variants": [
 			{"eq": "(x − 2)^{6} = a_{0} + a_{1}x + a_{2}x^{2} + … + a_{6}x^{6}",
 			 "steps": [
@@ -280,7 +280,7 @@ static func _slots() -> Array:
 
 		{"id": "shift", "chapter": 2, "type": "forge", "title": "換個位置照礦燈",
 		 "story": "這條礦脈不是用 x 排的，而是用 (x − 1) 排的。礦燈要照的地方，是讓「括號」變成 1 或 0 的那個 x。",
-		 "insight": "f(x) = a(x − h)^{n} + … + c(x − h) + d：係數和要讓 x − h = 1（代 x = h + 1）；常數 d 要讓 x − h = 0（代 x = h）。",
+		 "insight": "f(x) = a(x − h)^{n} + … + c(x − h) + d：係數和要讓 x − h = 1（代 x = h + 1）\n常數 d 要讓 x − h = 0（代 x = h）。",
 		 "variants": [
 			{"eq": "x^{3} − 2x^{2} + 4x + 1 = a(x − 1)^{3} + b(x − 1)^{2} + c(x − 1) + d 恆成立\n求 a + b + c + d 與 d",
 			 "steps": [
@@ -345,7 +345,7 @@ static func _slots() -> Array:
 
 		{"id": "degop", "chapter": 2, "type": "forge", "title": "礦脈的深度",
 		 "story": "兩條礦脈交會、相乘、相除之後，新的礦脈會有多深？",
-		 "insight": "f 是 m 次、g 是 n 次：f·g 是 m + n 次；f ± g 最多 max(m, n) 次（同次時可能抵消）；f 除以 g 的商是 m − n 次，餘式次數 < n。",
+		 "insight": "f 是 m 次、g 是 n 次：f·g 是 m + n 次\nf ± g 最多 max(m, n) 次（同次時可能抵消）\nf 除以 g 的商是 m − n 次，餘式次數 < n。",
 		 "variants": [
 			{"eq": "f(x) 是 3 次多項式，g(x) 是 2 次多項式",
 			 "steps": [

@@ -932,7 +932,7 @@ static func _gen_tide() -> Dictionary:
 		0:
 			# 週期 = 2π ÷ b = (2·bd/bn)π
 			return {"eq": eq + " 的週期", "q": "求週期。", "template": "週期 = [0]π", "ans": _frac(2 * int(b[1]), int(b[0])),
-				"nudge": "2π ÷ x 的係數 b；平移和高低都不影響週期。", "tag": BankG4.T_FREQ}
+				"nudge": "2π 除以 x 的係數 b\n平移和高低都不影響週期。", "tag": BankG4.T_FREQ}
 		1:
 			# 向右平移量 = −c/b（π 的倍數）
 			# 寫出「沒有平移」的那一條（同樣的 a、b、d），比較清楚是跟誰比

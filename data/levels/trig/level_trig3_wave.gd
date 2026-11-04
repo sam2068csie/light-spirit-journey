@@ -251,12 +251,12 @@ static func _gen_wave() -> Dictionary:
 		var num := (1 if fn == "tan" else 2) * int(b[1])
 		var den := int(b[0])
 		return {"eq": eq + " 的週期", "q": "求週期。", "template": "週期 = [0]π", "ans": _frac(num, den),
-			"nudge": ("π" if fn == "tan" else "2π") + " ÷ |x 的係數|。", "tag": BankG3.T_PER}
+			"nudge": ("π" if fn == "tan" else "2π") + " 除以 |x 的係數|。", "tag": BankG3.T_PER}
 	if randf() < 0.5:
 		return {"eq": eq + " 的最大值", "q": "求最大值。", "template": "最大值 = [0]", "ans": str(d + absi(a)),
-			"nudge": "%s 在 −1 和 1 之間：最大值 = %d + |%d|。" % [fn, d, a], "tag": BankG3.T_PROP}
+			"nudge": "%s 在 −1 和 1 之間：最大值 = %s + |%s|。" % [fn, str(d).replace("-", "−"), str(a).replace("-", "−")], "tag": BankG3.T_PROP}
 	return {"eq": eq + " 的最小值", "q": "求最小值。", "template": "最小值 = [0]", "ans": str(d - absi(a)),
-		"nudge": "%s 在 −1 和 1 之間：最小值 = %d − |%d|。" % [fn, d, a], "tag": BankG3.T_PROP}
+		"nudge": "%s 在 −1 和 1 之間：最小值 = %s − |%s|。" % [fn, str(d).replace("-", "−"), str(a).replace("-", "−")], "tag": BankG3.T_PROP}
 
 
 # ================= 畫面 =================

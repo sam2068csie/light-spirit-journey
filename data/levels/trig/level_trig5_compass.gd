@@ -607,7 +607,7 @@ func _refresh_lines() -> void:
 	elif is_vert(m2):
 		# 鉛直線：斜率不存在，不能代公式；夾角 = 90° − L₁ 的傾斜角，tan θ = 1 ÷ |m₁|
 		var tv2 := "不存在（θ = 90°）" if absf(m1) < 1e-9 else TideView.fr(1.0 / absf(m1))
-		lines_info.text = "L₂ 是鉛直線（斜率不存在）\ntan θ = 1 ÷ |%s| = %s%s" % [TideView.fr(m1), tv2, found]
+		lines_info.text = "L₂ 是鉛直線（斜率不存在）\ntan θ = \\frac{1}{|%s|} = %s%s" % [TideView.fr(m1), tv2, found]
 	else:
 		var den := 1.0 + m1 * m2
 		var t := absf((m2 - m1) / den) if absf(den) > 1e-9 else INF
