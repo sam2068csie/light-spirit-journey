@@ -632,19 +632,19 @@ class CrystalView extends LakeView:
 			"cmatch":
 				if bool(gst.get("sign_only", false)):
 					var tg: Dictionary = gst.target
-					return "求：拼出 a %s 0、p %s 0 的水晶曲線" % [">" if q(tg.a) > 0 else "<", ">" if q(tg.p) > 0 else "<"]
+					return "拼出 a %s 0、p %s 0 的水晶曲線" % [">" if q(tg.a) > 0 else "<", ">" if q(tg.p) > 0 else "<"]
 				return "求：和虛線重合"
 			"mirror":
 				return "求：A 繞水晶轉半圈後的位置 B"
 			"far":
-				return "求：一直拉遠，看曲線像哪一條虛線"
+				return "一直拉遠，看曲線像哪一條虛線"
 			"tangent":
-				return "求：轉動直線，貼住曲線"
+				return "轉動直線，貼住曲線"
 			"chline":
 				var i := mini(gstage, gst.goals.size() - 1)
 				var ks: Array = gst.get("ks", [])
 				if not ks.is_empty():
-					return "求：把光線拖到 y = %s，數交點（第 %d／%d 道）" % [String(ks[i]).replace("-", "−"), gstage + 1, gst.goals.size()]
+					return "把光線拖到 y = %s，數交點（第 %d／%d 道）" % [String(ks[i]).replace("-", "−"), gstage + 1, gst.goals.size()]
 				return "求：交點恰有 %d 個的 k（第 %d／%d 個任務）" % [int(gst.goals[i]), gstage + 1, gst.goals.size()]
 		return super()
 
