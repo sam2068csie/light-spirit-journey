@@ -499,6 +499,9 @@ func _build_keypad(multi: bool) -> void:
 	var frac_key := "." if fill_step.get("dec", false) else "/"
 	# 「下一格」不放按鈕：點上面的格子（①②③）就能換格子
 	var last_row := ["−", frac_key, "⌫", "送出"]
+	# "dot": true：分數鍵之外再多一個小數點鍵（估計值、誤差）
+	if fill_step.get("dot", false) and frac_key != ".":
+		last_row.insert(2, ".")
 	if _rad_on():
 		last_row.insert(2, "√")
 	var rows := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], last_row]
@@ -521,7 +524,7 @@ func _build_keypad(multi: bool) -> void:
 				b.size_flags_stretch_ratio = 1.4
 			if k == "送出":
 				UITheme.accent_button(b, 18)
-				b.size_flags_stretch_ratio = 2.2 if _rad_on() else 3.0
+				b.size_flags_stretch_ratio = 2.2 if (_rad_on() or fill_step.get("dot", false)) else 3.0
 			var key: String = k
 			b.pressed.connect(func(): _key(key))
 			row.add_child(b)
@@ -555,7 +558,7 @@ func _key(k: String) -> void:
 			_fill_submit()
 			return
 		_:
-			if v.length() < (10 if _rad_on() else 7):
+			if v.length() < (10 if _rad_on() or fill_step.get("dot", false) or fill_step.get("dec", false) else 7):
 				v += k
 	slot_vals[cur_slot] = v
 	slot_bad[cur_slot] = false
@@ -635,7 +638,7 @@ func _fill_submit() -> void:
 			cur_slot = i
 			_refresh_fill()
 			var how := "可填整數、負數或分數，例如 −3/2"
-			if fill_step.get("dec", false):
+			if fill_step.get("dec", false) or fill_step.get("dot", false):
 				how = "可填整數、負數或小數，例如 0.301"
 			elif rad:
 				how = "可填整數、分數或根號，例如 −√3/2、2√3"
@@ -1385,7 +1388,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_MINUS, KEY_KP_SUBTRACT:
 				k = "−"
 			KEY_PERIOD, KEY_KP_PERIOD:
-				k = "." if fill_step.get("dec", false) else ""
+				k = "." if fill_step.get("dec", false) or fill_step.get("dot", false) else ""
 			KEY_SLASH, KEY_KP_DIVIDE:
 				k = "/"
 			KEY_R, KEY_V:

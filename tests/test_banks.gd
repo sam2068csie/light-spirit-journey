@@ -1,7 +1,7 @@
 extends "test_base.gd"
 ## 2. 每個單元、每個大關、每段旅程的每一種題型，都能從頭自動作答到最後一步
 ##   ・推導題（forge）：一步一步呼叫 _step_done（等於每一步都答對）
-##   ・速算（speed）：連答 3 題
+##   ・速算（speed）：連答 3 題（正／負按鈕題用 _speed_pick）
 ##   ・其他題型（光橋、作圖……）：確認題目能正常開始
 ##   ・題庫格式檢查（step_bank.check）
 ## 環境變數 ONLY=L3 只測某一關；SHOTS=資料夾 會在每一步截圖（需要有畫面，不能 --headless）
@@ -59,8 +59,11 @@ func _tour_level(lid: String, file: String, bank) -> void:
 				for k in 3:
 					if lv.problems.is_empty() or lv.sp_i >= lv.problems.size():
 						break
-					lv.slot_vals = lv.problems[lv.sp_i].get("answers", [lv.problems[lv.sp_i].ans]).duplicate()
-					lv._fill_submit()
+					if lv.problems[lv.sp_i].has("choices"):
+						lv._speed_pick(int(lv.problems[lv.sp_i].correct))
+					else:
+						lv.slot_vals = lv.problems[lv.sp_i].get("answers", [lv.problems[lv.sp_i].ans]).duplicate()
+						lv._fill_submit()
 					await frames(2)
 				ok(int(lv.get("streak")) > 0, "%s 速算答對有算分" % tag)
 			elif lv.get("steps") != null and t == "forge":
