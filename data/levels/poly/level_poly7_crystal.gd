@@ -190,16 +190,21 @@ func _speed_show() -> void:
 	_clear(rank_box)
 	task_label.visible = true
 	task_label.text = pb.q
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	# 兩個選項排一排；三、四個選項排成兩欄（免得超出右邊的卡片）
+	var many: bool = pb.choices.size() > 2
+	var row := GridContainer.new()
+	row.columns = 2
+	row.add_theme_constant_override("h_separation", 10)
+	row.add_theme_constant_override("v_separation", 10)
 	rank_box.add_child(row)
 	for i in pb.choices.size():
 		var b := Button.new()
 		b.text = pb.choices[i]
-		b.custom_minimum_size = Vector2(0, 72)
+		b.custom_minimum_size = Vector2(0, 56 if many else 72)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", UITheme.fs(28))
+		b.clip_text = true
+		b.add_theme_font_size_override("font_size", UITheme.fs(22 if many else 28))
 		var idx: int = i
 		b.pressed.connect(func(): _speed_pick(idx))
 		row.add_child(b)

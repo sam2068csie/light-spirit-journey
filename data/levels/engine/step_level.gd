@@ -1090,6 +1090,15 @@ func _refresh_order() -> void:
 	for k in st.items.size() - order_seq.size():
 		parts.append("[color=#%s]□[/color]" % UITheme.TEXT_DIM.to_html(false))
 	order_preview.text = "  <  ".join(parts)
+	# 字太長會換行：用「全部排好」時的長度量，縮小字級讓它排成一行（排的過程字不會一下大一下小）
+	var full := PackedStringArray()
+	for it in st.items:
+		full.append(String(it.k))
+	var font := order_preview.get_theme_default_font()
+	var fs := 24
+	while fs > 14 and MathLabel.text_width(font, "  <  ".join(full), UITheme.fs(fs)) > order_preview.max_width - 8.0:
+		fs -= 1
+	order_preview.font_size = UITheme.fs(fs)
 	for i in order_btns.size():
 		var b: Button = order_btns[i]
 		# 已選的不鎖住（點了可以拿回來），只是變淡
@@ -2280,15 +2289,17 @@ class ForgeView extends Control:
 			shake = sin(t * 60.0) * 10.0 * ma
 		var pop := clampf(1.0 - (t - hit_t) / 0.3, 0.0, 1.0)
 		var y := size.y * speed_y
-		draw_string(font, Vector2(0, maxf(y - 70, 112.0)), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
+		# 分式比較高：「第幾題」再往上一點，免得碰到分子
+		var tall := 22.0 if sp_eq.split("\n")[0].contains("\\frac") else 0.0
+		draw_string(font, Vector2(0, maxf(y - 70 - tall, 100.0)), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
 		# 題目可以有兩行：第一行是式子（大字），第二行是問句（小一點）
 		var sl := sp_eq.split("\n")
 		MathLabel.draw_on(self, font, cx + shake, y, sl[0], _fit_fs(font, sl[0], UITheme.fs(40)), Color(1, 0.97, 0.9))
 		var y_after := y + 70.0
 		if sl.size() > 1:
 			var q2 := "\n".join(sl.slice(1))
-			MathLabel.draw_on(self, font, cx + shake, y + 62.0, q2, _fit_fs(font, q2, UITheme.fs(24)), Color(1, 0.92, 0.75))
-			y_after = y + 120.0
+			MathLabel.draw_on(self, font, cx + shake, y + 62.0 + tall, q2, _fit_fs(font, q2, UITheme.fs(24)), Color(1, 0.92, 0.75))
+			y_after = y + 120.0 + tall
 		if streak >= 2:
 			var fc := GOLD if streak >= 4 else FIRE
 			draw_string(font, Vector2(0, y_after), "連對 ×%d" % streak, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(24 + 8 * pop),
