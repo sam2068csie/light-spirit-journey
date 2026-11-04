@@ -20,6 +20,7 @@ var _title_spirit      # 標題旁邊的大光靈（TitleSpirit）
 var _wardrobe          # 打開中的衣櫃
 var _level_page: Control
 var _units_page: Control
+var _sky: Control                 # 背景的星空：世界地圖整個蓋住它時先藏起來（手機少畫好幾層全螢幕）
 var _units_body: Control
 var _map_unit := ""
 var _review_page: Control
@@ -44,6 +45,7 @@ func _ready() -> void:
 	sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(sky)
+	_sky = sky
 	_build_title_page()
 	_build_units_page()
 	_build_level_page()
@@ -1177,12 +1179,21 @@ func _show_page(p: String, animate: bool = true) -> void:
 	elif p == "tower":
 		_refresh_tower()
 	_refresh_quest_badges()
+	# 世界地圖是不透明的、整個蓋住畫面：淡入完之後就不用再畫後面的星空
+	if _sky != null:
+		_sky.visible = true
 	if animate:
 		show_node.modulate.a = 0.0
 		show_node.position = Vector2(0, 14)
 		var tw := show_node.create_tween().set_parallel()
 		tw.tween_property(show_node, "modulate:a", 1.0, 0.2)
 		tw.tween_property(show_node, "position", Vector2.ZERO, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		if p == "units":
+			tw.chain().tween_callback(func():
+				if _page == "units" and _sky != null:
+					_sky.visible = false)
+	elif p == "units" and _sky != null:
+		_sky.visible = false
 
 
 # ================= 每日任務入口 =================

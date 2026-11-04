@@ -6,9 +6,50 @@ extends "res://tests/test_base.gd"
 
 ## 各畫面的預算（目前實測值再多留約 25% 空間）
 const BUDGET := {
-	"main_menu": 95, "world_g11": 400, "world_g10": 250, "map_exp": 600,
+	"main_menu": 95, "world_g11": 400, "world_g10": 220, "map_exp": 600,
 	"map_trig": 420, "house": 185, "L1": 230, "L3": 310,
 }
+
+
+## 重疊塗色（overdraw）：畫面上每個像素平均被畫了幾層。手機的 GPU 很怕這個（解析度高，每多一層全螢幕就多一次填色）
+##   ・量法：把每個畫布換成「加法混色、每畫一次加一點亮度」的材質，截圖看平均亮度
+const OD_BUDGET := {"world_g11": 5.0, "world_g10": 11.0}
+
+
+func measure_od(tag: String) -> void:
+	var mat := ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = "shader_type canvas_item;\nrender_mode blend_add;\nvoid fragment(){ COLOR = vec4(4.0/255.0, 4.0/255.0, 4.0/255.0, 1.0); }"
+	mat.shader = sh
+	var old := {}
+	_swap_mat(get_root(), mat, old)
+	var clear := RenderingServer.get_default_clear_color()
+	RenderingServer.set_default_clear_color(Color.BLACK)
+	await wait(0.3)
+	var img := get_root().get_texture().get_image()
+	var sum := 0.0
+	var cnt := 0
+	for y in range(0, img.get_height(), 6):
+		for x in range(0, img.get_width(), 6):
+			sum += img.get_pixel(x, y).r * 255.0 / 4.0
+			cnt += 1
+	for n in old:
+		if is_instance_valid(n):
+			n.material = old[n]
+	RenderingServer.set_default_clear_color(clear)
+	var od := sum / maxf(1, cnt)
+	var cap: float = OD_BUDGET.get(tag, 0.0)
+	print("PERF %-10s overdraw   = %4.1f（預算 %.0f）" % [tag, od, cap])
+	ok(od <= cap, "%s 的 overdraw %.1f 超過預算 %.0f" % [tag, od, cap])
+	await wait(0.2)
+
+
+func _swap_mat(n: Node, mat: Material, old: Dictionary) -> void:
+	if n is CanvasItem:
+		old[n] = (n as CanvasItem).material
+		(n as CanvasItem).material = mat
+	for c in n.get_children():
+		_swap_mat(c, mat, old)
 
 
 func measure(tag: String) -> void:
@@ -58,9 +99,11 @@ func _initialize() -> void:
 	await measure("main_menu")
 	mm._show_page("units")
 	await measure("world_g11")
+	await measure_od("world_g11")
 	mm._set_grade("高一")
 	await wait(1.0)
 	await measure("world_g10")
+	await measure_od("world_g10")
 	g.set_unit("exp"); mm._ensure_map(); mm._show_page("levels")
 	await measure("map_exp")
 	g.set_unit("trig"); mm._ensure_map(); mm._show_page("levels")

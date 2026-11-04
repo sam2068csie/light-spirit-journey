@@ -289,6 +289,25 @@ static func _off(poly: PackedVector2Array, d: float) -> PackedVector2Array:
 	return best
 
 
+## outer 減掉 inner 的那一圈（inner 在 outer 裡面）。直接相減會得到「有洞的多邊形」畫不出來，
+## 所以先從中間切成左右兩半，各自相減就是兩個沒有洞的 C 字形
+static func _ring(outer: PackedVector2Array, inner: PackedVector2Array) -> Array:
+	var bb := Rect2(outer[0], Vector2.ZERO)
+	for q in outer:
+		bb = bb.expand(q)
+	bb = bb.grow(10.0)
+	var cx := bb.get_center().x
+	var out := []
+	for half in [Rect2(bb.position, Vector2(cx - bb.position.x, bb.size.y)), Rect2(Vector2(cx, bb.position.y), Vector2(bb.end.x - cx, bb.size.y))]:
+		var hp := PackedVector2Array([half.position, Vector2(half.end.x, half.position.y), half.end, Vector2(half.position.x, half.end.y)])
+		for piece in Geometry2D.intersect_polygons(outer, hp):
+			for r in Geometry2D.clip_polygons(piece, inner):
+				if Geometry2D.is_polygon_clockwise(r) != Geometry2D.is_polygon_clockwise(piece):
+					return [outer]           # 萬一還是有洞：退回畫整塊（只是多畫一層）
+				out.append(r)
+	return out
+
+
 static func _shift(poly: PackedVector2Array, d: Vector2) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for q in poly:
@@ -365,7 +384,7 @@ static func _dot(ci, c: Vector2, r: float, col: Color, n: int) -> void:
 	if ci is CanvasItem:
 		ci.draw_texture_rect(UITheme._disc(n), Rect2(c.x - r, c.y - r, 2.0 * r, 2.0 * r), false, col)
 	else:
-		ci.disc(c, r, col)
+		ci.disc(c, r, col, n)
 
 
 # ================= 樹、小東西 =================
@@ -947,11 +966,13 @@ func _place_root() -> void:
 	_root.scale = Vector2(zoom, zoom)
 	var v := _view().grow(60.0)
 	for pc in _pieces:
-		(pc.node as CanvasItem).visible = (pc.rect as Rect2).intersects(v)
+		var z: String = pc.zone
+		(pc.node as CanvasItem).visible = (pc.rect as Rect2).intersects(v) and (z == "" or _open.has(z))
 
 
 func _process(delta: float) -> void:
 	t += delta
+	_fade.visible = _fade.color.a > 0.004          # 完全透明時不畫（全螢幕的一層）
 	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy and not playing
 	_goal_t -= delta
 	if _goal_t <= 0.0:
@@ -1073,12 +1094,13 @@ func _next_egg() -> int:
 # ================= 畫布 =================
 
 ## 一塊靜態畫布：rect 是它的範圍（不在畫面裡就隱藏），dyn = 開放狀態改變時要重畫
-func _piece(rect: Rect2, painter: Callable, dyn := false) -> void:
+## zone：這塊是哪個地區的地標 → 那個地區還沒開放時整塊在不透明的雲底下，乾脆不畫
+func _piece(rect: Rect2, painter: Callable, dyn := false, zone := "") -> void:
 	var n := MapLayer.new()
 	n.painter = painter
 	n.batched = true
 	_root.add_child(n)
-	_pieces.append({"node": n, "rect": rect, "dyn": dyn})
+	_pieces.append({"node": n, "rect": rect, "dyn": dyn, "zone": zone})
 
 
 func _build_layers() -> void:
@@ -1090,19 +1112,19 @@ func _build_layers() -> void:
 	_root.add_child(base)
 	_piece(Rect2(0, 0, WORLD.x, WORLD.y), _p_roads)
 	# 地區的地標
-	_piece(Rect2(160, 2280, 1720, 1080), _p_num)
-	_piece(Rect2(420, 700, 1400, 1280), _p_canyon)
-	_piece(Rect2(1900, 380, 1300, 1320), _p_lake)
-	_piece(Rect2(2200, 1740, 1150, 1420), _p_hill)
+	_piece(Rect2(160, 2280, 1720, 1080), _p_num, false, "num")
+	_piece(Rect2(420, 700, 1400, 1280), _p_canyon, false, "exp")
+	_piece(Rect2(1900, 380, 1300, 1320), _p_lake, false, "line")
+	_piece(Rect2(2200, 1740, 1150, 1420), _p_hill, false, "poly")
 	_piece(Rect2(320, 3400, 900, 700), _p_house)
 	_piece(Rect2(900, 160, 1260, 700), _p_stele)
 	_piece(Rect2(1800, 3380, 900, 700), _p_meadow)
 	_piece(Rect2(3380, 2700, 960, 560), _p_bridge)
-	_piece(Rect2(4180, 2770, 1540, 1430), _p_falls)
-	_piece(Rect2(4300, 1360, 1200, 1120), _p_dome)
-	_piece(Rect2(4560, 420, 1120, 820), _p_garden)
-	_piece(Rect2(5760, 980, 1160, 1060), _p_market)
-	_piece(Rect2(6100, 2300, 1100, 1440), _p_lighthouse)
+	_piece(Rect2(4180, 2770, 1540, 1430), _p_falls, false, "seq")
+	_piece(Rect2(4300, 1360, 1200, 1120), _p_dome, false, "data")
+	_piece(Rect2(4560, 420, 1120, 820), _p_garden, false, "comb")
+	_piece(Rect2(5760, 980, 1160, 1060), _p_market, false, "prob")
+	_piece(Rect2(6100, 2300, 1100, 1440), _p_lighthouse, false, "trig")
 	_piece(Rect2(6380, 3640, 820, 560), _p_dock)
 	_piece(Rect2(4320, 2640, 520, 420), _p_cart)
 	# 樹和小東西：切成 900×900 的格子
@@ -1174,20 +1196,27 @@ func _p_base(L) -> void:
 		var poly: PackedVector2Array = _left_poly if side == 0 else _right_poly
 		var inner: PackedVector2Array = _left_in if side == 0 else _right_in
 		var east: bool = side == 1
-		# 淺灘：一圈一圈越往外越淡
+		# 淺灘：一圈一圈越往外越淡（只畫環，不疊整塊陸地；第 k 圈的顏色＝原本疊 5−k 層的效果）
+		var sa := 0.035 if east else 0.05
+		var sc := Color(0.55, 0.85, 1.0) if east else Color(0.6, 0.9, 0.95)
 		for k in [4, 3, 2, 1]:
-			var sh := _off(poly, 70.0 * k)
-			L.draw_colored_polygon(sh, Color(0.55, 0.85, 1.0, 0.035) if east else Color(0.6, 0.9, 0.95, 0.05))
-		# 南邊的崖壁（陸地往下錯開，看起來像一塊浮起來的台地）
-		L.draw_colored_polygon(_shift(poly, Vector2(0, 64)), (R_CLIFF if east else L_CLIFF).darkened(0.25))
-		L.draw_colored_polygon(_shift(poly, Vector2(0, 44)), R_CLIFF if east else L_CLIFF)
+			var a := 1.0 - pow(1.0 - sa, 5 - k)
+			for pc in _ring(_off(poly, 70.0 * k), poly if k == 1 else _off(poly, 70.0 * (k - 1))):
+				L.draw_colored_polygon(pc, Color(sc.r, sc.g, sc.b, a))
+		# 南邊的崖壁（陸地往下錯開，看起來像一塊浮起來的台地）：只畫露出來的那一條
+		for pc in Geometry2D.clip_polygons(_shift(poly, Vector2(0, 64)), poly):
+			L.draw_colored_polygon(pc, (R_CLIFF if east else L_CLIFF).darkened(0.25))
+		for pc in Geometry2D.clip_polygons(_shift(poly, Vector2(0, 44)), poly):
+			L.draw_colored_polygon(pc, R_CLIFF if east else L_CLIFF)
 		var str1 := _shift(poly, Vector2(0, 26))
 		str1.append(str1[0])
 		L.draw_polyline(str1, (R_CLIFF if east else L_CLIFF).lightened(0.12), 5.0, true)
-		# 沙灘、草地
-		L.draw_colored_polygon(poly, R_SAND if east else L_SAND)
+		# 沙灘（只畫草地外面那一圈）、草地
 		var beach_hi := _off(poly, -14.0)
-		L.draw_colored_polygon(beach_hi, (R_SAND if east else L_SAND).lightened(0.08))
+		for pc in _ring(poly, beach_hi):
+			L.draw_colored_polygon(pc, R_SAND if east else L_SAND)
+		for pc in _ring(beach_hi, inner):
+			L.draw_colored_polygon(pc, (R_SAND if east else L_SAND).lightened(0.08))
 		L.draw_colored_polygon(inner, R_GRASS if east else L_GRASS)
 		var rim := inner.duplicate()
 		rim.append(rim[0])
@@ -2373,11 +2402,14 @@ func _p_gates(L) -> void:
 
 # ================= 會動的東西（每幀畫） =================
 
+var _sea_pt := {}      # 海面光點的位置是不是在海上（快取）
+
 func _p_fx(L) -> void:
 	var v := _view().grow(120.0)
 	var font := UITheme.bold_font()
+	var tiny := zoom < 0.3          # 拉遠看全島時：浪花、海面的光點都小於一個像素，不畫
 	# 浪花：沿著海岸一小段一小段的白色弧線
-	for side in [_coast_l, _coast_r]:
+	for side in ([] if tiny else [_coast_l, _coast_r]):
 		var foam := PackedVector2Array()
 		for i in side.size():
 			var s: Array = side[i]
@@ -2394,11 +2426,15 @@ func _p_fx(L) -> void:
 	# 海面的光：西邊是晨光的金色、東邊是月光的白點
 	var gl := PackedVector2Array()
 	var y := floorf(v.position.y / 140.0) * 140.0
-	while y < v.end.y:
+	while y < v.end.y and not tiny:
 		var x := floorf(v.position.x / 220.0) * 220.0 + fmod(y, 440.0) * 0.5
 		while x < v.end.x:
 			var q := Vector2(x + sin(t * 0.8 + y * 0.01) * 14.0, y)
-			if not _ground(q):
+			# 「這一點是不是海」每格都問一次很花時間（要跟整條海岸線比），記起來
+			var key := Vector2i(int(x), int(y))
+			if not _sea_pt.has(key):
+				_sea_pt[key] = not _ground(Vector2(x, y)) and not _ground(Vector2(x - 14.0, y)) and not _ground(Vector2(x + 40.0, y))
+			if _sea_pt[key]:
 				gl.append_array([q, q + Vector2(26, 0)])
 			x += 220.0
 		y += 140.0
@@ -2661,10 +2697,11 @@ func _draw_cloud(L, z: Dictionary, i: int) -> void:
 			else:
 				_dot(L, p, r, base, 128)
 	L.draw_colored_polygon(_ell(c, rx * 0.84, ry * 0.84, 48), base)
-	for k in 9:
-		var a := TAU * k / 9.0 + t * 0.02 + i
-		var p := c + Vector2(cos(a) * rx, sin(a) * ry) * 0.5 + Vector2(-rx * 0.08, -ry * 0.12)
-		blob(L, p, Vector2(rx, ry) * 0.42, Color(1, 1, 1, 0.45) if not east else Color(0.88, 0.92, 1.0, 0.35))
+	# 亮面：四團就好（以前九團疊在一起，雲中間要重複畫六、七層）
+	for k in 4:
+		var a := TAU * k / 4.0 + t * 0.02 + i
+		var p := c + Vector2(cos(a) * rx, sin(a) * ry) * 0.42 + Vector2(-rx * 0.08, -ry * 0.12)
+		blob(L, p, Vector2(rx, ry) * 0.44, Color(1, 1, 1, 0.55) if not east else Color(0.88, 0.92, 1.0, 0.45))
 	var font := UITheme.bold_font()
 	UITheme.text_ol(L, font, c + Vector2(-400, -6), z.name, HORIZONTAL_ALIGNMENT_CENTER, 800, 72, Color(1, 1, 1, 0.95), 12)
 	UITheme.text_ol(L, font, c + Vector2(-400, 66), "雲霧籠罩・準備中", HORIZONTAL_ALIGNMENT_CENTER, 800, 36, Color(1, 1, 1, 0.8), 8)
