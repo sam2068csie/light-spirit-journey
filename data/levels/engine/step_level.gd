@@ -1062,7 +1062,11 @@ func _build_order(st: Dictionary) -> void:
 	order_preview.align_center = true
 	card.add_child(order_preview)
 	var grid := GridContainer.new()
-	grid.columns = 2
+	# 有一個選項太長（兩欄放不下）就排成一欄
+	var longest := 0
+	for it0 in st.items:
+		longest = maxi(longest, String(it0.text).replace("^{", "").replace("{", "").replace("}", "").length())
+	grid.columns = 1 if longest > 16 else 2
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	rank_box.add_child(grid)

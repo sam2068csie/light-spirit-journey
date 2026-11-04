@@ -59,7 +59,7 @@ static func conc_final(q: String, ans: String, why: String, cond := "") -> Dicti
 static func _boss_a(ys: String, diffs: String, a: String, opts: Array) -> Dictionary:
 	return {"q": "寶石由左到右的 y 是 %s，相鄰兩顆差 %s。每往右一格，差距乘上多少？（這就是底數 a）" % [ys, diffs],
 		"options": opts, "correct": 0, "why": "差距的比值就是底數：a = %s。" % a,
-		"nudge": "後一個差距 ÷ 前一個差距。", "tag": "exp_ratio"}
+		"nudge": "後一個差距 除以 前一個差距。", "tag": "exp_ratio"}
 
 
 static func _boss_k(a: String, k: String, opts: Array, why: String) -> Dictionary:
@@ -87,7 +87,7 @@ static func _axis_pred(fn: String, x1: float, x2: float, y: float, h: float) -> 
 	var opts := ["x = " + _sn(h), "x = 0", "x = " + _sn(-h if not is_zero_approx(h) else 1.0), "y = " + _sn(y)]
 	return {"q": "寶石 (%s, %s) 和 (%s, %s) 一樣高。這座光橋 %s 的對稱軸是？" % [_sn(x1), _sn(y), _sn(x2), _sn(y), fn],
 		"options": opts, "correct": 0,
-		"why": "等高兩點的中點是對稱軸：x = (%s + %s) ÷ 2 = %s。" % [_sn(x1), _sn(x2), _sn(h)],
+		"why": "等高兩點的中點是對稱軸：x = \\frac{%s + %s}{2} = %s。" % [_sn(x1), _sn(x2), _sn(h)],
 		"nudge": "對稱軸在兩顆一樣高的寶石正中間。", "tag": "abs_symmetry"}
 
 
@@ -124,7 +124,7 @@ static func slots() -> Array:
 			 "options": ["(0, 1)", "(1, 0)", "(1, a)", "(0, a)"], "correct": 0,
 			 "why": "a^{0} = 1，一定通過 (0, 1)。",
 			 "nudge": "把 x = 0 代進去，a^{0} 等於多少？", "tag": "exp_fixed_point"}],
-		 "insight": "y = a^{x} 都過 (0, 1)；x = 1 的高度就是底數 a。",
+		 "insight": "y = a^{x} 都過 (0, 1)\nx = 1 的高度就是底數 a。",
 		 "variants": [
 			{"answer": {"a": 2.0}, "xs": [-1, 0, 2]},
 			{"answer": {"a": 1.5}, "xs": [0, 2]},
@@ -136,7 +136,7 @@ static func slots() -> Array:
 		 "params": ["a"], "live": true,
 		 "story": "這次寶石在左邊高處。想想曲線要往哪個方向走？",
 		 "predicts": [DIR_DOWN],
-		 "insight": "0 < a < 1 往右下降；a^{x} 與 (1/a)^{x} 對稱於 y 軸。",
+		 "insight": "0 < a < 1 往右下降\na^{x} 與 (1/a)^{x} 對稱於 y 軸。",
 		 "variants": [
 			{"answer": {"a": 0.5}, "xs": [-2, 0, 1], "predicts": [DIR_DOWN, _base_pred(-2, 4, "1/2", ["2", "−2", "1/4"],
 				"a^{−2} = 1/a^{2} = 4 ⇒ a^{2} = 1/4 ⇒ a = 1/2（a > 0）。")]},
@@ -159,7 +159,7 @@ static func slots() -> Array:
 			 "options": ["越高", "越低", "一樣高", "不一定"], "correct": 1,
 			 "why": "x = −1 時 y = 1/a：底數越大反而越低。",
 			 "nudge": "x = −1 時 y = 1/a。a 越大，1/a 會？", "tag": "exp_base_compare"}],
-		 "insight": "比底數看 x = 1 的高度：越高底數越大；x < 0 時順序相反。",
+		 "insight": "比底數看 x = 1 的高度：越高底數越大\nx < 0 時順序相反。",
 		 "variants": [
 			{"bases": [2.0, 3.0, 0.5, 1.0 / 3.0]},
 			{"bases": [1.5, 2.0, 4.0]},
@@ -212,7 +212,7 @@ static func slots() -> Array:
 			 "options": ["2 個", "3 個", "4 個"], "correct": 1, "keep_order": true,
 			 "why": "遞增：左貼 y = k、右進第一象限，最多過 3 個象限。",
 			 "nudge": "曲線一直往上走。左邊會停在哪條線附近？", "tag": "quadrant"}],
-		 "insight": "必過 Ⅰ。b ≥ 0：Ⅰ、Ⅱ；b < 0：再過 Ⅲ，y 截距決定 Ⅱ 或 Ⅳ（過原點只過 Ⅰ、Ⅲ）。",
+		 "insight": "必過 Ⅰ。b ≥ 0：Ⅰ、Ⅱ\nb < 0：再過 Ⅲ，y 截距決定 Ⅱ 或 Ⅳ（過原點只過 Ⅰ、Ⅲ）。",
 		 "variants": [
 			{"target": [1, 2], "answer": {"h": 0.0, "k": 0.0}},
 			{"target": [1, 2, 3], "answer": {"h": -2.0, "k": -1.0}},
@@ -254,7 +254,7 @@ static func slots() -> Array:
 		{"id": "ratio", "chapter": 1, "type": "fit", "title": "衰減追蹤", "form": "exp",
 		 "params": ["m", "a"], "live": false,
 		 "ranges": {"a": [0.02, 4.0, 0.02]},
-		 "insight": "間隔相同、倍率就相同：y₂ ÷ y₁ = a^{x₂ − x₁}。",
+		 "insight": "間隔相同、倍率就相同：y₂ 除以 y₁ = a^{x₂ − x₁}。",
 		 "variants": [
 			{"answer": {"m": 1000.0, "a": 0.36}, "xs": [0, 0.5, 1, 1.5],
 			 "view": {"x": Vector2(-0.5, 4), "y": Vector2(-120, 1150)}, "ranges": {"m": [100, 2000, 50]},
@@ -323,7 +323,7 @@ static func slots() -> Array:
 			 "insight": "底數變大長得更快：2^{x} = x^{2} 有 3 解，3^{x} = x^{2} 只有 1 解。"},
 			{"lhs": "2^{x}", "rhs": "4 − x^{2}", "exp": {"form": "exp", "a": 2.0}, "quad": [-1.0, 0.0, 4.0], "n": 2,
 			 "view": {"y": Vector2(-5.0, 10.0)},
-			 "nudge": "4 − x^{2} 開口向下，頂點 (0, 4)；2^{x} 永遠大於 0。",
+			 "nudge": "4 − x^{2} 開口向下，頂點 (0, 4)\n2^{x} 永遠大於 0。",
 			 "why": "拋物線只在 −2 < x < 2 為正，2^{x} 在這段交 2 次。",
 			 "insight": "2^{x} > 0：交點只在拋物線高於 x 軸的那段。"},
 		 ]},
@@ -331,7 +331,7 @@ static func slots() -> Array:
 		{"id": "boss1", "chapter": 1, "type": "fit", "title": "第一章試煉", "form": "exp",
 		 "params": ["a", "h", "k"], "live": false, "time": 180.0,
 		 "story": "限時 180 秒！依序求出 a、k、h，再調滑桿點亮光橋。",
-		 "insight": "反推：y − k 每格乘 a；y − k = 1 的寶石，x 就是 h。",
+		 "insight": "反推：y − k 每格乘 a\ny − k = 1 的寶石，x 就是 h。",
 		 "variants": [
 			{"answer": {"a": 0.5, "h": -1.0, "k": 2.0}, "xs": [-3, -2, -1, 0],
 			 "predicts": [_boss_a("6、4、3、2.5", "2、1、0.5", "1/2", ["1/2", "2", "−1/2", "1/4"])],
@@ -382,7 +382,7 @@ static func slots() -> Array:
 			 "nudge": "|x| 最小是 0。底數小於 1，指數越小值越大還是越小？", "tag": "exp_monotonic"},
 			{"q": "這座山 y = a^{|x|}（0 < a < 1）的值域是？",
 			 "options": ["y > 0", "0 < y ≤ 1", "y ≥ 1", "0 ≤ y ≤ 1"], "correct": 1,
-			 "why": "最大值 1（x = 0）；兩側趨近 0 但不等於 0。",
+			 "why": "最大值 1（x = 0）\n兩側趨近 0 但不等於 0。",
 			 "nudge": "最高點在哪？兩邊會碰到 0 嗎？", "tag": "abs_symmetry"}],
 		 "insight": "0 < a < 1：最高點 (0, 1)，值域 0 < y ≤ 1。",
 		 "variants": [
@@ -417,7 +417,7 @@ static func slots() -> Array:
 			 "options": ["是，每個 x 只對到一個 y", "不是，每個 x 對到兩個 y", "只有 x > 0 時是"], "correct": 1,
 			 "why": "x = 0 時 y = ±1：一個 x 對兩個 y，不是函數。",
 			 "nudge": "x = 0 時，|y| = 1 的 y 有幾個？", "tag": "abs_relation"}],
-		 "insight": "|y| = f(x)：留 f(x) ≥ 0 的部分再對 x 軸翻一份；不是函數。",
+		 "insight": "|y| = f(x)：留 f(x) ≥ 0 的部分再對 x 軸翻一份\n不是函數。",
 		 "variants": [
 			{"answer": {"a": 2.0}, "xs": [0, 2], "view": {"x": Vector2(-4, 3.5), "y": Vector2(-5, 5)}},
 			{"answer": {"a": 3.0}, "xs": [0, 2], "view": {"x": Vector2(-4, 3), "y": Vector2(-9.5, 9.5)}},
@@ -446,7 +446,7 @@ static func slots() -> Array:
 
 		{"id": "sketch2", "chapter": 2, "type": "draw", "title": "徒手照鏡", "params": [], "tag": "draw_graph",
 		 "story": "沒有滑桿！先想沒有絕對值的圖，再翻折畫出來。",
-		 "insight": "包住 x：對 y 軸翻；包住整個式子：x 軸下方翻上來。",
+		 "insight": "包住 x：對 y 軸翻\n包住整個式子：x 軸下方翻上來。",
 		 "variants": [
 			{"form": "abs_in", "answer": {"a": 2.0, "h": 0.0, "k": 0.0},
 			 "keys": [Vector2(0, 1), Vector2(1, 2), Vector2(-1, 2), Vector2(2, 4), Vector2(-2, 4)]},
@@ -460,7 +460,7 @@ static func slots() -> Array:
 		{"id": "count", "chapter": 2, "type": "count", "title": "交點調頻",
 		 "params": ["c"], "goals": [2, 1, 0],
 		 "story": "方程式的解 = 圖形交點。移動水平線 y = c 完成任務。",
-		 "insight": "f(x) = c 的解數 = 交點數；c 碰到頂點或漸近線時會跳動。",
+		 "insight": "f(x) = c 的解數 = 交點數\nc 碰到頂點或漸近線時會跳動。",
 		 "variants": [
 			{"form": "abs_in", "fixed": {"a": 2.0},
 			 "final": {"q": "方程式 2^{|x|} = c 恰有兩個實數解時，c 的範圍是？",
@@ -470,7 +470,7 @@ static func slots() -> Array:
 			{"form": "abs_out", "fixed": {"a": 2.0, "k": -2.0},
 			 "final": {"q": "方程式 |2^{x} − 2| = c 恰有兩個實數解時，c 的範圍是？",
 				"options": ["c > 0", "0 < c < 2", "c ≥ 2", "c > 2"], "correct": 1,
-				"why": "0 < c < 2 左右各交一次；c ≥ 2 只剩右邊。",
+				"why": "0 < c < 2 左右各交一次\nc ≥ 2 只剩右邊。",
 				"nudge": "雷射牆在 y = 2。水平線在它上面時，左半段還碰得到嗎？", "tag": "solution_count"}},
 			{"form": "abs_in", "fixed": {"a": 0.5}, "view": {"x": Vector2(-4, 4), "y": Vector2(-0.5, 2.5)},
 			 "ranges": {"c": [-0.4, 2.0, 0.1]},
@@ -501,13 +501,13 @@ static func slots() -> Array:
 			 "insight": "一條遞減、一條遞增，最多只交一次。這是判斷交點數最快的方法。"},
 			{"lhs": "3^{|x|}", "rhs": "x^{2}", "exp": {"form": "abs_in", "a": 3.0}, "quad": [1.0, 0.0, 0.0], "n": 0,
 			 "view": {"y": Vector2(-1.5, 12.0)},
-			 "nudge": "3^{|x|} ≥ 1。|x| < 1 時 x^{2} < 1；|x| ≥ 1 呢？",
+			 "nudge": "3^{|x|} ≥ 1。|x| < 1 時 x^{2} < 1\n|x| ≥ 1 呢？",
 			 "why": "3^{|x|} 永遠在 x^{2} 上方，一個交點也沒有。",
 			 "insight": "比較兩函數的最大、最小值，常能直接判斷。"},
 			{"lhs": "2^{|x|}", "rhs": "5 − x^{2}", "exp": {"form": "abs_in", "a": 2.0}, "quad": [-1.0, 0.0, 5.0], "n": 2,
 			 "view": {"y": Vector2(-5.0, 10.0)},
 			 "nudge": "x > 0：一個遞增、一個遞減，交幾次？",
-			 "why": "一增一減只交一次；左右對稱，共 2 個。",
+			 "why": "一增一減只交一次\n左右對稱，共 2 個。",
 			 "insight": "對稱 + 單調性：先算一半，再乘以 2。"},
 		 ]},
 
@@ -523,7 +523,7 @@ static func slots() -> Array:
 			 "options": ["(h, k)", "(h, 1 + k)", "(0, 1)", "(h, 1)"], "correct": 1,
 			 "why": "x = h 時 y = 1 + k：最低點（a > 1）或最高點（a < 1）。",
 			 "nudge": "x = h 時，a^{|x − h|} 等於多少？", "tag": "abs_symmetry"}],
-		 "insight": "等高兩點的中點是對稱軸；(h, 1 + k) 是最高或最低點。",
+		 "insight": "等高兩點的中點是對稱軸\n(h, 1 + k) 是最高或最低點。",
 		 "variants": [
 			{"answer": {"a": 2.0, "h": -1.0, "k": -1.0}, "xs": [-3, -1, 0, 1]},
 			{"answer": {"a": 3.0, "h": 0.0, "k": -2.0}, "xs": [-1, 0, 1, 2], "view": {"y": Vector2(-2.5, 8.5)}},

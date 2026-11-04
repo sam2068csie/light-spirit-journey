@@ -58,6 +58,15 @@ func _play_level(lid: String, file: String, bank) -> void:
 				await _play_speed(lv)
 			elif String(slot.type) == "forge":
 				await _play_forge(lv)
+			elif String(slot.type) == "tune":
+				await _play_tune(lv)
+			elif String(slot.type) == "mag":
+				await _play_mag(lv)
+			elif lv.get("steps") == null and lv.has_method("_on_go"):
+				await _play_base(lv, String(slot.type))
+			elif not _no_play.has("type:" + String(slot.type)):
+				_no_play["type:" + String(slot.type)] = true
+				print("  （%s：%s 題型沒有實際操作）" % [lid, String(slot.type)])
 	print("  %s 玩完了" % lid)
 
 
@@ -76,7 +85,7 @@ func _check(lv, when: String) -> void:
 		if r.end.y > vp.y + 1.0:
 			_issue("%s：「%s」按鈕超出畫面下緣" % [when, gb.text])
 	# 中間：作答框不能壓到下方的圖
-	var fv = lv.fview
+	var fv = lv.get("fview")
 	if fv != null and fv.get("live_fill") != null and String(fv.live_fill) != "" and fv.kind == "forge" and not fv.done:
 		var y_top: float = fv._line_y(fv.lines.size())
 		var bottom: float = y_top - 20.0 + fv._live_h() - 10.0
@@ -113,8 +122,9 @@ func _check_node(n: Node, cr: Rect2, when: String) -> void:
 				var font: Font = b.get_theme_font("font")
 				var fs: int = b.get_theme_font_size("font_size")
 				for ln in b.text.split("\n"):
-					if font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > b.size.x - 4.0:
-						_issue("%s：按鈕的字超出（%s）" % [when, ln.left(30)])
+					var tw := font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+					if tw > b.size.x - 4.0:
+						_issue("%s：按鈕的字超出（%s：字寬 %d、按鈕 %d）" % [when, ln.left(30), int(tw), int(b.size.x)])
 		await _check_node(ctl, cr, when)
 
 
@@ -234,6 +244,9 @@ func _do_custom(lv, st: Dictionary, nm: String) -> void:
 	var kind := String(st.kind)
 	var tv = lv.fview
 	var lid := String(lv.level_id())
+	if lid.begins_with("L"):
+		await _do_exp(lv, st, nm)
+		return
 	match kind:
 		"spin":
 			if lid == "G1":
@@ -433,6 +446,122 @@ func _do_custom(lv, st: Dictionary, nm: String) -> void:
 				_no_play[kind] = true
 				print("  （%s 步驟沒有實際操作，直接當作答對）" % kind)
 			lv._step_done(st, "")
+
+
+# ---------------- 指對數（L2～L8）的互動步驟 ----------------
+func _do_exp(lv, st: Dictionary, nm: String) -> void:
+	var kind := String(st.kind)
+	var fv = lv.get("fview")
+	match kind:
+		"line":
+			fv.line_seg = Array(st.seg).duplicate()
+			fv.line_inc = Array(st.inc).duplicate()
+			fv.queue_redraw()
+			await _check(lv, nm + " 塗好之後")
+			await _go(lv)
+		"grid":
+			var vals := []
+			for row in st.ans:
+				vals.append(Array(row).map(func(v): return int(v)))
+			lv.grid_vals = vals
+			lv._refresh_grid()
+			await _check(lv, nm + " 填好之後")
+			await _go(lv)
+		"explore":
+			var tt: float = fv.t_of(st.tmap, float(st.targets[0]))
+			lv.ex_slider.value = tt
+			await _check(lv, nm + " 移好之後")
+			await _go(lv)
+		"chain":
+			for idx in lv.chain_solution(st):
+				lv._chain_pick(idx)
+				await frames(1)
+			await _check(lv, nm + " 接好之後")
+			await _go(lv)
+		"rule":
+			lv._on_answer(int(lv.cur_q.correct))
+		"gate":
+			lv.filter_keep = Array(st.keep).duplicate()
+			lv._refresh_filter()
+			await _check(lv, nm + " 選好之後")
+			await _go(lv)
+		"compass":
+			lv.compass_vals = lv.compass_answers(st)
+			lv._refresh_compass()
+			await _check(lv, nm + " 判斷好之後")
+			await _go(lv)
+		"ruler":
+			lv._ruler_pick(int(st.ans))
+		"grow":
+			lv.grow_slider.value = int(st.ans)
+			await _check(lv, nm + " 移好之後")
+			await _go(lv)
+		_:
+			if not _no_play.has(kind):
+				_no_play[kind] = true
+				print("  （%s 步驟沒有實際操作，直接當作答對）" % kind)
+			lv._step_done(st, "")
+
+
+## 舊的光橋引擎（L1、L5）：交給 play_base.gd
+func _play_base(lv, type: String) -> void:
+	if not FileAccess.file_exists("res://tests/play_base.gd"):
+		if not _no_play.has("base"):
+			_no_play["base"] = true
+			print("  （光橋題型還沒有實際操作）")
+		return
+	await load("res://tests/play_base.gd").play(self, lv, type)
+
+
+## 參數調頻（L2）：每個任務找出合格的參數 → 一步步計算 → 最後的範圍題
+func _play_tune(lv) -> void:
+	var rd: Dictionary = lv.r
+	var rg: Array = rd.param.range
+	for gi in rd.goals.size():
+		await _check(lv, "調頻任務 %d" % (gi + 1))
+		var ok := false
+		var v := float(rg[0])
+		while v <= float(rg[1]) + 1e-6:
+			if lv.tune_valid(rd, v) == int(rd.goals[gi]):
+				lv.tune_slider.value = v
+				ok = true
+				break
+			v += float(rg[2])
+		if not ok:
+			_issue("調頻任務 %d 找不到合格的參數" % (gi + 1))
+			return
+		lv._tune_lock()
+		await frames(2)
+	if int(lv.tune_phase) == 1:
+		await _play_forge(lv)
+	await frames(2)
+	if int(lv.tune_phase) == 2:
+		await _check(lv, "範圍題")
+		lv._on_answer(int(lv.cur_q.correct))
+	else:
+		_issue("調頻：算完之後沒有進到範圍題")
+
+
+## 數量級實驗室（L4）：每個任務用按鈕走到目標 → 測驗
+func _play_mag(lv) -> void:
+	var rd: Dictionary = lv.r
+	for mi in rd.missions.size():
+		await _check(lv, "數量級任務 %d" % (mi + 1))
+		var path: Array = lv.mag_solve(rd, lv.mag_s, float(rd.missions[mi].target))
+		if path.is_empty() and absf(lv.fview.mag_measure(rd, lv.mag_s) - float(rd.missions[mi].target)) >= 0.15:
+			_issue("數量級任務 %d 走不到目標" % (mi + 1))
+			return
+		for op in path:
+			lv._mag_op(op)
+		await frames(1)
+		lv._mag_lock()
+		await frames(2)
+	var guard := 0
+	while int(lv.mag_phase) == 1 and int(lv.mag_q) < rd.quiz.size() and guard < 10:
+		guard += 1
+		await _check(lv, "數量級測驗 %d" % guard)
+		lv._on_answer(int(lv.cur_q.correct))
+		await frames(2)
 
 
 ## 拼積木（tiles／eq／拼光束）：用關卡自己的算式，找出和目標相等的積木組合

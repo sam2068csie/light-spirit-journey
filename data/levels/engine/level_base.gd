@@ -585,7 +585,9 @@ func _wrap_side_text(n: Node) -> void:
 		return
 	if n is Label and n.autowrap_mode == TextServer.AUTOWRAP_OFF:
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	elif n is Button and n.autowrap_mode == TextServer.AUTOWRAP_OFF and n.get_node_or_null("Math") == null:
+	elif n is Button and n.autowrap_mode == TextServer.AUTOWRAP_OFF and n.get_node_or_null("Math") == null \
+			and (n.size_flags_horizontal & Control.SIZE_FILL) != 0:
+		# 縮在中間的小按鈕（例如「重新接」）不能換行：換行之後按鈕會縮成一個字寬，字直直排下來
 		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 

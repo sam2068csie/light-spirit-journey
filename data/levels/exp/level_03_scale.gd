@@ -48,7 +48,7 @@ func bank_slots() -> Array:
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．極值的祭壇", "button": "進入極值的祭壇  ▶",
 		"text": "求極值的三個關卡：\n\n" \
-			+ "・t 的範圍：t = a^{x} > 0；x 有範圍時 t 也有範圍\n" \
+			+ "・t 的範圍：t = a^{x} > 0\nx 有範圍時 t 也有範圍\n" \
 			+ "・t = a^{x} + a^{−x} ≥ 2（算幾不等式）\n" \
 			+ "・配方找頂點：頂點不在範圍內，就看端點\n\n" \
 			+ "拖動 t，親眼看點在拋物線上滑到哪裡！"}

@@ -76,7 +76,7 @@ func _make_rounds() -> Array:
 			{"label": "log_{2} 0.3", "value": lg(2, 0.3), "why": "底數 2 > 1、真數 0.3 < 1，所以小於 0"},
 		]},
 		{"layer": "explore",
-		 "tip": "估範圍：1 < log_{3} 5 < 2；(1/2)^{−2} = 4。",
+		 "tip": "估範圍：1 < log_{3} 5 < 2\n(1/2)^{−2} = 4。",
 		 "towers": [
 			{"label": "3^{−1}", "value": 1.0 / 3.0, "why": "負指數就是倒數：3^{−1} = 1/3"},
 			{"label": "log_{3} 5", "value": lg(3, 5), "why": "3 < 5 < 9，所以 1 < log_{3} 5 < 2"},
@@ -316,7 +316,7 @@ func _show_step(s: int) -> void:
 			+ "\n每座塔是 < 0、0 ~ 1 還是 > 1？"
 	elif s == 2:
 		step_label.text = UITheme.step_bar(["分區", "排序"], 1) \
-			+ "\n由低到高點塔名；一樣高的先按「＝」。"
+			+ "\n由低到高點塔名\n一樣高的先按「＝」。"
 
 
 static func _zone(v: float) -> int:

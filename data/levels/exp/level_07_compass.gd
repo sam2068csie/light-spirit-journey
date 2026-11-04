@@ -277,7 +277,7 @@ class CompassView extends AlchemyView:
 		draw_style_box(UITheme.boxc(Color(0.03, 0.09, 0.10, 0.7), 12, Color(MINT.r, MINT.g, MINT.b, 0.3), 1, 0), R.grow(6))
 		var ML := preload("res://data/ui/math_text.gd")
 		ML.draw_text(self, font, R.position + Vector2(4, -10),
-			"口訣：真、底同時 > 1 或同時 < 1 ⇒ [color=#ffcf5a]正[/color]；一個 > 1、一個 < 1 ⇒ [color=#5ad8ff]負[/color]",
+			"口訣：真、底同時 > 1 或同時 < 1 ⇒ [color=#ffcf5a]正[/color]\n一個 > 1、一個 < 1 ⇒ [color=#5ad8ff]負[/color]",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(0.8, 1, 0.9, 0.9))
 		var done := compass_t > 0.0
 		var n := compass_items.size()
