@@ -119,7 +119,8 @@ static func play(host: Control, key: String, lines: Array, title: String, uid :=
 
 
 ## 畫面上方的主線橫幅＋指向目標的金色箭頭（target：螢幕座標；(-1, -1) = 不畫箭頭）
-static func draw_goal(ci: CanvasItem, text: String, target: Vector2, t: float) -> void:
+## avoid：畫面上不要蓋到的地方（例如小地圖）；畫面外的箭頭落在裡面時，沿著邊緣讓開
+static func draw_goal(ci: CanvasItem, text: String, target: Vector2, t: float, avoid := Rect2()) -> void:
 	var font := UITheme.bold_font()
 	var fs := 16
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -145,6 +146,11 @@ static func draw_goal(ci: CanvasItem, text: String, target: Vector2, t: float) -
 		if absf(d.y) > 0.001:
 			k = minf(k, ((view.end.y if d.y > 0 else view.position.y) - c.y) / d.y)
 		var p := c + d * k - d * (6.0 * absf(sin(t * 4.0)))
+		if avoid.has_area() and avoid.grow(30.0).has_point(p):
+			if p.x > avoid.position.x:
+				p = Vector2(clampf(p.x, view.position.x, view.end.x), avoid.end.y + 36.0)
+			else:
+				p.x = avoid.position.x - 36.0
 		var n := d.orthogonal()
 		ci.draw_circle(p - d * 8.0, 24.0, Color(0.05, 0.06, 0.16, 0.7))
 		ci.draw_colored_polygon(PackedVector2Array([p + d * 14.0, p - d * 10.0 + n * 13.0, p - d * 10.0 - n * 13.0]), gold)

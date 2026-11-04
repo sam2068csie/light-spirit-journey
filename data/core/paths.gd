@@ -8,6 +8,7 @@ const MAP := {
 	"bg_layer.gd": "res://data/levels/engine/bg_layer.gd",
 	"boss_tower.gd": "res://data/levels/tower/boss_tower.gd",
 	"buddy.gd": "res://data/ui/buddy.gd",
+	"canvas_batch.gd": "res://data/maps/canvas_batch.gd",
 	"chest_fx.gd": "res://data/levels/engine/chest_fx.gd",
 	"concept_cards.gd": "res://data/ui/concept_cards.gd",
 	"concept_deck.gd": "res://data/ui/concept_deck.gd",

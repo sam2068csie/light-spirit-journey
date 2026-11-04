@@ -6,7 +6,7 @@ extends "res://tests/test_base.gd"
 
 ## 各畫面的預算（目前實測值再多留約 25% 空間）
 const BUDGET := {
-	"main_menu": 95, "world_g11": 400, "world_g10": 350, "map_exp": 600,
+	"main_menu": 95, "world_g11": 400, "world_g10": 250, "map_exp": 600,
 	"map_trig": 420, "house": 185, "L1": 230, "L3": 310,
 }
 
