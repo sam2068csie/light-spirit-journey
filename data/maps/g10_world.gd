@@ -18,7 +18,6 @@ extends "res://data/maps/world_base.gd"
 const MapLayer := preload("res://data/maps/map_layer.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Center := preload("res://data/core/review_center.gd")
-const LIGHT_SHADER := preload("res://data/maps/island_light.gdshader")     # 還沒點亮的地區：顏色往冷灰收、變暗
 
 const WORLD := Vector2(7200, 4400)
 const BASE_ZOOM := 0.62           # 平常的鏡頭（拉高視角，一次看到比較大的範圍）
@@ -140,12 +139,7 @@ var _fx: MapLayer
 var _hud: MapLayer
 var _zoom_lock := false           # 進出地區的鏡頭動畫：不要被自動縮放蓋掉
 var _seen_open := ""              # 上次畫的時候哪些地區開放（變了就重畫雲和大門）
-# 地區的亮度：0 = 還沒點亮（暗、灰、沒有動態），1 = 全部點亮（原本的樣子）
-var _lit := {}                    # 地區 id → 亮度（跟著單元的完成度）
-var _lit_mat := {}                # 地區 id → 地標那層的材質
-var _zone_fx := {}                # 地區 id → 那個地區自己的動態層
-var debug_lit := -1.0             # 截圖用：>= 0 時每個地區都用這個亮度
-var _gloom: MapLayer
+var _gloom: MapLayer              # 還沒點亮的地區上面的暗影（點亮的做法在 world_base.gd）
 
 static var _soft_tex: Texture2D
 
@@ -1046,9 +1040,10 @@ func _process(delta: float) -> void:
 			lf.p.x = W + 20.0
 	_place_root()
 	_fx.queue_redraw()
+	_light_tick(delta)
 	_gloom.queue_redraw()
-	for id in _zone_fx:
-		_zone_fx[id].queue_redraw()
+	for fl in _lit_fx.values():
+		fl.queue_redraw()
 	_hud.queue_redraw()
 	queue_redraw()
 
@@ -1120,16 +1115,28 @@ func _piece(rect: Rect2, painter: Callable, dyn := false, zone := "") -> void:
 
 
 func _zone_mat(id: String) -> ShaderMaterial:
-	if not _lit_mat.has(id):
-		var m := ShaderMaterial.new()
-		m.shader = LIGHT_SHADER
-		_lit_mat[id] = m
-		_lit[id] = -1.0
-	return _lit_mat[id]
+	return _light_mat(id)
+
+
+func _zone_of(id: String) -> Dictionary:
+	for z in ZONES:
+		if String(z.id) == id:
+			return z
+	return {}
+
+
+# ---------- 點亮（共用的做法在 world_base.gd；這裡告訴它有哪些地區） ----------
+
+func _light_keys() -> Array:
+	var out := []
+	for z in ZONES:
+		out.append(String(z.id))
+	return out
 
 
 ## 單元的完成度（0～1）
-func _zone_progress(z: Dictionary) -> float:
+func _light_target(key: String) -> float:
+	var z := _zone_of(key)
 	var u: Dictionary = Units.unit(z.unit)
 	if u.id != z.unit or u.levels.is_empty():
 		return 0.0
@@ -1140,26 +1147,14 @@ func _zone_progress(z: Dictionary) -> float:
 	return p / u.levels.size()
 
 
-## 完成度 → 亮度：前半段亮得慢一點（點亮一半還是偏暗，全部點亮才是原本的樣子）
-static func _lit_curve(k: float) -> float:
-	return pow(clampf(k, 0.0, 1.0), 1.5)
+func _light_box(key: String) -> Rect2:
+	var cl: Array = _zone_of(key).cloud
+	var r := Vector2(cl[1], cl[2])
+	return Rect2((cl[0] as Vector2) - r, r * 2.0)
 
 
-## 每個地區的亮度：照單元的完成度
-func _apply_light() -> void:
-	for z in ZONES:
-		var id: String = z.id
-		if not _lit_mat.has(id):
-			continue
-		var k := clampf(debug_lit if debug_lit >= 0.0 else _zone_progress(z), 0.0, 1.0)
-		if is_equal_approx(k, float(_lit[id])):
-			continue
-		_lit[id] = k
-		var e := _lit_curve(k)
-		(_lit_mat[id] as ShaderMaterial).set_shader_parameter("lit", e)
-		if _zone_fx.has(id):
-			# 地區裡的動態：沒點亮時淡淡的、慢吞吞的（風車還在，只是轉得很慢），越點越清楚
-			(_zone_fx[id] as CanvasItem).modulate.a = 0.3 + 0.7 * e * e
+func _light_name(key: String) -> String:
+	return String(_zone_of(key).get("name", ""))
 
 
 func _build_layers() -> void:
@@ -1216,7 +1211,7 @@ func _build_layers() -> void:
 		fl.painter = func(L): _p_zone_fx(L, id, _view().grow(120.0))
 		fl.material = _zone_mat(id)
 		_root.add_child(fl)
-		_zone_fx[id] = fl
+		_lit_fx[id] = fl
 	_apply_light()
 	_fx = MapLayer.new()
 	_fx.painter = _p_fx
@@ -2610,6 +2605,22 @@ func _p_fx(L) -> void:
 		var zg: Vector2 = ZONES[int(_near.i)].gate
 		var zc: Color = ZONES[int(_near.i)].color
 		blob(L, zg + Vector2(0, -60), Vector2(200, 160), Color(zc.r, zc.g, zc.b, 0.18 + 0.08 * sin(t * 4.0)))
+	# 點亮動畫：從地區中心擴散出去的光圈和往上冒的光點
+	for b in _light_bursts():
+		var box: Rect2 = b.box
+		var f: float = b.f
+		var c := box.get_center()
+		var zc: Color = _zone_of(String(b.key)).get("color", Color.WHITE)
+		var big := maxf(box.size.x, box.size.y) * 0.75
+		blob(L, c, Vector2(big, big * 0.75) * (0.4 + 0.6 * f), Color(1.0, 0.95, 0.75, 0.3 * sin(f * PI)))
+		for k in 3:
+			var ph := clampf(f * 1.4 - k * 0.2, 0.0, 1.0)
+			if ph > 0.0 and ph < 1.0:
+				L.draw_arc(c, 80.0 + ph * big, 0, TAU, 64, Color(zc.r, zc.g, zc.b, 0.5 * (1.0 - ph)), 6.0, true)
+		for j in 14:
+			var ph := fmod(f * 2.0 + j * 0.071, 1.0)
+			var q := c + Vector2(sin(j * 2.4) * box.size.x * 0.35, cos(j * 1.7) * box.size.y * 0.3 - ph * 220.0)
+			_dot(L, q, 6.0, Color(1.0, 0.95, 0.7, sin(f * PI) * (1.0 - ph)), 32)
 	# 光靈
 	for p in _trail:
 		_dot(L, p.p, 4.5 * (1.0 - p.life / 0.8), Color(1.0, 0.92, 0.6, 0.7 * (1.0 - p.life / 0.8)), 32)
@@ -2629,7 +2640,7 @@ func _p_zone_fx(L, id: String, v: Rect2) -> void:
 		return
 	# 沒點亮的地區連時間都走得慢（風車、水流、光束都慢吞吞的）
 	var t_real := t
-	t = t_real * (0.2 + 0.8 * _lit_curve(float(_lit.get(id, 1.0))))
+	t = light_time(id)
 	_zone_fx_body(L, id, v)
 	t = t_real
 
@@ -2776,7 +2787,7 @@ func _p_gloom(L) -> void:
 		var id: String = z.id
 		if not _open.has(id):
 			continue
-		var dk := 1.0 - _lit_curve(float(_lit.get(id, 1.0)))
+		var dk := 1.0 - light_e(id)
 		if dk < 0.02:
 			continue
 		var cl: Array = z.cloud
@@ -2913,7 +2924,7 @@ func _draw_minimap(L, _font: Font) -> void:
 	for z in ZONES:
 		var zc: Vector2 = o + (z.center as Vector2) * k
 		if _open.has(z.id):
-			UITheme.dot(L, zc, 5.0, Color(0.42, 0.44, 0.52).lerp(z.color, _lit_curve(float(_lit.get(z.id, 1.0)))))     # 還沒點亮的地區：灰的
+			UITheme.dot(L, zc, 5.0, Color(0.42, 0.44, 0.52).lerp(z.color, light_e(z.id)))     # 還沒點亮的地區：灰的
 		else:
 			UITheme.dot(L, zc, 7.0, Color(0.9, 0.9, 0.95, 0.55))
 	UITheme.dot(L, o + HOUSE * k, 3.5, Color("ffb87a"))

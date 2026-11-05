@@ -1,6 +1,7 @@
 extends Control
 ## 大地圖（高一曦光大陸 g10_world.gd、高二光潮群島 g11_sea.gd）的共用底層
 ##   共用：虛擬搖桿與鍵盤移動、穿裝扮的光靈、主線目標橫幅與箭頭、序章劇情＋操作教學、紀念品小劇情、提示文字、存檔
+##   點亮：每個地區／島的亮度跟著單元完成度（沒點亮時灰暗、動態又淡又慢）；完成度變高後回到地圖，會播一段點亮動畫
 ##   子類別要提供：_world_key()（"g10"／"g11"）、_grade_name()（"高一"／"高二"）、_state()（存檔用的字典）、
 ##     focus_point(name, uid)（劇情鏡頭）、_goal_world(goal)（主線目標在地圖上的位置）、_tut_steps()（操作教學）
 
@@ -58,6 +59,145 @@ func _goal_world(_gl: Dictionary) -> Vector2:
 
 func _tut_steps() -> Array:
 	return []
+
+func _view() -> Rect2:
+	return Rect2()
+
+## 點亮用：有哪些地區／島（key = 單元 id）、各自的完成度（0～1）、在地圖上的範圍、名字
+func _light_keys() -> Array:
+	return []
+
+func _light_target(_key: String) -> float:
+	return 1.0
+
+func _light_box(_key: String) -> Rect2:
+	return Rect2()
+
+func _light_name(_key: String) -> String:
+	return ""
+
+
+# ================= 點亮：地區／島的亮度 =================
+## 亮度 k（0～1）＝單元完成度；畫面上用 lit_curve(k)（前半段亮得慢，全部點亮才是原本的樣子）
+##   陸地、地標那層套 island_light.gdshader（lit 0 → 冷灰偏暗）；地區自己的動態層跟著調淡（0.3 + 0.7e²）、時間變慢
+##   存檔 _state().lit_seen 記著「上次在地圖上看到的亮度」：完成度變高了，等那一區出現在畫面上，花 LIGHT_DUR 秒慢慢亮起來
+const LIGHT_SHADER := preload("res://data/maps/island_light.gdshader")
+const LIGHT_DUR := 2.8
+
+var _lit := {}            # key → 畫面上現在的亮度（動畫中會在 from、to 之間）
+var _lit_mat := {}        # key → 陸地／地標那層的材質
+var _lit_fx := {}         # key → 那一區自己的動態層
+var _lit_anim := {}       # key → {from, to, t}（t < 0：等那一區出現在畫面上才開始）
+var debug_lit := -1.0     # 截圖用：>= 0 時每一區都用這個亮度（不播動畫）
+
+
+static func lit_curve(k: float) -> float:
+	return pow(clampf(k, 0.0, 1.0), 1.5)
+
+
+## 畫面上的亮度（0～1，還沒算過就當作全亮）
+func light_k(key: String) -> float:
+	var k := float(_lit.get(key, 1.0))
+	return 1.0 if k < 0.0 else k
+
+
+func light_e(key: String) -> float:
+	return lit_curve(light_k(key))
+
+
+## 動態層的時間：沒點亮的地區走得慢（風車、水流、光點都慢吞吞的）
+func light_time(key: String) -> float:
+	return t * (0.2 + 0.8 * light_e(key))
+
+
+func _light_mat(key: String) -> ShaderMaterial:
+	if not _lit_mat.has(key):
+		var m := ShaderMaterial.new()
+		m.shader = LIGHT_SHADER
+		_lit_mat[key] = m
+		_lit[key] = -1.0
+	return _lit_mat[key]
+
+
+func _light_show(key: String, k: float) -> void:
+	_lit[key] = k
+	var e := lit_curve(k)
+	(_lit_mat[key] as ShaderMaterial).set_shader_parameter("lit", e)
+	if _lit_fx.has(key):
+		(_lit_fx[key] as CanvasItem).modulate.a = 0.3 + 0.7 * e * e
+
+
+func _lit_seen() -> Dictionary:
+	var st := _state()
+	if not (st.get("lit_seen") is Dictionary):
+		st["lit_seen"] = {}
+	return st["lit_seen"]
+
+
+## 照完成度更新亮度；比上次看到的亮 → 排一段點亮動畫
+func _apply_light() -> void:
+	if _lit_mat.is_empty():
+		return
+	var seen := _lit_seen()
+	for key in _light_keys():
+		if not _lit_mat.has(key):
+			continue
+		var target := clampf(debug_lit if debug_lit >= 0.0 else _light_target(key), 0.0, 1.0)
+		if debug_lit >= 0.0:
+			_lit_anim.erase(key)
+			_light_show(key, target)
+			continue
+		if _lit_anim.has(key):
+			_lit_anim[key]["to"] = maxf(float(_lit_anim[key]["to"]), target)
+			continue
+		var was := float(seen.get(key, -1.0))
+		if was >= 0.0 and target > was + 0.001:
+			_lit_anim[key] = {"from": was, "to": target, "t": -1.0}
+			_light_show(key, was)
+			continue
+		if not is_equal_approx(target, float(_lit[key])):
+			_light_show(key, target)
+		if was < 0.0 or not is_equal_approx(was, target):
+			seen[key] = target       # 第一次看到（或完成度變低）：直接記下來，不播動畫
+
+
+## 每幀：點亮動畫（那一區出現在畫面上、沒有劇情或視窗擋著才開始）
+func _light_tick(delta: float) -> void:
+	for key in _lit_anim.keys():
+		var a: Dictionary = _lit_anim[key]
+		if float(a.t) < 0.0:
+			if playing or _busy or not is_visible_in_tree() or is_instance_valid(_overlay):
+				continue
+			if not _view().grow(-60.0).intersects(_light_box(key)):
+				continue
+			a.t = 0.0
+			_light_start(key, a)
+		a.t = float(a.t) + delta
+		var f := clampf(float(a.t) / LIGHT_DUR, 0.0, 1.0)
+		_light_show(key, lerpf(float(a.from), float(a.to), f * f * (3.0 - 2.0 * f)))
+		if f >= 1.0:
+			_lit_seen()[key] = float(a.to)
+			_lit_anim.erase(key)
+			Game.of(self).save_review()
+
+
+func _light_start(key: String, a: Dictionary) -> void:
+	var g = Game.of(self)
+	for i in 4:
+		g.play("bell", Game.semi(Game.scale_semi(2 + i * 2)), -12.0, 0.22 * i)
+	var nm := _light_name(key)
+	if nm != "" and _toast != null:
+		_show_toast("「%s」的世界之光全部點亮了！" % nm if float(a.to) >= 0.999 else "「%s」又亮了一點" % nm)
+
+
+## 正在播的點亮動畫：[{box, f（0～1）}]，子類別在動態層畫光圈和光點
+func _light_bursts() -> Array:
+	var out := []
+	for key in _lit_anim:
+		var a: Dictionary = _lit_anim[key]
+		if float(a.t) >= 0.0:
+			out.append({"key": key, "box": _light_box(key), "f": clampf(float(a.t) / LIGHT_DUR, 0.0, 1.0)})
+	return out
 
 
 # ================= 共用 =================

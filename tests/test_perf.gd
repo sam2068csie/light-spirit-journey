@@ -8,7 +8,21 @@ extends "res://tests/test_base.gd"
 const BUDGET := {
 	"main_menu": 95, "world_g11": 150, "world_g10": 220, "map_exp": 600,
 	"map_trig": 420, "house": 185, "L1": 230, "L3": 310,
+	# 多項式、三角函數各關（每關自己的背景 data/ui/scenery.gd）
+	"P1": 190, "P2": 170, "P3": 220, "P4": 250, "P5": 285, "P6": 245, "P7": 300, "P8": 320,
+	"G1": 225, "G2": 335, "G3": 245, "G4": 215, "G5": 170, "G6": 190, "G7": 190,
 }
+## 多項式、三角函數各關：[編號, 關卡檔, 題庫檔]（每關第一段旅程的第一題）
+const STEP_LEVELS := [
+	["P1", "level_poly1_lamp.gd", "poly1_bank.gd"], ["P2", "level_poly2_wheel.gd", "poly2_bank.gd"],
+	["P3", "level_poly3_echo.gd", "poly3_bank.gd"], ["P4", "level_poly4_mold.gd", "poly4_bank.gd"],
+	["P5", "level_poly5_lake.gd", "poly5_bank.gd"], ["P6", "level_poly6_wick.gd", "poly6_bank.gd"],
+	["P7", "level_poly7_crystal.gd", "poly7_bank.gd"], ["P8", "level_poly8_river.gd", "poly8_bank.gd"],
+	["G1", "level_trig1_arc.gd", "trig1_bank.gd"], ["G2", "level_trig2_sector.gd", "trig2_bank.gd"],
+	["G3", "level_trig3_wave.gd", "trig3_bank.gd"], ["G4", "level_trig4_tide.gd", "trig4_bank.gd"],
+	["G5", "level_trig5_compass.gd", "trig5_bank.gd"], ["G6", "level_trig6_mirror.gd", "trig6_bank.gd"],
+	["G7", "level_trig7_lighthouse.gd", "trig7_bank.gd"],
+]
 
 
 ## 重疊塗色（overdraw）：畫面上每個像素平均被畫了幾層。手機的 GPU 很怕這個（解析度高，每多一層全螢幕就多一次填色）
@@ -114,5 +128,9 @@ func _initialize() -> void:
 	await measure("L1")
 	await _level("level_03_scale.gd", "res://data/levels/exp/level03_bank.gd", 3)
 	await measure("L3")
+	var Paths := preload("res://data/core/paths.gd")
+	for e in STEP_LEVELS:
+		await _level(String(e[1]), Paths.of(String(e[2])), 0)
+		await measure(String(e[0]))
 	print("DONE perf %d/%d" % [checks - fails, checks])
 	quit(1 if fails > 0 else 0)

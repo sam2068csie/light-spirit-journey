@@ -83,14 +83,6 @@ var _plankton_grid := {}     # 1000×1000 一格（只算畫面附近那幾格�
 var _stars: Array = []
 var _coast: Array = []        # 每座島的海岸取樣 [[點, 往外的法向量], …]（浪花用）
 var _sea_pt := {}
-# 島的亮度：0 = 還沒點亮（暗、灰、沒有動態），1 = 全部點亮（原本的樣子）
-var _lit: Array = []          # 每座島現在的亮度（跟著單元的完成度）
-var _lit_mat: Array = []      # 每座島陸地那層的材質（shader 的 lit 參數）
-var _isl_fx: Array = []       # 每座島自己的動態層（點亮越多越清楚）
-var debug_lit := -1.0         # 截圖用：>= 0 時每座島都用這個亮度
-
-## 還沒點亮的島：顏色往冷灰收、整體變暗（lit = 1 時完全是原本的顏色）
-const LIGHT_SHADER := preload("res://data/maps/island_light.gdshader")
 
 
 func _init() -> void:
@@ -170,25 +162,31 @@ func on_shown() -> void:
 	queue_redraw()
 
 
-## 完成度 → 亮度：前半段亮得慢一點（點亮一半還是偏暗，全部點亮才是原本的樣子）
-static func _lit_curve(k: float) -> float:
-	return pow(clampf(k, 0.0, 1.0), 1.5)
+# ---------- 點亮（共用的做法在 world_base.gd；這裡告訴它有哪些島） ----------
+
+func _light_keys() -> Array:
+	var out := []
+	for isl in ISLANDS:
+		out.append(String(isl.unit))
+	return out
 
 
-## 每座島的亮度：照單元的完成度（世界之光點亮越多越亮，全部點亮 = 原本的樣子）
-func _apply_light() -> void:
-	if _lit_mat.is_empty():
-		return
+func _light_target(key: String) -> float:
+	return float(_progress(key).p)
+
+
+func _light_box(key: String) -> Rect2:
 	for i in ISLANDS.size():
-		var k := debug_lit if debug_lit >= 0.0 else float(_progress(ISLANDS[i].unit).p)
-		k = clampf(k, 0.0, 1.0)
-		if is_equal_approx(k, float(_lit[i])):
-			continue
-		_lit[i] = k
-		var e := _lit_curve(k)
-		(_lit_mat[i] as ShaderMaterial).set_shader_parameter("lit", e)
-		# 島上的動態：沒點亮時淡淡的、慢吞吞的，越點越清楚（和高一地圖一樣）
-		(_isl_fx[i] as CanvasItem).modulate.a = 0.3 + 0.7 * e * e
+		if String(ISLANDS[i].unit) == key:
+			return _shape[i].box
+	return Rect2()
+
+
+func _light_name(key: String) -> String:
+	for isl in ISLANDS:
+		if String(isl.unit) == key:
+			return String(isl.name)
+	return ""
 
 
 func _exit_tree() -> void:
@@ -940,7 +938,8 @@ func _process(delta: float) -> void:
 	_prewarm()
 	_place_root()
 	_fx.queue_redraw()
-	for fl in _isl_fx:
+	_light_tick(delta)
+	for fl in _lit_fx.values():
 		fl.queue_redraw()
 	_hud.queue_redraw()
 	queue_redraw()
@@ -1063,16 +1062,11 @@ func _build_layers() -> void:
 	_piece(Rect2(Vector2.ZERO, WORLD), _p_floor)
 	_piece(Rect2(-200, 1700, 1100, 1100), _p_harbor)
 	_piece(Rect2(WRECK - Vector2(400, 360), Vector2(800, 640)), _p_wreck)
-	var sh: Shader = LIGHT_SHADER
 	for i in ISLANDS.size():
 		var ii: int = i
 		var b: Rect2 = (_shape[i].box as Rect2).grow(420.0)
 		var n := _piece(b, func(L): _p_island(L, ii), false, String(ISLANDS[i].unit))
-		var m := ShaderMaterial.new()
-		m.shader = sh
-		n.material = m
-		_lit_mat.append(m)
-		_lit.append(-1.0)
+		n.material = _light_mat(String(ISLANDS[i].unit))     # 還沒點亮的島：灰暗（world_base 的點亮）
 	_piece(Rect2(Vector2.ZERO, WORLD), _p_docks, true)
 	# 海霧：每座島一塊（還沒開放才顯示），整塊慢慢飄動
 	for i in ISLANDS.size():
@@ -1088,9 +1082,9 @@ func _build_layers() -> void:
 		fl.batched = true
 		fl.cache = false
 		fl.lines_native = true
-		fl.material = _lit_mat[i]
+		fl.material = _light_mat(String(ISLANDS[i].unit))
 		_root.add_child(fl)
-		_isl_fx.append(fl)
+		_lit_fx[String(ISLANDS[i].unit)] = fl
 	_apply_light()
 	_fx = MapLayer.new()
 	_fx.painter = _p_fx
@@ -2422,6 +2416,7 @@ func _p_fx(L) -> void:
 		dd += 260.0
 	_sea_life(L, v)
 	_gloom_fx(L, v)
+	_burst_fx(L)
 	_egg_fx(L, v, font)
 	# 港口的燈塔光束、渡船的燈
 	var lamp := HARBOR + Vector2(150, -396)
@@ -2697,9 +2692,9 @@ func _sea_life(L, v: Rect2) -> void:
 ## 還沒點亮的島：上面壓著一層慢慢飄的灰暗雲影（點亮越多越淡）
 func _gloom_fx(L, v: Rect2) -> void:
 	for i in ISLANDS.size():
-		if not _open_i(i) or i >= _lit.size():
+		if not _open_i(i):
 			continue
-		var dk := 1.0 - _lit_curve(float(_lit[i]))
+		var dk := 1.0 - light_e(String(ISLANDS[i].unit))
 		if dk < 0.02:
 			continue
 		var b: Rect2 = _shape[i].box
@@ -2712,13 +2707,39 @@ func _gloom_fx(L, v: Rect2) -> void:
 			blob(L, p, Vector2(b.size.x * 0.34, b.size.y * 0.3), Color(0.05, 0.06, 0.12, 0.22 * dk))
 
 
+## 點亮動畫：從島的中心擴散出去的光圈，聖地一顆顆往上冒光點
+func _burst_fx(L) -> void:
+	for b in _light_bursts():
+		var box: Rect2 = b.box
+		var f: float = b.f
+		var c := box.get_center()
+		var col: Color = ISLANDS[0].col
+		var sites: Array = []
+		for i in ISLANDS.size():
+			if String(ISLANDS[i].unit) == String(b.key):
+				col = ISLANDS[i].col
+				sites = _shape[i].get("sites", [])
+		var big := maxf(box.size.x, box.size.y) * 0.7
+		blob(L, c, Vector2(big, big * 0.7) * (0.4 + 0.6 * f), Color(1.0, 0.95, 0.75, 0.32 * sin(f * PI)))
+		for k in 3:
+			var ph := clampf(f * 1.4 - k * 0.2, 0.0, 1.0)
+			if ph > 0.0 and ph < 1.0:
+				_ring_fx(L, c, 80.0 + ph * big, Color(col.r, col.g, col.b, 0.5 * (1.0 - ph)))
+		for j in sites.size():
+			var sp: Vector2 = sites[j]
+			for k in 4:
+				var ph := fmod(f * 2.2 + k * 0.25 + j * 0.13, 1.0)
+				var a := sin(f * PI) * (1.0 - ph)
+				_dot(L, sp + Vector2(sin(j * 2.0 + k * 1.7) * 26.0, -30.0 - ph * 160.0), 5.0, Color(1.0, 0.95, 0.7, a), 16)
+
+
 ## 一座島自己的動態（畫在那座島的動態層，照點亮程度調淡）
 func _island_fx_one(L, i: int, v: Rect2) -> void:
 	if not _open_i(i):
 		return
 	# 沒點亮的島連時間都走得慢（風箏、纜車、光點都慢吞吞的）
 	var t_real := t
-	t = t_real * (0.2 + 0.8 * _lit_curve(float(_lit[i]) if i < _lit.size() else 1.0))
+	t = light_time(String(ISLANDS[i].unit))
 	_island_fx_body(L, i, v)
 	t = t_real
 
@@ -3022,8 +3043,8 @@ func _draw_minimap(L) -> void:
 	L.draw_colored_polygon(_mini_cache["h"], Color("8a7a6a"))
 	for i in ISLANDS.size():
 		var mc: Color = (ISLANDS[i].col as Color).darkened(0.25) if _open_i(i) else Color(0.75, 0.78, 0.9, 0.6)
-		if _open_i(i) and i < _lit.size():
-			mc = Color(0.36, 0.38, 0.46).lerp(mc, _lit_curve(float(_lit[i])))     # 還沒點亮的島：小地圖上也是灰的
+		if _open_i(i):
+			mc = Color(0.36, 0.38, 0.46).lerp(mc, light_e(String(ISLANDS[i].unit)))     # 還沒點亮的島：小地圖上也是灰的
 		if not _open_i(i):
 			var fg: Array = _fog[i]
 			L.draw_colored_polygon(GW._ell(o + (fg[0] as Vector2) * k, float(fg[1]) * k * 0.9, float(fg[2]) * k * 0.9, 20), Color(0.8, 0.82, 0.92, 0.5))

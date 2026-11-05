@@ -7,11 +7,12 @@
 #   ONLY=P3 SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh play  （真的玩一次，檢查每一步的版面）
 #   SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh perf   （效能：各畫面 draw calls 不可超過預算）
 #   SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh tower  （真的爬一次終焉之塔：每一題、答錯、心用完、爬到塔頂）
+#   SHOTS=/tmp/s xvfb-run -a tests/run_tests.sh shots  （美術檢查：每一關的背景、大地圖各地區 0%／50%／100% 的亮度，只存截圖）
 set -u
 cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"
 if [ -n "${SHOTS:-}" ]; then MODE=(--rendering-driver opengl3); else MODE=(--headless); fi
-WHICH="${1:-load save economy banks scenes markup concepts}"
+WHICH="${1:-load save economy banks scenes markup concepts world guards}"
 status=0
 # 第一次在乾淨的環境跑：先匯入資源（字型、圖片），否則 load 會失敗
 "$GODOT" --headless --path . --import >/dev/null 2>&1 || true

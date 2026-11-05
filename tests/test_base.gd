@@ -47,6 +47,8 @@ func setup() -> void:
 		seen["type:" + k] = true
 	g.tut = seen
 	g.story_seen = ["world/g10", "world/g11"]
+	# 今天的連續簽到視窗當作已經跳過（全新的存檔會自動跳出來，蓋住主畫面、量效能也會多算）
+	g.streak["popup"] = load("res://data/core/daily_quests.gd").day_key()
 	await wait(0.3)
 
 
