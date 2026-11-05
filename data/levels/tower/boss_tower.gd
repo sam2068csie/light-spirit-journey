@@ -14,7 +14,7 @@ const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
-var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd）
+var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd）
 
 const STAGE_W := 700.0
 const STAGE_H := 556.0
@@ -23,6 +23,7 @@ const CARD_W := 348.0       # 右邊作答區內容寬
 const PLOT_W := 250.0       # 題目板右邊小座標圖的寬
 const CARD_MAX_H := 556.0   # 右邊作答區最高多高（再高就超出畫面）
 const MAX_HEARTS := 3
+const BUDDY_PAD := 54.0     # 推導板底部留給光靈對話框的高度
 
 var item: Dictionary = {}
 var steps: Array = []
@@ -213,6 +214,11 @@ func _build_ui() -> void:
 	widget_box = VBoxContainer.new()
 	widget_box.add_theme_constant_override("separation", 6)
 	left.add_child(widget_box)
+	# 底部留白：左下角是光靈說話的地方，最後一行捲上來，不要被對話框蓋住
+	var pad := Control.new()
+	pad.custom_minimum_size = Vector2(0, BUDDY_PAD)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	left.add_child(pad)
 	# 下面還有東西（被捲到看不到）時，底部中間出現「▼ 往下滑」，點一下往下捲
 	more_btn = Button.new()
 	more_btn.text = "▼ 下面還有"
@@ -245,7 +251,7 @@ func _build_ui() -> void:
 		if item.kind == "judge":
 			plot.custom_minimum_size = Vector2(CARD_W, 210)
 		else:
-			plot.custom_minimum_size = Vector2(PLOT_W, 250)
+			plot.custom_minimum_size = Vector2(PLOT_W, float(item.plot.get("h", 250)))
 			plot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			body.add_child(plot)
 
@@ -517,8 +523,8 @@ func _scroll_to(ctl: Control) -> void:
 	var top := ctl.global_position.y - board_scroll.global_position.y + board_scroll.scroll_vertical
 	var bottom := top + ctl.size.y
 	var to := board_scroll.scroll_vertical
-	if bottom > board_scroll.scroll_vertical + board_scroll.size.y:
-		to = int(bottom - board_scroll.size.y + 8.0)
+	if bottom + BUDDY_PAD > board_scroll.scroll_vertical + board_scroll.size.y:
+		to = int(bottom + BUDDY_PAD - board_scroll.size.y)
 	if top < to:
 		to = int(maxf(0.0, top - 8.0))
 	board_scroll.create_tween().tween_property(board_scroll, "scroll_vertical", to, 0.25)
@@ -650,7 +656,7 @@ func _update_more() -> void:
 		return
 	var sb := board_scroll.get_v_scroll_bar()
 	var hidden := sb.max_value - sb.page - float(board_scroll.scroll_vertical)
-	more_btn.visible = hidden > 24.0
+	more_btn.visible = hidden - BUDDY_PAD > 24.0
 
 
 ## 右邊作答區太高（選項是分數、提示又很長）會超出畫面：先縮小間距，再把選項按鈕壓矮一點
@@ -807,7 +813,7 @@ func _build_judge(s: Dictionary) -> void:
 		var btns := []
 		for v in [true, false]:
 			var b := Button.new()
-			b.text = "真" if v else "假"
+			b.text = "○" if v else "✕"          # 和八大關一樣用 ○／✕（對／錯），不用讀字
 			b.toggle_mode = true
 			b.focus_mode = Control.FOCUS_NONE
 			b.custom_minimum_size = Vector2(52, 34)
@@ -858,7 +864,7 @@ func _check_judge() -> void:
 			wrong += 1
 		var c := UITheme.GOOD if right else UITheme.BAD
 		jr.panel.add_theme_stylebox_override("panel", UITheme.box(Color(c.r, c.g, c.b, 0.10), 12, Color(c.r, c.g, c.b, 0.7), 1, 8))
-		jr.why.text = ("✓ " if right else "✗ ") + ("[color=#6ee7a0]真[/color]" if truth else "[color=#ff6b7a]假[/color]") + "：" + String(jr.card.why)
+		jr.why.text = ("[color=#6ee7a0]○[/color]" if truth else "[color=#ff6b7a]✕[/color]") + "　" + String(jr.card.why)
 		jr.why.visible = true
 		for b in jr.btns:
 			b.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1105,7 +1111,9 @@ func _on_pick(k: int, b: Button) -> void:
 ##   送出時有格子沒填好（空的、「3/」）只提醒，不扣心
 const KEY_ROWS := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], ["−", "/", "⌫", "送出"]]
 var fill_dot := false             # 這一題的答案有小數：多一個「.」鍵
-const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "−", ".", "/", "⌫", "▶", "◀"]   # 能打的鍵（測試用）
+var fill_rad := false             # 這一單元的填空有「√」鍵（題庫寫 const RADICALS := true；和八大關一樣，不管答案有沒有根號都出現）
+const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "−", ".", "/", "√", "⌫", "▶", "◀"]   # 能打的鍵（測試用）
+const StepLevel := preload("res://data/levels/engine/step_level.gd")
 var fill_send: Button
 var fill_live: MathLabel          # 推導板上正在填的那一行
 var fill_slots: Array = []        # 右邊的 ①②③ 格子按鈕
@@ -1123,6 +1131,7 @@ func _build_fill(s: Dictionary) -> void:
 	fill_cur = 0
 	fill_on = true
 	fill_dot = s.ans.any(func(a): return String(a).contains("."))
+	fill_rad = bool(s.get("rad", Bank.get_script_constant_map().get("RADICALS", false))) or s.ans.any(func(a): return String(a).contains("√"))
 	fill_live = _write(String(s.template))
 	var tip := Label.new()
 	tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
@@ -1163,6 +1172,8 @@ func _build_fill(s: Dictionary) -> void:
 		var ks: Array = keys.duplicate()
 		if fill_dot and ks.has("送出"):
 			ks.insert(2, ".")
+		if fill_rad and ks.has("送出"):
+			ks.insert(2, "√")
 		for key in ks:
 			var b := Button.new()
 			b.text = key
@@ -1170,9 +1181,11 @@ func _build_fill(s: Dictionary) -> void:
 			b.custom_minimum_size = Vector2(0, 42)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.add_theme_font_size_override("font_size", UITheme.fs(20) if String(key).length() == 1 else UITheme.fs(17))
+			if key == "√":
+				b.add_theme_color_override("font_color", UITheme.CYAN)
 			if key == "送出":
 				UITheme.accent_button(b, 18)
-				b.size_flags_stretch_ratio = 2.2 if fill_dot else 3.0
+				b.size_flags_stretch_ratio = 2.2 if (fill_dot or fill_rad) else 3.0
 				fill_send = b
 				b.pressed.connect(func(): _on_action())
 			else:
@@ -1198,10 +1211,15 @@ func _on_key(key: String) -> void:
 		"−":
 			v = v.substr(1) if v.begins_with("−") else "−" + v
 		"/":
-			if not v.contains("/") and not v.contains(".") and v.replace("−", "") != "":
+			if not v.contains("/") and not v.contains(".") and v.replace("−", "") != "" and not v.ends_with("√"):
 				v += "/"
+		"√":
+			# 分子、分母各自最多一個根號：2√3、√3/2、1/√3（和八大關一樣）
+			var part := v.substr(v.find("/") + 1) if v.contains("/") else v
+			if fill_rad and not part.contains("√") and not v.contains("."):
+				v += "√"
 		".":
-			if fill_dot and not v.contains(".") and not v.contains("/"):
+			if fill_dot and not v.contains(".") and not v.contains("/") and not v.contains("√"):
 				v += "." if v.replace("−", "") != "" else "0."
 		_:
 			if v.length() < (10 if fill_dot else 7):
@@ -1225,11 +1243,16 @@ func _fill_text(done_ok := false) -> String:
 				t = t.replace("− [%d]" % i, "+ [%d]" % i)
 				shown = shown.substr(1)
 		var col: Color
+		if shown.contains("√"):
+			shown = StepLevel.rad_markup(shown)
 		if shown == "":
 			shown = "▢" if i == fill_cur else "□"
 			col = UITheme.ACCENT if i == fill_cur else UITheme.TEXT_DIM
 		elif done_ok:
 			col = UITheme.CYAN_PALE
+			# 填好之後「1π」寫成「π」
+			if (shown == "1" or shown == "−1") and t.contains("[%d]π" % i):
+				shown = shown.replace("1", "")
 		else:
 			col = UITheme.BAD if fill_bad[i] else (UITheme.ACCENT if i == fill_cur else UITheme.CYAN)
 		t = t.replace("[%d]" % i, "[color=#%s]%s[/color]" % [col.to_html(false), shown])
@@ -1247,7 +1270,9 @@ static func _fill_answer(st: Dictionary) -> String:
 		elif v.begins_with("−") and t.contains("− [%d]" % i):
 			t = t.replace("− [%d]" % i, "+ [%d]" % i)
 			v = v.substr(1)
-		t = t.replace("[%d]" % i, v)
+		if (v == "1" or v == "−1") and t.contains("[%d]π" % i):
+			v = v.replace("1", "")
+		t = t.replace("[%d]" % i, StepLevel.rad_markup(v) if v.contains("√") else v)
 	return t
 
 
@@ -1256,7 +1281,7 @@ func _refresh_fill() -> void:
 		fill_live.text = _fill_text()
 	for i in fill_slots.size():
 		var b: Button = fill_slots[i]
-		b.text = "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], fill_vals[i] if fill_vals[i] != "" else "＿"]
+		b.text = "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], String(fill_vals[i]) if fill_vals[i] != "" else "＿"]
 		var c := UITheme.BAD if fill_bad[i] else (UITheme.ACCENT if i == fill_cur else Color(1, 1, 1, 0.15))
 		b.add_theme_stylebox_override("normal", UITheme.box(UITheme.PANEL_LIGHT, 10, c, 2 if i == fill_cur or fill_bad[i] else 1, 6))
 		b.add_theme_stylebox_override("hover", UITheme.box(UITheme.PANEL_LIGHT.lightened(0.08), 10, c, 2, 6))
@@ -1269,6 +1294,9 @@ func _refresh_fill() -> void:
 
 ## 把「−3/4」「2.5」這種字串變成數值；看不懂回傳 NAN
 static func _num(v: String) -> float:
+	if v.contains("√"):
+		var r: Array = StepLevel.parse_r(v)
+		return NAN if r.is_empty() else float(r[0]) * sqrt(float(r[1])) / float(r[2])
 	var t := v.replace("−", "-").replace(" ", "")
 	var re := RegEx.new()
 	re.compile("^(-?)(\\d+(?:\\.\\d+)?)(?:/(\\d+(?:\\.\\d+)?))?$")
@@ -1300,7 +1328,7 @@ func _check_fill() -> void:
 			fill_cur = i
 			_refresh_fill()
 			_hint("%s 格還沒填好（%s）。" % ["①②③④⑤⑥"[mini(i, 5)],
-				"可填整數、負數或小數，例如 −0.86" if fill_dot else "可填整數、負數或分數，例如 −3/2"], "info")
+				"可填整數、負數或小數，例如 −0.86" if fill_dot else ("可填整數、分數或根號，例如 −√3/2" if fill_rad else "可填整數、負數或分數，例如 −3/2")], "info")
 			return
 	var ok := true
 	for i in fill_vals.size():
@@ -1354,6 +1382,8 @@ func _unhandled_key_input(e: InputEvent) -> void:
 				k = "." if fill_dot else ""
 			KEY_SLASH, KEY_KP_DIVIDE:
 				k = "/"
+			KEY_R, KEY_V:
+				k = "√" if fill_rad else ""
 			KEY_BACKSPACE:
 				k = "⌫"
 			KEY_ENTER, KEY_KP_ENTER:
@@ -1604,7 +1634,17 @@ class NumLine extends Control:
 
 
 ## 小座標圖：曲線（f 用 x 當變數，Godot 的 Expression 語法）、範圍色帶、點、鉛直虛線。
-## 每個圖層可以有 at：完成第幾步之後才出現。
+## 每個圖層可以有 at：完成第幾步之後才出現（until：第幾步開始消失）。
+## 三角函數：
+##   "pi": 6 → 橫軸每 π/6 一條格線，刻度標 π/2、π、3π/2…（"pi_lab": 4 → 標到 π/4）
+## 幾何圖（"geo": true：x、y 等比例，沒有格線和坐標軸；要坐標軸寫 "axes": true）：
+##   "shapes": [{k: "seg", a: [x, y], b: [x, y]}, {k: "poly", pts: [[x, y]…], fill: "cyan"},
+##     {k: "circle", o, r}, {k: "arc", o, r, a0, a1（度，逆時針）}, {k: "sector", o, r, a0, a1, fill},
+##     {k: "dot", p}, {k: "label", p, s, off: [dx, dy]}, {k: "angle", o, a0, a1}（角的小弧）, {k: "right", p, u, v}（直角記號）]
+##     每個圖形都可以有 c（顏色）、w（線寬）、dash、at、until
+##   "groups": [{o: [x, y], shapes: [以 o 為原點的圖形], at, anim: {…}}]：會動的一組
+##     anim {k: "roll", r, dist, dur}：輪子沿地面滾動（dist > 0 往右、順時針），"trace": [lx, ly] 畫出那一點的軌跡
+##     anim {k: "spin", period, dir}：繞 o 轉（dir 1 逆時針、−1 順時針），例如摩天輪、風車
 class Plot extends Control:
 	var data: Dictionary = {}
 	var stage := 0:
@@ -1656,14 +1696,23 @@ class Plot extends Control:
 			draw_polyline(cur, col, w, true)
 
 	func _vis(layer: Dictionary) -> bool:
-		return stage >= int(layer.get("at", 0))
+		return stage >= int(layer.get("at", 0)) and (not layer.has("until") or stage < int(layer.until))
 
 	func _to(p: Vector2) -> Vector2:
 		var xr: Array = data.x
 		var yr: Array = data.y
 		var r := Rect2(Vector2(10, 10), size - Vector2(20, 20))
+		if data.get("geo", false):
+			# 幾何圖：x、y 同一個比例，置中
+			var sc := minf(r.size.x / (xr[1] - xr[0]), r.size.y / (yr[1] - yr[0]))
+			var c := r.get_center()
+			return Vector2(c.x + (p.x - (xr[0] + xr[1]) / 2.0) * sc, c.y - (p.y - (yr[0] + yr[1]) / 2.0) * sc)
 		return Vector2(r.position.x + (p.x - xr[0]) / (xr[1] - xr[0]) * r.size.x,
 			r.end.y - (p.y - yr[0]) / (yr[1] - yr[0]) * r.size.y)
+
+	## 一個單位長是幾個像素（幾何圖用）
+	func _unit() -> float:
+		return _to(Vector2(1, 0)).x - _to(Vector2(0, 0)).x
 
 	func _sample(f: String) -> Array:
 		if _cache.has(f):
@@ -1688,6 +1737,7 @@ class Plot extends Control:
 
 	static func _col(nm: String) -> Color:
 		return {"cyan": UITheme.CYAN, "pink": UITheme.PINK, "orange": UITheme.ORANGE, "lime": UITheme.LIME,
+			"gold": UITheme.ACCENT, "violet": UITheme.VIOLET, "text": UITheme.TEXT,
 			"dim": Color(1, 1, 1, 0.55), "faint": Color(1, 1, 1, 0.22)}.get(nm, UITheme.CYAN)
 
 	func _draw() -> void:
@@ -1695,9 +1745,14 @@ class Plot extends Control:
 		var font := get_theme_default_font()
 		var xr: Array = data.x
 		var yr: Array = data.y
-		# 格線
+		if data.get("geo", false):
+			_draw_geo(font)
+			return
+		# 格線（"pi"：橫軸每 π/n 一條）
 		var step := 1.0 if (xr[1] - xr[0]) <= 10.0 else 2.0
-		var gx := ceilf(xr[0] / step) * step
+		if data.has("pi"):
+			step = PI / float(data.pi)
+		var gx := ceilf(xr[0] / step - 1e-6) * step
 		while gx <= xr[1]:
 			var a := _to(Vector2(gx, yr[0]))
 			var b := _to(Vector2(gx, yr[1]))
@@ -1725,6 +1780,8 @@ class Plot extends Control:
 		if yr[0] < 0.0 and yr[1] > 0.0:
 			draw_line(_to(Vector2(xr[0], 0)), _to(Vector2(xr[1], 0)), Color(1, 1, 1, 0.4), 1.5)
 			preload("res://data/ui/math_text.gd").draw_text(self, font, _to(Vector2(xr[1], 0)) + Vector2(-14, -6), String(data.get("var", "x")), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.6))
+		if data.has("pi"):
+			_pi_ticks(font)
 		# 鉛直虛線（漸近線）
 		for v in data.get("vlines", []):
 			if _vis(v):
@@ -1743,6 +1800,9 @@ class Plot extends Control:
 			for p in pts:
 				var span: float = yr[1] - yr[0]
 				var ok: bool = p != null and p.y > yr[0] - span and p.y < yr[1] + span
+				# tan 這種跳過漸近線的地方：前後兩點差太多就斷開
+				if ok and faint.size() > 0 and absf(_to(p).y - faint[faint.size() - 1].y) > size.y * 1.2:
+					ok = false
 				if not ok:
 					if faint.size() > 1:
 						_pl(faint, Color(col.r, col.g, col.b, 0.25), 2.0, dash)
@@ -1780,3 +1840,247 @@ class Plot extends Control:
 				var tp := sp + off
 				draw_string_outline(font, tp, lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UITheme.fs(4), Color(0.04, 0.05, 0.12, 0.9))
 				draw_string(font, tp, lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), UITheme.ACCENT)
+		# 一般座標圖上也可以疊幾何圖形（例如波形上的三角形）
+		for sh in data.get("shapes", []):
+			if _vis(sh):
+				_shape(sh, Vector2.ZERO, 0.0, font)
+
+	## 橫軸的 π 刻度：π/2、π、3π/2…（太擠就只標 π 的整數倍）
+	func _pi_ticks(font: Font) -> void:
+		var xr: Array = data.x
+		var yr: Array = data.y
+		var d := int(data.get("pi_lab", 2))
+		var fs0 := UITheme.fs(12)
+		# 刻度太擠（字比間距寬）就少標一點：π/6 → π/3 → π…
+		while d > 1:
+			var px := absf(_to(Vector2(PI / d, 0)).x - _to(Vector2(0, 0)).x)
+			var wmax := font.get_string_size(_pi_text(2 * d - 1, d), HORIZONTAL_ALIGNMENT_LEFT, -1, fs0).x
+			if px >= wmax + 6.0:
+				break
+			d = d / 2 if d % 2 == 0 else (d / 3 if d % 3 == 0 else 1)
+		var k := int(ceil(xr[0] / (PI / d) - 1e-6))
+		var y0 := _to(Vector2(0, clampf(0.0, yr[0], yr[1]))).y
+		while k * PI / d <= xr[1] + 1e-6:
+			if k != 0:
+				var sp := _to(Vector2(k * PI / d, 0))
+				draw_line(Vector2(sp.x, y0 - 3), Vector2(sp.x, y0 + 3), Color(1, 1, 1, 0.45), 1.0)
+				var s := _pi_text(k, d)
+				var fs := UITheme.fs(12)
+				var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				var tp := Vector2(sp.x - w / 2.0, minf(y0 + 15.0, size.y - 4.0))
+				if data.get("pi_up", false):
+					tp.y = y0 - 6.0
+				draw_string_outline(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UITheme.fs(3), Color(0.04, 0.05, 0.12, 0.9))
+				draw_string(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.55))
+			k += 1
+
+	## k·π/d 寫成「3π/2」「−π」「2π」
+	static func _pi_text(k: int, d: int) -> String:
+		var g := absi(k)
+		var h := d
+		while h != 0:
+			var tt := g % h
+			g = h
+			h = tt
+		var n := k / g
+		var m := d / g
+		var sg := "−" if n < 0 else ""
+		var a := absi(n)
+		var top := ("π" if a == 1 else "%dπ" % a)
+		return sg + (top if m == 1 else "%s/%d" % [top, m])
+
+	# ---------- 幾何圖 ----------
+	var _anim_t0 := {}
+
+	func _v(a) -> Vector2:
+		return Vector2(float(a[0]), float(a[1]))
+
+	func _draw_geo(font: Font) -> void:
+		if data.get("axes", false):
+			var xr: Array = data.x
+			var yr: Array = data.y
+			draw_line(_to(Vector2(xr[0], 0)), _to(Vector2(xr[1], 0)), Color(1, 1, 1, 0.4), 1.5)
+			if xr[0] < 0.0 and xr[1] > 0.0:
+				draw_line(_to(Vector2(0, yr[0])), _to(Vector2(0, yr[1])), Color(1, 1, 1, 0.4), 1.5)
+		for sh in data.get("shapes", []):
+			if _vis(sh):
+				_shape(sh, Vector2.ZERO, 0.0, font)
+		var gi := 0
+		for g in data.get("groups", []):
+			gi += 1
+			if not _vis(g):
+				_anim_t0.erase(gi)
+				continue
+			if not _anim_t0.has(gi):
+				_anim_t0[gi] = t
+			var o := _v(g.get("o", [0, 0]))
+			var rot := 0.0
+			var an: Dictionary = g.get("anim", {})
+			var tt: float = t - float(_anim_t0[gi])
+			if small or test_still:
+				tt = 1e6 if an.get("k", "") == "roll" else 0.0
+			match String(an.get("k", "")):
+				"roll":
+					var dur := float(an.get("dur", 3.0))
+					var cyc := dur + 1.4
+					var p := clampf(fmod(tt, cyc) / dur, 0.0, 1.0) if tt < 1e5 else 1.0
+					p = p * p * (3.0 - 2.0 * p)
+					var dist := float(an.dist) * p
+					var r := float(an.r)
+					var c0 := o
+					o = c0 + Vector2(dist, 0)
+					rot = -dist / r
+					if g.has("trace"):
+						var lp := _v(g.trace)
+						var pts := PackedVector2Array()
+						for i in 61:
+							var dd := dist * i / 60.0
+							pts.append(_to(c0 + Vector2(dd, 0) + lp.rotated(-dd / r)))
+						_pl(pts, Color(1, 0.85, 0.45, 0.55), 2.0, true)
+				"spin":
+					rot = TAU * tt / float(an.get("period", 6.0)) * float(an.get("dir", 1))
+				"polyroll":
+					# 正多邊形往右翻滾：每次繞著右下角的頂點順時針轉一個外角
+					_polyroll(g, an, tt, font)
+					continue
+			for sh in g.get("shapes", []):
+				if _vis(sh):
+					_shape(sh, o, rot, font)
+		for p in data.get("pts", []):
+			if _vis(p):
+				_shape({"k": "dot", "p": [p.x, p.y], "s": p.get("label", ""), "off": p.get("off", [8, -8])}, Vector2.ZERO, 0.0, font)
+
+	var test_still := false        # 測試截圖：動畫直接停在最後
+
+	## 正多邊形翻滾：o 是一開始左下角頂點的位置，邊長 side、邊數 sides，翻 n 次（每次 dur 秒）
+	## 一開始的圖形（以 o 為原點）翻第 k 次時：先往右平移 k 個邊長，再繞 (k + 1) 個邊長的地方轉
+	func _polyroll(g: Dictionary, an: Dictionary, tt: float, font: Font) -> void:
+		var side := float(an.side)
+		var ext := TAU / float(an.sides)
+		var n := int(an.n)
+		var dur := float(an.get("dur", 0.9))
+		var total := n * dur
+		var cyc := total + 1.4
+		var tau := minf(fmod(tt, cyc), total) if tt < 1e5 else total
+		var k := mini(int(tau / dur), n - 1)
+		var p := clampf((tau - k * dur) / dur, 0.0, 1.0)
+		if tau >= total:
+			k = n - 1
+			p = 1.0
+		var o := _v(g.get("o", [0, 0]))
+		var place := func(local: Vector2, kk: int, pp: float) -> Vector2:
+			var base := local + Vector2(side * kk, 0)
+			var piv := Vector2(side * (kk + 1), 0)
+			return o + piv + (base - piv).rotated(-ext * pp)
+		if g.has("trace"):
+			var lp := _v(g.trace)
+			var pts := PackedVector2Array()
+			for kk in k + 1:
+				var last := 1.0 if kk < k else p
+				for i in 21:
+					pts.append(_to(place.call(lp, kk, last * i / 20.0)))
+			_pl(pts, Color(1, 0.85, 0.45, 0.6), 2.0, true)
+		for sh in g.get("shapes", []):
+			if not _vis(sh):
+				continue
+			var s2: Dictionary = sh.duplicate(true)
+			for key in ["a", "b", "p", "o"]:
+				if s2.has(key):
+					var q: Vector2 = place.call(_v(s2[key]), k, p) - o
+					s2[key] = [q.x, q.y]
+			if s2.has("pts"):
+				var arr := []
+				for q0 in s2.pts:
+					var q: Vector2 = place.call(_v(q0), k, p) - o
+					arr.append([q.x, q.y])
+				s2.pts = arr
+			_shape(s2, o, 0.0, font)
+
+	## 把一個圖形畫出來（o、rot：整組平移、旋轉）
+	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		var tr := func(a) -> Vector2:
+			return _to(o + _v(a).rotated(rot))
+		var col := _col(String(sh.get("c", "dim")))
+		var w := float(sh.get("w", 2.0))
+		var dash: bool = sh.get("dash", false)
+		match String(sh.k):
+			"seg":
+				_pl(PackedVector2Array([tr.call(sh.a), tr.call(sh.b)]), col, w, dash)
+			"poly":
+				var pts := PackedVector2Array()
+				for q in sh.pts:
+					pts.append(tr.call(q))
+				if sh.has("fill"):
+					var fc := _col(String(sh.fill))
+					draw_colored_polygon(pts, Color(fc.r, fc.g, fc.b, float(sh.get("alpha", 0.28))))
+				if not sh.get("open", false):
+					pts.append(pts[0])
+				if not sh.get("nostroke", false):
+					_pl(pts, col, w, dash)
+			"ellipse":
+				var oc := _v(sh.o)
+				var pts := PackedVector2Array()
+				for i in 65:
+					var a := TAU * i / 64.0
+					pts.append(tr.call([oc.x + float(sh.rx) * cos(a), oc.y + float(sh.ry) * sin(a)]))
+				_pl(pts, col, w, dash)
+			"circle", "arc", "sector":
+				var oc := _v(sh.get("o", [0, 0]))
+				var r := float(sh.r)
+				var a0 := deg_to_rad(float(sh.get("a0", 0.0)))
+				var a1 := deg_to_rad(float(sh.get("a1", 360.0)))
+				var n := maxi(8, int(absf(a1 - a0) / TAU * 96.0))
+				var pts := PackedVector2Array()
+				for i in n + 1:
+					var a := lerpf(a0, a1, float(i) / n)
+					pts.append(tr.call([oc.x + r * cos(a), oc.y + r * sin(a)]))
+				if sh.k == "sector":
+					var cc: Vector2 = tr.call([oc.x, oc.y])
+					var poly := PackedVector2Array([cc])
+					poly.append_array(pts)
+					if sh.has("fill"):
+						var fc := _col(String(sh.fill))
+						draw_colored_polygon(poly, Color(fc.r, fc.g, fc.b, float(sh.get("alpha", 0.28))))
+					poly.append(cc)
+					_pl(poly, col, w, dash)
+				else:
+					if sh.has("fill"):
+						var fc := _col(String(sh.fill))
+						draw_colored_polygon(pts, Color(fc.r, fc.g, fc.b, float(sh.get("alpha", 0.28))))
+					_pl(pts, col, w, dash)
+			"dot":
+				var sp: Vector2 = tr.call(sh.p)
+				var dc := _col(String(sh.get("c", "gold")))
+				UITheme.dot(self, sp, 8.0, Color(dc.r, dc.g, dc.b, 0.2))
+				UITheme.dot(self, sp, 4.5, dc)
+				if String(sh.get("s", "")) != "":
+					_label(font, sp, String(sh.s), sh.get("off", [8, -8]), dc)
+			"label":
+				_label(font, tr.call(sh.p), String(sh.s), sh.get("off", [0, 0]), _col(String(sh.get("c", "text"))), true)
+			"angle":
+				# 角的小弧（像素半徑）
+				var cp: Vector2 = tr.call(sh.o)
+				var rr := float(sh.get("r", 16.0))
+				var b0 := -deg_to_rad(float(sh.a0)) - rot
+				var b1 := -deg_to_rad(float(sh.a1)) - rot
+				draw_arc(cp, rr, minf(b0, b1), maxf(b0, b1), 24, _col(String(sh.get("c", "gold"))), 1.6, true)
+				if String(sh.get("s", "")) != "":
+					var mid := (b0 + b1) / 2.0
+					_label(font, cp + Vector2(cos(mid), sin(mid)) * (rr + 9.0), String(sh.s), [0, 0], _col(String(sh.get("c", "gold"))), true)
+			"right":
+				var cp: Vector2 = tr.call(sh.p)
+				var u: Vector2 = (tr.call([sh.p[0] + sh.u[0], sh.p[1] + sh.u[1]]) - cp).normalized() * 9.0
+				var v: Vector2 = (tr.call([sh.p[0] + sh.v[0], sh.p[1] + sh.v[1]]) - cp).normalized() * 9.0
+				_pl(PackedVector2Array([cp + u, cp + u + v, cp + v]), Color(1, 1, 1, 0.6), 1.4, false)
+
+	## 文字（center：以那一點為中心）
+	func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) -> void:
+		var fs := UITheme.fs(15)
+		var sz := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var tp := sp + Vector2(float(off[0]), float(off[1]))
+		if center:
+			tp += Vector2(-sz.x / 2.0, sz.y * 0.32)
+		tp.x = clampf(tp.x, 2.0, size.x - sz.x - 2.0)
+		tp.y = clampf(tp.y, sz.y * 0.8, size.y - 3.0)
+		draw_string_outline(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UITheme.fs(4), Color(0.04, 0.05, 0.12, 0.9))
+		draw_string(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)

@@ -98,6 +98,7 @@ const MAP := {
 	"touch_slider.gd": "res://data/ui/touch_slider.gd",
 	"tower_bank.gd": "res://data/levels/tower/tower_bank.gd",
 	"poly_tower_bank.gd": "res://data/levels/tower/poly_tower_bank.gd",
+	"trig_tower_bank.gd": "res://data/levels/tower/trig_tower_bank.gd",
 	"tower_climb.gd": "res://data/levels/tower/tower_climb.gd",
 	"tower_view.gd": "res://data/levels/tower/tower_view.gd",
 	"trig1_bank.gd": "res://data/levels/trig/trig1_bank.gd",

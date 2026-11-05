@@ -50,7 +50,7 @@ const UNITS := [
 	# ======================= 高二上 =======================
 	# 三角函數：G1～G7 全部做好，正式開放
 	{"id": "trig", "term": "高二上", "title": "三角函數", "exam": "", "color": UITheme.PINK, "open": true,
-	 "world": "光靈的旅程：月輪島與正弦海岸", "map": "trig_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_trig.gd",
+	 "world": "光靈的旅程：月輪島與正弦海岸", "map": "trig_map.gd", "tower": "trig_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_trig.gd",
 	 "levels": [
 		{"id": "G1", "name": "弧之渡口", "topic": "弧度量", "file": "level_trig1_arc.gd", "bank": "trig1_bank.gd", "color": UITheme.CYAN},
 		{"id": "G2", "name": "扇形潟湖", "topic": "扇形弧長與面積", "file": "level_trig2_sector.gd", "bank": "trig2_bank.gd", "color": UITheme.ORANGE},

@@ -234,6 +234,26 @@ func _check_bank() -> void:
 			if st.has("col") and not it.get("routes", {}).has(st.col):
 				_issue("%s：路線 %s 沒有名字" % [id, st.col])
 		_lint(it, id)
+		_no_cjk_on_plot(it.get("plot", {}), id)
+		for st in it.steps:
+			for gph in st.get("graphs", []):
+				_no_cjk_on_plot(gph, id)
+
+
+## 圖上不標中文：點的 label、幾何圖的文字 s
+func _no_cjk_on_plot(v, where: String) -> void:
+	if v is Dictionary:
+		for k in v:
+			if (k == "label" or k == "s") and v[k] is String:
+				for ch in String(v[k]):
+					if ch.unicode_at(0) >= 0x3000:
+						_issue("%s：圖上有中文「%s」" % [where, v[k]])
+						break
+			else:
+				_no_cjk_on_plot(v[k], where)
+	elif v is Array:
+		for e in v:
+			_no_cjk_on_plot(e, where)
 
 
 func _lint(v, where: String) -> void:
@@ -491,7 +511,8 @@ func _lose_cases() -> void:
 	await _tutorial_case()
 	await _keypad_case()
 	# 1. 只剩一顆心時答錯：示範解法、看攀登結果
-	var lose_ids := ["r_logsum", "j_rules", "l_twolog", "b_ineq"] if unit == "exp" else ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"]
+	var lose_ids: Array = {"exp": ["r_logsum", "j_rules", "l_twolog", "b_ineq"], "h1poly": ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"],
+		"trig": ["tc_half", "tj_sign", "tq_tide", "tb_gun", "tg_pick"]}[unit]
 	for id in lose_ids:
 		cur_tag = id + "（心用完）"
 		var bt = await _open(id, 1)
@@ -508,7 +529,7 @@ func _lose_cases() -> void:
 		await _bcheck(bt, "心用完")
 		await shot(unit + "_lose_" + id)
 	# 2. 時間到
-	for id in (["e_closed", "q_bact"] if unit == "exp" else ["pp_twoway", "pg_pair"]):
+	for id in {"exp": ["e_closed", "q_bact"], "h1poly": ["pp_twoway", "pg_pair"], "trig": ["te_quad", "tq_wheel"]}[unit]:
 		cur_tag = id + "（時間到）"
 		var bt = await _open(id, 3, 2.0)
 		if bt == null:
@@ -521,7 +542,7 @@ func _lose_cases() -> void:
 		await _bcheck(bt, "時間到")
 		await shot(unit + "_timeout_" + id)
 	# 3. 審判錯一張不扣心、錯兩張扣一顆
-	var jid := "j_value" if unit == "exp" else "pj_tworem"
+	var jid: String = {"exp": "j_value", "h1poly": "pj_tworem", "trig": "tj_period"}[unit]
 	cur_tag = jid + "（錯一張）"
 	var bj = await _open(jid)
 	if bj != null:
