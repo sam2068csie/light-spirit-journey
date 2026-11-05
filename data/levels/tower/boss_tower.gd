@@ -1425,8 +1425,17 @@ class NumLine extends Control:
 						sc = Color(sc.r, sc.g, sc.b, 0.85)
 					UITheme.dot(self, c, 15.0, Color(sc.r, sc.g, sc.b, 0.18))
 					draw_arc(c, 15.0, 0, TAU, 28, sc, 2.0, true)
-					var txt := "＋" if v > 0 else ("−" if v < 0 else "?")
-					draw_string(font, c + Vector2(-14, 7), txt, HORIZONTAL_ALIGNMENT_CENTER, 28, UITheme.fs(20), sc)
+					# ＋、− 直接畫線，一定在圓心；？ 用字型量出來的大小置中
+					if v != 0:
+						draw_line(c + Vector2(-7, 0), c + Vector2(7, 0), sc, 2.6, true)
+						if v > 0:
+							draw_line(c + Vector2(0, -7), c + Vector2(0, 7), sc, 2.6, true)
+					else:
+						var qs := UITheme.fs(18)
+						var tw := font.get_string_size("?", HORIZONTAL_ALIGNMENT_LEFT, -1, qs)
+						var asc := font.get_ascent(qs)
+						var desc := font.get_descent(qs)
+						draw_string(font, c + Vector2(-tw.x / 2.0, (asc - desc) / 2.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, qs, sc)
 				for i in xs.size():
 					draw_line(Vector2(xs[i], y - 14), Vector2(xs[i], y + 14), Color(1, 1, 1, 0.35), 2.0)
 				continue
