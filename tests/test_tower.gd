@@ -364,6 +364,10 @@ func _bcheck(bt, when: String) -> void:
 		_issue("%s：右邊作答區超出畫面（%d×%d，下緣 %d）" % [when, int(cr.size.x), int(cr.size.y), int(cr.end.y)])
 		await shot("%s_%s" % [cur_tag, when])
 	await _check_node(card, cr, when)
+	# 選項不能折成兩行
+	for b in bt.opts_box.get_children():
+		if b is Button and b.has_meta("one_line_w") and float(b.get_meta("one_line_w")) > bt.CARD_W - 28.0 + 0.5:
+			_issue("%s：選項太長會折成兩行（%s）" % [when, String(b.get_node("Math").text).left(40)])
 	var sr: Rect2 = bt.stage_panel.get_global_rect()
 	if sr.size.x > bt.STAGE_W + 1.0 or sr.size.y > bt.STAGE_H + 1.0:
 		_issue("%s：左邊題目板被撐大了（%d×%d）" % [when, int(sr.size.x), int(sr.size.y)])

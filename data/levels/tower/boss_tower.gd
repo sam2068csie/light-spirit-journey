@@ -69,7 +69,6 @@ var pick_tiles: Array = []      # 選圖題的每一張圖（按鈕）
 var fill_on := false            # 數字鍵盤正在作答
 var fill_vals: Array = []       # 每一格目前填的字
 var fill_cur := 0               # 正在填第幾格
-var fill_label: MathLabel
 
 
 var scratch: Control      # 計算紙
@@ -420,9 +419,9 @@ func _advance() -> void:
 		_show_step()
 
 
-func _write(line: String, dim := false, at := -1) -> void:
+func _write(line: String, dim := false, at := -1) -> MathLabel:
 	if line == "":
-		return
+		return null
 	var idx := si if at < 0 else at
 	var col := String(steps[idx].get("col", "")) if idx >= 0 and idx < steps.size() else ""
 	var l := MathLabel.new()
@@ -441,6 +440,7 @@ func _write(line: String, dim := false, at := -1) -> void:
 	var tw := create_tween()
 	tw.tween_property(l, "modulate:a", 1.0, 0.3)
 	_scroll_board_end()
+	return l
 
 
 ## 分類討論：推導板分成左右兩欄（第一次用到時才建立）
@@ -528,8 +528,12 @@ func _out_of_hearts() -> bool:
 ## 結束這一層：把剩下的推導都寫上去
 func _reveal_all(msg: String) -> void:
 	fail_at = si
+	if fill_on and is_instance_valid(fill_live):
+		fill_live.queue_free()        # 還沒填完的那一行拿掉，下面寫完整的解法
 	for i in range(si, steps.size()):
 		_write_pre(i, true)
+		if String(steps[i].t) == "fill":
+			_write(_fill_answer(steps[i]), true, i)     # 填空那一行：答案填好
 		_write(String(steps[i].get("write", "")), true, i)
 	_lock_widgets()
 	_hint(msg, "bad")
@@ -698,6 +702,7 @@ func _build_choice(s: Dictionary) -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		# 太長的選項折成兩行（按鈕跟著變高）
 		var m: Control = b.get_node("Math")
+		b.set_meta("one_line_w", m.get_combined_minimum_size().x)     # 不折行時有多寬（測試檢查選項會不會折成兩行）
 		m.max_width = CARD_W - 28.0
 		b.custom_minimum_size.y = maxf(50.0, m.get_combined_minimum_size().y + 16.0)
 		b.pressed.connect(_on_choice.bind(k, b))
@@ -1069,11 +1074,15 @@ func _on_pick(k: int, b: Button) -> void:
 # ================= 數字鍵盤填答案 =================
 ## {t: "fill", q, template: "f(4) = [0]", ans: ["24"], hint, write}
 ##   template 裡的 [0]、[1]… 是要填的格子；ans 是每一格的答案（分數寫 a/b，比較時看數值，2/4 和 1/2 都算對）
+##   和八大關一樣：填空直接寫在左邊的推導板（空格就在那一行裡），右邊是 ①②③ 選格子＋鍵盤
 
-## 鍵盤和八大關一樣分三列：1～5／6～0／− . / ⌫ 送出（好幾格時多一個「下一格」）
+## 鍵盤和八大關一樣分三列：1～5／6～0／− . / ⌫ 送出（換格子：點上面的 ①②③）
 const KEY_ROWS := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], ["−", ".", "/", "⌫", "送出"]]
 const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "−", ".", "/", "⌫", "▶", "◀"]   # 能打的鍵（測試用）
 var fill_send: Button
+var fill_live: MathLabel          # 推導板上正在填的那一行
+var fill_slots: Array = []        # 右邊的 ①②③ 格子按鈕
+var fill_bad: Array = []          # 送出後填錯的格子（標紅）
 
 
 func _build_fill(s: Dictionary) -> void:
@@ -1081,52 +1090,64 @@ func _build_fill(s: Dictionary) -> void:
 	fill_vals = []
 	fill_vals.resize(n)
 	fill_vals.fill("")
+	fill_bad = []
+	fill_bad.resize(n)
+	fill_bad.fill(false)
 	fill_cur = 0
 	fill_on = true
-	var disp := PanelContainer.new()
-	disp.add_theme_stylebox_override("panel", UITheme.box(Color(0, 0, 0, 0.28), 12, Color(kind_col.r, kind_col.g, kind_col.b, 0.5), 1, 10))
-	disp.mouse_filter = Control.MOUSE_FILTER_STOP
-	disp.gui_input.connect(func(e: InputEvent):
-		if e is InputEventMouseButton and e.pressed and fill_vals.size() > 1:
-			fill_cur = (fill_cur + 1) % fill_vals.size()
-			_refresh_fill())
-	opts_box.add_child(disp)
-	fill_label = MathLabel.new()
-	fill_label.font_size = UITheme.fs(22)
-	fill_label.max_width = CARD_W - 24
-	fill_label.align_center = true
-	fill_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	disp.add_child(fill_label)
+	fill_live = _write(String(s.template))
+	var tip := Label.new()
+	tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
+	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	tip.custom_minimum_size = Vector2(CARD_W, 0)
+	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
+	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	opts_box.add_child(tip)
+	fill_slots = []
+	if n > 1:
+		var row := GridContainer.new()
+		row.columns = n if n <= 4 else ceili(n / 2.0)
+		row.add_theme_constant_override("h_separation", 6)
+		row.add_theme_constant_override("v_separation", 6)
+		opts_box.add_child(row)
+		for i in n:
+			var sb := Button.new()
+			sb.clip_text = true
+			sb.custom_minimum_size = Vector2(0, 34)
+			sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sb.focus_mode = Control.FOCUS_NONE
+			sb.add_theme_font_size_override("font_size", UITheme.fs(17))
+			var idx := i
+			sb.pressed.connect(func():
+				if fill_on:
+					fill_cur = idx
+					_refresh_fill())
+			row.add_child(sb)
+			fill_slots.append(sb)
 	var pad := VBoxContainer.new()
 	pad.name = "Pad"
 	pad.add_theme_constant_override("separation", 6)
 	opts_box.add_child(pad)
 	for keys in KEY_ROWS:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		pad.add_child(row)
-		var ks: Array = keys.duplicate()
-		if ks.has("送出") and n > 1:
-			ks.insert(ks.find("送出"), "▶")
-		for key in ks:
+		var row2 := HBoxContainer.new()
+		row2.add_theme_constant_override("separation", 6)
+		pad.add_child(row2)
+		for key in keys:
 			var b := Button.new()
-			b.text = "下一格" if key == "▶" else key
+			b.text = key
 			b.focus_mode = Control.FOCUS_NONE
-			b.custom_minimum_size = Vector2(0, 44)
+			b.custom_minimum_size = Vector2(0, 42)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.add_theme_font_size_override("font_size", UITheme.fs(20) if String(key).length() == 1 else UITheme.fs(15))
-			if key != "送出":
-				UITheme.tight(b, 2)
-			if key == "▶":
-				b.size_flags_stretch_ratio = 1.5
+			b.add_theme_font_size_override("font_size", UITheme.fs(20) if String(key).length() == 1 else UITheme.fs(17))
 			if key == "送出":
 				UITheme.accent_button(b, 18)
-				b.size_flags_stretch_ratio = 2.0 if n > 1 else 2.6
+				b.size_flags_stretch_ratio = 2.6
 				fill_send = b
 				b.pressed.connect(func(): _on_action())
 			else:
+				UITheme.tight(b, 2)
 				b.pressed.connect(_on_key.bind(key))
-			row.add_child(b)
+			row2.add_child(b)
 	action_btn.visible = false
 	_refresh_fill()
 
@@ -1135,32 +1156,72 @@ func _on_key(key: String) -> void:
 	if not fill_on or done or waiting:
 		return
 	Game.of(self).sfx("click")
+	if key == "◀" or key == "▶":
+		fill_cur = (fill_cur + (1 if key == "▶" else -1) + fill_vals.size()) % fill_vals.size()
+		_refresh_fill()
+		return
 	var v: String = fill_vals[fill_cur]
-	match key:
-		"⌫":
-			v = v.left(v.length() - 1)
-		"◀", "▶":
-			# 換格子：不改任何一格的內容
-			fill_cur = (fill_cur + (1 if key == "▶" else -1) + fill_vals.size()) % fill_vals.size()
-			_refresh_fill()
-			return
-		_:
-			if v.length() < 9:
-				v += key
+	if key == "⌫":
+		v = v.left(v.length() - 1)
+	elif v.length() < 9:
+		v += key
 	fill_vals[fill_cur] = v
+	fill_bad[fill_cur] = false
 	_refresh_fill()
 
 
-func _refresh_fill() -> void:
-	var s: Dictionary = steps[si]
-	var t := String(s.template)
+## 推導板那一行和右邊的 ①②③：空的格子 □（正在填的是金色 ▢），填了的是青色，填錯的是紅色
+func _fill_text(done_ok := false) -> String:
+	var t := String(steps[si].template)
 	for i in fill_vals.size():
-		var v: String = fill_vals[i]
-		var shown := v if v != "" else "□"
-		# 每一格長得一樣，正在填的那一格是金色
-		var c := "ffcf5a" if i == fill_cur and fill_on else "9be7ff"
-		t = t.replace("[%d]" % i, "[color=#%s]%s[/color]" % [c, shown])
-	fill_label.text = t
+		var shown: String = fill_vals[i]
+		# 「+ □」裡填了負數：顯示成「− 3」，不要「+ −3」
+		if shown.begins_with("−"):
+			if t.contains("+ [%d]" % i):
+				t = t.replace("+ [%d]" % i, "− [%d]" % i)
+				shown = shown.substr(1)
+			elif t.contains("− [%d]" % i):
+				t = t.replace("− [%d]" % i, "+ [%d]" % i)
+				shown = shown.substr(1)
+		var col: Color
+		if shown == "":
+			shown = "▢" if i == fill_cur else "□"
+			col = UITheme.ACCENT if i == fill_cur else UITheme.TEXT_DIM
+		elif done_ok:
+			col = UITheme.CYAN_PALE
+		else:
+			col = UITheme.BAD if fill_bad[i] else (UITheme.ACCENT if i == fill_cur else UITheme.CYAN)
+		t = t.replace("[%d]" % i, "[color=#%s]%s[/color]" % [col.to_html(false), shown])
+	return t
+
+
+## 填空那一行把答案填進去（示範解法用）
+static func _fill_answer(st: Dictionary) -> String:
+	var t := String(st.template)
+	for i in st.ans.size():
+		var v := String(st.ans[i])
+		if v.begins_with("−") and t.contains("+ [%d]" % i):
+			t = t.replace("+ [%d]" % i, "− [%d]" % i)
+			v = v.substr(1)
+		elif v.begins_with("−") and t.contains("− [%d]" % i):
+			t = t.replace("− [%d]" % i, "+ [%d]" % i)
+			v = v.substr(1)
+		t = t.replace("[%d]" % i, v)
+	return t
+
+
+func _refresh_fill() -> void:
+	if is_instance_valid(fill_live):
+		fill_live.text = _fill_text()
+	for i in fill_slots.size():
+		var b: Button = fill_slots[i]
+		b.text = "%s %s" % ["①②③④⑤⑥"[mini(i, 5)], fill_vals[i] if fill_vals[i] != "" else "＿"]
+		var c := UITheme.BAD if fill_bad[i] else (UITheme.ACCENT if i == fill_cur else Color(1, 1, 1, 0.15))
+		b.add_theme_stylebox_override("normal", UITheme.box(UITheme.PANEL_LIGHT, 10, c, 2 if i == fill_cur or fill_bad[i] else 1, 6))
+		b.add_theme_stylebox_override("hover", UITheme.box(UITheme.PANEL_LIGHT.lightened(0.08), 10, c, 2, 6))
+		var pr := UITheme.box(UITheme.PANEL_LIGHT.lightened(0.14), 10, UITheme.ACCENT, 2, 6)
+		b.add_theme_stylebox_override("pressed", pr)
+		b.add_theme_stylebox_override("hover_pressed", pr)
 	var ready := fill_vals.all(func(x): return String(x) != "")
 	if is_instance_valid(fill_send):
 		fill_send.disabled = not ready or not fill_on
@@ -1195,18 +1256,23 @@ func _check_fill() -> void:
 	var s: Dictionary = steps[si]
 	var ok := true
 	for i in fill_vals.size():
-		if not fill_match(String(fill_vals[i]), String(s.ans[i])):
+		fill_bad[i] = not fill_match(String(fill_vals[i]), String(s.ans[i]))
+		if fill_bad[i]:
 			ok = false
 	if ok:
-		fill_on = false
 		Game.of(self).sfx("correct")
-		_refresh_fill()
 		action_btn.visible = false
 		var pad := opts_box.get_node_or_null("Pad")
 		if pad:
 			for row in pad.get_children():
 				for k in row.get_children():
 					k.disabled = true
+		for b in fill_slots:
+			b.disabled = true
+		# 推導板上那一行：填好的樣子；write 有另外寫的話接在下面
+		if is_instance_valid(fill_live):
+			fill_live.text = _fill_text(true)
+		fill_on = false
 		_write(String(s.get("write", "")))
 		_hint("答對了！", "good")
 		var gen := si
@@ -1214,6 +1280,9 @@ func _check_fill() -> void:
 		if gen == si and not done:
 			_advance()
 		return
+	# 填錯的格子標紅，游標移到第一個錯的格子
+	fill_cur = fill_bad.find(true)
+	_refresh_fill()
 	_lose_heart()
 	if _out_of_hearts():
 		return
