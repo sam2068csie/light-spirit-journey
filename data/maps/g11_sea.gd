@@ -187,9 +187,8 @@ func _apply_light() -> void:
 		_lit[i] = k
 		var e := _lit_curve(k)
 		(_lit_mat[i] as ShaderMaterial).set_shader_parameter("lit", e)
-		# 島上的動態：沒點亮時幾乎不動，越點越清楚
-		(_isl_fx[i] as CanvasItem).modulate.a = e * e
-		(_isl_fx[i] as CanvasItem).visible = k > 0.02
+		# 島上的動態：沒點亮時淡淡的、慢吞吞的，越點越清楚（和高一地圖一樣）
+		(_isl_fx[i] as CanvasItem).modulate.a = 0.3 + 0.7 * e * e
 
 
 func _exit_tree() -> void:
@@ -942,8 +941,7 @@ func _process(delta: float) -> void:
 	_place_root()
 	_fx.queue_redraw()
 	for fl in _isl_fx:
-		if (fl as CanvasItem).visible:
-			fl.queue_redraw()
+		fl.queue_redraw()
 	_hud.queue_redraw()
 	queue_redraw()
 
@@ -2718,6 +2716,14 @@ func _gloom_fx(L, v: Rect2) -> void:
 func _island_fx_one(L, i: int, v: Rect2) -> void:
 	if not _open_i(i):
 		return
+	# 沒點亮的島連時間都走得慢（風箏、纜車、光點都慢吞吞的）
+	var t_real := t
+	t = t_real * (0.2 + 0.8 * _lit_curve(float(_lit[i]) if i < _lit.size() else 1.0))
+	_island_fx_body(L, i, v)
+	t = t_real
+
+
+func _island_fx_body(L, i: int, v: Rect2) -> void:
 	var sh: Dictionary = _shape[i]
 	if not v.intersects((sh.box as Rect2).grow(200.0)):
 		return

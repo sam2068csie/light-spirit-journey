@@ -10,12 +10,15 @@ extends "res://data/maps/world_base.gd"
 ##   根之洞窟＝大樹的根伸進山丘　階梯瀑布＝一階一階加寬的瀑布　星點觀測台＝散布的地燈和一條光帶
 ##   排列花園＝三色花的各種排法　骰子市集＝帳篷與巨大骰子　三角燈塔＝岬角上的燈塔和旋轉的光束
 ## 還沒開放的地區整片蓋在雲裡（走不進去）；開放之後雲散開。
+## 開放的地區一開始是暗的、灰灰冷冷的（世界之光還沒點亮），聖地越點越亮；全部點亮才恢復原本的色彩和地區裡的動態。
 ## 畫法：不常變的東西（陸地、地形、樹、建築）分成一塊一塊的畫布，只畫一次，看不到的那塊直接隱藏；
 ##   會動的東西（浪花、水流、風車、光束、雲、螢火蟲、光靈）每幀畫在 _fx；小地圖、主線橫幅、搖桿畫在 _hud。
 ## 存檔放在 Game.world10：{stones: [], visited: [], eggs: [], pos: [x, y], v2: true}
 
 const MapLayer := preload("res://data/maps/map_layer.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
+const Center := preload("res://data/core/review_center.gd")
+const LIGHT_SHADER := preload("res://data/maps/island_light.gdshader")     # 還沒點亮的地區：顏色往冷灰收、變暗
 
 const WORLD := Vector2(7200, 4400)
 const BASE_ZOOM := 0.62           # 平常的鏡頭（拉高視角，一次看到比較大的範圍）
@@ -137,6 +140,12 @@ var _fx: MapLayer
 var _hud: MapLayer
 var _zoom_lock := false           # 進出地區的鏡頭動畫：不要被自動縮放蓋掉
 var _seen_open := ""              # 上次畫的時候哪些地區開放（變了就重畫雲和大門）
+# 地區的亮度：0 = 還沒點亮（暗、灰、沒有動態），1 = 全部點亮（原本的樣子）
+var _lit := {}                    # 地區 id → 亮度（跟著單元的完成度）
+var _lit_mat := {}                # 地區 id → 地標那層的材質
+var _zone_fx := {}                # 地區 id → 那個地區自己的動態層
+var debug_lit := -1.0             # 截圖用：>= 0 時每個地區都用這個亮度
+var _gloom: MapLayer
 
 static var _soft_tex: Texture2D
 
@@ -552,6 +561,7 @@ func _state() -> Dictionary:
 
 func on_shown() -> void:
 	cam = _cam_target()
+	_apply_light()
 	queue_redraw()
 
 
@@ -979,6 +989,7 @@ func _process(delta: float) -> void:
 		_goal_t = 1.0
 		_refresh_goal()
 		_refresh_open()
+		_apply_light()
 		var key := ",".join(_open.keys())
 		if key != _seen_open:
 			_seen_open = key
@@ -1035,6 +1046,9 @@ func _process(delta: float) -> void:
 			lf.p.x = W + 20.0
 	_place_root()
 	_fx.queue_redraw()
+	_gloom.queue_redraw()
+	for id in _zone_fx:
+		_zone_fx[id].queue_redraw()
 	_hud.queue_redraw()
 	queue_redraw()
 
@@ -1099,8 +1113,53 @@ func _piece(rect: Rect2, painter: Callable, dyn := false, zone := "") -> void:
 	var n := MapLayer.new()
 	n.painter = painter
 	n.batched = true
+	if zone != "":
+		n.material = _zone_mat(zone)
 	_root.add_child(n)
 	_pieces.append({"node": n, "rect": rect, "dyn": dyn, "zone": zone})
+
+
+func _zone_mat(id: String) -> ShaderMaterial:
+	if not _lit_mat.has(id):
+		var m := ShaderMaterial.new()
+		m.shader = LIGHT_SHADER
+		_lit_mat[id] = m
+		_lit[id] = -1.0
+	return _lit_mat[id]
+
+
+## 單元的完成度（0～1）
+func _zone_progress(z: Dictionary) -> float:
+	var u: Dictionary = Units.unit(z.unit)
+	if u.id != z.unit or u.levels.is_empty():
+		return 0.0
+	var g = Game.of(self)
+	var p := 0.0
+	for l in u.levels:
+		p += float(Center.level_progress(g, l.id))
+	return p / u.levels.size()
+
+
+## 完成度 → 亮度：前半段亮得慢一點（點亮一半還是偏暗，全部點亮才是原本的樣子）
+static func _lit_curve(k: float) -> float:
+	return pow(clampf(k, 0.0, 1.0), 1.5)
+
+
+## 每個地區的亮度：照單元的完成度
+func _apply_light() -> void:
+	for z in ZONES:
+		var id: String = z.id
+		if not _lit_mat.has(id):
+			continue
+		var k := clampf(debug_lit if debug_lit >= 0.0 else _zone_progress(z), 0.0, 1.0)
+		if is_equal_approx(k, float(_lit[id])):
+			continue
+		_lit[id] = k
+		var e := _lit_curve(k)
+		(_lit_mat[id] as ShaderMaterial).set_shader_parameter("lit", e)
+		if _zone_fx.has(id):
+			# 地區裡的動態：沒點亮時淡淡的、慢吞吞的（風車還在，只是轉得很慢），越點越清楚
+			(_zone_fx[id] as CanvasItem).modulate.a = 0.3 + 0.7 * e * e
 
 
 func _build_layers() -> void:
@@ -1143,8 +1202,22 @@ func _build_layers() -> void:
 		var cell: Dictionary = cells[key]
 		var rect := Rect2(Vector2(key) * 900.0 - Vector2(120, 200), Vector2(1140, 1240))
 		_piece(rect, func(L): _p_cell(L, cell))
+	# 還沒點亮的地區：上面壓一層暗暗的影子（地面、樹也跟著暗；大門和名牌在上面，照樣看得清楚）
+	var gloom := MapLayer.new()
+	gloom.painter = _p_gloom
+	_root.add_child(gloom)
+	_gloom = gloom
 	# 大門、名牌（開放狀態改變時重畫）
 	_piece(Rect2(0, 0, WORLD.x, WORLD.y), _p_gates, true)
+	# 每個地區自己的動態（風車、熱氣球、瀑布、光束……）：分開成一層一層，才能照點亮程度調淡
+	for z in ZONES:
+		var id: String = z.id
+		var fl := MapLayer.new()
+		fl.painter = func(L): _p_zone_fx(L, id, _view().grow(120.0))
+		fl.material = _zone_mat(id)
+		_root.add_child(fl)
+		_zone_fx[id] = fl
+	_apply_light()
 	_fx = MapLayer.new()
 	_fx.painter = _p_fx
 	_root.add_child(_fx)
@@ -2454,39 +2527,6 @@ func _p_fx(L) -> void:
 			rf.append_array([p, p + d * 30.0])
 	if not rf.is_empty():
 		L.draw_multiline(rf, Color(0.8, 0.95, 1.0, 0.35), 3.0)
-	# 圓規湖的漣漪和晨光
-	if _open.has("line") and v.intersects(Rect2(LAKE_C - Vector2(LAKE_R, LAKE_R), Vector2(LAKE_R, LAKE_R) * 2.0)):
-		for k in 3:
-			var rr := fmod(t * 34.0 + k * 120.0, LAKE_R - 30.0)
-			L.draw_arc(LAKE_C, rr, 0, TAU, 64, Color(0.8, 0.92, 1.0, 0.22 * (1.0 - rr / LAKE_R)), 3.0, true)
-		blob(L, LAKE_C + Vector2(-120 + sin(t * 0.5) * 10.0, -140), Vector2(90, 30), Color(1.0, 0.95, 0.8, 0.35 + 0.15 * sin(t * 2.0)))
-		var bt := LAKE_C + Vector2(140 + sin(t * 0.3) * 60.0, 60 + sin(t * 0.7) * 6.0)
-		L.draw_colored_polygon(PackedVector2Array([bt + Vector2(-34, 0), bt + Vector2(34, 0), bt + Vector2(24, 14), bt + Vector2(-24, 14)]), Color("a8743e"))
-		L.draw_line(bt, bt + Vector2(0, -46), Color("5a3a22"), 3.0)
-		L.draw_colored_polygon(PackedVector2Array([bt + Vector2(2, -44), bt + Vector2(30, -6), bt + Vector2(2, -6)]), Color("fff4e0"))
-	# 風車的葉片
-	var hub := WINDMILL + Vector2(0, -300)
-	if _open.has("num") and v.has_point(hub):
-		var rot := t * 0.6
-		for k in 4:
-			var a := rot + k * PI / 2.0
-			var d := Vector2.from_angle(a)
-			var n := d.orthogonal()
-			L.draw_line(hub, hub + d * 230.0, Color("6a4630"), 8.0, true)
-			L.draw_colored_polygon(PackedVector2Array([hub + d * 50.0, hub + d * 230.0, hub + d * 230.0 + n * 46.0, hub + d * 50.0 + n * 36.0]), Color(0.96, 0.92, 0.82, 0.92))
-			for j in 4:
-				var s := 0.3 + j * 0.2
-				L.draw_line(hub + d * (230.0 * s), hub + d * (230.0 * s) + n * (36.0 + 10.0 * s), Color("8a6a46"), 2.0)
-		_dot(L, hub, 16.0, Color("5a3d2c"), 32)
-	# 倍增峽谷上空的熱氣球
-	var bl := CANYON_C + Vector2(sin(t * 0.2) * 260.0, -260 + sin(t * 0.9) * 18.0)
-	if _open.has("exp") and v.has_point(bl):
-		blob(L, bl + Vector2(0, 330), Vector2(60, 18), Color(0, 0, 0, 0.18))
-		L.draw_colored_polygon(_ell(bl, 64, 76, 32), Color("e0763f"))
-		L.draw_colored_polygon(_ell(bl, 30, 76, 24), Color("f5c84c"))
-		L.draw_line(bl + Vector2(-34, 60), bl + Vector2(-14, 110), Color("5a3a22"), 2.0)
-		L.draw_line(bl + Vector2(34, 60), bl + Vector2(14, 110), Color("5a3a22"), 2.0)
-		L.draw_rect(Rect2(bl + Vector2(-18, 106), Vector2(36, 26)), Color("8a5a36"))
 	# 小屋煙囪的煙
 	var ch := HOUSE + Vector2(88, -262)
 	if v.has_point(ch):
@@ -2495,15 +2535,6 @@ func _p_fx(L) -> void:
 			blob(L, ch + Vector2(sin(ph * 5.0 + k) * 16.0 + ph * 40.0, -ph * 180.0), Vector2(26, 26) * (0.6 + ph), Color(0.9, 0.88, 0.85, 0.45 * (1.0 - ph)))
 		blob(L, HOUSE + Vector2(-80, -48), Vector2(60, 50), Color(1.0, 0.85, 0.5, 0.18 + 0.06 * sin(t * 3.0)))
 		blob(L, HOUSE + Vector2(80, -48), Vector2(60, 50), Color(1.0, 0.85, 0.5, 0.18 + 0.06 * sin(t * 3.0 + 1.0)))
-	# 洞口水晶和軌道邊的燈
-	if _open.has("poly") and v.intersects(Rect2(HILL_C - Vector2(400, 400), Vector2(800, 900))):
-		blob(L, HILL_C + Vector2(0, 220), Vector2(190, 150), Color(0.75, 0.6, 1.0, 0.18 + 0.08 * sin(t * 2.0)))
-		var g3: Vector2 = ZONES[3].gate
-		for k in 3:
-			var lp := Vector2(HILL_C.x + (60 if k % 2 == 0 else -60), lerpf(HILL_C.y + 300, g3.y - 60, k / 2.0))
-			L.draw_line(lp, lp + Vector2(0, -50), Color("5a3a22"), 4.0)
-			blob(L, lp + Vector2(0, -56), Vector2(30, 30), Color(1.0, 0.85, 0.5, 0.5 + 0.15 * sin(t * 3.0 + k)))
-			_dot(L, lp + Vector2(0, -56), 6.0, Color("ffe7a3"), 32)
 	# 橋上的燈籠：西邊暖色、東邊冷色
 	if v.intersects(BRIDGE):
 		for k in 5:
@@ -2512,86 +2543,6 @@ func _p_fx(L) -> void:
 			for yy in [BRIDGE.position.y - 40, BRIDGE.end.y - 44]:
 				blob(L, Vector2(x, yy), Vector2(34, 34), Color(c.r, c.g, c.b, 0.45 + 0.1 * sin(t * 2.5 + k)))
 				_dot(L, Vector2(x, yy), 7.0, c.lightened(0.4), 32)
-	# 階梯瀑布：往下流的水紋、水花、霧
-	if _open.has("seq") and v.intersects(Rect2(FALLS_X - 500, 2900, 1000, 1150)):
-		var streak := PackedVector2Array()
-		for k in 5:
-			var y0: float = FALL_T[k] + 8.0
-			var hgt: float = FALL_B[k] - y0
-			var w: float = FALL_W[k]
-			for j in int(w / 16.0):
-				var ph := fmod(t * 1.6 + j * 0.37 + k * 0.21, 1.0)
-				var xx := FALLS_X - w / 2.0 + 8.0 + j * 16.0
-				var sp := (xx - FALLS_X) * 0.12 / hgt
-				streak.append_array([Vector2(xx + sp * ph * hgt, y0 + ph * hgt), Vector2(xx + sp * minf(hgt, ph * hgt + 30.0), y0 + minf(hgt, ph * hgt + 30.0))])
-			for j in 5:
-				var fx := FALLS_X - w / 2.0 - 10.0 + (w + 20.0) * (j + 0.5) / 5.0
-				blob(L, Vector2(fx, FALL_B[k] - 4.0), Vector2(w / 3.2, 24), Color(1, 1, 1, 0.4 + 0.18 * sin(t * 4.0 + j * 1.7 + k)))
-			blob(L, Vector2(FALLS_X, FALL_B[k] - 30.0), Vector2(w * 0.9, 40), Color(0.85, 0.95, 1.0, 0.12 + 0.05 * sin(t * 2.0 + k)))
-		L.draw_multiline(streak, Color(1, 1, 1, 0.55), 3.0)
-		blob(L, Vector2(FALLS_X, 2990), Vector2(90, 30), Color(0.7, 0.95, 1.0, 0.25 + 0.1 * sin(t * 2.5)))
-		for k in 6:
-			var ph := fmod(t * 0.22 + k / 6.0, 1.0)
-			blob(L, FALL_POOL + Vector2(sin(k * 2.3) * 140.0, -40.0 - ph * 200.0), Vector2(170, 70) * (0.7 + ph), Color(0.8, 0.9, 1.0, 0.24 * (1.0 - ph)))
-		for k in 3:
-			var ph := fmod(t * 0.4 + k / 3.0, 1.0)
-			L.draw_arc(FALL_POOL + Vector2(0, -10), 40.0 + ph * 200.0, 0.0, TAU, 40, Color(0.8, 0.92, 1.0, 0.25 * (1.0 - ph)), 3.0, true)
-		L.draw_arc(FALL_POOL + Vector2(0, 40), 270.0, PI * 1.15, PI * 1.85, 32, Color(0.75, 0.85, 1.0, 0.15), 14.0, true)       # 月虹
-	# 觀測台：望遠鏡慢慢轉、地燈一閃一閃
-	if _open.has("data") and v.intersects(Rect2(DOME_C - Vector2(700, 500), Vector2(1400, 1000))):
-		var piv := DOME_C + Vector2(0, -120)
-		var a := -PI / 2.0 + 0.5 * sin(t * 0.25)
-		var d := Vector2.from_angle(a)
-		var n := d.orthogonal()
-		L.draw_colored_polygon(PackedVector2Array([piv + n * 16.0, piv - n * 16.0, piv + d * 170.0 - n * 22.0, piv + d * 170.0 + n * 22.0]), Color("c8b070"))
-		L.draw_colored_polygon(PackedVector2Array([piv + n * 4.0, piv - n * 6.0, piv + d * 170.0 - n * 8.0, piv + d * 170.0 + n * 6.0]), Color("f2dca0"))
-		_dot(L, piv + d * 172.0, 20.0, Color("3a3a4a"), 32)
-		var lights := _dome_lights()
-		for k in lights.size():
-			var q: Vector2 = lights[k]
-			blob(L, q, Vector2(30, 30), Color(0.6, 0.85, 1.0, 0.4 + 0.3 * sin(t * 2.0 + k)))
-			_dot(L, q, 5.0, Color("e6f7ff"), 32)
-		for k in lights.size() - 1:
-			if k % 2 == 0:
-				L.draw_line(lights[k], lights[k + 1], Color(0.62, 0.85, 1.0, 0.25), 3.0, true)
-	# 噴水池的水柱
-	if _open.has("comb") and v.has_point(FOUNTAIN):
-		var jets := PackedVector2Array()
-		for k in 10:
-			var a := TAU * k / 10.0 + t * 0.4
-			var ph := fmod(t * 1.2 + k * 0.1, 1.0)
-			var top := FOUNTAIN + Vector2(0, -78)
-			var tip := top + Vector2(cos(a) * 70.0 * ph, sin(a) * 30.0 * ph - 60.0 * sin(ph * PI))
-			jets.append_array([top, tip])
-			_dot(L, tip, 4.0, Color(0.85, 0.95, 1.0, 0.9 * (1.0 - ph)), 32)
-		L.draw_multiline(jets, Color(0.8, 0.92, 1.0, 0.45), 3.0)
-	# 市集的燈串
-	if _open.has("prob") and v.intersects(Rect2(MARKET_C - Vector2(600, 500), Vector2(1200, 900))):
-		for k in TENTS.size():
-			var a: Vector2 = TENTS[k] + Vector2(0, -190)
-			var b := MARKET_C + Vector2(0, -260)
-			var pts := _sag(a, b, 40.0)
-			for j in pts.size():
-				var bc: Color = [Color("ffd36e"), Color("ff9ad5"), Color("8fd0ff")][(j + k) % 3]
-				var on := 0.55 + 0.45 * sin(t * 3.0 + j * 1.3 + k)
-				blob(L, pts[j], Vector2(14, 14), Color(bc.r, bc.g, bc.b, 0.45 * on))
-				_dot(L, pts[j], 4.0, bc.lightened(0.3 * on), 32)
-	# 燈塔的光束
-	var lamp := LIGHTHOUSE + Vector2(0, -664)
-	if _open.has("trig") and v.grow(1400.0).has_point(lamp):
-		var rot := t * 0.7
-		for k in 2:
-			var a := rot + k * PI
-			var d := Vector2.from_angle(a)
-			var n := d.orthogonal()
-			L.draw_polygon(PackedVector2Array([lamp, lamp + d * 1500.0 + n * 260.0, lamp + d * 1500.0 - n * 260.0]),
-				PackedColorArray([Color(1.0, 0.96, 0.7, 0.42), Color(1.0, 0.96, 0.7, 0.0), Color(1.0, 0.96, 0.7, 0.0)]))
-		blob(L, lamp, Vector2(120, 120), Color(1.0, 0.95, 0.65, 0.5 + 0.2 * sin(t * 4.0)))
-		# 岩石邊的浪
-		for k in 6:
-			var ph := fmod(t * 0.5 + k / 6.0, 1.0)
-			var wp := LIGHTHOUSE + Vector2(340, 40 + k * 40)
-			blob(L, wp + Vector2(-ph * 60.0, 0), Vector2(60, 18) * (0.6 + ph), Color(1, 1, 1, 0.4 * (1.0 - ph)))
 	# 帆船的燈
 	var bl2 := Vector2(7080, 4110) + Vector2(-10, -40)
 	if v.has_point(bl2):
@@ -2671,6 +2622,172 @@ func _p_fx(L) -> void:
 	SL.draw_all(L, Vector2.ZERO, SPIRIT_R, Game.of(self).equipped, t)
 	L.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
+
+## 一個地區自己的動態（畫在那個地區的動態層上，照點亮程度調淡）
+func _p_zone_fx(L, id: String, v: Rect2) -> void:
+	if not _open.has(id):
+		return
+	# 沒點亮的地區連時間都走得慢（風車、水流、光束都慢吞吞的）
+	var t_real := t
+	t = t_real * (0.2 + 0.8 * _lit_curve(float(_lit.get(id, 1.0))))
+	_zone_fx_body(L, id, v)
+	t = t_real
+
+
+func _zone_fx_body(L, id: String, v: Rect2) -> void:
+	match id:
+		"num":
+			# 風車的葉片
+			var hub := WINDMILL + Vector2(0, -300)
+			if v.has_point(hub):
+				var rot := t * 0.6
+				for k in 4:
+					var a := rot + k * PI / 2.0
+					var d := Vector2.from_angle(a)
+					var n := d.orthogonal()
+					L.draw_line(hub, hub + d * 230.0, Color("6a4630"), 8.0, true)
+					L.draw_colored_polygon(PackedVector2Array([hub + d * 50.0, hub + d * 230.0, hub + d * 230.0 + n * 46.0, hub + d * 50.0 + n * 36.0]), Color(0.96, 0.92, 0.82, 0.92))
+					for j in 4:
+						var s := 0.3 + j * 0.2
+						L.draw_line(hub + d * (230.0 * s), hub + d * (230.0 * s) + n * (36.0 + 10.0 * s), Color("8a6a46"), 2.0)
+				_dot(L, hub, 16.0, Color("5a3d2c"), 32)
+		"exp":
+			# 倍增峽谷上空的熱氣球
+			var bl := CANYON_C + Vector2(sin(t * 0.2) * 260.0, -260 + sin(t * 0.9) * 18.0)
+			if v.has_point(bl):
+				blob(L, bl + Vector2(0, 330), Vector2(60, 18), Color(0, 0, 0, 0.18))
+				L.draw_colored_polygon(_ell(bl, 64, 76, 32), Color("e0763f"))
+				L.draw_colored_polygon(_ell(bl, 30, 76, 24), Color("f5c84c"))
+				L.draw_line(bl + Vector2(-34, 60), bl + Vector2(-14, 110), Color("5a3a22"), 2.0)
+				L.draw_line(bl + Vector2(34, 60), bl + Vector2(14, 110), Color("5a3a22"), 2.0)
+				L.draw_rect(Rect2(bl + Vector2(-18, 106), Vector2(36, 26)), Color("8a5a36"))
+		"line":
+			# 圓規湖的漣漪和晨光
+			if v.intersects(Rect2(LAKE_C - Vector2(LAKE_R, LAKE_R), Vector2(LAKE_R, LAKE_R) * 2.0)):
+				for k in 3:
+					var rr := fmod(t * 34.0 + k * 120.0, LAKE_R - 30.0)
+					L.draw_arc(LAKE_C, rr, 0, TAU, 64, Color(0.8, 0.92, 1.0, 0.22 * (1.0 - rr / LAKE_R)), 3.0, true)
+				blob(L, LAKE_C + Vector2(-120 + sin(t * 0.5) * 10.0, -140), Vector2(90, 30), Color(1.0, 0.95, 0.8, 0.35 + 0.15 * sin(t * 2.0)))
+				var bt := LAKE_C + Vector2(140 + sin(t * 0.3) * 60.0, 60 + sin(t * 0.7) * 6.0)
+				L.draw_colored_polygon(PackedVector2Array([bt + Vector2(-34, 0), bt + Vector2(34, 0), bt + Vector2(24, 14), bt + Vector2(-24, 14)]), Color("a8743e"))
+				L.draw_line(bt, bt + Vector2(0, -46), Color("5a3a22"), 3.0)
+				L.draw_colored_polygon(PackedVector2Array([bt + Vector2(2, -44), bt + Vector2(30, -6), bt + Vector2(2, -6)]), Color("fff4e0"))
+		"poly":
+			# 洞口水晶和軌道邊的燈
+			if v.intersects(Rect2(HILL_C - Vector2(400, 400), Vector2(800, 900))):
+				blob(L, HILL_C + Vector2(0, 220), Vector2(190, 150), Color(0.75, 0.6, 1.0, 0.18 + 0.08 * sin(t * 2.0)))
+				var g3: Vector2 = ZONES[3].gate
+				for k in 3:
+					var lp := Vector2(HILL_C.x + (60 if k % 2 == 0 else -60), lerpf(HILL_C.y + 300, g3.y - 60, k / 2.0))
+					L.draw_line(lp, lp + Vector2(0, -50), Color("5a3a22"), 4.0)
+					blob(L, lp + Vector2(0, -56), Vector2(30, 30), Color(1.0, 0.85, 0.5, 0.5 + 0.15 * sin(t * 3.0 + k)))
+					_dot(L, lp + Vector2(0, -56), 6.0, Color("ffe7a3"), 32)
+		"seq":
+			# 階梯瀑布：往下流的水紋、水花、霧
+			if v.intersects(Rect2(FALLS_X - 500, 2900, 1000, 1150)):
+				var streak := PackedVector2Array()
+				for k in 5:
+					var y0: float = FALL_T[k] + 8.0
+					var hgt: float = FALL_B[k] - y0
+					var w: float = FALL_W[k]
+					for j in int(w / 16.0):
+						var ph := fmod(t * 1.6 + j * 0.37 + k * 0.21, 1.0)
+						var xx := FALLS_X - w / 2.0 + 8.0 + j * 16.0
+						var sp := (xx - FALLS_X) * 0.12 / hgt
+						streak.append_array([Vector2(xx + sp * ph * hgt, y0 + ph * hgt), Vector2(xx + sp * minf(hgt, ph * hgt + 30.0), y0 + minf(hgt, ph * hgt + 30.0))])
+					for j in 5:
+						var fx := FALLS_X - w / 2.0 - 10.0 + (w + 20.0) * (j + 0.5) / 5.0
+						blob(L, Vector2(fx, FALL_B[k] - 4.0), Vector2(w / 3.2, 24), Color(1, 1, 1, 0.4 + 0.18 * sin(t * 4.0 + j * 1.7 + k)))
+					blob(L, Vector2(FALLS_X, FALL_B[k] - 30.0), Vector2(w * 0.9, 40), Color(0.85, 0.95, 1.0, 0.12 + 0.05 * sin(t * 2.0 + k)))
+				L.draw_multiline(streak, Color(1, 1, 1, 0.55), 3.0)
+				blob(L, Vector2(FALLS_X, 2990), Vector2(90, 30), Color(0.7, 0.95, 1.0, 0.25 + 0.1 * sin(t * 2.5)))
+				for k in 6:
+					var ph := fmod(t * 0.22 + k / 6.0, 1.0)
+					blob(L, FALL_POOL + Vector2(sin(k * 2.3) * 140.0, -40.0 - ph * 200.0), Vector2(170, 70) * (0.7 + ph), Color(0.8, 0.9, 1.0, 0.24 * (1.0 - ph)))
+				for k in 3:
+					var ph := fmod(t * 0.4 + k / 3.0, 1.0)
+					L.draw_arc(FALL_POOL + Vector2(0, -10), 40.0 + ph * 200.0, 0.0, TAU, 40, Color(0.8, 0.92, 1.0, 0.25 * (1.0 - ph)), 3.0, true)
+				L.draw_arc(FALL_POOL + Vector2(0, 40), 270.0, PI * 1.15, PI * 1.85, 32, Color(0.75, 0.85, 1.0, 0.15), 14.0, true)       # 月虹
+		"data":
+			# 觀測台：望遠鏡慢慢轉、地燈一閃一閃
+			if v.intersects(Rect2(DOME_C - Vector2(700, 500), Vector2(1400, 1000))):
+				var piv := DOME_C + Vector2(0, -120)
+				var a := -PI / 2.0 + 0.5 * sin(t * 0.25)
+				var d := Vector2.from_angle(a)
+				var n := d.orthogonal()
+				L.draw_colored_polygon(PackedVector2Array([piv + n * 16.0, piv - n * 16.0, piv + d * 170.0 - n * 22.0, piv + d * 170.0 + n * 22.0]), Color("c8b070"))
+				L.draw_colored_polygon(PackedVector2Array([piv + n * 4.0, piv - n * 6.0, piv + d * 170.0 - n * 8.0, piv + d * 170.0 + n * 6.0]), Color("f2dca0"))
+				_dot(L, piv + d * 172.0, 20.0, Color("3a3a4a"), 32)
+				var lights := _dome_lights()
+				for k in lights.size():
+					var q: Vector2 = lights[k]
+					blob(L, q, Vector2(30, 30), Color(0.6, 0.85, 1.0, 0.4 + 0.3 * sin(t * 2.0 + k)))
+					_dot(L, q, 5.0, Color("e6f7ff"), 32)
+				for k in lights.size() - 1:
+					if k % 2 == 0:
+						L.draw_line(lights[k], lights[k + 1], Color(0.62, 0.85, 1.0, 0.25), 3.0, true)
+		"comb":
+			# 噴水池的水柱
+			if v.has_point(FOUNTAIN):
+				var jets := PackedVector2Array()
+				for k in 10:
+					var a := TAU * k / 10.0 + t * 0.4
+					var ph := fmod(t * 1.2 + k * 0.1, 1.0)
+					var top := FOUNTAIN + Vector2(0, -78)
+					var tip := top + Vector2(cos(a) * 70.0 * ph, sin(a) * 30.0 * ph - 60.0 * sin(ph * PI))
+					jets.append_array([top, tip])
+					_dot(L, tip, 4.0, Color(0.85, 0.95, 1.0, 0.9 * (1.0 - ph)), 32)
+				L.draw_multiline(jets, Color(0.8, 0.92, 1.0, 0.45), 3.0)
+		"prob":
+			# 市集的燈串
+			if v.intersects(Rect2(MARKET_C - Vector2(600, 500), Vector2(1200, 900))):
+				for k in TENTS.size():
+					var a: Vector2 = TENTS[k] + Vector2(0, -190)
+					var b := MARKET_C + Vector2(0, -260)
+					var pts := _sag(a, b, 40.0)
+					for j in pts.size():
+						var bc: Color = [Color("ffd36e"), Color("ff9ad5"), Color("8fd0ff")][(j + k) % 3]
+						var on := 0.55 + 0.45 * sin(t * 3.0 + j * 1.3 + k)
+						blob(L, pts[j], Vector2(14, 14), Color(bc.r, bc.g, bc.b, 0.45 * on))
+						_dot(L, pts[j], 4.0, bc.lightened(0.3 * on), 32)
+		"trig":
+			# 燈塔的光束
+			var lamp := LIGHTHOUSE + Vector2(0, -664)
+			if v.grow(1400.0).has_point(lamp):
+				var rot := t * 0.7
+				for k in 2:
+					var a := rot + k * PI
+					var d := Vector2.from_angle(a)
+					var n := d.orthogonal()
+					L.draw_polygon(PackedVector2Array([lamp, lamp + d * 1500.0 + n * 260.0, lamp + d * 1500.0 - n * 260.0]),
+						PackedColorArray([Color(1.0, 0.96, 0.7, 0.42), Color(1.0, 0.96, 0.7, 0.0), Color(1.0, 0.96, 0.7, 0.0)]))
+				blob(L, lamp, Vector2(120, 120), Color(1.0, 0.95, 0.65, 0.5 + 0.2 * sin(t * 4.0)))
+				# 岩石邊的浪
+				for k in 6:
+					var ph := fmod(t * 0.5 + k / 6.0, 1.0)
+					var wp := LIGHTHOUSE + Vector2(340, 40 + k * 40)
+					blob(L, wp + Vector2(-ph * 60.0, 0), Vector2(60, 18) * (0.6 + ph), Color(1, 1, 1, 0.4 * (1.0 - ph)))
+
+
+## 還沒點亮的地區：壓一層暗影（點亮越多越淡）
+func _p_gloom(L) -> void:
+	var v := _view().grow(200.0)
+	for z in ZONES:
+		var id: String = z.id
+		if not _open.has(id):
+			continue
+		var dk := 1.0 - _lit_curve(float(_lit.get(id, 1.0)))
+		if dk < 0.02:
+			continue
+		var cl: Array = z.cloud
+		var r := Vector2(cl[1], cl[2]) * 1.25
+		if not v.intersects(Rect2((cl[0] as Vector2) - r, r * 2.0)):
+			continue
+		blob(L, cl[0], r, Color(0.04, 0.05, 0.12, 0.62 * dk))
+		for k in 3:
+			var ph: float = float(k) * 2.1 + float(z.center.x) * 0.001
+			var p: Vector2 = (cl[0] as Vector2) + Vector2(sin(t * 0.05 + ph) * r.x * 0.3, cos(t * 0.04 + ph) * r.y * 0.25)
+			blob(L, p, r * 0.6, Color(0.05, 0.06, 0.13, 0.18 * dk))
 
 ## 一個地區上方的雲：一大團不透明的雲，邊緣是一圈慢慢飄動的雲朵（西邊染著晨光的桃色、東邊是夜晚的藍灰色）
 func _draw_cloud(L, z: Dictionary, i: int) -> void:
@@ -2796,7 +2913,7 @@ func _draw_minimap(L, _font: Font) -> void:
 	for z in ZONES:
 		var zc: Vector2 = o + (z.center as Vector2) * k
 		if _open.has(z.id):
-			UITheme.dot(L, zc, 5.0, z.color)
+			UITheme.dot(L, zc, 5.0, Color(0.42, 0.44, 0.52).lerp(z.color, _lit_curve(float(_lit.get(z.id, 1.0)))))     # 還沒點亮的地區：灰的
 		else:
 			UITheme.dot(L, zc, 7.0, Color(0.9, 0.9, 0.95, 0.55))
 	UITheme.dot(L, o + HOUSE * k, 3.5, Color("ffb87a"))
