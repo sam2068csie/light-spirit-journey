@@ -12,6 +12,7 @@ const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
 const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
+const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
 var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd）
 
@@ -353,6 +354,28 @@ func _start() -> void:
 	tw.tween_property(stem_label, "modulate:a", 1.0, 0.45)
 	buddy.say("第 %d 層：「%s」！" % [floor_n, item.title] if not test_mode else "「%s」！" % item.title, "happy", 2.6)
 	_show_step()
+	_first_time_tutorial()
+
+
+## 第一次進終焉之塔：教學提醒難度比較高、可以用右上角的計算紙（只跳一次，記在存檔的 tut["tower"]）
+func _first_time_tutorial() -> void:
+	var g = Game.of(self)
+	if g.tut.get("tower", false):
+		return
+	await get_tree().create_timer(0.7).timeout
+	if not is_inside_tree() or done or g.tut.get("tower", false):
+		return
+	g.tut["tower"] = true
+	g.save_review()
+	var pen: Control = scratch.get("_btn") if scratch else null
+	var hud := func() -> Rect2:
+		return heart_label.get_global_rect().merge(timer_label.get_global_rect()).grow(8)
+	var pen_rect := func() -> Rect2:
+		return pen.get_global_rect().grow(8) if is_instance_valid(pen) else Rect2()
+	Tut.run(self, [
+		{"text": "歡迎來到終焉之塔！這裡是段考風格的大題，一層一題，越往上越難。", "face": "happy"},
+		{"rect": hud, "text": "整趟攀登只有三顆心，每一層都有時間限制。答錯、超時都會扣一顆心。", "face": "normal"},
+		{"rect": pen_rect, "text": "終焉之塔難度較高，請善用右上角的手寫計算功能！按這支筆，就能直接在畫面上寫算式。", "face": "happy"}])
 
 
 ## 這一步開始前先寫上推導板的「已知」（例如「令 t = 2^{x}（t > 0）」），不是這一步的答案

@@ -42,7 +42,7 @@ func setup() -> void:
 	g = load("res://data/core/game.gd").of(helper)
 	g.notify_asked = true
 	g.grade_pick = "高二"
-	var seen := {"basic": true}
+	var seen := {"basic": true, "tower": true}
 	for k in ["fit", "draw", "cross", "table", "rank", "quadrant", "count", "chord", "forge", "speed", "tune"]:
 		seen["type:" + k] = true
 	g.tut = seen

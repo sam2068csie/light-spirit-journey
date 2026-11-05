@@ -393,7 +393,50 @@ func _bcheck(bt, when: String) -> void:
 
 # ================= 失敗 =================
 
+## 第一次進塔的教學：跳一次（遊戲暫停），之後不再跳
+func _tutorial_case() -> void:
+	cur_tag = unit + "（第一次進塔的教學）"
+	g.tut.erase("tower")
+	var bt = await _open(String(Bank.items()[0].id))
+	if bt == null:
+		return
+	await wait(0.6)
+	var tut: Node = null
+	for c in bt.get_children():
+		if c is CanvasLayer and c.get_script() != null and String(c.get_script().resource_path).ends_with("tutorial.gd"):
+			tut = c
+	if tut == null:
+		_issue("第一次進終焉之塔沒有跳教學")
+		return
+	if not paused:
+		_issue("教學進行時遊戲沒有暫停（計時會跑）")
+	var texts := []
+	for k in tut.steps.size():
+		await wait(0.5)
+		await shot("%s_tower_tut_%d" % [unit, k])
+		texts.append(String(tut.steps[k].text))
+		if int(tut.i) != k:
+			_issue("教學第 %d 句被跳過了" % (k + 1))
+		var i0: int = tut.i
+		while is_instance_valid(tut) and int(tut.i) == i0 and not tut._ended:
+			tut._advance()      # 字還在跑時第一下是「顯示完」
+			await frames(1)
+	await wait(0.6)
+	if not "".join(texts).contains("手寫計算"):
+		_issue("教學沒有提到右上角的手寫計算功能")
+	if paused:
+		_issue("教學結束後遊戲還是暫停的")
+	if not bool(g.tut.get("tower", false)):
+		_issue("教學看過了，存檔卻沒有記下來")
+	var bt2 = await _open(String(Bank.items()[0].id))
+	await wait(0.6)
+	for c in bt2.get_children():
+		if c is CanvasLayer and c.get_script() != null and String(c.get_script().resource_path).ends_with("tutorial.gd"):
+			_issue("看過教學了，第二次進塔又跳出來")
+
+
 func _lose_cases() -> void:
+	await _tutorial_case()
 	# 1. 只剩一顆心時答錯：示範解法、看攀登結果
 	var lose_ids := ["r_logsum", "j_rules", "l_twolog", "b_ineq"] if unit == "exp" else ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"]
 	for id in lose_ids:
