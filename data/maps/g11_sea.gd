@@ -7,6 +7,7 @@ extends "res://data/maps/world_base.gd"
 ##     立方浮島＝浮在空中的方塊、三根互相垂直的水晶　平面峽灣＝兩道平直的岩壁交成一條線、纜車穿過岩壁
 ##     機率樹海＝一路分岔的巨樹（樹狀圖）　矩陣城＝排成行與列的街區與運河
 ##   ・還沒開放的島整座藏在海霧裡（霧擋住航行），碼頭和浮標留在霧外
+##   ・開放的島一開始是暗的、灰灰冷冷的（世界之光還沒點亮），聖地越點越亮；全部點亮才恢復原本的色彩和島上的動態
 ##   ・靠近碼頭跳出靠岸卡片，「上岸」進入原本的單元地圖；從單元地圖返回，光舟停在那座島的碼頭旁
 ##   ・海上的彩蛋：沉船（對數）、漩渦（弧度）、瓶中信（向量的長度）；還有背著小島的海龜
 ## 存檔：Game.world11 {pos: [x, y], visited: [], eggs: [], ret: 上岸時記下的單元, v2: 地圖放大後的座標}
@@ -82,6 +83,14 @@ var _plankton_grid := {}     # 1000×1000 一格（只算畫面附近那幾格�
 var _stars: Array = []
 var _coast: Array = []        # 每座島的海岸取樣 [[點, 往外的法向量], …]（浪花用）
 var _sea_pt := {}
+# 島的亮度：0 = 還沒點亮（暗、灰、沒有動態），1 = 全部點亮（原本的樣子）
+var _lit: Array = []          # 每座島現在的亮度（跟著單元的完成度）
+var _lit_mat: Array = []      # 每座島陸地那層的材質（shader 的 lit 參數）
+var _isl_fx: Array = []       # 每座島自己的動態層（點亮越多越清楚）
+var debug_lit := -1.0         # 截圖用：>= 0 時每座島都用這個亮度
+
+## 還沒點亮的島：顏色往冷灰收、整體變暗（lit = 1 時完全是原本的顏色）
+const LIGHT_SHADER := preload("res://data/maps/island_light.gdshader")
 
 
 func _init() -> void:
@@ -157,7 +166,30 @@ func _state() -> Dictionary:
 
 
 func on_shown() -> void:
+	_apply_light()
 	queue_redraw()
+
+
+## 完成度 → 亮度：前半段亮得慢一點（點亮一半還是偏暗，全部點亮才是原本的樣子）
+static func _lit_curve(k: float) -> float:
+	return pow(clampf(k, 0.0, 1.0), 1.5)
+
+
+## 每座島的亮度：照單元的完成度（世界之光點亮越多越亮，全部點亮 = 原本的樣子）
+func _apply_light() -> void:
+	if _lit_mat.is_empty():
+		return
+	for i in ISLANDS.size():
+		var k := debug_lit if debug_lit >= 0.0 else float(_progress(ISLANDS[i].unit).p)
+		k = clampf(k, 0.0, 1.0)
+		if is_equal_approx(k, float(_lit[i])):
+			continue
+		_lit[i] = k
+		var e := _lit_curve(k)
+		(_lit_mat[i] as ShaderMaterial).set_shader_parameter("lit", e)
+		# 島上的動態：沒點亮時幾乎不動，越點越清楚
+		(_isl_fx[i] as CanvasItem).modulate.a = e * e
+		(_isl_fx[i] as CanvasItem).visible = k > 0.02
 
 
 func _exit_tree() -> void:
@@ -849,6 +881,7 @@ func _process(delta: float) -> void:
 		_goal_t = 1.0
 		_refresh_goal()
 		_refresh_open()
+		_apply_light()
 		var key := ",".join(_open.keys())
 		if key != _seen_open:
 			_seen_open = key
@@ -908,6 +941,9 @@ func _process(delta: float) -> void:
 	_prewarm()
 	_place_root()
 	_fx.queue_redraw()
+	for fl in _isl_fx:
+		if (fl as CanvasItem).visible:
+			fl.queue_redraw()
 	_hud.queue_redraw()
 	queue_redraw()
 
@@ -1014,12 +1050,13 @@ static func _coast_samples(poly: PackedVector2Array, step: float) -> Array:
 # ================= 畫布 =================
 
 ## 一塊靜態畫布：rect 是它的範圍（不在畫面裡就隱藏）；dyn = 開放狀態改變時要重畫；zone：還沒開放就不畫（在霧底下）
-func _piece(rect: Rect2, painter: Callable, dyn := false, zone := "", fog := "") -> void:
+func _piece(rect: Rect2, painter: Callable, dyn := false, zone := "", fog := "") -> MapLayer:
 	var n := MapLayer.new()
 	n.painter = painter
 	n.batched = true
 	_root.add_child(n)
 	_pieces.append({"node": n, "rect": rect, "dyn": dyn, "zone": zone, "fog": fog})
+	return n
 
 
 func _build_layers() -> void:
@@ -1028,10 +1065,16 @@ func _build_layers() -> void:
 	_piece(Rect2(Vector2.ZERO, WORLD), _p_floor)
 	_piece(Rect2(-200, 1700, 1100, 1100), _p_harbor)
 	_piece(Rect2(WRECK - Vector2(400, 360), Vector2(800, 640)), _p_wreck)
+	var sh: Shader = LIGHT_SHADER
 	for i in ISLANDS.size():
 		var ii: int = i
 		var b: Rect2 = (_shape[i].box as Rect2).grow(420.0)
-		_piece(b, func(L): _p_island(L, ii), false, String(ISLANDS[i].unit))
+		var n := _piece(b, func(L): _p_island(L, ii), false, String(ISLANDS[i].unit))
+		var m := ShaderMaterial.new()
+		m.shader = sh
+		n.material = m
+		_lit_mat.append(m)
+		_lit.append(-1.0)
 	_piece(Rect2(Vector2.ZERO, WORLD), _p_docks, true)
 	# 海霧：每座島一塊（還沒開放才顯示），整塊慢慢飄動
 	for i in ISLANDS.size():
@@ -1039,6 +1082,18 @@ func _build_layers() -> void:
 		var fg: Array = _fog[i]
 		var fr := Rect2((fg[0] as Vector2) - Vector2(fg[1], fg[2]) * 1.3, Vector2(fg[1], fg[2]) * 2.6)
 		_piece(fr, func(L): _draw_fog(L, ii), false, "", String(ISLANDS[i].unit))
+	# 每座島自己的動態（風箏、纜車、光點……）：一層一層分開，才能照點亮程度調淡
+	for i in ISLANDS.size():
+		var ii: int = i
+		var fl := MapLayer.new()
+		fl.painter = func(L): _island_fx_one(L, ii, _view().grow(160.0))
+		fl.batched = true
+		fl.cache = false
+		fl.lines_native = true
+		fl.material = _lit_mat[i]
+		_root.add_child(fl)
+		_isl_fx.append(fl)
+	_apply_light()
 	_fx = MapLayer.new()
 	_fx.painter = _p_fx
 	_fx.batched = true          # 每幀也收成網格：魚、水母、浮游生物一隻一隻畫會變成好幾百次繪圖
@@ -2368,7 +2423,7 @@ func _p_fx(L) -> void:
 			_dot(L, p, 5.0, col.lightened(0.4), 32)
 		dd += 260.0
 	_sea_life(L, v)
-	_island_fx(L, v)
+	_gloom_fx(L, v)
 	_egg_fx(L, v, font)
 	# 港口的燈塔光束、渡船的燈
 	var lamp := HARBOR + Vector2(150, -396)
@@ -2641,108 +2696,126 @@ func _sea_life(L, v: Rect2) -> void:
 
 
 ## 開放的島上會動的東西
-func _island_fx(L, v: Rect2) -> void:
+## 還沒點亮的島：上面壓著一層慢慢飄的灰暗雲影（點亮越多越淡）
+func _gloom_fx(L, v: Rect2) -> void:
 	for i in ISLANDS.size():
-		if not _open_i(i):
+		if not _open_i(i) or i >= _lit.size():
 			continue
-		var sh: Dictionary = _shape[i]
-		if not v.intersects((sh.box as Rect2).grow(200.0)):
+		var dk := 1.0 - _lit_curve(float(_lit[i]))
+		if dk < 0.02:
 			continue
-		var c: Vector2 = ISLANDS[i].c
-		match String(sh.kind):
-			"trig":
-				var o: Vector2 = sh.o
-				blob(L, o + Vector2(0, -190), Vector2(70, 70), Color(0.9, 0.85, 1.0, 0.45 + 0.2 * sin(t * 2.0)))
-				for k in 3:
-					var ph := fmod(t * 0.4 + k / 3.0, 1.0)
-					_ring_fx(L, o + Vector2(0, 30), 80.0 + ph * 120.0, Color(1, 1, 1, 0.22 * (1.0 - ph)))
-				var k0: float = sh.k
-				var xx := TM.WX0 + TM.PER * 0.25
-				var j := 0
-				while xx < TM.X_END - 20.0:
-					var p: Vector2 = o + (TM.wave_p(xx) - TM.O) * k0
-					blob(L, p + Vector2(0, -72), Vector2(36, 36), Color(1.0, 0.82, 0.45, 0.4 + 0.15 * sin(t * 3.0 + j)))
-					xx += TM.PER * 0.5
-					j += 1
-			"exp":
-				var ma: Vector2 = sh.ma
-				var mb: Vector2 = sh.mb
+		var b: Rect2 = _shape[i].box
+		if not v.intersects(b.grow(200.0)):
+			continue
+		var c := b.get_center()
+		for k in 5:
+			var ph := float(k) * 1.7 + i
+			var p := c + Vector2(sin(t * 0.05 + ph) * b.size.x * 0.32, cos(t * 0.04 + ph * 1.3) * b.size.y * 0.28)
+			blob(L, p, Vector2(b.size.x * 0.34, b.size.y * 0.3), Color(0.05, 0.06, 0.12, 0.22 * dk))
+
+
+## 一座島自己的動態（畫在那座島的動態層，照點亮程度調淡）
+func _island_fx_one(L, i: int, v: Rect2) -> void:
+	if not _open_i(i):
+		return
+	var sh: Dictionary = _shape[i]
+	if not v.intersects((sh.box as Rect2).grow(200.0)):
+		return
+	var c: Vector2 = ISLANDS[i].c
+	match String(sh.kind):
+		"trig":
+			var o: Vector2 = sh.o
+			blob(L, o + Vector2(0, -190), Vector2(70, 70), Color(0.9, 0.85, 1.0, 0.45 + 0.2 * sin(t * 2.0)))
+			for k in 3:
+				var ph := fmod(t * 0.4 + k / 3.0, 1.0)
+				_ring_fx(L, o + Vector2(0, 30), 80.0 + ph * 120.0, Color(1, 1, 1, 0.22 * (1.0 - ph)))
+			var k0: float = sh.k
+			var xx := TM.WX0 + TM.PER * 0.25
+			var j := 0
+			while xx < TM.X_END - 20.0:
+				var p: Vector2 = o + (TM.wave_p(xx) - TM.O) * k0
+				blob(L, p + Vector2(0, -72), Vector2(36, 36), Color(1.0, 0.82, 0.45, 0.4 + 0.15 * sin(t * 3.0 + j)))
+				xx += TM.PER * 0.5
+				j += 1
+		"exp":
+			var ma: Vector2 = sh.ma
+			var mb: Vector2 = sh.mb
+			for k in 10:
+				var f := fmod(t * 0.08 + k / 10.0, 1.0)
+				var p := ma.lerp(mb, f)
+				blob(L, p, Vector2(50, 18), Color(1.0, 0.95, 0.8, 0.35 * sin(f * PI)))
+			blob(L, sh.tower + Vector2(0, -94), Vector2(40, 40), Color(1.0, 0.85, 0.5, 0.45 + 0.15 * sin(t * 3.0)))
+		"vec2":
+			# 風箏
+			for k in 2:
+				var base := c + Vector2(-80 + k * 300, 120 - k * 200)
+				var kp := base + Vector2(180 + sin(t * 0.9 + k) * 40.0, -260 + cos(t * 1.1 + k) * 30.0)
+				L.draw_polyline(PackedVector2Array([base, base.lerp(kp, 0.5) + Vector2(20, 30), kp]), Color(1, 1, 1, 0.5), 2.0, true)
+				var kd := (kp - base).normalized()
+				var kn := kd.orthogonal()
+				L.draw_colored_polygon(PackedVector2Array([kp + kd * 40.0, kp + kn * 24.0, kp - kd * 26.0, kp - kn * 24.0]), Color("ff7a8a") if k == 0 else Color("5fd4ff"))
+				L.draw_polyline(PackedVector2Array([kp - kd * 26.0, kp - kd * 46.0 + kn * sin(t * 4.0) * 10.0, kp - kd * 66.0]), Color("f5c84c"), 3.0, true)
+			# 風吹過田的一道道白線
+			var wl := PackedVector2Array()
+			for k in 8:
+				var ph := fmod(t * 0.35 + k / 8.0, 1.0)
+				var s := c + Vector2(-600 + ph * 1200.0, -300 + k * 80.0) + Vector2(0, -ph * 260.0)
+				wl.append_array([s, s + Vector2(90, -28)])
+			L.draw_multiline(wl, Color(1, 1, 1, 0.25), 3.0)
+			# 雁群：兩隊往同一個方向飛，合成一隊
+			for k in 7:
+				var ph := fmod(t * 0.05, 1.0)
+				var lead := c + Vector2(-700, 500) + Vector2(1400, -1000) * ph
+				var off := Vector2(-k * 26.0, k * 18.0) if k % 2 == 0 else Vector2(-k * 26.0, -k * 10.0)
+				var p := lead + off
+				var flap := sin(t * 6.0 + k) * 6.0
+				L.draw_polyline(PackedVector2Array([p + Vector2(-14, flap), p, p + Vector2(14, flap)]), Color("2a2a3a"), 3.0, true)
+		"vec3":
+			for ax in 3:
+				blob(L, c + Vector2(-100 + ax * 100, -320), Vector2(60, 60), Color([Color(1, 0.5, 0.55), Color(0.5, 1, 0.7), Color(0.5, 0.7, 1)][ax], 0.0))
+			for k in 14:
+				var ph := fmod(t * 0.2 + k / 14.0, 1.0)
+				var p := c + Vector2(sin(k * 2.1) * 360.0, 200.0 - ph * 520.0)
+				_dot(L, p, 3.0, Color(0.8, 0.9, 1.0, 0.7 * sin(ph * PI)), 16)
+			blob(L, c + Vector2(-100, -300), Vector2(140, 100), Color(0.6, 0.75, 1.0, 0.12 + 0.05 * sin(t * 1.5)))
+		"plane":
+			if sh.has("cable"):
+				var t1: Vector2 = sh.cable[0] + Vector2(0, -112)
+				var t2: Vector2 = sh.cable[1] + Vector2(0, -112)
+				var f := 0.5 + 0.5 * sin(t * 0.25)
+				var gp := t1.lerp(t2, f)
+				L.draw_line(gp, gp + Vector2(0, 26), Color("3a4a6a"), 3.0)
+				L.draw_rect(Rect2(gp + Vector2(-22, 26), Vector2(44, 32)), Color("d84a4a"))
+				L.draw_rect(Rect2(gp + Vector2(-16, 32), Vector2(32, 12)), Color("ffe08a"))
+			var apex: Vector2 = sh.apex
+			for k in 8:
+				var p := apex.lerp((sh.ma + sh.mb) / 2.0, 0.15 + k * 0.1) + Vector2(sin(k * 3.0) * 30.0, cos(k * 2.0) * 20.0)
+				_dot(L, p, 2.5, Color(1, 1, 1, 0.3 + 0.4 * absf(sin(t * 1.3 + k))), 16)
+		"prob":
+			for k in 30:
+				var a := k * 2.4 + t * 0.3
+				var p := c + Vector2(cos(a) * (200.0 + k * 14.0), sin(a * 1.3) * (120.0 + k * 6.0)) + Vector2(0, -60)
+				_dot(L, p, 3.0, Color(1.0, 0.95, 0.5, 0.4 + 0.4 * sin(t * 3.0 + k)), 16)
+			blob(L, c + Vector2(0, -300), Vector2(420, 260), Color(1.0, 0.8, 0.5, 0.06 + 0.03 * sin(t)))
+		"matrix":
+			if sh.has("plaza"):
+				var br: Rect2 = sh.plaza
+				var tile := br.size / 3.0
+				var k := int(t * 1.2) % 9
+				var order := [0, 1, 2, 5, 8, 7, 6, 3, 4]
+				var idx: int = order[k]
+				var tr := Rect2(br.position + Vector2(idx % 3, idx / 3) * tile, tile).grow(-6.0)
+				L.draw_rect(tr, Color(1.0, 0.95, 0.6, 0.35))
+			if sh.has("area"):
+				var area: Rect2 = sh.area
+				var gd: Array = sh.grid
 				for k in 10:
-					var f := fmod(t * 0.08 + k / 10.0, 1.0)
-					var p := ma.lerp(mb, f)
-					blob(L, p, Vector2(50, 18), Color(1.0, 0.95, 0.8, 0.35 * sin(f * PI)))
-				blob(L, sh.tower + Vector2(0, -94), Vector2(40, 40), Color(1.0, 0.85, 0.5, 0.45 + 0.15 * sin(t * 3.0)))
-			"vec2":
-				# 風箏
-				for k in 2:
-					var base := c + Vector2(-80 + k * 300, 120 - k * 200)
-					var kp := base + Vector2(180 + sin(t * 0.9 + k) * 40.0, -260 + cos(t * 1.1 + k) * 30.0)
-					L.draw_polyline(PackedVector2Array([base, base.lerp(kp, 0.5) + Vector2(20, 30), kp]), Color(1, 1, 1, 0.5), 2.0, true)
-					var kd := (kp - base).normalized()
-					var kn := kd.orthogonal()
-					L.draw_colored_polygon(PackedVector2Array([kp + kd * 40.0, kp + kn * 24.0, kp - kd * 26.0, kp - kn * 24.0]), Color("ff7a8a") if k == 0 else Color("5fd4ff"))
-					L.draw_polyline(PackedVector2Array([kp - kd * 26.0, kp - kd * 46.0 + kn * sin(t * 4.0) * 10.0, kp - kd * 66.0]), Color("f5c84c"), 3.0, true)
-				# 風吹過田的一道道白線
-				var wl := PackedVector2Array()
-				for k in 8:
-					var ph := fmod(t * 0.35 + k / 8.0, 1.0)
-					var s := c + Vector2(-600 + ph * 1200.0, -300 + k * 80.0) + Vector2(0, -ph * 260.0)
-					wl.append_array([s, s + Vector2(90, -28)])
-				L.draw_multiline(wl, Color(1, 1, 1, 0.25), 3.0)
-				# 雁群：兩隊往同一個方向飛，合成一隊
-				for k in 7:
-					var ph := fmod(t * 0.05, 1.0)
-					var lead := c + Vector2(-700, 500) + Vector2(1400, -1000) * ph
-					var off := Vector2(-k * 26.0, k * 18.0) if k % 2 == 0 else Vector2(-k * 26.0, -k * 10.0)
-					var p := lead + off
-					var flap := sin(t * 6.0 + k) * 6.0
-					L.draw_polyline(PackedVector2Array([p + Vector2(-14, flap), p, p + Vector2(14, flap)]), Color("2a2a3a"), 3.0, true)
-			"vec3":
-				for ax in 3:
-					blob(L, c + Vector2(-100 + ax * 100, -320), Vector2(60, 60), Color([Color(1, 0.5, 0.55), Color(0.5, 1, 0.7), Color(0.5, 0.7, 1)][ax], 0.0))
-				for k in 14:
-					var ph := fmod(t * 0.2 + k / 14.0, 1.0)
-					var p := c + Vector2(sin(k * 2.1) * 360.0, 200.0 - ph * 520.0)
-					_dot(L, p, 3.0, Color(0.8, 0.9, 1.0, 0.7 * sin(ph * PI)), 16)
-				blob(L, c + Vector2(-100, -300), Vector2(140, 100), Color(0.6, 0.75, 1.0, 0.12 + 0.05 * sin(t * 1.5)))
-			"plane":
-				if sh.has("cable"):
-					var t1: Vector2 = sh.cable[0] + Vector2(0, -112)
-					var t2: Vector2 = sh.cable[1] + Vector2(0, -112)
-					var f := 0.5 + 0.5 * sin(t * 0.25)
-					var gp := t1.lerp(t2, f)
-					L.draw_line(gp, gp + Vector2(0, 26), Color("3a4a6a"), 3.0)
-					L.draw_rect(Rect2(gp + Vector2(-22, 26), Vector2(44, 32)), Color("d84a4a"))
-					L.draw_rect(Rect2(gp + Vector2(-16, 32), Vector2(32, 12)), Color("ffe08a"))
-				var apex: Vector2 = sh.apex
-				for k in 8:
-					var p := apex.lerp((sh.ma + sh.mb) / 2.0, 0.15 + k * 0.1) + Vector2(sin(k * 3.0) * 30.0, cos(k * 2.0) * 20.0)
-					_dot(L, p, 2.5, Color(1, 1, 1, 0.3 + 0.4 * absf(sin(t * 1.3 + k))), 16)
-			"prob":
-				for k in 30:
-					var a := k * 2.4 + t * 0.3
-					var p := c + Vector2(cos(a) * (200.0 + k * 14.0), sin(a * 1.3) * (120.0 + k * 6.0)) + Vector2(0, -60)
-					_dot(L, p, 3.0, Color(1.0, 0.95, 0.5, 0.4 + 0.4 * sin(t * 3.0 + k)), 16)
-				blob(L, c + Vector2(0, -300), Vector2(420, 260), Color(1.0, 0.8, 0.5, 0.06 + 0.03 * sin(t)))
-			"matrix":
-				if sh.has("plaza"):
-					var br: Rect2 = sh.plaza
-					var tile := br.size / 3.0
-					var k := int(t * 1.2) % 9
-					var order := [0, 1, 2, 5, 8, 7, 6, 3, 4]
-					var idx: int = order[k]
-					var tr := Rect2(br.position + Vector2(idx % 3, idx / 3) * tile, tile).grow(-6.0)
-					L.draw_rect(tr, Color(1.0, 0.95, 0.6, 0.35))
-				if sh.has("area"):
-					var area: Rect2 = sh.area
-					var gd: Array = sh.grid
-					for k in 10:
-						var ph := fmod(t * 0.03 + k / 10.0, 1.0)
-						var cc := 1 + k % (int(gd[4]) - 1)
-						var x: float = area.position.x + cc * (float(gd[0]) + float(gd[2])) - float(gd[2]) * 0.5
-						var p := Vector2(x, area.position.y - 60.0 + (area.size.y + 120.0) * ph)
-						blob(L, p, Vector2(24, 24), Color(1.0, 0.8, 0.45, 0.5))
-						_dot(L, p, 5.0, Color("ffe7a3"), 16)
+					var ph := fmod(t * 0.03 + k / 10.0, 1.0)
+					var cc := 1 + k % (int(gd[4]) - 1)
+					var x: float = area.position.x + cc * (float(gd[0]) + float(gd[2])) - float(gd[2]) * 0.5
+					var p := Vector2(x, area.position.y - 60.0 + (area.size.y + 120.0) * ph)
+					blob(L, p, Vector2(24, 24), Color(1.0, 0.8, 0.45, 0.5))
+					_dot(L, p, 5.0, Color("ffe7a3"), 16)
 
 
 ## 彩蛋：瓶中信在海上漂、漩渦在轉、沉船旁邊冒泡
@@ -2943,6 +3016,8 @@ func _draw_minimap(L) -> void:
 	L.draw_colored_polygon(_mini_cache["h"], Color("8a7a6a"))
 	for i in ISLANDS.size():
 		var mc: Color = (ISLANDS[i].col as Color).darkened(0.25) if _open_i(i) else Color(0.75, 0.78, 0.9, 0.6)
+		if _open_i(i) and i < _lit.size():
+			mc = Color(0.36, 0.38, 0.46).lerp(mc, _lit_curve(float(_lit[i])))     # 還沒點亮的島：小地圖上也是灰的
 		if not _open_i(i):
 			var fg: Array = _fog[i]
 			L.draw_colored_polygon(GW._ell(o + (fg[0] as Vector2) * k, float(fg[1]) * k * 0.9, float(fg[2]) * k * 0.9, 20), Color(0.8, 0.82, 0.92, 0.5))
