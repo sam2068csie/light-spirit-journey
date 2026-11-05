@@ -435,8 +435,61 @@ func _tutorial_case() -> void:
 			_issue("看過教學了，第二次進塔又跳出來")
 
 
+## 數字鍵盤的規則要和八大關一樣
+func _keypad_case() -> void:
+	var fid := ""
+	for it in Bank.items():
+		for st in it.steps:
+			if String(st.t) == "fill" and fid == "" and not String(st.ans[0]).contains("."):
+				fid = String(it.id)
+	if fid == "":
+		return
+	cur_tag = unit + "（數字鍵盤 " + fid + "）"
+	var bt = await _open(fid, 3)
+	if bt == null:
+		return
+	var guard := 0
+	while String(bt.steps[bt.si].t) != "fill" and guard < 10:
+		guard += 1
+		var si0: int = bt.si
+		await _answer(bt, bt.steps[si0])
+		await _wait_step(bt, si0)
+		if bt.waiting:
+			bt.action_btn.pressed.emit()
+			await frames(3)
+	var press := func(keys: Array) -> String:
+		for k in keys:
+			bt._on_key(k)
+		return String(bt.fill_vals[bt.fill_cur])
+	var checks := [
+		[["1", "−"], "−1", "先按 1 再按 − 要變成 −1"],
+		[["−"], "1", "再按一次 − 要變回 1"],
+		[["/", "2", "/"], "1/2", "/ 只能按一次"],
+		[["⌫", "⌫", "⌫", "/"], "", "空的時候不能按 /"],
+		[["−", "/"], "−", "只有負號時不能按 /"],
+		[["⌫", "1", "2", "3", "4", "5", "6", "7", "8"], "1234567", "最多 7 個字"]]
+	for c in checks:
+		var got: String = press.call(c[0])
+		if got != String(c[1]):
+			_issue("%s：按出「%s」，應該是「%s」" % [c[2], got, c[1]])
+	if bt.KEY_ROWS[2].has(".") or bt.opts_box.find_children("*", "Button", true, false).any(func(b): return b.text == "."):
+		_issue("答案沒有小數的題目卻有「.」鍵")
+	while String(bt.fill_vals[bt.fill_cur]) != "":
+		bt._on_key("⌫")
+	press.call(["3", "/"])
+	var h0: int = bt.hearts
+	bt.fill_send.pressed.emit()
+	await frames(2)
+	if bt.hearts != h0:
+		_issue("格子沒填好（「3/」）就送出，不該扣心")
+	if not String(bt.hint_label.text).contains("還沒填好"):
+		_issue("格子沒填好就送出，沒有提醒")
+	await shot(unit + "_keypad_unfinished")
+
+
 func _lose_cases() -> void:
 	await _tutorial_case()
+	await _keypad_case()
 	# 1. 只剩一顆心時答錯：示範解法、看攀登結果
 	var lose_ids := ["r_logsum", "j_rules", "l_twolog", "b_ineq"] if unit == "exp" else ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"]
 	for id in lose_ids:

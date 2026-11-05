@@ -1099,8 +1099,12 @@ func _on_pick(k: int, b: Button) -> void:
 ##   template 裡的 [0]、[1]… 是要填的格子；ans 是每一格的答案（分數寫 a/b，比較時看數值，2/4 和 1/2 都算對）
 ##   和八大關一樣：填空直接寫在左邊的推導板（空格就在那一行裡），右邊是 ①②③ 選格子＋鍵盤
 
-## 鍵盤和八大關一樣分三列：1～5／6～0／− . / ⌫ 送出（換格子：點上面的 ①②③）
-const KEY_ROWS := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], ["−", ".", "/", "⌫", "送出"]]
+## 鍵盤和八大關（step_level.gd 的 _build_keypad、_key）一模一樣：
+##   三列 1～5／6～0／− / ⌫ 送出（答案有小數時多一個「.」）；換格子點上面的 ①②③（實體鍵盤 Tab、←、→）
+##   −：整個數變號（先按 1 再按 − 就是 −1）　/：只能一次、不能和小數點一起　.：空的時候變成「0.」
+##   送出時有格子沒填好（空的、「3/」）只提醒，不扣心
+const KEY_ROWS := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], ["−", "/", "⌫", "送出"]]
+var fill_dot := false             # 這一題的答案有小數：多一個「.」鍵
 const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "−", ".", "/", "⌫", "▶", "◀"]   # 能打的鍵（測試用）
 var fill_send: Button
 var fill_live: MathLabel          # 推導板上正在填的那一行
@@ -1118,6 +1122,7 @@ func _build_fill(s: Dictionary) -> void:
 	fill_bad.fill(false)
 	fill_cur = 0
 	fill_on = true
+	fill_dot = s.ans.any(func(a): return String(a).contains("."))
 	fill_live = _write(String(s.template))
 	var tip := Label.new()
 	tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
@@ -1155,7 +1160,10 @@ func _build_fill(s: Dictionary) -> void:
 		var row2 := HBoxContainer.new()
 		row2.add_theme_constant_override("separation", 6)
 		pad.add_child(row2)
-		for key in keys:
+		var ks: Array = keys.duplicate()
+		if fill_dot and ks.has("送出"):
+			ks.insert(2, ".")
+		for key in ks:
 			var b := Button.new()
 			b.text = key
 			b.focus_mode = Control.FOCUS_NONE
@@ -1164,7 +1172,7 @@ func _build_fill(s: Dictionary) -> void:
 			b.add_theme_font_size_override("font_size", UITheme.fs(20) if String(key).length() == 1 else UITheme.fs(17))
 			if key == "送出":
 				UITheme.accent_button(b, 18)
-				b.size_flags_stretch_ratio = 2.6
+				b.size_flags_stretch_ratio = 2.2 if fill_dot else 3.0
 				fill_send = b
 				b.pressed.connect(func(): _on_action())
 			else:
@@ -1184,10 +1192,20 @@ func _on_key(key: String) -> void:
 		_refresh_fill()
 		return
 	var v: String = fill_vals[fill_cur]
-	if key == "⌫":
-		v = v.left(v.length() - 1)
-	elif v.length() < 9:
-		v += key
+	match key:
+		"⌫":
+			v = v.substr(0, maxi(0, v.length() - 1))
+		"−":
+			v = v.substr(1) if v.begins_with("−") else "−" + v
+		"/":
+			if not v.contains("/") and not v.contains(".") and v.replace("−", "") != "":
+				v += "/"
+		".":
+			if fill_dot and not v.contains(".") and not v.contains("/"):
+				v += "." if v.replace("−", "") != "" else "0."
+		_:
+			if v.length() < (10 if fill_dot else 7):
+				v += key
 	fill_vals[fill_cur] = v
 	fill_bad[fill_cur] = false
 	_refresh_fill()
@@ -1245,9 +1263,8 @@ func _refresh_fill() -> void:
 		var pr := UITheme.box(UITheme.PANEL_LIGHT.lightened(0.14), 10, UITheme.ACCENT, 2, 6)
 		b.add_theme_stylebox_override("pressed", pr)
 		b.add_theme_stylebox_override("hover_pressed", pr)
-	var ready := fill_vals.all(func(x): return String(x) != "")
 	if is_instance_valid(fill_send):
-		fill_send.disabled = not ready or not fill_on
+		fill_send.disabled = not fill_on       # 和八大關一樣隨時可以按；沒填好的格子按下去會提醒
 
 
 ## 把「−3/4」「2.5」這種字串變成數值；看不懂回傳 NAN
@@ -1277,6 +1294,14 @@ static func fill_match(got: String, want: String) -> bool:
 
 func _check_fill() -> void:
 	var s: Dictionary = steps[si]
+	# 有格子還沒填好（空的、只打了「3/」）：提醒就好，不扣心
+	for i in fill_vals.size():
+		if is_nan(_num(String(fill_vals[i]))):
+			fill_cur = i
+			_refresh_fill()
+			_hint("%s 格還沒填好（%s）。" % ["①②③④⑤⑥"[mini(i, 5)],
+				"可填整數、負數或小數，例如 −0.86" if fill_dot else "可填整數、負數或分數，例如 −3/2"], "info")
+			return
 	var ok := true
 	for i in fill_vals.size():
 		fill_bad[i] = not fill_match(String(fill_vals[i]), String(s.ans[i]))
@@ -1313,23 +1338,37 @@ func _check_fill() -> void:
 
 
 func _unhandled_key_input(e: InputEvent) -> void:
-	if not fill_on or not (e is InputEventKey) or not e.pressed:
+	if not fill_on or not (e is InputEventKey) or not e.pressed or e.echo:
 		return
-	var k: InputEventKey = e
-	var map := {KEY_MINUS: "−", KEY_KP_SUBTRACT: "−", KEY_SLASH: "/", KEY_KP_DIVIDE: "/", KEY_PERIOD: ".",
-		KEY_KP_PERIOD: ".", KEY_BACKSPACE: "⌫", KEY_LEFT: "◀", KEY_RIGHT: "▶", KEY_TAB: "▶"}
-	if k.keycode >= KEY_0 and k.keycode <= KEY_9:
-		_on_key(str(k.keycode - KEY_0))
-	elif k.keycode >= KEY_KP_0 and k.keycode <= KEY_KP_9:
-		_on_key(str(k.keycode - KEY_KP_0))
-	elif map.has(k.keycode):
-		_on_key(map[k.keycode])
-	elif k.keycode == KEY_ENTER or k.keycode == KEY_KP_ENTER:
-		if is_instance_valid(fill_send) and not fill_send.disabled:
-			_on_action()
+	var k := ""
+	var code: int = e.keycode
+	if code >= KEY_0 and code <= KEY_9:
+		k = str(code - KEY_0)
+	elif code >= KEY_KP_0 and code <= KEY_KP_9:
+		k = str(code - KEY_KP_0)
 	else:
+		match code:
+			KEY_MINUS, KEY_KP_SUBTRACT:
+				k = "−"
+			KEY_PERIOD, KEY_KP_PERIOD:
+				k = "." if fill_dot else ""
+			KEY_SLASH, KEY_KP_DIVIDE:
+				k = "/"
+			KEY_BACKSPACE:
+				k = "⌫"
+			KEY_ENTER, KEY_KP_ENTER:
+				k = "送出"
+			KEY_TAB, KEY_RIGHT:
+				k = "▶"
+			KEY_LEFT:
+				k = "◀"
+	if k == "" or ((k == "▶" or k == "◀") and fill_vals.size() < 2):
 		return
 	get_viewport().set_input_as_handled()
+	if k == "送出":
+		_on_action()
+	else:
+		_on_key(k)
 
 
 # ================= 小元件 =================
