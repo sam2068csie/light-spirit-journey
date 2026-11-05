@@ -335,7 +335,7 @@ const REMAIN := [
 			{"t": "choice", "q": "f(x) 除以 (3x + 1)^{2} 的餘式？", "opts": ["−3x + 1", "1", "3x + 3", "−3x − 1"],
 				"hint": "−(3x + 1) + 2 是一次式，次數已經比 (3x + 1)^{2} 低", "write": "答：−(3x + 1) + 2 = −3x + 1"}]},
 
-	{"id": "pr_twosq", "kind": "remain", "tier": 3, "title": "兩個平方因式", "tmul": 1.4,
+	{"id": "pr_twosq", "kind": "remain", "tier": 3, "title": "兩個平方因式", "tmul": 1.35,
 		"stem": "f(x) 除以 (x + 1)^{2} 的餘式為 x + 5，除以 (x − 1)^{2} 的餘式為 x + 1。求 f(x) 除以 (x^{2} − 1)^{2} 的餘式。",
 		"steps": [
 			{"t": "choice", "pre": "(x^{2} − 1)^{2} = (x + 1)^{2}(x − 1)^{2}，餘式 R(x) 最多三次", "q": "R(x) 怎麼假設最好？", "opts": ["(x + 1)^{2}(ax + b) + x + 5", "ax + b", "(x + 1)(ax + b) + x + 5", "(x + 1)^{2} + x + 5"],
@@ -480,7 +480,7 @@ const LINES := [
 # ================= 參數討論（二次函數、恆成立、分類討論） =================
 
 const PARAM := [
-	{"id": "pp_twoway", "kind": "param", "tier": 2, "title": "開口向上還是向下", "tmul": 1.4,
+	{"id": "pp_twoway", "kind": "param", "tier": 2, "title": "開口向上還是向下", "tmul": 1.35,
 		"stem": "二次函數 f(x) = ax^{2} + 4ax + b 在 −3 ≤ x ≤ 1 的最大值為 12、最小值為 −6。求數對 (a, b)。（有兩解）",
 		"routes": {"A": "a > 0（開口向上）", "B": "a < 0（開口向下）"},
 		"steps": [
@@ -529,7 +529,7 @@ const PARAM := [
 			{"t": "choice", "q": "k 的範圍：", "opts": ["k > 3/2", "k > 1/2", "k < 1/2 或 k > 3/2", "1 < k < 3/2"],
 				"hint": "(k − 1)^{2} > 1/4 且 k − 1 > 0 ⇒ k − 1 > 1/2", "write": "答：k > 3/2"}]},
 
-	{"id": "pp_nosol", "kind": "param", "tier": 3, "title": "無解", "tmul": 1.4,
+	{"id": "pp_nosol", "kind": "param", "tier": 3, "title": "無解", "tmul": 1.35,
 		"stem": "不等式 ax^{2} + 4ax + (3a + 2) < 0 無解。求 a 的範圍。",
 		"routes": {"A": "a = 0", "B": "a ≠ 0"},
 		"steps": [
@@ -565,7 +565,7 @@ const PARAM := [
 				{"v": "a = 6", "ok": false, "why": "a > 0 開口向上，只有最小值"}], "write": "a = −8（a = 6 開口向上，不合）"},
 			{"t": "fill", "q": "求 b：", "template": "b = −2a = [0]", "ans": ["16"], "hint": "−2 × (−8)", "write": "答：(a, b) = (−8, 16)"}]},
 
-	{"id": "pp_quadrants", "kind": "param", "tier": 3, "title": "通過四個象限", "tmul": 1.5,
+	{"id": "pp_quadrants", "kind": "param", "tier": 3, "title": "通過四個象限", "tmul": 1.35,
 		"stem": "二次函數 f(x) = ax^{2} − 2ax + b 在 −1 ≤ x ≤ 2 的最大值為 7、最小值為 −1，且圖形通過四個象限。求數對 (a, b)。",
 		"routes": {"A": "a > 0", "B": "a < 0"},
 		"steps": [
@@ -601,7 +601,7 @@ const PARAM := [
 			{"t": "choice", "q": "頂點 t = −1 在 t ≤ −2 裡面嗎？最小值？", "opts": ["不在：t = −2 時最小 −5", "在：最小值 −6", "不在：t = −2 時最小 3", "不在：沒有最小值"],
 				"hint": "t ≤ −2 這一段在頂點左邊，是遞減的：越靠近 −2 越小", "write": "答：頂點不在範圍內，t = −2（x = −1）時最小值 4 − 4 − 5 = −5"}]},
 
-	{"id": "pp_abs", "kind": "param", "tier": 3, "title": "絕對值的交點", "tmul": 1.4,
+	{"id": "pp_abs", "kind": "param", "tier": 3, "title": "絕對值的交點", "tmul": 1.35,
 		"stem": "方程式 |x^{2} − 2x| = x + k 恰有兩個相異實根。求 k 的範圍。",
 		"plot": {"x": [-1.5, 4.0], "y": [-3.0, 4.0], "curves": [{"f": "abs(x*x-2*x)-x", "c": "orange", "at": 2}],
 			"pts": [{"x": 0, "y": 0, "label": "", "at": 3}, {"x": 0.5, "y": 0.25, "label": "", "at": 3}, {"x": 2, "y": -2, "label": "(2, −2)", "at": 3}]},
@@ -635,7 +635,7 @@ const BOSS := [
 			{"t": "choice", "part": "(3)", "q": "和 y = 7 有幾個交點？", "opts": ["3 個", "1 個", "2 個", "4 個"],
 				"hint": "7 介於局部最低 0 和局部最高 8 之間", "write": "0 < 7 < 8　→　答：3 個交點"}]},
 
-	{"id": "pb_power", "kind": "boss", "tier": 3, "title": "餘式的次方", "tmul": 1.8,
+	{"id": "pb_power", "kind": "boss", "tier": 3, "title": "餘式的次方", "tmul": 1.7,
 		"stem": "f(x)、g(x) 的首項係數都是 1，f(x) 是三次多項式。f(x) 除以 g(x) 的餘式為 x + 2，[f(x)]^{2} 除以 g(x) 的餘式為 3x + 1。\n(1) 求 g(x)　(2) [f(x)]^{3} 除以 g(x) 的餘式為 ax + b，求 (a, b)　(3) 滿足條件的 f(x) 唯一嗎？",
 		"steps": [
 			{"t": "choice", "part": "(1)", "q": "[f(x)]^{2} 和誰除以 g(x) 的餘式相同？", "opts": ["(x + 2)^{2}", "x + 2", "2(x + 2)", "(3x + 1)^{2}"],

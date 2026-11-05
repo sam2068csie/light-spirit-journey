@@ -359,7 +359,19 @@ static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: b
 	var top := cands.filter(func(q): return int(q.tier) == tier)
 	var q: Dictionary = (top if not top.is_empty() and randf() < 0.6 else cands).pick_random()
 	return {"level": "T", "slot": q.id, "vi": 0, "title": bank.KIND_NAME[q.kind] + "・" + q.title,
-		"type": q.kind, "tmul": float(q.get("tmul", 1.0)), "tag": ""}
+		"type": q.kind, "tmul": tower_tmul(q), "tag": ""}
+
+
+## 限時倍數：每個單元的塔都一樣的上限（一般題最多 1.35 倍、試煉大題 1.6～1.7 倍）
+const TMUL_MAX := 1.35
+const TMUL_BOSS := [1.6, 1.7]
+
+
+static func tower_tmul(q: Dictionary) -> float:
+	var m := float(q.get("tmul", 1.0))
+	if String(q.get("kind", "")) == "boss":
+		return clampf(m, TMUL_BOSS[0], TMUL_BOSS[1])
+	return clampf(m, 1.0, TMUL_MAX)
 
 
 static func _tower_old(floor_n: int, used: Dictionary, last: Dictionary, unit: String = Units.DEFAULT) -> Dictionary:
