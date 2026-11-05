@@ -158,9 +158,9 @@ func _answer(bt, st: Dictionary) -> void:
 		"fill":
 			await _type_fill(bt, st.ans)
 			await _bcheck(bt, "%02d 數字填好" % bt.si)
-			if bt.action_btn.disabled:
-				_issue("每一格都填了，「送出答案」還是不能按")
-			bt.action_btn.pressed.emit()
+			if bt.fill_send.disabled:
+				_issue("每一格都填了，「送出」還是不能按")
+			bt.fill_send.pressed.emit()
 
 
 func _pick_tile(bt, k: int) -> Button:
@@ -309,7 +309,7 @@ func _answer_wrong(bt, st: Dictionary) -> void:
 		"fill":
 			var bad: Array = st.ans.map(func(v): return "98765")
 			await _type_fill(bt, bad)
-			bt.action_btn.pressed.emit()
+			bt.fill_send.pressed.emit()
 			await frames(2)
 			if bt.hearts != h0 - 1:
 				_issue("填錯數字卻沒有扣心")

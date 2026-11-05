@@ -3336,7 +3336,7 @@ var _concept_progress := {}   # 觀念整理：每張卡片填到哪裡（同一
 
 func _show_concepts(idx: int = -1) -> void:
 	var c := _concept_color()
-	var o := UITheme.modal(self, Color(c.r, c.g, c.b, 0.5), 1110)
+	var o := UITheme.modal(self, Color(c.r, c.g, c.b, 0.5), 1110, true, false)   # 觀念卡片自己會縮放，不用捲動
 	Game.of(self).sfx("open")
 	var layer: Control = o[0]
 	var col: VBoxContainer = o[1]

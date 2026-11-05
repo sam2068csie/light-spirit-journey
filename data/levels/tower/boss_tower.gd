@@ -646,16 +646,13 @@ func _fit_card() -> void:
 		for bt in btns:
 			bt.custom_minimum_size.y = maxf(42.0, bt.custom_minimum_size.y - cut)
 		return
-	# 數字鍵盤：每一列壓矮一點（最矮 32）
-	for grid in opts_box.get_children():
-		if grid is GridContainer:
-			var keys := grid.get_children().filter(func(k): return k.custom_minimum_size.y > 32.0)
-			if keys.is_empty():
-				return
-			var rows := ceili(float(grid.get_child_count()) / float(grid.columns))
-			var cut2 := ceilf(over / rows)
-			for k in keys:
-				k.custom_minimum_size.y = maxf(32.0, k.custom_minimum_size.y - cut2)
+	# 數字鍵盤：每一列壓矮一點（最矮 34）
+	var pad := opts_box.get_node_or_null("Pad")
+	if pad:
+		var cut2 := ceilf(over / maxf(1.0, pad.get_child_count()))
+		for row in pad.get_children():
+			for k in row.get_children():
+				k.custom_minimum_size.y = maxf(34.0, k.custom_minimum_size.y - cut2)
 
 
 ## 換下一步：作答區的間距恢復原樣
@@ -1073,7 +1070,10 @@ func _on_pick(k: int, b: Button) -> void:
 ## {t: "fill", q, template: "f(4) = [0]", ans: ["24"], hint, write}
 ##   template 裡的 [0]、[1]… 是要填的格子；ans 是每一格的答案（分數寫 a/b，比較時看數值，2/4 和 1/2 都算對）
 
-const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ".", "/", "−", "⌫", "◀", "▶"]   # 兩列八鍵（右邊作答區比較矮也放得下）
+## 鍵盤和八大關一樣分三列：1～5／6～0／− . / ⌫ 送出（好幾格時多一個「下一格」）
+const KEY_ROWS := [["1", "2", "3", "4", "5"], ["6", "7", "8", "9", "0"], ["−", ".", "/", "⌫", "送出"]]
+const KEYS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "−", ".", "/", "⌫", "▶", "◀"]   # 能打的鍵（測試用）
+var fill_send: Button
 
 
 func _build_fill(s: Dictionary) -> void:
@@ -1097,25 +1097,37 @@ func _build_fill(s: Dictionary) -> void:
 	fill_label.align_center = true
 	fill_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	disp.add_child(fill_label)
-	var grid := GridContainer.new()
-	grid.columns = 8
-	grid.add_theme_constant_override("h_separation", 4)
-	grid.add_theme_constant_override("v_separation", 6)
-	opts_box.add_child(grid)
-	for key in KEYS:
-		var b := Button.new()
-		b.text = key
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2((CARD_W - 28.0) / 8.0, 48)
-		b.add_theme_font_size_override("font_size", UITheme.fs(21))
-		UITheme.tight(b, 2)
-		if key in ["◀", "▶"] and n < 2:
-			b.disabled = true
-			b.modulate.a = 0.3
-		b.pressed.connect(_on_key.bind(key))
-		grid.add_child(b)
-	action_btn.text = "送出答案"
-	action_btn.visible = true
+	var pad := VBoxContainer.new()
+	pad.name = "Pad"
+	pad.add_theme_constant_override("separation", 6)
+	opts_box.add_child(pad)
+	for keys in KEY_ROWS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		pad.add_child(row)
+		var ks: Array = keys.duplicate()
+		if ks.has("送出") and n > 1:
+			ks.insert(ks.find("送出"), "▶")
+		for key in ks:
+			var b := Button.new()
+			b.text = "下一格" if key == "▶" else key
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(0, 44)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", UITheme.fs(20) if String(key).length() == 1 else UITheme.fs(15))
+			if key != "送出":
+				UITheme.tight(b, 2)
+			if key == "▶":
+				b.size_flags_stretch_ratio = 1.5
+			if key == "送出":
+				UITheme.accent_button(b, 18)
+				b.size_flags_stretch_ratio = 2.0 if n > 1 else 2.6
+				fill_send = b
+				b.pressed.connect(func(): _on_action())
+			else:
+				b.pressed.connect(_on_key.bind(key))
+			row.add_child(b)
+	action_btn.visible = false
 	_refresh_fill()
 
 
@@ -1127,10 +1139,11 @@ func _on_key(key: String) -> void:
 	match key:
 		"⌫":
 			v = v.left(v.length() - 1)
-		"◀":
-			fill_cur = (fill_cur - 1 + fill_vals.size()) % fill_vals.size()
-		"▶":
-			fill_cur = (fill_cur + 1) % fill_vals.size()
+		"◀", "▶":
+			# 換格子：不改任何一格的內容
+			fill_cur = (fill_cur + (1 if key == "▶" else -1) + fill_vals.size()) % fill_vals.size()
+			_refresh_fill()
+			return
 		_:
 			if v.length() < 9:
 				v += key
@@ -1144,12 +1157,13 @@ func _refresh_fill() -> void:
 	for i in fill_vals.size():
 		var v: String = fill_vals[i]
 		var shown := v if v != "" else "□"
+		# 每一格長得一樣，正在填的那一格是金色
 		var c := "ffcf5a" if i == fill_cur and fill_on else "9be7ff"
-		var box := "[color=#%s]%s[/color]" % [c, ("⟨" + shown + "⟩") if (i == fill_cur and fill_on and fill_vals.size() > 1) else shown]
-		t = t.replace("[%d]" % i, box)
+		t = t.replace("[%d]" % i, "[color=#%s]%s[/color]" % [c, shown])
 	fill_label.text = t
 	var ready := fill_vals.all(func(x): return String(x) != "")
-	action_btn.disabled = not ready
+	if is_instance_valid(fill_send):
+		fill_send.disabled = not ready or not fill_on
 
 
 ## 把「−3/4」「2.5」這種字串變成數值；看不懂回傳 NAN
@@ -1188,9 +1202,10 @@ func _check_fill() -> void:
 		Game.of(self).sfx("correct")
 		_refresh_fill()
 		action_btn.visible = false
-		for b in opts_box.get_children():
-			if b is GridContainer:
-				for k in b.get_children():
+		var pad := opts_box.get_node_or_null("Pad")
+		if pad:
+			for row in pad.get_children():
+				for k in row.get_children():
 					k.disabled = true
 		_write(String(s.get("write", "")))
 		_hint("答對了！", "good")
@@ -1218,7 +1233,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 	elif map.has(k.keycode):
 		_on_key(map[k.keycode])
 	elif k.keycode == KEY_ENTER or k.keycode == KEY_KP_ENTER:
-		if not action_btn.disabled:
+		if is_instance_valid(fill_send) and not fill_send.disabled:
 			_on_action()
 	else:
 		return

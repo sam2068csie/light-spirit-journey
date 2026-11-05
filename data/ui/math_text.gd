@@ -828,7 +828,8 @@ static func frac_extent(fr: Dictionary, fs: float) -> Vector2:
 		bot = maxf(bot, ch.dy * fs + ch.scale * fs * 0.22 * _hk(ch))
 	var den_asc := 0.0
 	for ch in fr.den:
-		den_asc = maxf(den_asc, -ch.dy * fs + ch.scale * fs * 0.74 * _hk(ch))
+		# 分母有根號、上橫線（\ol）時多留一點空間，免得橫線和分數線黏在一起
+		den_asc = maxf(den_asc, -ch.dy * fs + ch.scale * fs * (0.96 if ch.has("rads") and not ch.rads.is_empty() else 0.74) * _hk(ch))
 	return Vector2(axis + gap + top, -axis + gap + den_asc + bot)
 
 
@@ -847,7 +848,8 @@ static func draw_frac(ci: CanvasItem, font: Font, pos: Vector2, fr: Dictionary, 
 	_draw_row(ci, font, Vector2(pos.x + (w - nw) / 2.0, axis_y - gap - num_desc), fr.num, fs, col)
 	var den_asc := 0.0
 	for ch in fr.den:
-		den_asc = maxf(den_asc, -ch.dy * fs + ch.scale * fs * 0.74 * _hk(ch))
+		# 分母有根號、上橫線（\ol）時多留一點空間，免得橫線和分數線黏在一起
+		den_asc = maxf(den_asc, -ch.dy * fs + ch.scale * fs * (0.96 if ch.has("rads") and not ch.rads.is_empty() else 0.74) * _hk(ch))
 	_draw_row(ci, font, Vector2(pos.x + (w - dw) / 2.0, axis_y + gap + den_asc), fr.den, fs, col)
 
 

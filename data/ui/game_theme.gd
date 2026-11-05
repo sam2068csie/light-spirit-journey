@@ -559,7 +559,8 @@ static func text_ol(ci: CanvasItem, font: Font, pos: Vector2, text: String, alig
 
 
 ## 全螢幕的半透明遮罩 + 置中的卡片。回傳 [遮罩層, 卡片內的直排容器]
-static func modal(parent: Node, border: Color, width: int = 0, fade: bool = true) -> Array:
+## scroll：內容比畫面高的時候，卡片的高度停在畫面內，裡面可以上下捲動（觀念卡片自己會縮放，傳 false）
+static func modal(parent: Node, border: Color, width: int = 0, fade: bool = true, scroll: bool = true) -> Array:
 	var layer := Control.new()
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -582,12 +583,37 @@ static func modal(parent: Node, border: Color, width: int = 0, fade: bool = true
 	center.add_child(card)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)
-	card.add_child(col)
+	if scroll:
+		_scroll_wrap(layer, card, col, sb)
+	else:
+		card.add_child(col)
 	if fade:
 		layer.modulate.a = 0.0
 		var tw := layer.create_tween()
 		tw.tween_property(layer, "modulate:a", 1.0, 0.16)
 	return [layer, col]
+
+
+## 視窗的內容放進 ScrollContainer：平常和沒有捲動時一模一樣大，太高才把高度限制在畫面內（手指拖動、滾輪都能捲）
+static func _scroll_wrap(layer: Control, card: PanelContainer, col: VBoxContainer, sb: StyleBox) -> void:
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	card.add_child(sc)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(col)
+	var fit := func() -> void:
+		if not is_instance_valid(sc) or not sc.is_inside_tree():
+			return
+		var vh := layer.get_viewport_rect().size.y
+		var maxh := vh - 32.0 - sb.get_margin(SIDE_TOP) - sb.get_margin(SIDE_BOTTOM)
+		var need := col.get_combined_minimum_size()
+		var over := need.y > maxh
+		var bar := sc.get_v_scroll_bar().get_combined_minimum_size().x if over else 0.0
+		sc.custom_minimum_size = Vector2(need.x + bar, minf(need.y, maxh))
+	col.minimum_size_changed.connect(fit)
+	layer.resized.connect(fit)
+	fit.call_deferred()
 
 
 ## 置中的大標題文字
