@@ -51,6 +51,7 @@ const MAP := {
 	"level_07_compass.gd": "res://data/levels/exp/level_07_compass.gd",
 	"level_08_telescope.gd": "res://data/levels/exp/level_08_telescope.gd",
 	"level_base.gd": "res://data/levels/engine/level_base.gd",
+	"level_core.gd": "res://data/levels/engine/level_core.gd",
 	"level_pips.gd": "res://data/levels/engine/level_pips.gd",
 	"level_poly1_lamp.gd": "res://data/levels/poly/level_poly1_lamp.gd",
 	"level_poly2_wheel.gd": "res://data/levels/poly/level_poly2_wheel.gd",
