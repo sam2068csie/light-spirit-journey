@@ -19,6 +19,10 @@ const CHAPTERS_G3 := [
 var wave_info: MathLabel
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("0d1838"), "sky_bot": Color("06142a"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G3"
 
@@ -262,6 +266,13 @@ static func _gen_wave() -> Dictionary:
 # ================= 畫面 =================
 
 class WaveView extends MoonView:
+	func _draw_forge_bg() -> void:
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "steps", size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
 	const GREEN := UITheme.LIME
 	const BLUEC := UITheme.CYAN
 	const ORANGE := UITheme.ORANGE

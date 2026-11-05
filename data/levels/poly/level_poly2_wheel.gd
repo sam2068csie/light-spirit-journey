@@ -40,7 +40,7 @@ func radicals_ok() -> bool:
 	return true
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0f1a33"), "sky_bot": Color("0a1224"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("10243f"), "sky_bot": Color("071425"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．深層水車", "button": "進入深層水車  ▶",
@@ -221,19 +221,8 @@ class WheelView extends ForgeView:
 
 	## 水車洞窟：深藍的底、兩側的小瀑布、底部的水光
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("0f1a33"), Color("0f1a33"), Color("0a1224"), Color("0a1224")]))
-		var falls := PackedVector2Array()
-		for side in [14.0, w - 14.0]:
-			for k in 18:
-				var y := fposmod(t * 160.0 + k * 41.0, h + 40.0) - 20.0
-				falls.append_array([Vector2(side + 3.0 * sin(k * 1.7), y), Vector2(side + 3.0 * sin(k * 1.7), y + 16.0)])
-		draw_multiline(falls, Color(0.5, 0.8, 1.0, 0.18), 2.0)
-		var glow := 0.07 + 0.02 * sin(t * 1.3)
-		draw_polygon(PackedVector2Array([Vector2(0, h * 0.75), Vector2(w, h * 0.75), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color(0.3, 0.7, 1.0, 0.0), Color(0.3, 0.7, 1.0, 0.0), Color(0.3, 0.6, 1.0, glow), Color(0.3, 0.6, 1.0, glow)]))
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "wheel", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

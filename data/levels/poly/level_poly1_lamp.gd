@@ -41,7 +41,7 @@ func step_color() -> Color:
 	return CRYSTAL
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("1a1230"), "sky_bot": Color("100a1e"), "scenery": "none", "ambient": "dust"}
+	return {"sky_top": Color("2c1d18"), "sky_bot": Color("120c0b"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．深層礦脈", "button": "進入深層礦脈  ▶",
@@ -319,38 +319,8 @@ class MineView extends ForgeView:
 
 	## 洞窟：上方的鐘乳石、地上一排小水晶、慢慢飄的光塵
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("1a1230"), Color("1a1230"), Color("0f0a1c"), Color("0f0a1c")]))
-		# 鐘乳石
-		var tops := PackedVector2Array()
-		var tcol := PackedColorArray()
-		for i in 14:
-			var x := (i + 0.5) * w / 14.0 + 10.0 * sin(i * 2.3)
-			var hh := 18.0 + 26.0 * fposmod(i * 0.618, 1.0)
-			var hw := 10.0 + 6.0 * fposmod(i * 0.37, 1.0)
-			var c := Color("2a2148")
-			tops.append_array([Vector2(x - hw, 0), Vector2(x + hw, 0), Vector2(x, hh)])
-			tcol.append_array([c, c, c])
-		var idx := PackedInt32Array()
-		for i in tops.size():
-			idx.append(i)
-		RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), idx, tops, tcol)
-		# 地上的水晶（微微發光）
-		for i in 9:
-			var x := (i + 0.5) * w / 9.0 + 14.0 * sin(i * 1.7)
-			var hh := 10.0 + 12.0 * fposmod(i * 0.43, 1.0)
-			var pulse := 0.5 + 0.5 * sin(t * 1.4 + i * 1.3)
-			var c := Color(0.77, 0.6, 1.0, 0.10 + 0.08 * pulse)
-			draw_colored_polygon(PackedVector2Array([Vector2(x - 5, h), Vector2(x, h - hh), Vector2(x + 5, h)]), c)
-		# 光塵
-		for i in 26:
-			var sp := 0.02 + 0.02 * fposmod(i * 0.371, 1.0)
-			var y := h - fposmod(t * sp + i * 0.137, 1.0) * h
-			var x := fposmod(i * 0.618, 1.0) * w + 10.0 * sin(t * 0.7 + i)
-			var a := 0.12 + 0.12 * sin(t * 1.1 + i)
-			UITheme.dot_n(self, Vector2(x, y), 1.2 + fposmod(i * 0.29, 1.0) * 1.2, Color(0.85, 0.75, 1.0, maxf(0.0, a)), 16)
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "mine", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

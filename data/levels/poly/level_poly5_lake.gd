@@ -40,7 +40,7 @@ func step_color() -> Color:
 	return LAKE_C
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0b1630"), "sky_bot": Color("08101f"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("0c2a3c"), "sky_bot": Color("061722"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．湖面的秘密", "button": "潛入湖面的秘密  ▶",
@@ -791,26 +791,8 @@ class LakeView extends EchoView:
 
 	# ---------- 背景：月光下的湖 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		if w < 100.0 or h < 100.0:
-			return
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("0b1630"), Color("0b1630"), Color("08101f"), Color("08101f")]))
-		var moon := Vector2(w - 26.0, 18.0)
-		UITheme.dot(self, moon, 16.0, Color(0.85, 0.92, 1.0, 0.06))
-		UITheme.dot(self, moon, 8.0, Color(0.95, 0.97, 1.0, 0.35))
-		var stars := PackedVector2Array()
-		for i in 22:
-			var p := Vector2(fposmod(i * 97.3, w), fposmod(i * 41.7, h * 0.4))
-			stars.append_array([p, p + Vector2(1.5, 0)])
-		draw_multiline(stars, Color(1, 1, 1, 0.35 + 0.15 * sin(t * 1.3)), 1.5)
-		var shim := PackedVector2Array()
-		for i in 10:
-			var y := h * 0.78 + i * 11.0
-			var x := fposmod(t * 18.0 + i * 61.0, w)
-			shim.append_array([Vector2(x, y), Vector2(x + 26.0, y)])
-		draw_multiline(shim, Color(0.6, 0.8, 1.0, 0.12), 2.0)
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "lake", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

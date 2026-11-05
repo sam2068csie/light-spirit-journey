@@ -40,7 +40,7 @@ func step_color() -> Color:
 	return MOON
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("0c1a3a"), "sky_bot": Color("08142b"), "scenery": "none", "ambient": "moonsea"}
+	return {"sky_top": Color("0c1a3c"), "sky_bot": Color("071226"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．月光刻度", "button": "進入月光刻度  ▶",
@@ -446,28 +446,8 @@ class MoonView extends ForgeView:
 
 	## 月光的背景：深藍的夜、右上角的月亮、慢慢閃的星星、底部的水光
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("0c1a3a"), Color("0c1a3a"), Color("071226"), Color("071226")]))
-		var mc := Vector2(w - 70, 70)
-		UITheme.dot(self, mc, 60.0, Color(0.85, 0.9, 1.0, 0.035))
-		UITheme.dot(self, mc, 34.0, Color(0.85, 0.9, 1.0, 0.06))
-		UITheme.dot(self, mc, 22.0, Color(0.92, 0.95, 1.0, 0.10))
-		for i in 34:
-			var p := Vector2(fposmod(i * 0.618, 1.0) * w, fposmod(i * 0.377, 1.0) * h * 0.8)
-			var a := 0.10 + 0.12 * sin(t * (0.8 + fposmod(i * 0.29, 1.0)) + i)
-			UITheme.dot(self, p, 1.0 + fposmod(i * 0.41, 1.0) * 1.2, Color(0.85, 0.92, 1.0, maxf(0.0, a)))
-		var glow := 0.08 + 0.02 * sin(t * 1.3)
-		draw_polygon(PackedVector2Array([Vector2(0, h * 0.7), Vector2(w, h * 0.7), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color(0.35, 0.75, 1.0, 0.0), Color(0.35, 0.75, 1.0, 0.0), Color(0.35, 0.6, 1.0, glow), Color(0.35, 0.6, 1.0, glow)]))
-		for k in 4:
-			var yy := h - 14.0 - 16.0 * k
-			var pts := PackedVector2Array()
-			for i in 25:
-				var x := w * i / 24.0
-				pts.append(Vector2(x, yy + 2.5 * sin(x * 0.03 + t * (0.6 + 0.2 * k) + k)))
-			draw_polyline(pts, Color(0.6, 0.85, 1.0, 0.05), 1.2, true)
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "ferry", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

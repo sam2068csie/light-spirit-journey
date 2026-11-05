@@ -26,6 +26,10 @@ var _pulse_tw: Tween
 var _pulse_ctl: Control
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("101a3e"), "sky_bot": Color("0a1530"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G6"
 
@@ -485,6 +489,13 @@ static func _gen_mirror() -> Dictionary:
 # ================= 畫面 =================
 
 class MirrorView extends CompassView:
+	func _draw_forge_bg() -> void:
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "pool", size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
 	var mir_phi := 0.0
 	var mir_show := 0.0
 	var mir_lo := 0.0

@@ -39,7 +39,7 @@ func step_color() -> Color:
 	return RIVER_C
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("07141a"), "sky_bot": Color("040a0e"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("0b2822"), "sky_bot": Color("041311"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．高次與分式的河", "button": "潛入更深的河  ▶",
@@ -497,18 +497,8 @@ class RiverView extends CrystalView:
 
 	# ---------- 背景：地下河 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		if w < 100.0 or h < 100.0:
-			return
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("07141a"), Color("07141a"), Color("040a0e"), Color("040a0e")]))
-		var drops := PackedVector2Array()
-		for i in 16:
-			var x := fposmod(i * 89.3, w)
-			var y := fposmod(t * 30.0 + i * 47.0, h * 0.6)
-			drops.append_array([Vector2(x, y), Vector2(x, y + 6.0)])
-		draw_multiline(drops, Color(RIVER.r, RIVER.g, RIVER.b, 0.18), 1.5)
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "river", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

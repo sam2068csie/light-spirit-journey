@@ -1528,6 +1528,7 @@ class LogDrag extends Control:
 class ForgeView extends Control:
 	const UITheme := preload("res://data/ui/game_theme.gd")
 	const Ambient := preload("res://data/ui/ambient.gd")
+	const Scenery := preload("res://data/ui/scenery.gd")     # 每關自己的背景（多項式、三角函數）
 	const MathLabel := preload("res://data/ui/math_text.gd")
 	const FIRE := UITheme.ORANGE
 	const GOLD := UITheme.GOLD

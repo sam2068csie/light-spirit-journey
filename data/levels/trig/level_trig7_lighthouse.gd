@@ -34,6 +34,10 @@ const WV_SAMPLES := [0.0, 40.0, 100.0, 230.0, 310.0]
 var lh_info: MathLabel
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("0e1838"), "sky_bot": Color("081428"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G7"
 
@@ -534,6 +538,13 @@ static func _gen_light() -> Dictionary:
 # ================= 畫面 =================
 
 class LightView extends MirrorView:
+	func _draw_forge_bg() -> void:
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "lighthouse", size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
 	var ph_r := 1.0
 	var ph_ang := 0.0
 	var ph_rt := "1"

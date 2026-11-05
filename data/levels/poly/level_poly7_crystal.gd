@@ -36,7 +36,7 @@ func step_color() -> Color:
 	return CRYSTAL_C
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("150d2a"), "sky_bot": Color("0b0718"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("281040"), "sky_bot": Color("100720"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．遠看與近看", "button": "拿起望遠鏡  ▶",
@@ -662,17 +662,8 @@ class CrystalView extends LakeView:
 
 	# ---------- 背景：水晶洞 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		if w < 100.0 or h < 100.0:
-			return
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("150d2a"), Color("150d2a"), Color("0b0718"), Color("0b0718")]))
-		for i in 12:
-			var p := Vector2(fposmod(i * 113.7, w), fposmod(i * 71.3, h * 0.55))
-			var a := 0.10 + 0.07 * sin(t * 1.7 + i)
-			var r := 4.0 + float(i % 3) * 2.0
-			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r), p + Vector2(r * 0.6, 0), p + Vector2(0, r), p + Vector2(-r * 0.6, 0)]), Color(GEM.r, GEM.g, GEM.b, a))
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "crystal", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

@@ -36,6 +36,10 @@ var _last_miss_hint := 0
 var _tips: Array = []          # 這一步的小提示（放不下的時候會先收起來）
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("140f38"), "sky_bot": Color("07192e"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G4"
 
@@ -1244,31 +1248,8 @@ class TideView extends MoonView:
 	# ---------- 背景：夜裡的海，水面隨潮汐起伏 ----------
 
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("120f35"), Color("120f35"), Color("07192e"), Color("07192e")]))
-		var mc := Vector2(w - 70, 70)
-		UITheme.dot(self, mc, 60.0, Color(0.85, 0.82, 1.0, 0.035))
-		UITheme.dot(self, mc, 34.0, Color(0.85, 0.82, 1.0, 0.06))
-		UITheme.dot(self, mc, 22.0, Color(0.95, 0.93, 1.0, 0.10))
-		for i in 30:
-			var p := Vector2(fposmod(i * 0.618, 1.0) * w, fposmod(i * 0.377, 1.0) * h * 0.7)
-			var a := 0.10 + 0.12 * sin(t * (0.8 + fposmod(i * 0.29, 1.0)) + i)
-			UITheme.dot(self, p, 1.0 + fposmod(i * 0.41, 1.0) * 1.2, Color(0.9, 0.88, 1.0, maxf(0.0, a)))
-		# 潮汐：整片水面慢慢漲落，上面疊著三層波紋
-		var tide := 8.0 * sin(t * 0.35)
-		for k in 3:
-			var yy := h - 20.0 - 15.0 * k + tide * (1.0 - 0.25 * k)
-			var pts := PackedVector2Array()
-			for i in 33:
-				var x := w * i / 32.0
-				pts.append(Vector2(x, yy + 3.0 * sin(x * 0.02 + t * (0.7 + 0.2 * k) + k * 1.7)))
-			var fill := PackedVector2Array(pts)
-			fill.append(Vector2(w, h))
-			fill.append(Vector2(0, h))
-			draw_colored_polygon(fill, Color(0.45, 0.4, 1.0, 0.035 + 0.01 * k))
-			draw_polyline(pts, Color(0.75, 0.7, 1.0, 0.10), 1.2, true)
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "tide", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

@@ -42,7 +42,7 @@ func step_color() -> Color:
 	return WICK_C
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("140f24"), "sky_bot": Color("0a0814"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("1e1632"), "sky_bot": Color("1c1108"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．換一盞燈", "button": "換一盞燈  ▶",
@@ -487,17 +487,8 @@ class WickView extends LakeView:
 
 	# ---------- 背景：夜裡的燈坊 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		if w < 100.0 or h < 100.0:
-			return
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("140f24"), Color("140f24"), Color("0a0814"), Color("0a0814")]))
-		for i in 9:
-			var p := Vector2(fposmod(i * 131.7 + t * 6.0, w), h * 0.15 + fposmod(i * 57.3, h * 0.5) - fposmod(t * 9.0 + i * 40.0, h * 0.5))
-			var a := 0.10 + 0.06 * sin(t * 2.0 + i)
-			UITheme.dot(self, p, 7.0, Color(FLAME.r, FLAME.g, FLAME.b, a * 0.5))
-			UITheme.dot(self, p, 2.5, Color(FLAME.r, FLAME.g, FLAME.b, a * 2.0))
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "wick", size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

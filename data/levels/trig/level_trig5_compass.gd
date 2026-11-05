@@ -26,6 +26,10 @@ var lines_info: MathLabel
 var _rot_sliders: Array = []
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("0c1434"), "sky_bot": Color("0a0d22"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G5"
 
@@ -699,6 +703,13 @@ static func _gen_compass() -> Dictionary:
 # ================= 畫面 =================
 
 class CompassView extends TideView:
+	func _draw_forge_bg() -> void:
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "compass", size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
 	var rot_a := 0.0
 	var rot_b := 0.0
 	var rot_show_a := 0.0

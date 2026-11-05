@@ -39,7 +39,7 @@ func step_color() -> Color:
 	return ECHO_C
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("1a1430"), "sky_bot": Color("0e0b1c"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("221a3e"), "sky_bot": Color("0e0b1c"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．雙重回音", "button": "走進雙重回音  ▶",
@@ -545,7 +545,6 @@ class EchoView extends WheelView:
 	var echo_t := -10.0
 	var echo_x := ""
 	var echo_val := ""
-	var _walls := []             # 岩壁（快取）
 	var echo_head := "回音"
 	var echo_word := "（餘式）"    # 回音後面的說明（第四關代入的不一定是餘式，就不寫）
 	# 回音石（probe）
@@ -830,46 +829,14 @@ class EchoView extends WheelView:
 
 	# ---------- 背景 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("1a1430"), Color("1a1430"), Color("0e0b1c"), Color("0e0b1c")]))
-		if w < 100.0 or h < 100.0:
-			return
-		if _walls.is_empty() or not is_equal_approx(float(_walls[0]), w + h):
-			_walls = [w + h, _wall_polys(w, h)]
-		for p in _walls[1]:
-			draw_colored_polygon(p, Color(0.16, 0.12, 0.26, 0.9))
-		# 石廊裡慢慢擴散的回音環
-		var rings := 3
-		for k in rings:
-			var ph := fposmod(t * 0.25 + k / float(rings), 1.0)
-			draw_arc(Vector2(w - 30.0, h * 0.5), 40.0 + ph * w * 0.5, PI * 0.7, PI * 1.3, 24,
-				Color(ECHO.r, ECHO.g, ECHO.b, 0.07 * (1.0 - ph)), 2.0, true)
-		_draw_waves()
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "echo", size, t)
+		if size.x >= 100.0 and size.y >= 100.0:
+			_draw_waves()
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
 
-	## 兩側的岩壁和上方的鐘乳石
-	static func _wall_polys(w: float, h: float) -> Array:
-		var out := []
-		for side in [0, 1]:
-			var pts := PackedVector2Array()
-			var x_edge := 0.0 if side == 0 else w
-			var dir := 1.0 if side == 0 else -1.0
-			pts.append(Vector2(x_edge, 0))
-			for i in 13:
-				var y := h * i / 12.0
-				var d := 16.0 + 6.0 * sin(i * 1.9 + side * 2.0) + 4.0 * sin(i * 0.7)
-				pts.append(Vector2(x_edge + dir * d, y))
-			pts.append(Vector2(x_edge, h))
-			out.append(pts)
-		for i in 9:
-			var x := w * (i + 0.5) / 9.0 + 14.0 * sin(i * 2.3)
-			var len := 16.0 + 14.0 * absf(sin(i * 1.3))
-			out.append(PackedVector2Array([Vector2(x - 9.0, 0), Vector2(x + 9.0, 0), Vector2(x + 1.0, len)]))
-		return out
 
 	## 聲波：喊出去（往右的弧）、回音（往左的弧）。畫在最上面「推導紀錄」那一列的右邊（不擋住推導）
 	const WAVE_Y := 26.0

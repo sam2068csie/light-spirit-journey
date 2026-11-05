@@ -41,7 +41,7 @@ func step_color() -> Color:
 	return MOLTEN
 
 func stage_style() -> Dictionary:
-	return {"sky_top": Color("2a1410"), "sky_bot": Color("140a08"), "scenery": "none", "ambient": "currents"}
+	return {"sky_top": Color("3a170f"), "sky_bot": Color("170807"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
 
 func chapter_card() -> Dictionary:
 	return {"title": "第二章．餘式的鑄模", "button": "走進餘式的鑄模  ▶",
@@ -248,25 +248,10 @@ class MoldView extends EchoView:
 
 	# ---------- 背景 ----------
 	func _draw_forge_bg() -> void:
-		var w := size.x
-		var h := size.y
-		if w < 100.0 or h < 100.0:
-			return
-		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color("2a1410"), Color("2a1410"), Color("140a08"), Color("140a08")]))
-		# 底部熔爐的光
-		var glow := 0.16 + 0.04 * sin(t * 1.7)
-		draw_polygon(PackedVector2Array([Vector2(0, h * 0.7), Vector2(w, h * 0.7), Vector2(w, h), Vector2(0, h)]),
-			PackedColorArray([Color(1, 0.45, 0.15, 0.0), Color(1, 0.45, 0.15, 0.0), Color(1, 0.4, 0.1, glow), Color(1, 0.4, 0.1, glow)]))
-		# 兩側滴落的熔液
-		var lines := PackedVector2Array()
-		for side in [18.0, w - 18.0]:
-			for k in 6:
-				var y := fposmod(t * 70.0 + k * 97.0 + side, h + 30.0) - 15.0
-				var x: float = side + 6.0 * sin(k * 2.1)
-				lines.append_array([Vector2(x, y), Vector2(x, y + 9.0)])
-		draw_multiline(lines, Color(1, 0.55, 0.2, 0.35), 3.0)
-		_draw_waves()
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "mold", size, t)
+		if size.x >= 100.0 and size.y >= 100.0:
+			_draw_waves()
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
 		if ma > 0.0:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))

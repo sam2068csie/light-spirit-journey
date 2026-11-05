@@ -18,6 +18,10 @@ const CHAPTERS_G2 := [
 var fan_info: MathLabel
 
 
+func stage_style() -> Dictionary:
+	return {"sky_top": Color("0c2d46"), "sky_bot": Color("0a3a3e"), "scenery": "none", "ambient": ""}     # 粒子畫在 Scenery 背景裡
+
+
 func level_id() -> String:
 	return "G2"
 
@@ -245,6 +249,13 @@ static func _gen_sector() -> Dictionary:
 # ================= 畫面 =================
 
 class SectorView extends MoonView:
+	func _draw_forge_bg() -> void:
+		# 這一關自己的背景（data/ui/scenery.gd）
+		Scenery.paint(self, "lagoon", size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
 	const AMBER := UITheme.ORANGE
 	const CYANC := UITheme.CYAN
 
