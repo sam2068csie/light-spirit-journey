@@ -28,6 +28,9 @@ xcuserdata/
 *.keystore
 *.jks
 
+# 匯出設定（每台電腦自己的匯出路徑、簽章、憑證設定，不同步）
+export_presets.cfg
+
 # 系統檔
 .DS_Store
 Thumbs.db
