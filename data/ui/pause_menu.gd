@@ -13,6 +13,7 @@ var list_action := Callable()   # 關卡設定後，暫停選單會多一個「�
 var list_label := "返回關卡列表"
 var help_action := Callable()   # 有設定時，暫停選單會多一個「操作說明」（重看新手教學）
 var report_info := Callable()   # 回傳「現在是哪一題」的文字；有設定時，暫停選單會多一個「回報這一題」
+var blocked := Callable()       # 回傳 true 時先不開暫停選單（例如章節寶箱正要跳出來，避免一按就離開、沒開到寶箱）
 
 
 func _init() -> void:
@@ -25,7 +26,7 @@ func is_open() -> bool:
 
 
 func open() -> void:
-	if is_open():
+	if is_open() or (blocked.is_valid() and blocked.call()):
 		return
 	get_tree().paused = true
 	Game.of(self).duck(true)
@@ -143,7 +144,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	if _settings != null:
 		return      # 設定視窗自己會處理 Esc
 	if _modal == null:
-		open()
+		open()      # 章節寶箱還沒開完時 open() 會擋下來
 	elif _confirming:
 		_show_menu(false)
 	else:

@@ -202,6 +202,7 @@ func _ready() -> void:
 	add_child(hint_face)
 	pause_menu = PauseMenu.new()
 	pause_menu.list_action = _back_to_list
+	pause_menu.blocked = func(): return _chest_pending or _chest_showing     # 章節寶箱跳出來前後不能暫停／離開
 	pause_menu.report_info = _report_context
 	pause_menu.help_action = func(): _tut_show(["basic", "type:" + _tut_kind()])
 	add_child(pause_menu)
@@ -2879,6 +2880,13 @@ func _finish_journey() -> void:
 		else:
 			bt.add_theme_font_size_override("font_size", UITheme.fs(17))
 		bt.pressed.connect(func():
+			# 防呆：章節寶箱正要跳出來（或還沒開完）時先不離開，直接把寶箱叫出來，避免一按就錯過
+			if _chest_showing:
+				return
+			if _chest_pending:
+				_chest_pending = false
+				_open_chest(chapter_now, _pending_gold)
+				return
 			layer.queue_free()
 			cb.call())
 		btns.add_child(bt)
@@ -2896,14 +2904,23 @@ func _finish_journey() -> void:
 		mk.call("回到題目列表  ▶", passed, func(): _show_journeys(ch))
 	level_cleared.emit(round_stars)
 	# 這一章的旅程全部通過了：打開章節大寶箱
+	# 寶箱等 0.7 秒才跳出來；這段時間按結算的按鈕、暫停、返回鍵都會先開寶箱（_chest_pending）
 	if passed and _chest_ready(ch):
+		_chest_pending = true
+		_pending_gold = false
 		get_tree().create_timer(0.7).timeout.connect(func():
-			if is_instance_valid(layer):
+			var go := _chest_pending and is_instance_valid(layer)
+			_chest_pending = false
+			if go:
 				_open_chest(ch))
 	elif _gold_ready(ch):
 		# 這一章所有題型都答對過了：打開章節黃金寶箱
+		_chest_pending = true
+		_pending_gold = true
 		get_tree().create_timer(0.7).timeout.connect(func():
-			if is_instance_valid(layer):
+			var go := _chest_pending and is_instance_valid(layer)
+			_chest_pending = false
+			if go:
 				_open_chest(ch, true))
 
 
@@ -3053,6 +3070,8 @@ func _chest_status_row(ch: int, gold: bool) -> Control:
 
 ## 章節大寶箱：寶箱跳一跳 → 點「打開」→ 東西飛出來、加進持有物品
 var _chest_showing := false
+var _chest_pending := false     # 結算畫面出來了、寶箱還在等那 0.7 秒
+var _pending_gold := false
 
 
 func _open_chest(ch: int, gold := false) -> void:
