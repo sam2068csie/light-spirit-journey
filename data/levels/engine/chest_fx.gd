@@ -279,12 +279,13 @@ func _draw_lid_open(P: Dictionary, k: float) -> void:
 	var capR_o := PackedVector2Array()
 	for q in capR:
 		capR_o.append(q + Vector2(5, 0))
-	var thick := PackedVector2Array(capR)
-	var rev := capR_o.duplicate()
-	rev.reverse()
-	thick.append_array(rev)
-	draw_colored_polygon(thick, P.side.darkened(0.15))
-	draw_colored_polygon(capR_o, P.side)
+	# 厚度：一段一段畫小四邊形（整條畫成一個多邊形時，蓋子轉到側面會自己交叉、三角化失敗）
+	for j in N:
+		var quad := PackedVector2Array([capR[j], capR[j + 1], capR_o[j + 1], capR_o[j]])
+		if absf((quad[1] - quad[0]).cross(quad[3] - quad[0])) > 0.5:
+			draw_colored_polygon(quad, P.side.darkened(0.15))
+	if absf(_area(capR_o)) > 1.0:
+		draw_colored_polygon(capR_o, P.side)
 	draw_polyline(capR_o, P.band_lo, 4.0, true)
 	# 蓋子的邊緣（關著時的下緣，現在翻到最上面）：金屬條＋厚度
 	var rim0 := _lid3(-hw, 0.0, phi)
@@ -311,3 +312,11 @@ func _star(c: Vector2, r: float, col: Color) -> void:
 		var a := k * PI / 4.0 + t * 2.0
 		pts.append(c + Vector2(cos(a), sin(a)) * (r if k % 2 == 0 else r * 0.4))
 	draw_colored_polygon(pts, col)
+
+
+## 多邊形的面積（有正負號）：太小的不畫（三角化會失敗）
+static func _area(pts: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in pts.size():
+		a += pts[i].cross(pts[(i + 1) % pts.size()])
+	return a * 0.5

@@ -10,7 +10,7 @@ extends "res://data/levels/engine/step_level.gd"
 ## 新的步驟（kind）：
 ##   grid  點選格子點：在坐標方格上點一下，放下一個點（再點別的地方可以移動），按「確定位置」
 ##         {"kind": "grid", "name", "q", "target": [x, y], "label": "D", "line", "nudge", "tag",
-##          "traps": [[x, y, "點到這裡時的提示"], …]（可省略）, "snap": 1（格子點；0.5 = 半格）}
+##          "traps": [[x, y, "點到這裡時的提示"], …]（可省略）, "snap": 1（格子點；0.5 = 半格）, "off": [dx, dy]（答對後標籤的位置，可省略）}
 ##         答對之後那一點會留在方格上
 ##         點選的時候可以縮放：手機雙指捏合（兩指一起移動 = 平移），電腦用滑鼠滾輪（右鍵或中鍵拖曳 = 平移），
 ##         放大之後右上角有「還原」
@@ -35,6 +35,10 @@ extends "res://data/levels/engine/step_level.gd"
 ##         答對之後塗色的地方留在方格上
 ## 交點漣漪：plane 寫 "hits": true，直線碰到圓（或圓弧 arc）的地方會濺起一圈一圈的漣漪
 ##   滑桿的 eq 可以寫 {#hits}：目前的交點個數。圖層寫 "nohit": true 就不算它
+##   plane 再寫 "lamps": true：直線剛好和圓相切時，切點亮起一盞燈（C7 切線燈環起）
+## 足跡：滑桿裡會動的點寫 "trail": true，走過的地方留下一串光點（一直留到這一題做完，C8 軌跡）
+## 會動的圖層可以寫 "when": "算式"：算式成立才畫（例如 "abs(k + 1) < 0.001" 時才畫公共弦）
+## 點可以寫 "hole": true：空心的點（軌跡要去掉的點）
 ## 不等式的圖層：
 ##   {"k": "region", "ineq": [[a, b, c, op], …], "c": "lime", "alpha": 0.22}  塗出聯立不等式的區域（係數也可以是含參數的算式，給滑桿用）
 ##   {"k": "lattice", "ineq": [[a, b, c, op], …], "c": "gold"}  區域裡的格子點
@@ -164,7 +168,7 @@ func _grid_submit() -> void:
 	var p: Vector2 = pl.pick
 	if p.is_equal_approx(want):
 		Game.of(self).sfx("correct")
-		pl.add_dot(want, lab, String(st.get("c", "gold")))
+		pl.add_dot(want, lab, String(st.get("c", "gold")), false, st.get("off", [8, -8]))
 		pl.fx_burst(want)
 		pl.pick_off()
 		go_btn.visible = false
@@ -198,7 +202,7 @@ func _custom_reveal(msg: String) -> void:
 		for j in range(si, steps.size()):
 			var st: Dictionary = steps[j]
 			if String(st.kind) == "grid":
-				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")))
+				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")), false, st.get("off", [8, -8]))
 			elif String(st.kind) == "grids":
 				for tg in st.targets:
 					pl.add_dot(Vector2(float(tg[0]), float(tg[1])), "", "gold", true)
@@ -511,6 +515,7 @@ func _refresh_slide() -> void:
 		if is_instance_valid(vl):
 			vl.text = "= " + CoordPlane.frac(float(slide_vals.get(nm, 0.0)))
 	_pv().plane.dyn_vals = slide_vals
+	_pv().plane.record_trails()
 	if slide_eq != null and is_instance_valid(slide_eq):
 		var tpl := String(st.eq)
 		if tpl.contains("{#hits}"):
@@ -561,6 +566,7 @@ func _slide_done(st: Dictionary) -> void:
 	Game.of(self).sfx("correct")
 	var pl: CoordPlane = _pv().plane
 	var keep: bool = st.get("keep", false)
+	_fill_trails(st)
 	for ln in st.get("lines", []):
 		var sh := pl.eval_line(ln, slide_vals)
 		if sh.is_empty():
@@ -583,6 +589,30 @@ func _slide_done(st: Dictionary) -> void:
 	_clear(rank_box)
 	rank_box.visible = false
 	_step_done(st, "")
+
+
+## 足跡：只有一條滑桿時，做完把整段範圍走一遍，足跡連成完整的圖形（沒拉滿也看得到軌跡的樣子）
+func _fill_trails(st: Dictionary) -> void:
+	if st.params.size() != 1:
+		return
+	var has_trail := false
+	for ln in st.get("lines", []):
+		if ln is Dictionary and ln.get("trail", false):
+			has_trail = true
+	if not has_trail:
+		return
+	var pl: CoordPlane = _pv().plane
+	var p: Dictionary = st.params[0]
+	var nm := String(p.n)
+	var keep_v: float = slide_vals.get(nm, float(p.v))
+	var stp := maxf(float(p.step), 1e-3)
+	var n := int(round((float(p.max) - float(p.min)) / stp))
+	for i in n + 1:
+		slide_vals[nm] = float(p.min) + stp * i
+		pl.dyn_vals = slide_vals
+		pl.record_trails()
+	slide_vals[nm] = keep_v
+	pl.dyn_vals = slide_vals
 
 
 # ================= 畫面：推導紀錄＋坐標方格 =================
@@ -664,6 +694,7 @@ class CoordPlane extends TowerPlot.Plot:
 	var dyn_vals := {}
 	var kept: Array = []                 # 滑桿步驟做完留下來的直線（已經算好的 line 圖層）
 	var kept_regions: Array = []         # 點選區域做完留下來的塗色（region 圖層）
+	var trail_pts: Array = []            # 足跡：會動的點走過的位置 [Vector2, 顏色名稱]
 	var cells_on := false                # 點選區域的步驟
 	var cell_lines: Array = []           # 切開方格的直線 [a, b, c]
 	var cell_sel := {}                   # 塗了哪幾塊（正負號的組合 → true）
@@ -700,6 +731,7 @@ class CoordPlane extends TowerPlot.Plot:
 		dyn = []
 		kept = []
 		kept_regions = []
+		trail_pts = []
 		region_off()
 		_anim0 = {}
 		fx = []
@@ -921,16 +953,37 @@ class CoordPlane extends TowerPlot.Plot:
 	func has_pick() -> bool:
 		return is_finite(pick.x) and is_finite(pick.y)
 
-	func add_dot(p: Vector2, s: String, c := "gold", bare := false) -> void:
+	func add_dot(p: Vector2, s: String, c := "gold", bare := false, off = [8, -8]) -> void:
 		for d in dots:
 			if (d.p as Vector2).is_equal_approx(p) and String(d.s) == s:
 				return
-		dots.append({"p": p, "s": s, "c": c, "bare": bare})
+		dots.append({"p": p, "s": s, "c": c, "bare": bare, "off": off})
 		queue_redraw()
+
+	## 足跡：把會動的點（"trail": true）現在的位置記下來
+	func record_trails() -> void:
+		for ln in dyn:
+			if not ln.get("trail", false):
+				continue
+			var e := eval_line(ln, dyn_vals)
+			if e.is_empty() or String(e.k) != "dot":
+				continue
+			var q := _v(e.p)
+			if not (is_finite(q.x) and is_finite(q.y)):
+				continue
+			var dup := false
+			for tp in trail_pts:
+				if (tp[0] as Vector2).distance_to(q) < 1e-3:
+					dup = true
+					break
+			if not dup:
+				trail_pts.append([q, String(ln.get("c", "gold"))])
 
 	## 含參數的直線 → 算好係數的 line 圖層（a、b 都是 0 時回傳空的）
 	func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 		var kk := String(ln.get("k", "line"))
+		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
+			return {}
 		if kk == "region":
 			var out := ln.duplicate()
 			var iq := []
@@ -942,7 +995,7 @@ class CoordPlane extends TowerPlot.Plot:
 		if kk == "circle":
 			var o := [calc(str(ln.o[0]), vals), calc(str(ln.o[1]), vals)]
 			var rr := calc(str(ln.r), vals)
-			if is_nan(rr) or rr < -1e-9:
+			if not is_finite(rr) or rr < -1e-9 or not is_finite(o[0]) or not is_finite(o[1]):
 				return {}
 			if rr < 1e-6:
 				return {"k": "dot", "p": o, "c": String(ln.get("c", "cyan")), "s": ""}
@@ -961,6 +1014,9 @@ class CoordPlane extends TowerPlot.Plot:
 		var abc := []
 		for e in ln.abc:
 			abc.append(calc(String(e), vals))
+		for v in abc:
+			if not is_finite(v):
+				return {}
 		if absf(abc[0]) < 1e-9 and absf(abc[1]) < 1e-9:
 			return {}
 		var sh := {"k": "line", "abc": abc, "c": String(ln.get("c", "cyan")), "s": String(ln.get("s", "")), "w": float(ln.get("w", 2.5))}
@@ -975,7 +1031,11 @@ class CoordPlane extends TowerPlot.Plot:
 		if ex.parse(e, names) != OK:
 			return 0.0
 		var v = ex.execute(vals.values())
-		return float(v) if not ex.has_execute_failed() and (v is float or v is int) else 0.0
+		if ex.has_execute_failed():
+			return 0.0
+		if v is bool:
+			return 1.0 if v else 0.0
+		return float(v) if (v is float or v is int) else 0.0
 
 	## 分數的寫法：0.5 → \\frac{1}{2}、−1.5 → −\\frac{3}{2}
 	static func frac(v: float) -> String:
@@ -1231,6 +1291,7 @@ class CoordPlane extends TowerPlot.Plot:
 				_fill_world(cell_poly(key, wr), Color(0.55, 0.25, 0.15, 0.45 * fa))
 				_draw_stalks(cell_poly(key, wr), Color(0.6, 0.35, 0.2, 0.8 * fa), 1.0, true)
 		super(font)
+		_draw_trails()
 		for ln in kept:
 			_shape(ln, Vector2.ZERO, 0.0, font)
 		for ln in dyn:
@@ -1240,7 +1301,8 @@ class CoordPlane extends TowerPlot.Plot:
 			if not sh.is_empty():
 				_shape(sh, Vector2.ZERO, 0.0, font)
 		for d in dots:
-			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "" if d.get("bare", false) else "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
+			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "" if d.get("bare", false) else "%s%s" % [d.s, pt_text(d.p)], "c": d.c,
+				"off": d.get("off", [8, -8])}, Vector2.ZERO, 0.0, font)
 		if picking and has_pick() and pick_mode == "point":
 			_draw_pick(font)
 		if bool(data.get("hits", false)):
@@ -1253,6 +1315,10 @@ class CoordPlane extends TowerPlot.Plot:
 
 	## 畫面上所有直線和圓（圓弧）的交點
 	func hit_points() -> Array:
+		return _hits().map(func(h): return h[0])
+
+	## 交點和它是不是切點：[[Vector2, 是切點], …]
+	func _hits() -> Array:
 		var lines := []
 		var circs := []
 		var add := func(sh: Dictionary):
@@ -1287,7 +1353,8 @@ class CoordPlane extends TowerPlot.Plot:
 				var b := d.dot(w)
 				var disc := b * b - (w.length_squared() - r * r)
 				var pts := []
-				if absf(disc) < 1e-6 * maxf(r * r, 1.0):
+				var tangent := absf(disc) < 1e-6 * maxf(r * r, 1.0)
+				if tangent:
 					pts.append(p - d * b)
 				elif disc > 0.0:
 					var sq := sqrt(disc)
@@ -1303,10 +1370,12 @@ class CoordPlane extends TowerPlot.Plot:
 								continue
 					var dup := false
 					for e in out:
-						if (e as Vector2).distance_to(q) < 1e-4:
+						if (e[0] as Vector2).distance_to(q) < 1e-4:
 							dup = true
+							if tangent:
+								e[1] = true
 					if not dup:
-						out.append(q)
+						out.append([q, tangent])
 		return out
 
 	## 直線 → [線上一點, 單位方向]
@@ -1321,14 +1390,53 @@ class CoordPlane extends TowerPlot.Plot:
 
 	func _draw_hits() -> void:
 		var i := 0
-		for q in hit_points():
-			var sp := _to(q)
+		var lamps: bool = data.get("lamps", false)
+		for h in _hits():
+			var sp := _to(h[0])
 			i += 1
+			if lamps and h[1]:
+				_draw_lamp(sp, i)
+				continue
 			for k in 2:
 				var ph := fposmod(t * 0.8 + k * 0.5 + i * 0.17, 1.0)
 				draw_arc(sp, 5.0 + 22.0 * ph, 0.0, TAU, 32, Color(0.6, 0.95, 1.0, 0.6 * (1.0 - ph)), 1.6, true)
 			UITheme.dot(self, sp, 9.0, Color(0.6, 0.95, 1.0, 0.3))
 			UITheme.dot(self, sp, 4.0, Color(0.85, 1.0, 1.0, 0.95))
+
+	## 切點的燈：暖黃色的光暈、一閃一閃的光芒
+	func _draw_lamp(sp: Vector2, i: int) -> void:
+		var pulse := 0.5 + 0.5 * sin(t * 2.4 + i)
+		UITheme.dot(self, sp, 22.0 + 4.0 * pulse, Color(1.0, 0.82, 0.4, 0.12))
+		UITheme.dot(self, sp, 12.0, Color(1.0, 0.85, 0.45, 0.3))
+		var rays := PackedVector2Array()
+		for k in 8:
+			var a := TAU * k / 8.0 + t * 0.4
+			var dv := Vector2(cos(a), sin(a))
+			rays.append(sp + dv * 9.0)
+			rays.append(sp + dv * (15.0 + 4.0 * pulse))
+		draw_multiline(rays, Color(1.0, 0.88, 0.5, 0.55), 1.4)
+		UITheme.dot(self, sp, 5.0, Color(1.0, 0.95, 0.75, 1.0))
+
+	## 足跡：走過的地方留下一串小光點
+	##   一次畫完（很短的粗線段當成小光點），不然點一多 draw call 就太多
+	func _draw_trails() -> void:
+		if trail_pts.is_empty():
+			return
+		var glow := PackedVector2Array()
+		var core := PackedVector2Array()
+		var gc := PackedColorArray()
+		var cc := PackedColorArray()
+		for tp in trail_pts:
+			var c := _col(String(tp[1]))
+			var sp := _to(tp[0])
+			glow.append(sp - Vector2(3.0, 0))
+			glow.append(sp + Vector2(3.0, 0))
+			gc.append(Color(c.r, c.g, c.b, 0.18))
+			core.append(sp - Vector2(1.4, 0))
+			core.append(sp + Vector2(1.4, 0))
+			cc.append(Color(c.r, c.g, c.b, 0.9))
+		draw_multiline_colors(glow, gc, 6.0)
+		draw_multiline_colors(core, cc, 2.8)
 
 	# ---------- 看得到的後果 ----------
 
@@ -1594,6 +1702,15 @@ class CoordPlane extends TowerPlot.Plot:
 		return clampf((t - float(_anim0[key])) / float(sh.get("dur", 1.4)), 0.0, 1.0)
 
 	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		if String(sh.k) == "dot" and sh.get("hole", false):
+			# 空心的點（軌跡要去掉的點）
+			var sp := _to(_v(sh.p))
+			var hc := _col(String(sh.get("c", "text")))
+			UITheme.dot(self, sp, 6.0, Color(0.04, 0.05, 0.12, 1.0))
+			draw_arc(sp, 6.0, 0.0, TAU, 24, hc, 2.0, true)
+			if String(sh.get("s", "")) != "":
+				_label(font, sp, String(sh.s), sh.get("off", [8, -8]), hc)
+			return
 		if String(sh.k) == "region":
 			var c := _col(String(sh.get("c", "lime")))
 			_fill_world(region_poly(sh.ineq), Color(c.r, c.g, c.b, float(sh.get("alpha", 0.2))))

@@ -5,7 +5,7 @@ extends RefCounted
 ##   多項式：mine 係數礦燈、wheel 綜合除法水車、echo 回音石廊、mold 根之鑄模、
 ##           lake 拋物鏡湖、wick 極值燈芯、crystal 對稱水晶、river 符號地下河
 ##   直線與圓：lakeside 坐標燈標（C1）、pier 直線棧橋、moonlake 鏡面渡口、paddy 分光稻田、workshop 圓規工坊、
-##             ripple 割弦漣漪（C6）
+##             ripple 割弦漣漪（C6）、lampring 切線燈環（C7）、startrail 軌跡星環（C8）
 ##   三角函數：ferry 弧之渡口、lagoon 扇形潟湖、steps 浪之階梯、tide 潮汐調音盤、
 ##             compass 和角羅盤、pool 倍角鏡池、lighthouse 疊合燈塔
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -58,6 +58,10 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_workshop(ci, sz, t)
 		"ripple":
 			_ripple(ci, sz, t)
+		"lampring":
+			_lampring(ci, sz, t)
+		"startrail":
+			_startrail(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -1081,3 +1085,118 @@ static func _ripple(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var al := 0.35 + 0.15 * sin(t * 1.3 + i)
 		UITheme.dot(ci, p, 6.0, Color(1.0, 0.85, 0.5, al * 0.25))
 		UITheme.dot(ci, p, 1.8, Color(1.0, 0.92, 0.7, al))
+
+
+## C7 切線燈環：湖岸一圈燈，燈塔的光來回掃，光剛好擦過湖岸（相切）的時候，切點那盞燈亮起來
+static func _lampring(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var hz := hh * 0.42
+	_grad(ci, sz, Color("1a1430"), Color("0a0814"))
+	for i in 26:
+		var p := Vector2(h(i, 401) * w, h(i, 402) * hz * 0.95)
+		var al := 0.16 + 0.18 * sin(t * (0.5 + h(i, 403)) + i * 2.3)
+		UITheme.dot(ci, p, 1.1 + 0.8 * h(i, 404), Color(0.9, 0.86, 1.0, maxf(al, 0.04)))
+	ci.draw_rect(Rect2(0, hz, w, hh - hz), Color(0.05, 0.045, 0.09, 1.0))
+	# 湖（從斜上方看是橢圓）
+	var cc := Vector2(w * 0.42, hz + (hh - hz) * 0.55)
+	var rx := w * 0.28
+	var ry := (hh - hz) * 0.3
+	var rim := PackedVector2Array()
+	for i in 72:
+		var a := TAU * i / 72.0
+		rim.append(cc + Vector2(cos(a) * rx, sin(a) * ry))
+	ci.draw_colored_polygon(rim, Color(0.12, 0.12, 0.28, 0.6))
+	rim.append(rim[0])
+	ci.draw_polyline(rim, Color(0.95, 0.75, 0.9, 0.18), 1.5, true)
+	# 湖岸的小燈（暗暗的）
+	for i in 16:
+		var a := TAU * i / 16.0 + 0.1
+		var p := cc + Vector2(cos(a) * rx, sin(a) * ry)
+		UITheme.dot(ci, p, 4.0, Color(1.0, 0.8, 0.6, 0.12))
+		UITheme.dot(ci, p, 1.4, Color(1.0, 0.85, 0.7, 0.4))
+	# 燈塔
+	var lh := Vector2(w * 0.86, hz + (hh - hz) * 0.28)
+	ci.draw_colored_polygon(PackedVector2Array([lh + Vector2(-9, 0), lh + Vector2(9, 0), lh + Vector2(13, 46), lh + Vector2(-13, 46)]),
+		Color(0.16, 0.13, 0.22, 1.0))
+	for k in 3:
+		ci.draw_line(lh + Vector2(-10 - k, 10 + 12 * k), lh + Vector2(10 + k, 10 + 12 * k), Color(0.8, 0.45, 0.6, 0.35), 3.0)
+	UITheme.dot(ci, lh, 14.0, Color(1.0, 0.85, 0.5, 0.18))
+	UITheme.dot(ci, lh, 4.0, Color(1.0, 0.95, 0.8, 0.95))
+	# 從燈塔到湖岸的兩條切線（在單位圓的坐標裡算，再轉回畫面）
+	var lu := Vector2((lh.x - cc.x) / rx, (lh.y - cc.y) / ry)
+	var tp: Array[Vector2] = []
+	if lu.length() > 1.0:
+		var base := atan2(lu.y, lu.x)
+		var off := acos(1.0 / lu.length())
+		for sgn: float in [-1.0, 1.0]:
+			var th := base + sgn * off
+			tp.append(cc + Vector2(cos(th) * rx, sin(th) * ry))
+	if tp.size() == 2:
+		var a1 := (tp[0] - lh).angle()
+		var a2 := (tp[1] - lh).angle()
+		var mid := (a1 + a2) * 0.5
+		var half := absf(a1 - a2) * 0.5
+		var ang := mid + half * 1.3 * sin(t * 0.33)
+		var dir := Vector2(cos(ang), sin(ang))
+		ci.draw_line(lh, lh + dir * w * 1.6, Color(1.0, 0.85, 0.55, 0.06), 6.0, true)
+		ci.draw_line(lh, lh + dir * w * 1.6, Color(1.0, 0.9, 0.65, 0.14), 1.6, true)
+		for i in 2:
+			var ai := a1 if i == 0 else a2
+			var g := exp(-pow((ang - ai) / 0.035, 2.0))
+			if g > 0.02:
+				UITheme.dot(ci, tp[i], 18.0, Color(1.0, 0.82, 0.45, 0.22 * g))
+				UITheme.dot(ci, tp[i], 6.0, Color(1.0, 0.9, 0.6, 0.8 * g))
+				for k in 8:
+					var a := TAU * k / 8.0 + t * 0.5
+					var dv := Vector2(cos(a), sin(a))
+					ci.draw_line(tp[i] + dv * 8.0, tp[i] + dv * 15.0, Color(1.0, 0.88, 0.5, 0.5 * g), 1.2, true)
+
+
+## C8 軌跡星環：長時間曝光的星軌，星星繞著北極星畫出一圈一圈的圓（光的足跡）
+static func _startrail(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	_grad(ci, sz, Color("0c1530"), Color("060a18"))
+	var pole := Vector2(w * 0.62, hh * 0.3)
+	var rot := t * 0.06
+	# 所有星軌的弧一次畫完（一段一段的小線段，各自的顏色），不然 draw call 太多
+	var segs := PackedVector2Array()
+	var cols := PackedColorArray()
+	for i in 46:
+		var r := 18.0 + h(i, 501) * w * 0.7
+		var a0 := h(i, 502) * TAU + rot
+		var span := 0.5 + 0.9 * h(i, 503)
+		var c := Color(0.75 + 0.25 * h(i, 504), 0.8 + 0.2 * h(i, 505), 1.0, 0.1 + 0.12 * h(i, 506))
+		var n := maxi(4, int(span * r / 10.0))
+		var prev := pole + Vector2(cos(a0), sin(a0)) * r
+		for k in n:
+			var a := a0 + span * (k + 1) / n
+			var q := pole + Vector2(cos(a), sin(a)) * r
+			segs.append(prev)
+			segs.append(q)
+			cols.append(c)
+			prev = q
+		if i % 4 == 0:
+			UITheme.dot(ci, prev, 1.6, Color(c.r, c.g, c.b, 0.7))
+	ci.draw_multiline_colors(segs, cols, 1.2)
+	UITheme.dot(ci, pole, 6.0, Color(0.9, 0.95, 1.0, 0.25))
+	UITheme.dot(ci, pole, 2.2, Color(1.0, 1.0, 1.0, 0.9))
+	# 地平線的山
+	var hz := hh * 0.74
+	var hill := PackedVector2Array([Vector2(0, hh)])
+	for i in 25:
+		var x := w * i / 24.0
+		hill.append(Vector2(x, hz - 18.0 * h(i, 507) - 12.0 * sin(i * 0.7)))
+	hill.append(Vector2(w, hh))
+	ci.draw_colored_polygon(hill, Color(0.03, 0.04, 0.08, 1.0))
+	# 一顆星星沿著圓走，留下一串光點
+	var sc := Vector2(w * 0.25, hh * 0.42)
+	var sr := minf(w, hh) * 0.13
+	for k in 8:
+		var a := t * 0.5 - k * 0.2
+		var p := sc + Vector2(cos(a), sin(a)) * sr
+		UITheme.dot(ci, p, 2.4 - k * 0.2, Color(1.0, 0.9, 0.55, 0.6 * (1.0 - k / 8.0)))
+	var sp := sc + Vector2(cos(t * 0.5), sin(t * 0.5)) * sr
+	UITheme.dot(ci, sp, 7.0, Color(1.0, 0.9, 0.55, 0.25))
+	UITheme.dot(ci, sp, 2.6, Color(1.0, 0.97, 0.8, 1.0))
