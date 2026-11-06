@@ -1027,6 +1027,8 @@ class CoordPlane extends TowerPlot.Plot:
 				out += "−"
 				continue
 			out += frac(v)
+		# 圓心在原點：(x)^{2} 寫成 x^{2}
+		out = out.replace("(x)^{2}", "x^{2}").replace("(y)^{2}", "y^{2}")
 		# 第一項被省掉時，開頭的「+ 」「− 」整理一下
 		var re := RegEx.new()
 		re.compile("(^|：|= |\\n) ?\\+ ")
