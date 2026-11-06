@@ -59,7 +59,7 @@ func _speed_show() -> void:
 	if sp_i > 0:
 		story_label.visible = false
 	_build_fill({"name": "速算", "q": pb.q, "template": pb.template, "answers": pb.answers, "alts": pb.get("alts", []),
-		"mode": "ordered", "nudge": pb.nudge, "tag": pb.tag, "line": "", "paren": true})
+		"mode": pb.get("mode", "ordered"), "nudge": pb.nudge, "tag": pb.tag, "line": "", "paren": true})
 
 
 func _speed_tag() -> String:
@@ -111,7 +111,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 			var r2 := u * u + w * w
 			var c := r2 + u * h + w * k
 			pb = {"eq": "%s 上一點 P%s" % [_circle(h, k, r2), _pt(h + u, k + w)], "q": "用公式寫出過 P 的切線。",
-				"template": "[0]x + [1]y = [2]", "answers": [str(u), str(w), str(c)], "alts": [[str(-u), str(-w), str(-c)]],
+				"template": "[0]x + [1]y = [2]", "answers": [str(u), str(w), str(c)], "mode": "prop",
 				"tag": BankC7.T_PT,
 				"nudge": "x₀x + y₀y = r^{2}。" if h == 0 and k == 0 else "(x₀ − h)(x − h) + (y₀ − k)(y − k) = r^{2}，再展開。"}
 		var key := String(pb.eq)

@@ -59,7 +59,7 @@ func _speed_show() -> void:
 	if sp_i > 0:
 		story_label.visible = false
 	_build_fill({"name": "速算", "q": pb.q, "template": pb.template, "answers": pb.answers, "alts": pb.get("alts", []),
-		"mode": "ordered", "nudge": pb.nudge, "tag": pb.tag, "line": "", "paren": true})
+		"mode": pb.get("mode", "ordered"), "nudge": pb.nudge, "tag": pb.tag, "line": "", "paren": true})
 
 
 func _speed_tag() -> String:
@@ -118,8 +118,8 @@ static func gen_problems(kind: String, n: int) -> Array:
 				c = -c
 			if a == 0 or b == 0 or absi(a) > 6 or absi(b) > 6 or absi(c) > 20:
 				continue
-			pb = {"eq": "%s\n%s" % [_general(h1, k1, q1), _general(h2, k2, q2)], "q": "兩式相減，寫出公共弦所在的直線（化成最簡）。",
-				"template": "[0]x + [1]y = [2]", "answers": [str(a), str(b), str(-c)], "alts": [[str(-a), str(-b), str(c)]],
+			pb = {"eq": "%s\n%s" % [_general(h1, k1, q1), _general(h2, k2, q2)], "q": "兩式相減，寫出公共弦所在的直線。",
+				"template": "[0]x + [1]y = [2]", "answers": [str(a), str(b), str(-c)], "mode": "prop",
 				"tag": BankC8.T_FAM, "nudge": "上式減下式，x^{2}、y^{2} 消掉，再約分。"}
 		var key := String(pb.eq)
 		if seen.has(key):

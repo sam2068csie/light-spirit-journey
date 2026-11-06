@@ -655,12 +655,26 @@ func _fill_submit() -> void:
 			_hint("%s 格還沒填好（%s）。" % ["①②③④⑤⑥"[mini(i, 5)], how], "info")
 			return
 		ins.append(q)
+	# 正負號不影響的格子（[0]^{2}、±[0]、|[0]m|）：比絕對值
+	var free := _sign_free(String(fill_step.template))
+	for i in free:
+		if i < ins.size():
+			ins[i] = _abs_val(ins[i], rad)
+	# "check"：另一種也對的寫法（例如點斜式用直線上的任何一點），算式成立就算對
+	if fill_step.has("check") and _fill_check(ins, rad):
+		for i in slot_bad.size():
+			slot_bad[i] = false
+		_fill_judge(true)
+		return
 	if fill_step.has("groups") or fill_step.has("alts"):
 		_fill_judge(_fill_groups(ins, rad))
 		return
 	var ans := []
 	for a in fill_step.answers:
 		ans.append(parse_r(str(a)) if rad else parse_q(str(a)))
+	for i in free:
+		if i < ans.size():
+			ans[i] = _abs_val(ans[i], rad)
 	var ok := false
 	if rad:
 		# 有根號：化成最簡（a√b / c）再比
@@ -734,11 +748,15 @@ func _fill_submit() -> void:
 ## "alts" 是其他也算對的整組答案（例如斜率寫成 \frac{y₁ − y₂}{x₁ − x₂}）。順便標出紅色的格子
 func _fill_groups(ins: Array, rad: bool) -> bool:
 	var groups: Array = fill_step.get("groups", [])
+	var free := _sign_free(String(fill_step.template))
 	var best := []
 	for cand in [fill_step.answers] + Array(fill_step.get("alts", [])):
 		var ans := []
 		for a in cand:
 			ans.append(parse_r(str(a)) if rad else parse_q(str(a)))
+		for i in free:
+			if i < ans.size():
+				ans[i] = _abs_val(ans[i], rad)
 		var bad := []
 		bad.resize(ins.size())
 		bad.fill(false)
@@ -771,6 +789,46 @@ func _fill_groups(ins: Array, rad: bool) -> bool:
 
 func _same_val(a: Array, b: Array, rad: bool) -> bool:
 	return a == b if rad else q_eq(a, b)
+
+
+## 正負號不影響答案的格子：平方 [0]^{2}、正負 ±[0]（∓[0]）、絕對值 |[0]| 或 |[0]m|（m 是一個字母）
+static func _sign_free(tpl: String) -> Array:
+	var out := []
+	var re := RegEx.new()
+	re.compile("\\[(\\d+)\\]\\^\\{2\\}|[±∓]\\[(\\d+)\\]|\\|\\[(\\d+)\\][A-Za-z]?\\|")
+	for m in re.search_all(tpl):
+		for g in [1, 2, 3]:
+			if m.get_string(g) != "":
+				out.append(int(m.get_string(g)))
+	return out
+
+
+## 取絕對值：有理數 [n, d]、根號 [a, b, c]
+static func _abs_val(v: Array, rad: bool) -> Array:
+	if v.is_empty():
+		return v
+	if rad:
+		return [absi(int(v[0])), v[1], v[2]]
+	return [absi(int(v[0])), absi(int(v[1]))]
+
+
+## "check" 算式：格子的值叫 s0、s1…（小數），例如點斜式 y − [0] = 2(x − [1]) 用直線 y = 2x − 7 上的任何一點都對：
+##   "abs(s0 - (2*s1 - 7)) < 1e-6"
+func _fill_check(ins: Array, rad: bool) -> bool:
+	var names := PackedStringArray()
+	var vals := []
+	for i in ins.size():
+		names.append("s%d" % i)
+		var v: Array = ins[i]
+		vals.append(float(v[0]) * sqrt(float(v[1])) / float(v[2]) if rad else float(v[0]) / float(v[1]))
+	var ex := Expression.new()
+	if ex.parse(String(fill_step.check), names) != OK:
+		push_warning("check 算式看不懂：%s" % fill_step.check)
+		return false
+	var r = ex.execute(vals)
+	if ex.has_execute_failed():
+		return false
+	return bool(r)
 
 
 func _fill_judge(ok: bool) -> void:
