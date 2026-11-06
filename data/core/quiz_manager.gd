@@ -150,7 +150,7 @@ const MISTAKE_INFO := {
 	"poly_ineqsame":   {"name": "相同解", "level": 3},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
-	"line_divide":     {"name": "分點公式（AP : PB = m : n）", "level": 1},
+	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
 	"line_para":       {"name": "平行四邊形的第四頂點（A + C = B + D）", "level": 1},
 	"line_center":     {"name": "三心與角平分線分點", "level": 2},
 	"line_slope":      {"name": "斜率的計算與意義", "level": 1},

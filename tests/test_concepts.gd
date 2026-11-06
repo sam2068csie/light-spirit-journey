@@ -15,6 +15,7 @@ func _initialize() -> void:
 	await setup()
 	_check_content()
 	await _check_play()
+	await _check_rows()
 	finish("CONCEPTS")
 
 
@@ -194,6 +195,29 @@ func _check_play() -> void:
 	ok(d._counter.text.contains("完成 2"), "清單上顯示完成 2 張：%s" % d._counter.text)
 	holder.queue_free()
 	await frames(2)
+
+
+## 隨堂小測的選項列：有分數（比較高）的選項，字不能超出選項框
+func _check_rows() -> void:
+	var n := 0
+	for lid in ["L1", "P1", "G1", "C1"]:
+		var hd: Array = await _deck_for(lid)
+		var d = hd[1]
+		for i in d.cards.size():
+			if not d.cards[i].has("check"):
+				continue
+			d._show(i, 0, true)
+			await frames(3)
+			for rb in d._rows:
+				var m = rb.find_child("Math", true, false)
+				if m == null:
+					continue
+				n += 1
+				ok(rb.size.y >= m.get_combined_minimum_size().y + 4.0,
+					"%s「%s」小測選項「%s」超出選項框（框 %d、字 %d）" % [lid, d.cards[i].title, m.text, rb.size.y, m.get_combined_minimum_size().y])
+		hd[0].queue_free()
+		await frames(2)
+	ok(n > 20, "檢查了 %d 個小測選項" % n)
 
 
 func _mouse(t: Control, p: Vector2, down: bool, direct: bool) -> void:

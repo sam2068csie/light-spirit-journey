@@ -392,7 +392,7 @@ static func _slots() -> Array:
 		 "story": "用有限的材料圍出最大的燈坊。拖動燈芯，旁邊的圖形會跟著變形。",
 		 "insight": "圖形的極值：選一個長度當變數，其他長度都用它表示，寫出面積（二次函數），別忘了變數的範圍。",
 		 "variants": [
-			{"figure": "trap", "eq": "牆 AB、BC 夾 135°，用 36 公尺的材料圍 \\ol{PQ}、\\ol{QR}\n\\ol{PQ} ∥ \\ol{BC}、\\ol{QR} ⊥ \\ol{BC}，梯形 PQRB 的最大面積？",
+			{"figure": "trap", "eq": "牆 \\ol{AB}、\\ol{BC} 夾 135°，用 36 公尺的材料圍 \\ol{PQ}、\\ol{QR}\n\\ol{PQ} ∥ \\ol{BC}、\\ol{QR} ⊥ \\ol{BC}，梯形 PQRB 的最大面積？",
 			 "steps": [
 				_c("斜牆", "設高 \\ol{QR} = h。P 在斜牆上，\\ol{PQ} 比 \\ol{BC} 長多少？", ["h", "2h", "\\frac{h}{2}", "√{2}h"], 0,
 					"135° 的牆和水平線夾 45°：多出來的是等腰直角三角形，水平邊 = 高 = h。", "45° 的直角三角形，兩股一樣長。", "\\ol{PQ} = \\ol{BC} + h", T_APP),

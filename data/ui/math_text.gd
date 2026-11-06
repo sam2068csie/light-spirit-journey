@@ -446,10 +446,14 @@ func _layout() -> void:
 		cursor += lh + up + down
 	_content = Vector2(box_w, cursor)
 	# 數學式按鈕（make_button）：式子比按鈕高（例如有分數）時，把按鈕撐高一點，不要讓字貼到或超出按鈕邊
+	# 觀念卡小測的選項列（Button > HBox > Math）也一樣，要多留上下邊距
 	var par := get_parent()
-	if name == "Math" and par is Button:
+	if name == "Math":
 		var need := cursor + 4.0
-		if (par as Button).custom_minimum_size.y < need:
+		if not par is Button and par is Container and par.get_parent() is Button:
+			par = par.get_parent()
+			need = cursor + 14.0
+		if par is Button and (par as Button).custom_minimum_size.y < need:
 			(par as Button).custom_minimum_size.y = need
 
 

@@ -815,7 +815,7 @@ class CompassView extends TideView:
 			MathLabel.draw_on(self, font, pb.x + 14.0 * cos(b), pb.y - 14.0 * sin(b), "B", UITheme.fs(15), pink)
 			var ab2 := 2.0 - 2.0 * cos(a - b)
 			var mid := (pa + pb) / 2.0
-			MathLabel.draw_on(self, font, mid.x, mid.y - 12.0, "AB = %s" % dec3(sqrt(maxf(ab2, 0.0))), UITheme.fs(13), UITheme.GOLD)
+			MathLabel.draw_on(self, font, mid.x, mid.y - 12.0, "\\ol{AB} = %s" % dec3(sqrt(maxf(ab2, 0.0))), UITheme.fs(13), UITheme.GOLD)
 		else:
 			var ps := c + Vector2(cos(a + b), -sin(a + b)) * rad
 			_arc_between(c, 24.0, 0.0, a, cyan, 3.0)

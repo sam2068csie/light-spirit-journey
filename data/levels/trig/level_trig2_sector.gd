@@ -670,7 +670,7 @@ class SectorView extends MoonView:
 		draw_string(font, pa + Vector2(-16, 18), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.8))
 		draw_string(font, pb + Vector2(6, 18), "A′", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15), Color(1, 1, 1, 0.8))
 		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 44.0, "攤開側面", Color(1, 0.92, 0.7), 15)
-		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 72.0, "最短 = 弦 AA′", UITheme.GOLD, 15)
+		_txt(font, rect.position.x + rect.size.x * 0.8, rect.position.y + 72.0, "最短 = 弦 \\ol{AA′}", UITheme.GOLD, 15)
 
 	## 立體的圓錐：螞蟻從底圓上的 A 出發，沿著側面繞一圈回到 A（前面實線、後面虛線），路線就是攤開後的那條直線
 	func _draw_ant3d(font: Font, rect: Rect2) -> void:
