@@ -104,6 +104,7 @@ func _build_grid(st: Dictionary) -> void:
 	grid_tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	grid_tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(grid_tip)
+	_tip_gap()
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = "確定位置"
@@ -197,6 +198,13 @@ func test_answer(st: Dictionary) -> bool:
 	return false
 
 
+## 說明文字下面留一點空：右邊提示框的光靈頭像會往上凸，不要蓋到說明的第二行
+func _tip_gap() -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 14)
+	rank_box.add_child(gap)
+
+
 # ================= 點選區域（region） =================
 
 var region_tip: Label
@@ -236,6 +244,7 @@ func _build_region(st: Dictionary) -> void:
 	region_tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	region_tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(region_tip)
+	_tip_gap()
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = "確定"
