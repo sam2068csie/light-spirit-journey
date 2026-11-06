@@ -97,9 +97,9 @@ static func gen_problems(kind: String, n: int) -> Array:
 			var r := int(rd[0])
 			var d := int(rd[1])
 			var c := side * d * nl - a * h - b * k
-			pb = {"eq": "%s 和 %s" % [_circle(h, k, r), lin(a, b, c)], "q": "算出弦心距和弦長。",
-				"template": "d = [0]，弦長 = [1]", "answers": [str(d), str(2 * int(round(sqrt(r * r - d * d))))],
-				"tag": BankC6.T_CHORD, "nudge": "d = 圓心到直線的距離，弦長 = 2√(r^{2} − d^{2})。"}
+			pb = {"eq": "%s 和 %s" % [_circle(h, k, r), lin(a, b, c)], "q": "算出弦心距 d(K, L) 和弦長。",
+				"template": "d(K, L) = [0]，弦長 = [1]", "answers": [str(d), str(2 * int(round(sqrt(r * r - d * d))))],
+				"tag": BankC6.T_CHORD, "nudge": "弦長 = 2√(r^{2} − d(K, L)^{2})。"}
 		else:
 			var r := randi_range(2, 5)
 			var d := r
@@ -109,9 +109,9 @@ static func gen_problems(kind: String, n: int) -> Array:
 			elif want == 2:
 				d = r - randi_range(1, mini(2, r))
 			var c := side * d * nl - a * h - b * k
-			pb = {"eq": "%s 和 %s" % [_circle(h, k, r), lin(a, b, c)], "q": "比一比 d 和 r，有幾個交點？",
-				"template": "d = [0]，交點 [1] 個", "answers": [str(d), str(want)], "tag": BankC6.T_REL,
-				"nudge": "d < r 兩個、d = r 一個、d > r 零個。"}
+			pb = {"eq": "%s 和 %s" % [_circle(h, k, r), lin(a, b, c)], "q": "d(K, L) 和半徑 r 比，有幾個交點？",
+				"template": "d(K, L) = [0]，交點 [1] 個", "answers": [str(d), str(want)], "tag": BankC6.T_REL,
+				"nudge": "d(K, L) 小於 r 兩個、等於 r 一個、大於 r 零個。"}
 		var key := String(pb.eq)
 		if seen.has(key):
 			continue
