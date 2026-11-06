@@ -544,5 +544,5 @@ func _draw_landmark(i: int) -> void:
 
 
 func _draw_names(font: Font) -> void:
-	UITheme.text_ol(_tgt, font, Vector2(40, 82), "坐標平原", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(28), Color(0.6, 0.85, 1.0, 0.85), 6)
+	UITheme.text_ol(_tgt, font, Vector2(48, 138), "坐標平原", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(28), Color(0.6, 0.85, 1.0, 0.85), 6)
 	UITheme.text_ol(_tgt, font, O + Vector2(R + 10.0, -R + 6.0), "圓規湖", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(30), Color(1.0, 0.86, 0.5, 0.85), 6)

@@ -89,6 +89,8 @@ static func slots() -> Array:
 	var out := _slots()
 	for slot in out:
 		slot["plain"] = true
+		if String(slot.type) == "forge":
+			slot["type_name"] = "逐步推導"
 		SB.fix_roots(slot)
 		slot["params"] = slot.get("params", [])
 		for v in slot.get("variants", []):
@@ -119,7 +121,7 @@ static func _slots() -> Array:
 					"2y − 2 = 3x − 6 ⇒ 3x − 2y − 4 = 0", "2(y − 1) = 3(x − 2) ⇒ 2y − 2 = 3x − 6，全部移到左邊。", T_EQ, "prop"),
 			 ]},
 			{"eq": "A(1, −2)、B(3, 2)、C(a, 6)、D(−1, b) 四點共線\n求 a、b",
-			 "plane": _plane([-3, 7], [-7, 7], [_p("A", 1, -2, 0, [10, 10]), _p("B", 3, 2, 0, [10, 10]), _ln([1, -2], [3, 2], "", 2, "dim", true)]),
+			 "plane": _plane([-3, 7], [-7, 7], [_p("A", 1, -2, 0, [10, 10]), _p("B", 3, 2, 0, [10, 10]), _ln([1, -2], [3, 2], "", 3, "dim", true)]),
 			 "steps": [
 				_fx("斜率", "先列式算出 m_{AB}。", "m_{AB} = \\frac{[0] − [1]}{[2] − [3]} = [4]", ["2", "-2", "3", "1", "2"],
 					"m_{AB} = \\frac{2 − (−2)}{3 − 1} = 2", "A(1, −2)、B(3, 2)：分子 y 的差、分母 x 的差（同一個順序）。", T_SLOPE,
@@ -386,8 +388,10 @@ static func _slots() -> Array:
 		 "insight": "(a₁x + b₁y + c₁) + k(a₂x + b₂y + c₂) = 0 恆過兩直線 a₁x + b₁y + c₁ = 0、a₂x + b₂y + c₂ = 0 的交點\n過 P 的直線和線段 \\ol{AB} 相交：斜率介在 m_{PA}、m_{PB} 之間（轉動的過程沒有經過鉛直線時）。",
 		 "variants": [
 			{"eq": "L：(1 + k)x + (1 − k)y + k − 3 = 0\n不論 k 是多少，L 都通過哪一點？",
-			 "plane": _plane([-3, 5], [-2, 5], [_lg(1, 1, -3, "k = 0", 1, "dim", true), _lg(2, 0, -2, "k = 1", 1, "dim", true),
-				_lg(0, 2, -4, "k = −1", 1, "dim", true), _lg(3, -1, -1, "k = 2", 1, "dim", true)]),
+			 "plane": _plane([-3, 5], [-2, 5], [_lg(1, 1, -3, "", 1, "dim", true), _lg(2, 0, -2, "", 1, "dim", true),
+				_lg(0, 2, -4, "", 1, "dim", true), _lg(3, -1, -1, "", 1, "dim", true),
+				{"k": "label", "p": [4.2, -1.6], "s": "k = 0", "c": "dim", "at": 1}, {"k": "label", "p": [1.0, -1.6], "s": "k = 1", "c": "dim", "at": 1, "off": [30, 0]},
+				{"k": "label", "p": [-2.2, 2.0], "s": "k = −1", "c": "dim", "at": 1, "off": [0, -12]}, {"k": "label", "p": [2.0, 5.0], "s": "k = 2", "c": "dim", "at": 1, "off": [34, 14]}]),
 			 "steps": [
 				_s("轉轉看", "拉動 k，看看 L 怎麼動。", [["k", -3, 3, 0.5, 0]], [["1 + k", "1 - k", "k - 3", "cyan", "L"]],
 					"不論 k 是多少，L 都繞著同一點轉", "", T_FIX, {"eq": "L：{1 + k}x + {1 - k}y + {k - 3} = 0", "free": true}),

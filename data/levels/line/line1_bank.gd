@@ -76,7 +76,9 @@ static func _plane(x: Array, y: Array, shapes: Array) -> Dictionary:
 static func slots() -> Array:
 	var out := _slots()
 	for slot in out:
-		slot["plain"] = true          # 舞台只畫背景，內容由推導台負責
+		slot["plain"] = true
+		if String(slot.type) == "forge":
+			slot["type_name"] = "逐步推導"          # 舞台只畫背景，內容由推導台負責
 		SB.fix_roots(slot)
 		slot["params"] = slot.get("params", [])
 		# 列式的填空：填了負數就照寫的樣子加括號（4 − (−2)），不要自動變成 4 + 2
