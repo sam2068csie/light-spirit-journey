@@ -239,6 +239,29 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					await slide_to(k, v)
 			await snap(String(lv.r.id) + "_調好")
 			await go()
+		"region":
+			# 點選區域：點每一塊要塗的地方的代表點（答錯時點一塊不該塗的）
+			var pl = lv._pv().plane
+			var want: Array = lv.region_targets(st)
+			var pick := []
+			if wrong:
+				for key in pl.all_cells():
+					if not want.has(key):
+						pick = [key]
+						break
+			else:
+				pick = want
+			for key in pl.cell_sel.keys():
+				if not pick.has(key):
+					await click_at(pl.get_global_transform() * pl._to(pl.cell_rep(key)))
+			for key in pick:
+				if not pl.cell_sel.has(key):
+					var sp: Vector2 = pl.get_global_transform() * pl._to(pl.cell_rep(key))
+					await click_at(sp)
+					if not pl.cell_sel.has(key):
+						_issue("%s：點區域（%s）沒有塗上色" % [_where(), key])
+			await snap(String(lv.r.id) + "_塗好")
+			await go()
 		"order":
 			var idx: Array = range(st.items.size())
 			idx.sort_custom(func(a, b): return float(st.items[a].v) < float(st.items[b].v))

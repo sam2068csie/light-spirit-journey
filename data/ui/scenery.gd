@@ -51,6 +51,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_pier(ci, sz, t)
 		"moonlake":
 			_moonlake(ci, sz, t)
+		"paddy":
+			_paddy(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -893,3 +895,52 @@ static func _moonlake(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		while xx < w:
 			ci.draw_line(Vector2(xx, yy), Vector2(xx + 34.0, yy), Color(0.7, 0.9, 1.0, 0.05), 1.2)
 			xx += 160.0
+
+
+## C4 分光稻田：夜裡的稻田從畫面下方往遠處延伸，田埂（直線）把田切成一塊一塊，有幾塊亮著光，螢火蟲在飛
+static func _paddy(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var hz := hh * 0.42
+	_grad(ci, sz, Color("16213a"), Color("0a1020"))
+	_stars(ci, Vector2(w, hz), t, 18, 0.9, Color(0.9, 0.92, 1.0), 201)
+	_ridge(ci, Vector2(w, hz + 2.0), hz - 14.0, 10.0, 0.015, 0.4, Color(0.1, 0.13, 0.24, 0.95))
+	# 田地：透視的四邊形（遠處窄、近處寬）
+	var vp := Vector2(w * 0.5, hz - 40.0)
+	var ground := PackedVector2Array([Vector2(0, hz), Vector2(w, hz), Vector2(w, hh), Vector2(0, hh)])
+	ci.draw_colored_polygon(ground, Color(0.06, 0.1, 0.12, 0.95))
+	var to_ground := func(u: float, v: float) -> Vector2:
+		# u：左右 0～1，v：遠近 0（地平線）～1（最近）
+		var y := hz + (hh - hz) * v * v
+		var half := w * (0.3 + 0.9 * v * v)
+		return Vector2(w * 0.5 + (u - 0.5) * 2.0 * half, y)
+	# 幾塊亮著的稻田
+	var lit := [[1, 1], [2, 2], [3, 1], [0, 3], [4, 3]]
+	for c in lit:
+		var u0: float = c[0] / 6.0
+		var v0: float = c[1] / 5.0
+		var pts := PackedVector2Array([to_ground.call(u0, v0), to_ground.call(u0 + 1.0 / 6.0, v0), to_ground.call(u0 + 1.0 / 6.0, v0 + 0.2), to_ground.call(u0, v0 + 0.2)])
+		var a: float = 0.07 + 0.04 * sin(t * 1.5 + c[0] * 1.7 + c[1])
+		ci.draw_colored_polygon(pts, Color(1.0, 0.75, 0.35, a))
+	# 田埂：縱向的線往消失點收、橫向的線越近越疏
+	for i in 7:
+		ci.draw_line(to_ground.call(i / 6.0, 0.0), to_ground.call(i / 6.0, 1.0), Color(0.55, 0.7, 0.5, 0.22), 1.3)
+	for j in 6:
+		var v := j / 5.0
+		ci.draw_line(to_ground.call(0.0, v), to_ground.call(1.0, v), Color(0.55, 0.7, 0.5, 0.18), 1.2)
+	# 一條斜的田埂（直線）穿過整片田，兩邊的顏色不同
+	ci.draw_line(to_ground.call(-0.2, 1.0), to_ground.call(0.95, 0.0), Color(1.0, 0.8, 0.45, 0.14), 2.0, true)
+	# 稻穗：一小撮一小撮的短線，隨風搖
+	for i in 60:
+		var u := h(i, 202)
+		var v := 0.25 + 0.75 * h(i, 203)
+		var p: Vector2 = to_ground.call(u, v)
+		var ht := 6.0 + 10.0 * v
+		var sway := 2.0 * sin(t * 1.8 + i * 0.7) * v
+		ci.draw_line(p, p + Vector2(sway, -ht), Color(0.6, 0.75, 0.45, 0.35), 1.2)
+	# 螢火蟲
+	for i in 18:
+		var p := Vector2(fposmod(h(i, 204) * w + t * (5.0 + 6.0 * h(i, 205)), w), hz + (hh - hz) * (0.1 + 0.6 * h(i, 206)) + 8.0 * sin(t * 0.9 + i))
+		var al := 0.15 + 0.15 * sin(t * 2.1 + i * 1.9)
+		UITheme.dot(ci, p, 6.0, Color(1.0, 0.85, 0.4, al * 0.35))
+		UITheme.dot(ci, p, 1.6, Color(1.0, 0.92, 0.6, al * 2.0))

@@ -23,6 +23,14 @@ extends "res://data/levels/engine/step_level.gd"
 ##          "traps": [[{"k": −2}, "調到這裡時的提示"], …], "keep": true（做完把那條線留在方格上）}
 ##         lines 裡也可以放會動的點和線段（拖動點）：{"k": "dot", "p": ["t", "0"], "s": "P"}、{"k": "seg", "a": ["t", "0"], "b": ["1", "1"]}
 ##         eq 的 {…} 可以用 sqrt、abs、pow：例如 "\\ol{PA} + \\ol{PB} ≈ {sqrt(pow(t - 1, 2) + 1) + …}"（不是分數時顯示到小數第二位）
+##   region 點選區域：直線把方格切成好幾塊，點一下塗色、再點一次取消，按「確定」
+##         {"kind": "region", "name", "q", "line", "nudge", "tag",
+##          "ineq": [[a, b, c, "<="], …]（要塗的地方：每一條 ax + by + c 和 0 的關係，"<" "<=" ">" ">="）,
+##          "lines": [[a, b, c], …]（切開方格的直線，省略就用 ineq 的邊界）, "names": ["2x + y ≤ 4", …]（答錯時提示用）}
+##         答對之後塗色的地方留在方格上
+## 不等式的圖層：
+##   {"k": "region", "ineq": [[a, b, c, op], …], "c": "lime", "alpha": 0.22}  塗出聯立不等式的區域（係數也可以是含參數的算式，給滑桿用）
+##   {"k": "lattice", "ineq": [[a, b, c, op], …], "c": "gold"}  區域裡的格子點
 ## 動畫圖層（at 那一步出現時才開始播）：
 ##   {"k": "path", "pts": [[x, y], …], "c", "dur": 1.5}  光線：沿著折線一段一段畫出來，最後有箭頭
 ##   {"k": "fold", "pts": [[x, y], …], "to": [[x, y], …], "dur": 1.2, "marks": [[從, 到], …]}  摺紙：多邊形從 pts 慢慢翻到 to，marks 的點跟著翻
@@ -70,11 +78,14 @@ func _pv() -> PlaneView:
 func _forge_step() -> void:
 	if fview != null and _pv().plane != null:
 		_pv().plane.pick_off()
+		_pv().plane.region_off()
 	super()
 	if si < steps.size() and String(steps[si].kind) == "grid":
 		_build_grid(steps[si])
 	elif si < steps.size() and String(steps[si].kind) == "slide":
 		_build_slide(steps[si])
+	elif si < steps.size() and String(steps[si].kind) == "region":
+		_build_region(steps[si])
 
 
 func _build_grid(st: Dictionary) -> void:
@@ -118,6 +129,9 @@ func _custom_go() -> void:
 	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "slide":
 		_slide_submit()
 		return
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "region":
+		_region_submit()
+		return
 	super()
 
 
@@ -155,6 +169,9 @@ func _custom_reveal(msg: String) -> void:
 			var st: Dictionary = steps[j]
 			if String(st.kind) == "grid":
 				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")))
+			elif String(st.kind) == "region":
+				pl.kept_regions.append({"k": "region", "ineq": st.ineq, "c": String(st.get("c", "lime"))})
+		pl.region_off()
 	super(msg)
 
 
@@ -164,6 +181,13 @@ func test_answer(st: Dictionary) -> bool:
 		_pv().plane.pick = Vector2(float(st.target[0]), float(st.target[1]))
 		_refresh_grid()
 		return true
+	if String(st.kind) == "region":
+		var pl: CoordPlane = _pv().plane
+		pl.cell_sel = {}
+		for key in region_targets(st):
+			pl.cell_sel[key] = true
+		pl.queue_redraw()
+		return true
 	if String(st.kind) == "slide":
 		for k in st.get("goal", {}).keys():
 			slide_vals[k] = float(st.goal[k])
@@ -171,6 +195,99 @@ func test_answer(st: Dictionary) -> bool:
 		_refresh_slide()
 		return true
 	return false
+
+
+# ================= 點選區域（region） =================
+
+var region_tip: Label
+
+
+func _region_lines(st: Dictionary) -> Array:
+	if st.has("lines"):
+		return st.lines
+	var out := []
+	for q in st.ineq:
+		out.append([q[0], q[1], q[2]])
+	return out
+
+
+## 這一步要塗的那幾塊（每一塊用正負號的組合當名字，例如 "+-+"）
+func region_targets(st: Dictionary) -> Array:
+	var pl: CoordPlane = _pv().plane
+	var out := []
+	for key in pl.all_cells():
+		if CoordPlane.ineq_ok(st.ineq, pl.cell_rep(key), false):
+			out.append(key)
+	return out
+
+
+func _build_region(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	_pv().plane.region_on(_region_lines(st), String(st.get("c", "lime")), func(): _refresh_region())
+	region_tip = Label.new()
+	region_tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	region_tip.custom_minimum_size = Vector2(300, 0)
+	region_tip.add_theme_font_size_override("font_size", UITheme.fs(15))
+	region_tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	rank_box.add_child(region_tip)
+	go_btn.visible = true
+	go_btn.disabled = false
+	go_btn.text = "確定"
+	_refresh_region()
+
+
+func _refresh_region() -> void:
+	if region_tip == null or not is_instance_valid(region_tip):
+		return
+	var n: int = _pv().plane.cell_sel.size()
+	if n == 0:
+		region_tip.text = "在坐標方格上點一下要塗色的地方。\n再點一次可以取消。"
+	else:
+		region_tip.text = "塗了 %d 塊。再點一次可以取消。" % n
+
+
+func _region_submit() -> void:
+	var st: Dictionary = steps[si]
+	var pl: CoordPlane = _pv().plane
+	if pl.cell_sel.is_empty():
+		_hint("先在坐標方格上點一下要塗色的地方。", "info")
+		return
+	var want := region_targets(st)
+	var extra := []
+	for key in pl.cell_sel.keys():
+		if not want.has(key):
+			extra.append(key)
+	var missing := []
+	for key in want:
+		if not pl.cell_sel.has(key):
+			missing.append(key)
+	if extra.is_empty() and missing.is_empty():
+		Game.of(self).sfx("correct")
+		pl.kept_regions.append({"k": "region", "ineq": st.ineq, "c": String(st.get("c", "lime"))})
+		pl.region_off()
+		go_btn.visible = false
+		_clear(rank_box)
+		rank_box.visible = false
+		_step_done(st, "")
+		return
+	var msg := "還不對。提示：" + String(st.nudge)
+	var names: Array = st.get("names", [])
+	if not extra.is_empty():
+		# 塗錯的那一塊不符合哪一個條件
+		var p: Vector2 = pl.cell_rep(extra[0])
+		for i in st.ineq.size():
+			if not CoordPlane.ineq_ok([st.ineq[i]], p, false):
+				msg = "有一塊不符合「%s」。代一個那裡的點進去看看。" % names[i] if i < names.size() else "有一塊塗錯了。提示：" + String(st.nudge)
+				break
+	elif not missing.is_empty():
+		msg = "還有符合條件的地方沒有塗到。"
+	_wrong(st, msg)
 
 
 # ================= 滑桿調參數（slide） =================
@@ -317,7 +434,7 @@ class PlaneView extends ForgeView:
 	## 這一步要不要大張的坐標方格（點選格子點、全部做完）
 	func _want_big() -> bool:
 		var sts: Array = rd.get("steps", [])
-		return done or step >= sts.size() or String(sts[step].get("kind", "")) in ["grid", "slide"]
+		return done or step >= sts.size() or String(sts[step].get("kind", "")) in ["grid", "slide", "region"]
 
 	## 左下角留給光靈和對話框
 	func _plane_rect() -> Rect2:
@@ -367,6 +484,12 @@ class CoordPlane extends TowerPlot.Plot:
 	var dyn: Array = []                  # 滑桿步驟：跟著參數動的直線 {"abc": [算式…], "c", "s"}
 	var dyn_vals := {}
 	var kept: Array = []                 # 滑桿步驟做完留下來的直線（已經算好的 line 圖層）
+	var kept_regions: Array = []         # 點選區域做完留下來的塗色（region 圖層）
+	var cells_on := false                # 點選區域的步驟
+	var cell_lines: Array = []           # 切開方格的直線 [a, b, c]
+	var cell_sel := {}                   # 塗了哪幾塊（正負號的組合 → true）
+	var cell_col := "lime"
+	var _on_cell := Callable()
 	var _anim0 := {}                     # 動畫圖層第一次出現的時間（path、fold）
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
 	var picking := false
@@ -394,6 +517,8 @@ class CoordPlane extends TowerPlot.Plot:
 		dots = []
 		dyn = []
 		kept = []
+		kept_regions = []
+		region_off()
 		_anim0 = {}
 		_cache = {}
 		stage = 0
@@ -420,6 +545,119 @@ class CoordPlane extends TowerPlot.Plot:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mouse_default_cursor_shape = Control.CURSOR_ARROW
 		queue_redraw()
+
+	# ---------- 點選區域 ----------
+
+	func region_on(lines: Array, col: String, cb: Callable) -> void:
+		pick_on("", 1.0, func(_p): pass)
+		cells_on = true
+		cell_lines = lines
+		cell_sel = {}
+		cell_col = col
+		_on_cell = cb
+
+	func region_off() -> void:
+		cells_on = false
+		cell_sel = {}
+		cell_lines = []
+		_on_cell = Callable()
+
+	## p 在哪一塊（每一條直線代入的正負號，在線上的話含 "0"）
+	func cell_key(p: Vector2) -> String:
+		var k := ""
+		for l in cell_lines:
+			var v := float(l[0]) * p.x + float(l[1]) * p.y + float(l[2])
+			k += "0" if absf(v) < 1e-6 else ("+" if v > 0.0 else "-")
+		return k
+
+	## 畫面上看得到的每一塊（在方格上取樣）
+	func all_cells() -> Array:
+		var out := []
+		var wr := _frame_world()
+		for i in 49:
+			for j in 31:
+				var p := wr.position + Vector2(wr.size.x * (i + 0.5) / 49.0, wr.size.y * (j + 0.5) / 31.0)
+				var k := cell_key(p)
+				if not k.contains("0") and not out.has(k):
+					out.append(k)
+		return out
+
+	## 題目的範圍（不含下面光靈對話框那一條）換成坐標
+	func _frame_world() -> Rect2:
+		var f := _frame()
+		var a := from_px(Vector2(f.position.x, f.end.y))
+		var b := from_px(Vector2(f.end.x, f.position.y))
+		return Rect2(a, b - a)
+
+	## 一塊在畫面上的多邊形（坐標），rect 是要裁切的範圍
+	func cell_poly(key: String, rect: Rect2) -> PackedVector2Array:
+		var poly := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)])
+		for i in cell_lines.size():
+			var l: Array = cell_lines[i]
+			var sg := 1.0 if key[i] == "+" else -1.0
+			poly = clip_half(poly, float(l[0]) * sg, float(l[1]) * sg, float(l[2]) * sg)
+		return poly
+
+	## 這一塊的代表點（看得到的範圍裡、多邊形的中心）
+	func cell_rep(key: String) -> Vector2:
+		var poly := cell_poly(key, _frame_world())
+		if poly.is_empty():
+			return Vector2(INF, INF)
+		var c := Vector2.ZERO
+		for p in poly:
+			c += p
+		return c / poly.size()
+
+	## 多邊形和半平面 ax + by + c ≥ 0 的交集（Sutherland–Hodgman）
+	static func clip_half(poly: PackedVector2Array, a: float, b: float, c: float) -> PackedVector2Array:
+		var out := PackedVector2Array()
+		var n := poly.size()
+		for i in n:
+			var p := poly[i]
+			var q := poly[(i + 1) % n]
+			var vp := a * p.x + b * p.y + c
+			var vq := a * q.x + b * q.y + c
+			if vp >= 0.0:
+				out.append(p)
+			if (vp >= 0.0) != (vq >= 0.0):
+				out.append(p.lerp(q, vp / (vp - vq)))
+		return out
+
+	## p 符不符合這些不等式（strict = true：在邊界上要看等號）
+	static func ineq_ok(ineq: Array, p: Vector2, strict: bool) -> bool:
+		for q in ineq:
+			var v := float(q[0]) * p.x + float(q[1]) * p.y + float(q[2])
+			match String(q[3]):
+				"<":
+					if v >= (0.0 if strict else 1e-9):
+						return false
+				"<=":
+					if v > 1e-9:
+						return false
+				">":
+					if v <= (0.0 if strict else -1e-9):
+						return false
+				">=":
+					if v < -1e-9:
+						return false
+		return true
+
+	## 聯立不等式的區域（畫在畫面範圍裡）
+	func region_poly(ineq: Array) -> PackedVector2Array:
+		var wr := _world()
+		var poly := PackedVector2Array([wr.position, Vector2(wr.end.x, wr.position.y), wr.end, Vector2(wr.position.x, wr.end.y)])
+		for q in ineq:
+			var sg := 1.0 if String(q[3]).begins_with(">") else -1.0
+			poly = clip_half(poly, float(q[0]) * sg, float(q[1]) * sg, float(q[2]) * sg)
+		return poly
+
+	func _fill_world(poly: PackedVector2Array, col: Color) -> void:
+		if poly.size() < 3:
+			return
+		var sp := PackedVector2Array()
+		for p in poly:
+			sp.append(_to(p))
+		draw_colored_polygon(sp, col)
 
 	func reset_view() -> void:
 		zoom = 1.0
@@ -461,6 +699,14 @@ class CoordPlane extends TowerPlot.Plot:
 	## 含參數的直線 → 算好係數的 line 圖層（a、b 都是 0 時回傳空的）
 	func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 		var kk := String(ln.get("k", "line"))
+		if kk == "region":
+			var out := ln.duplicate()
+			var iq := []
+			for q in ln.ineq:
+				iq.append([calc(str(q[0]), vals), calc(str(q[1]), vals), calc(str(q[2]), vals), q[3]])
+			out["ineq"] = iq
+			out.erase("at")
+			return out
 		if kk == "dot" or kk == "seg":
 			var out := ln.duplicate()
 			for key in ["p", "a", "b"]:
@@ -611,6 +857,20 @@ class CoordPlane extends TowerPlot.Plot:
 		# 捏合中（或剛捏合完、手指還沒全部放開）：不放點
 		if _pinched or _touches.size() >= 2:
 			return
+		if cells_on:
+			# 點選區域：點一下切換那一塊（在線上不算）
+			if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
+				var key := cell_key(from_px(e.position))
+				if not key.contains("0"):
+					if cell_sel.has(key):
+						cell_sel.erase(key)
+					else:
+						cell_sel[key] = true
+					queue_redraw()
+					if _on_cell.is_valid():
+						_on_cell.call()
+				accept_event()
+			return
 		var press: bool = e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed
 		if press:
 			_pick_before = pick
@@ -697,10 +957,26 @@ class CoordPlane extends TowerPlot.Plot:
 
 	func _draw_geo(font: Font) -> void:
 		_draw_grid(font)
+		# 塗色在最下面（直線、點畫在上面）
+		for rg in kept_regions:
+			var c := _col(String(rg.get("c", "lime")))
+			_fill_world(region_poly(rg.ineq), Color(c.r, c.g, c.b, 0.2))
+		for ln in dyn:
+			if String(ln.get("k", "")) == "region":
+				var rg := eval_line(ln, dyn_vals)
+				var c := _col(String(rg.get("c", "lime")))
+				_fill_world(region_poly(rg.ineq), Color(c.r, c.g, c.b, float(rg.get("alpha", 0.24))))
+		if cells_on:
+			var c := _col(cell_col)
+			var wr := _world()
+			for key in cell_sel.keys():
+				_fill_world(cell_poly(key, wr), Color(c.r, c.g, c.b, 0.3 + 0.06 * sin(t * 3.0)))
 		super(font)
 		for ln in kept:
 			_shape(ln, Vector2.ZERO, 0.0, font)
 		for ln in dyn:
+			if String(ln.get("k", "")) == "region":
+				continue
 			var sh := eval_line(ln, dyn_vals)
 			if not sh.is_empty():
 				_shape(sh, Vector2.ZERO, 0.0, font)
@@ -802,6 +1078,20 @@ class CoordPlane extends TowerPlot.Plot:
 		return clampf((t - float(_anim0[key])) / float(sh.get("dur", 1.4)), 0.0, 1.0)
 
 	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		if String(sh.k) == "region":
+			var c := _col(String(sh.get("c", "lime")))
+			_fill_world(region_poly(sh.ineq), Color(c.r, c.g, c.b, float(sh.get("alpha", 0.2))))
+			return
+		if String(sh.k) == "lattice":
+			var c := _col(String(sh.get("c", "gold")))
+			var wr := _world()
+			for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x)) + 1):
+				for iy in range(int(ceilf(wr.position.y)), int(floorf(wr.end.y)) + 1):
+					if ineq_ok(sh.ineq, Vector2(ix, iy), true):
+						var sp := _to(Vector2(ix, iy))
+						UITheme.dot(self, sp, 7.0, Color(c.r, c.g, c.b, 0.25))
+						UITheme.dot(self, sp, 3.5, c)
+			return
 		if String(sh.k) == "path":
 			# 光線：沿著折線畫出來
 			var pts: Array = sh.pts
