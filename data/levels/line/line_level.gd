@@ -35,6 +35,10 @@ extends "res://data/levels/engine/step_level.gd"
 ##   {"k": "path", "pts": [[x, y], …], "c", "dur": 1.5}  光線：沿著折線一段一段畫出來，最後有箭頭
 ##   {"k": "fold", "pts": [[x, y], …], "to": [[x, y], …], "dur": 1.2, "marks": [[從, 到], …]}  摺紙：多邊形從 pts 慢慢翻到 to，marks 的點跟著翻
 ## 點選區域的步驟可以加 "bloom": true：塗對了，田裡的稻子一株一株長出來；塗錯的那幾塊會枯掉（變紅褐色）。
+## 看得到的後果（自動，不用在題庫寫）：
+##   點選格子點：放對了，那一點像燈標一樣亮起來（光圈擴散）。放錯了，那一點閃一下就熄掉，提示說 x、y 坐標偏大還是偏小
+##   滑桿：調對了，直線上一塊一塊鋪上木板（keep 的直線木板留著）、會動的點亮起來。調錯了，直線閃紅、木板掉進水裡
+##   直線圖層可以寫 "from_p"、"from_q"：出現的時候從那裡滑過來（平移）
 ## 延後到終焉之塔的題型記在 docs/line_tower_backlog.md（每做完一關都要更新）
 ##
 ## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
@@ -149,6 +153,7 @@ func _grid_submit() -> void:
 	if p.is_equal_approx(want):
 		Game.of(self).sfx("correct")
 		pl.add_dot(want, lab, String(st.get("c", "gold")))
+		pl.fx_burst(want)
 		pl.pick_off()
 		go_btn.visible = false
 		_clear(rank_box)
@@ -156,10 +161,21 @@ func _grid_submit() -> void:
 		_step_done(st, "")
 		return
 	var msg := "還不對。提示：" + String(st.nudge)
+	var trapped := false
 	for tr in st.get("traps", []):
 		if p.is_equal_approx(Vector2(float(tr[0]), float(tr[1]))):
 			msg = String(tr[2])
-	_wrong(st, "你放在 %s。%s" % [CoordPlane.pt_text(p), msg])
+			trapped = true
+	pl.fx_miss(p)
+	if not trapped:
+		# 只說方向，不說差多少（還是要自己算）
+		var parts := []
+		if not is_equal_approx(p.x, want.x):
+			parts.append("x 坐標太%s" % ("大" if p.x > want.x else "小"))
+		if not is_equal_approx(p.y, want.y):
+			parts.append("y 坐標太%s" % ("大" if p.y > want.y else "小"))
+		msg = "、".join(parts) + "。" + msg
+	_wrong(st, "你放在 %s，燈沒有亮。%s" % [CoordPlane.pt_text(p), msg])
 
 
 func _custom_reveal(msg: String) -> void:
@@ -407,17 +423,33 @@ func _slide_submit() -> void:
 				hit = false
 		if hit:
 			msg = String(tr[1])
+	var pl: CoordPlane = _pv().plane
+	for ln in st.get("lines", []):
+		var sh := pl.eval_line(ln, slide_vals)
+		if sh.is_empty():
+			continue
+		if String(sh.k) == "line":
+			pl.fx_fall(sh)
+		elif String(sh.k) == "dot":
+			pl.fx_miss(pl._v(sh.p))
 	_wrong(st, msg)
 
 
 func _slide_done(st: Dictionary) -> void:
 	Game.of(self).sfx("correct")
 	var pl: CoordPlane = _pv().plane
-	if st.get("keep", false):
-		for ln in st.get("lines", []):
-			var sh := pl.eval_line(ln, slide_vals)
-			if not sh.is_empty() and String(sh.k) == "line":
+	var keep: bool = st.get("keep", false)
+	for ln in st.get("lines", []):
+		var sh := pl.eval_line(ln, slide_vals)
+		if sh.is_empty():
+			continue
+		if String(sh.k) == "line":
+			if keep:
 				pl.kept.append(sh)
+			if not st.get("free", false):
+				pl.fx_lay(sh, keep)
+		elif String(sh.k) == "dot" and not st.get("free", false):
+			pl.fx_burst(pl._v(sh.p))
 	pl.dyn = []
 	go_btn.visible = false
 	_clear(rank_box)
@@ -511,6 +543,7 @@ class CoordPlane extends TowerPlot.Plot:
 	var withered := {}                   # 塗錯、枯掉的那幾塊 → 枯掉的時間
 	var _on_cell := Callable()
 	var _anim0 := {}                     # 動畫圖層第一次出現的時間（path、fold）
+	var fx: Array = []                   # 看得到的後果：{"k": burst／miss／lay／fall, "t0", …}
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
 	var picking := false
 	var pick_label := "P"
@@ -540,6 +573,7 @@ class CoordPlane extends TowerPlot.Plot:
 		kept_regions = []
 		region_off()
 		_anim0 = {}
+		fx = []
 		_cache = {}
 		stage = 0
 		pick_off()
@@ -1062,8 +1096,138 @@ class CoordPlane extends TowerPlot.Plot:
 			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
 		if picking and has_pick():
 			_draw_pick(font)
+		_draw_fx()
 		if picking:
 			_draw_zoom_ui(font)
+
+	# ---------- 看得到的後果 ----------
+
+	func fx_burst(p: Vector2) -> void:
+		fx.append({"k": "burst", "t0": t, "p": p})
+
+	func fx_miss(p: Vector2) -> void:
+		fx.append({"k": "miss", "t0": t, "p": p})
+
+	## 鋪木板：沿著直線一塊一塊鋪上去（stay：鋪好的木板留著）
+	func fx_lay(sh: Dictionary, stay: bool) -> void:
+		fx.append({"k": "lay", "t0": t, "sh": sh, "stay": stay})
+
+	## 斷掉：直線閃紅，木板掉進水裡
+	func fx_fall(sh: Dictionary) -> void:
+		fx.append({"k": "fall", "t0": t, "sh": sh})
+
+	## 直線在畫面範圍裡的那一段（坐標），沒有的話回傳空的
+	func _visible_seg(sh: Dictionary) -> PackedVector2Array:
+		var a := float(sh.abc[0]) if sh.has("abc") else 0.0
+		var p: Vector2
+		var d: Vector2
+		if sh.has("abc"):
+			var b := float(sh.abc[1])
+			var c := float(sh.abc[2])
+			d = Vector2(b, -a).normalized()
+			p = Vector2(-a * c, -b * c) / (a * a + b * b)
+		else:
+			p = _v(sh.p)
+			d = (_v(sh.q) - p).normalized()
+		var wr := _frame_world()
+		var lo := -INF
+		var hi := INF
+		for ax in 2:
+			var pv := p.x if ax == 0 else p.y
+			var dv := d.x if ax == 0 else d.y
+			var mn := wr.position.x if ax == 0 else wr.position.y
+			var mx := wr.end.x if ax == 0 else wr.end.y
+			if absf(dv) < 1e-9:
+				if pv < mn or pv > mx:
+					return PackedVector2Array()
+				continue
+			var s1 := (mn - pv) / dv
+			var s2 := (mx - pv) / dv
+			lo = maxf(lo, minf(s1, s2))
+			hi = minf(hi, maxf(s1, s2))
+		if lo >= hi:
+			return PackedVector2Array()
+		return PackedVector2Array([p + d * lo, p + d * hi])
+
+	func _draw_fx() -> void:
+		var keep := []
+		for e in fx:
+			var age := t - float(e.t0)
+			match String(e.k):
+				"burst":
+					if age > 1.2:
+						continue
+					var sp := _to(e.p)
+					var k := age / 1.2
+					var gc := Color(1.0, 0.86, 0.42)
+					UITheme.dot(self, sp, 26.0 * (1.0 - k) + 6.0, Color(gc.r, gc.g, gc.b, 0.35 * (1.0 - k)))
+					draw_arc(sp, 8.0 + 42.0 * k, 0.0, TAU, 40, Color(gc.r, gc.g, gc.b, 0.8 * (1.0 - k)), 2.5, true)
+					draw_arc(sp, 4.0 + 24.0 * k, 0.0, TAU, 32, Color(1, 1, 1, 0.6 * (1.0 - k)), 1.5, true)
+					for i in 8:
+						var dir := Vector2.RIGHT.rotated(TAU * i / 8.0 + 0.3)
+						draw_line(sp + dir * (10.0 + 20.0 * k), sp + dir * (16.0 + 30.0 * k), Color(gc.r, gc.g, gc.b, 0.7 * (1.0 - k)), 2.0, true)
+				"miss":
+					if age > 1.6:
+						continue
+					var sp := _to(e.p)
+					var fl := 1.0 if age < 0.35 else clampf(1.0 - (age - 0.35) / 1.25, 0.0, 1.0)
+					var blink := 0.5 + 0.5 * cos(age * 28.0) if age < 0.35 else 1.0
+					var rc := Color(1.0, 0.35, 0.4, fl * blink)
+					UITheme.dot(self, sp, 10.0, Color(rc.r, rc.g, rc.b, 0.25 * rc.a))
+					draw_line(sp + Vector2(-6, -6), sp + Vector2(6, 6), rc, 2.5, true)
+					draw_line(sp + Vector2(-6, 6), sp + Vector2(6, -6), rc, 2.5, true)
+				"lay":
+					var seg := _visible_seg(e.sh)
+					if seg.is_empty():
+						continue
+					var a := _to(seg[0])
+					var b := _to(seg[1])
+					var L := a.distance_to(b)
+					var dir := (b - a) / maxf(L, 1.0)
+					var nrm := Vector2(-dir.y, dir.x)
+					var n := int(L / 16.0)
+					var k := clampf(age / 1.0, 0.0, 1.0)
+					var fade := 1.0 if e.stay else clampf(1.0 - (age - 1.3) / 0.8, 0.0, 1.0)
+					if fade <= 0.0:
+						continue
+					for i in n:
+						var u := (i + 0.5) / n
+						if u > k:
+							break
+						var c := a.lerp(b, u)
+						var fresh := clampf((k - u) * 6.0, 0.0, 1.0)
+						var al := (0.5 + 0.45 * fresh) * fade if e.stay else 0.85 * fade
+						draw_line(c - nrm * 7.0, c + nrm * 7.0, Color(0.85, 0.62, 0.35, al), 4.5, true)
+					if k < 1.0:
+						UITheme.dot(self, a.lerp(b, k), 7.0, Color(1.0, 0.86, 0.42, 0.7))
+				"fall":
+					if age > 1.6:
+						continue
+					var seg := _visible_seg(e.sh)
+					if seg.is_empty():
+						continue
+					var a := _to(seg[0])
+					var b := _to(seg[1])
+					var fl := clampf(1.0 - age / 1.0, 0.0, 1.0)
+					if fl > 0.0:
+						draw_line(a, b, Color(1.0, 0.3, 0.35, 0.75 * fl), 5.0, true)
+					var dir := (b - a).normalized()
+					var nrm := Vector2(-dir.y, dir.x)
+					for i in 7:
+						var u := (i + 0.5) / 7.0
+						var c := a.lerp(b, u) + Vector2(sin(i * 2.3) * 8.0 * age, 220.0 * age * age)
+						var rot := age * (3.0 + i)
+						var hn := nrm.rotated(rot) * 8.0
+						draw_line(c - hn, c + hn, Color(0.8, 0.55, 0.32, clampf(1.0 - age / 1.6, 0.0, 1.0)), 4.5, true)
+			keep.append(e)
+		# 鋪好留著的木板永遠保留，其他播完就丟掉
+		var still := []
+		for e in fx:
+			if String(e.k) == "lay" and e.stay:
+				still.append(e)
+			elif keep.has(e):
+				still.append(e)
+		fx = still
 
 	## 放大之後：右上角的「還原」按鈕和倍率
 	func _draw_zoom_ui(font: Font) -> void:
@@ -1150,7 +1314,7 @@ class CoordPlane extends TowerPlot.Plot:
 
 	## 動畫圖層：從第一次出現開始算，0 → 1
 	func _anim_k(sh: Dictionary) -> float:
-		var key := str(sh.get("pts", [])) + String(sh.k)
+		var key := str(sh.get("pts", [])) + str(sh.get("p", "")) + str(sh.get("q", "")) + str(sh.get("abc", "")) + String(sh.k)
 		if not _anim0.has(key):
 			_anim0[key] = t
 		return clampf((t - float(_anim0[key])) / float(sh.get("dur", 1.4)), 0.0, 1.0)
@@ -1238,7 +1402,14 @@ class CoordPlane extends TowerPlot.Plot:
 			p = Vector2(-a * c, -b * c) / (a * a + b * b)
 		else:
 			p = _v(sh.p)
-			d = (_v(sh.q) - p).normalized()
+			var q := _v(sh.q)
+			if sh.has("from_p"):
+				# 平移：從 from_p、from_q 滑過來
+				var k := _anim_k(sh)
+				k = k * k * (3.0 - 2.0 * k)
+				p = _v(sh.from_p).lerp(p, k)
+				q = _v(sh.from_q).lerp(q, k)
+			d = (q - p).normalized()
 		var wr := _world().grow(1.0)
 		var big := wr.size.length() + (p - wr.get_center()).length()
 		var col := _col(String(sh.get("c", "cyan")))

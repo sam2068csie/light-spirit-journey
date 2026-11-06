@@ -319,13 +319,15 @@ func _initialize() -> void:
 	mm._grade = "高一"
 	mm._show_page("levels")
 	await wait(1.2)
-	# 劇情（序章、其他關點亮的劇情）：一直按「略過」到沒有為止
-	for k in 8:
+	# 劇情（序章、其他關點亮的劇情，可能一段接一段）：一直按「略過」，等到地圖不在播劇情為止
+	for k in 20:
+		await wait(0.8)
 		var skip := btn_text(current_scene, "略過")
-		if skip == null:
+		if skip != null:
+			await click(skip, "略過")
+			continue
+		if not bool(mm._map.get("playing")):
 			break
-		await click(skip, "略過")
-		await wait(1.2)
 	var map = mm._map
 	var si := -1
 	for i in map.m_sites.size():
