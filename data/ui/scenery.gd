@@ -4,7 +4,8 @@ extends RefCounted
 ## 全部用時間 t 直接算位置（不存粒子狀態），每幀重畫也很便宜。
 ##   多項式：mine 係數礦燈、wheel 綜合除法水車、echo 回音石廊、mold 根之鑄模、
 ##           lake 拋物鏡湖、wick 極值燈芯、crystal 對稱水晶、river 符號地下河
-##   直線與圓：lakeside 圓規湖岸（C1 坐標燈標）
+##   直線與圓：lakeside 坐標燈標（C1）、pier 直線棧橋、moonlake 鏡面渡口、paddy 分光稻田、workshop 圓規工坊、
+##             ripple 割弦漣漪（C6）
 ##   三角函數：ferry 弧之渡口、lagoon 扇形潟湖、steps 浪之階梯、tide 潮汐調音盤、
 ##             compass 和角羅盤、pool 倍角鏡池、lighthouse 疊合燈塔
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -55,6 +56,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_paddy(ci, sz, t)
 		"workshop":
 			_workshop(ci, sz, t)
+		"ripple":
+			_ripple(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -1006,3 +1009,75 @@ static func _workshop(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var al := 0.12 + 0.12 * sin(t * 1.5 + i * 2.1)
 		UITheme.dot(ci, p, 5.0, Color(0.85, 0.75, 1.0, al * 0.3))
 		UITheme.dot(ci, p, 1.5, Color(0.95, 0.9, 1.0, al * 2.0))
+
+
+## C6 割弦漣漪：夜裡的圓形湖（從斜上方看是橢圓），一道光慢慢掃過湖面，碰到湖岸的地方濺起漣漪
+static func _ripple(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var hz := hh * 0.46
+	_grad(ci, sz, Color("0f1a33"), Color("070c1a"))
+	# 星星
+	for i in 32:
+		var p := Vector2(h(i, 301) * w, h(i, 302) * hz * 0.95)
+		var al := 0.18 + 0.2 * sin(t * (0.6 + h(i, 303)) + i * 1.7)
+		UITheme.dot(ci, p, 1.2 + 0.8 * h(i, 304), Color(0.8, 0.88, 1.0, maxf(al, 0.04)))
+	# 遠山的剪影
+	var hill := PackedVector2Array([Vector2(0, hh)])
+	for i in 25:
+		var x := w * i / 24.0
+		hill.append(Vector2(x, hz - 14.0 - 22.0 * h(i, 305) * sin(PI * i / 24.0) - 10.0 * sin(i * 0.9)))
+	hill.append(Vector2(w, hh))
+	ci.draw_colored_polygon(hill, Color(0.05, 0.07, 0.13, 0.95))
+	ci.draw_rect(Rect2(0, hz, w, hh - hz), Color(0.045, 0.06, 0.11, 1.0))
+	# 圓形的湖（從斜上方看）
+	var cc := Vector2(w * 0.5, hz + (hh - hz) * 0.5)
+	var rx := w * 0.36
+	var ry := (hh - hz) * 0.3
+	var rim := PackedVector2Array()
+	for i in 72:
+		var a := TAU * i / 72.0
+		rim.append(cc + Vector2(cos(a) * rx, sin(a) * ry))
+	ci.draw_colored_polygon(rim, Color(0.1, 0.18, 0.34, 0.55))
+	rim.append(rim[0])
+	ci.draw_polyline(rim, Color(0.55, 0.7, 1.0, 0.22), 1.5, true)
+	# 湖面上慢慢擴散的小水紋
+	for i in 4:
+		var q := Vector2(h(i, 306) * 1.2 - 0.6, h(i, 307) * 1.2 - 0.6)
+		var k := fposmod(t * 0.18 + h(i, 308), 1.0)
+		var ring := PackedVector2Array()
+		for j in 33:
+			var a := TAU * j / 32.0
+			ring.append(cc + Vector2((q.x + 0.25 * k * cos(a)) * rx, (q.y + 0.25 * k * sin(a)) * ry))
+		ci.draw_polyline(ring, Color(0.6, 0.75, 1.0, 0.12 * (1.0 - k)), 1.0, true)
+	# 掃過湖面的光：x cos φ + y sin φ = s（湖是單位圓）
+	var phi := t * 0.21
+	var s := 1.35 * sin(t * 0.33)
+	var nv := Vector2(cos(phi), sin(phi))
+	var dv := Vector2(-nv.y, nv.x)
+	var foot := nv * s
+	var to_s := func(u: Vector2) -> Vector2:
+		return cc + Vector2(u.x * rx, u.y * ry)
+	ci.draw_line(to_s.call(foot - dv * 3.0), to_s.call(foot + dv * 3.0), Color(1.0, 0.85, 0.45, 0.1), 2.0, true)
+	if absf(s) < 1.0:
+		var half := sqrt(1.0 - s * s)
+		var p1: Vector2 = to_s.call(foot - dv * half)
+		var p2: Vector2 = to_s.call(foot + dv * half)
+		ci.draw_line(p1, p2, Color(1.0, 0.88, 0.5, 0.32), 2.5, true)
+		for p: Vector2 in [p1, p2]:
+			for j in 2:
+				var k := fposmod(t * 0.9 + j * 0.5, 1.0)
+				var ring := PackedVector2Array()
+				for m in 25:
+					var a := TAU * m / 24.0
+					ring.append(p + Vector2(cos(a) * (4.0 + 22.0 * k), sin(a) * (2.0 + 9.0 * k)))
+				ci.draw_polyline(ring, Color(0.75, 0.88, 1.0, 0.4 * (1.0 - k)), 1.2, true)
+			UITheme.dot(ci, p, 7.0, Color(1.0, 0.9, 0.55, 0.2))
+			UITheme.dot(ci, p, 2.5, Color(1.0, 0.95, 0.8, 0.85))
+	# 岸邊的燈
+	for i in 5:
+		var a := PI * (0.15 + 0.7 * i / 4.0) + PI
+		var p := cc + Vector2(cos(a) * rx * 1.06, sin(a) * ry * 1.06)
+		var al := 0.35 + 0.15 * sin(t * 1.3 + i)
+		UITheme.dot(ci, p, 6.0, Color(1.0, 0.85, 0.5, al * 0.25))
+		UITheme.dot(ci, p, 1.8, Color(1.0, 0.92, 0.7, al))

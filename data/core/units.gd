@@ -31,7 +31,7 @@ const UNITS := [
 		{"id": "C3", "name": "鏡面渡口", "topic": "對稱與距離", "file": "level_line3_mirror.gd", "bank": "line3_bank.gd", "color": UITheme.LIME},
 		{"id": "C4", "name": "分光稻田", "topic": "二元一次不等式", "file": "level_line4_paddy.gd", "bank": "line4_bank.gd", "color": UITheme.ORANGE},
 		{"id": "C5", "name": "圓規工坊", "topic": "圓方程式與求圓", "file": "level_line5_compass.gd", "bank": "line5_bank.gd", "color": UITheme.VIOLET},
-		{"id": "C6", "name": "割弦漣漪", "topic": "圓與直線", "file": "", "bank": "", "color": UITheme.BLUE},
+		{"id": "C6", "name": "割弦漣漪", "topic": "圓與直線", "file": "level_line6_ripple.gd", "bank": "line6_bank.gd", "color": UITheme.BLUE},
 		{"id": "C7", "name": "切線燈環", "topic": "切線與圓冪", "file": "", "bank": "", "color": UITheme.PINK},
 		{"id": "C8", "name": "軌跡星環", "topic": "圓系與軌跡", "file": "", "bank": "", "color": UITheme.GOOD},
 	 ]},

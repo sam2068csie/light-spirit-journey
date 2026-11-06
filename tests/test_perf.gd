@@ -12,7 +12,7 @@ const BUDGET := {
 	"P1": 190, "P2": 170, "P3": 220, "P4": 250, "P5": 285, "P6": 245, "P7": 300, "P8": 320,
 	"G1": 225, "G2": 335, "G3": 245, "G4": 215, "G5": 170, "G6": 190, "G7": 190,
 	"C1": 270,          # 直線與圓：下方有坐標方格（格線、刻度）
-	"C2": 290, "C3": 290, "C4": 300, "C5": 300,
+	"C2": 290, "C3": 290, "C4": 300, "C5": 300, "C6": 300,
 }
 ## 多項式、三角函數各關：[編號, 關卡檔, 題庫檔]（每關第一段旅程的第一題）
 const STEP_LEVELS := [
@@ -24,7 +24,7 @@ const STEP_LEVELS := [
 	["G3", "level_trig3_wave.gd", "trig3_bank.gd"], ["G4", "level_trig4_tide.gd", "trig4_bank.gd"],
 	["G5", "level_trig5_compass.gd", "trig5_bank.gd"], ["G6", "level_trig6_mirror.gd", "trig6_bank.gd"],
 	["G7", "level_trig7_lighthouse.gd", "trig7_bank.gd"],
-	["C1", "level_line1_coord.gd", "line1_bank.gd"], ["C2", "level_line2_pier.gd", "line2_bank.gd"], ["C3", "level_line3_mirror.gd", "line3_bank.gd"], ["C4", "level_line4_paddy.gd", "line4_bank.gd"], ["C5", "level_line5_compass.gd", "line5_bank.gd"],
+	["C1", "level_line1_coord.gd", "line1_bank.gd"], ["C2", "level_line2_pier.gd", "line2_bank.gd"], ["C3", "level_line3_mirror.gd", "line3_bank.gd"], ["C4", "level_line4_paddy.gd", "line4_bank.gd"], ["C5", "level_line5_compass.gd", "line5_bank.gd"], ["C6", "level_line6_ripple.gd", "line6_bank.gd"],
 ]
 
 

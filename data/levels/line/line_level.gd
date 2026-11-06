@@ -33,6 +33,8 @@ extends "res://data/levels/engine/step_level.gd"
 ##          "ineq": [[a, b, c, "<="], …]（要塗的地方：每一條 ax + by + c 和 0 的關係，"<" "<=" ">" ">="）,
 ##          "lines": [[a, b, c], …]（切開方格的直線，省略就用 ineq 的邊界）, "names": ["2x + y ≤ 4", …]（答錯時提示用）}
 ##         答對之後塗色的地方留在方格上
+## 交點漣漪：plane 寫 "hits": true，直線碰到圓（或圓弧 arc）的地方會濺起一圈一圈的漣漪
+##   滑桿的 eq 可以寫 {#hits}：目前的交點個數。圖層寫 "nohit": true 就不算它
 ## 不等式的圖層：
 ##   {"k": "region", "ineq": [[a, b, c, op], …], "c": "lime", "alpha": 0.22}  塗出聯立不等式的區域（係數也可以是含參數的算式，給滑桿用）
 ##   {"k": "lattice", "ineq": [[a, b, c, op], …], "c": "gold"}  區域裡的格子點
@@ -508,9 +510,12 @@ func _refresh_slide() -> void:
 		var vl = slide_val_labels[nm]
 		if is_instance_valid(vl):
 			vl.text = "= " + CoordPlane.frac(float(slide_vals.get(nm, 0.0)))
-	if slide_eq != null and is_instance_valid(slide_eq):
-		slide_eq.text = CoordPlane.fill_eq(String(st.eq), slide_vals)
 	_pv().plane.dyn_vals = slide_vals
+	if slide_eq != null and is_instance_valid(slide_eq):
+		var tpl := String(st.eq)
+		if tpl.contains("{#hits}"):
+			tpl = tpl.replace("{#hits}", str(_pv().plane.hit_points().size()))
+		slide_eq.text = CoordPlane.fill_eq(tpl, slide_vals)
 	_pv().plane.queue_redraw()
 
 
@@ -1042,7 +1047,8 @@ class CoordPlane extends TowerPlot.Plot:
 		return "(%s, %s)" % [num(p.x), num(p.y)]
 
 	static func num(v: float) -> String:
-		var s := str(int(round(v))) if is_equal_approx(v, round(v)) else str(snappedf(v, 0.01))
+		var r := snappedf(v, 0.01)
+		var s := str(int(round(r))) if is_equal_approx(r, round(r)) else str(r)
 		return s.replace("-", "−")
 
 	# ---------- 坐標換算 ----------
@@ -1237,9 +1243,92 @@ class CoordPlane extends TowerPlot.Plot:
 			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "" if d.get("bare", false) else "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
 		if picking and has_pick() and pick_mode == "point":
 			_draw_pick(font)
+		if bool(data.get("hits", false)):
+			_draw_hits()
 		_draw_fx()
 		if picking:
 			_draw_zoom_ui(font)
+
+	# ---------- 交點漣漪 ----------
+
+	## 畫面上所有直線和圓（圓弧）的交點
+	func hit_points() -> Array:
+		var lines := []
+		var circs := []
+		var add := func(sh: Dictionary):
+			if sh.is_empty() or sh.get("nohit", false):
+				return
+			match String(sh.get("k", "")):
+				"line":
+					lines.append(sh)
+				"circle", "arc":
+					circs.append(sh)
+		for sh in data.get("shapes", []):
+			if _vis(sh):
+				add.call(sh)
+		for sh in kept:
+			add.call(sh)
+		for ln in dyn:
+			if String(ln.get("k", "")) == "region":
+				continue
+			var e := eval_line(ln, dyn_vals)
+			if not e.is_empty():
+				e["nohit"] = ln.get("nohit", false)
+			add.call(e)
+		var out := []
+		for ln in lines:
+			var pd := _line_pd(ln)
+			var p: Vector2 = pd[0]
+			var d: Vector2 = pd[1]
+			for c in circs:
+				var o := _v(c.get("o", [0, 0]))
+				var r := float(c.r)
+				var w := p - o
+				var b := d.dot(w)
+				var disc := b * b - (w.length_squared() - r * r)
+				var pts := []
+				if absf(disc) < 1e-6 * maxf(r * r, 1.0):
+					pts.append(p - d * b)
+				elif disc > 0.0:
+					var sq := sqrt(disc)
+					pts.append(p + d * (-b + sq))
+					pts.append(p + d * (-b - sq))
+				for q in pts:
+					if String(c.k) == "arc":
+						var ang := fposmod(rad_to_deg(atan2(q.y - o.y, q.x - o.x)), 360.0)
+						var a0 := float(c.get("a0", 0.0))
+						var a1 := float(c.get("a1", 360.0))
+						if ang < a0 - 0.01 or ang > a1 + 0.01:
+							if not (absf(ang - 360.0) < 0.01 and a0 < 0.01):
+								continue
+					var dup := false
+					for e in out:
+						if (e as Vector2).distance_to(q) < 1e-4:
+							dup = true
+					if not dup:
+						out.append(q)
+		return out
+
+	## 直線 → [線上一點, 單位方向]
+	func _line_pd(sh: Dictionary) -> Array:
+		if sh.has("abc"):
+			var a := float(sh.abc[0])
+			var b := float(sh.abc[1])
+			var c := float(sh.abc[2])
+			return [Vector2(-a * c, -b * c) / (a * a + b * b), Vector2(b, -a).normalized()]
+		var p := _v(sh.p)
+		return [p, (_v(sh.q) - p).normalized()]
+
+	func _draw_hits() -> void:
+		var i := 0
+		for q in hit_points():
+			var sp := _to(q)
+			i += 1
+			for k in 2:
+				var ph := fposmod(t * 0.8 + k * 0.5 + i * 0.17, 1.0)
+				draw_arc(sp, 5.0 + 22.0 * ph, 0.0, TAU, 32, Color(0.6, 0.95, 1.0, 0.6 * (1.0 - ph)), 1.6, true)
+			UITheme.dot(self, sp, 9.0, Color(0.6, 0.95, 1.0, 0.3))
+			UITheme.dot(self, sp, 4.0, Color(0.85, 1.0, 1.0, 0.95))
 
 	# ---------- 看得到的後果 ----------
 
