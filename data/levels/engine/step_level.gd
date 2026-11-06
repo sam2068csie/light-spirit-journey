@@ -572,7 +572,11 @@ func _refresh_fill() -> void:
 	for i in slot_vals.size():
 		var shown: String = slot_vals[i]
 		# 「+ □」裡填了負數：顯示成「− 3」而不是「+ −3」
-		if shown.begins_with("−"):
+		# "paren": true（列式的填空）：照學生寫的樣子，負數加括號「− (−2)」，不要改成「+ 2」
+		if shown.begins_with("−") and fill_step.get("paren", false):
+			if t.contains("+ [%d]" % i) or t.contains("− [%d]" % i) or t.contains("× [%d]" % i):
+				shown = "(" + shown + ")"
+		elif shown.begins_with("−"):
 			if t.contains("+ [%d]" % i):
 				t = t.replace("+ [%d]" % i, "− [%d]" % i)
 				shown = shown.substr(1)
@@ -645,6 +649,9 @@ func _fill_submit() -> void:
 			_hint("%s 格還沒填好（%s）。" % ["①②③④⑤⑥"[mini(i, 5)], how], "info")
 			return
 		ins.append(q)
+	if fill_step.has("groups") or fill_step.has("alts"):
+		_fill_judge(_fill_groups(ins, rad))
+		return
 	var ans := []
 	for a in fill_step.answers:
 		ans.append(parse_r(str(a)) if rad else parse_q(str(a)))
@@ -715,6 +722,49 @@ func _fill_submit() -> void:
 					slot_bad[i] = true
 					ok = false
 	_fill_judge(ok)
+
+
+## 列式的填空："groups" 裡的格子可以互換（例如 \frac{x₁ + x₂}{2} 先填誰都可以），
+## "alts" 是其他也算對的整組答案（例如斜率寫成 \frac{y₁ − y₂}{x₁ − x₂}）。順便標出紅色的格子
+func _fill_groups(ins: Array, rad: bool) -> bool:
+	var groups: Array = fill_step.get("groups", [])
+	var best := []
+	for cand in [fill_step.answers] + Array(fill_step.get("alts", [])):
+		var ans := []
+		for a in cand:
+			ans.append(parse_r(str(a)) if rad else parse_q(str(a)))
+		var bad := []
+		bad.resize(ins.size())
+		bad.fill(false)
+		var grouped := {}
+		for g in groups:
+			var used := {}
+			for i in g:
+				grouped[int(i)] = true
+				var hit := false
+				for j in g:
+					if not used.has(int(j)) and _same_val(ins[int(i)], ans[int(j)], rad):
+						used[int(j)] = true
+						hit = true
+						break
+				if not hit:
+					bad[int(i)] = true
+		for i in ins.size():
+			if not grouped.has(i) and not _same_val(ins[i], ans[i], rad):
+				bad[i] = true
+		if not bad.has(true):
+			for i in slot_bad.size():
+				slot_bad[i] = false
+			return true
+		if best.is_empty() or bad.count(true) < best.count(true):
+			best = bad
+	for i in slot_bad.size():
+		slot_bad[i] = best[i]
+	return false
+
+
+func _same_val(a: Array, b: Array, rad: bool) -> bool:
+	return a == b if rad else q_eq(a, b)
 
 
 func _fill_judge(ok: bool) -> void:

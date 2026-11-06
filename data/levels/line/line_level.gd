@@ -12,6 +12,8 @@ extends "res://data/levels/engine/step_level.gd"
 ##         {"kind": "grid", "name", "q", "target": [x, y], "label": "D", "line", "nudge", "tag",
 ##          "traps": [[x, y, "點到這裡時的提示"], …]（可省略）, "snap": 1（格子點；0.5 = 半格）}
 ##         答對之後那一點會留在方格上
+##         點選的時候可以縮放：手機雙指捏合（兩指一起移動 = 平移），電腦用滑鼠滾輪（右鍵或中鍵拖曳 = 平移），
+##         放大之後右上角有「還原」
 ##
 ## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
 
@@ -89,7 +91,7 @@ func _refresh_grid() -> void:
 	var lab := String(st.get("label", "P"))
 	var p: Vector2 = _pv().plane.pick
 	if not _pv().plane.has_pick():
-		grid_tip.text = "在左下的坐標方格上點一下，放下 %s 點。" % lab
+		grid_tip.text = "在左下的坐標方格上點一下，放下 %s 點。\n（雙指或滑鼠滾輪可以放大）" % lab
 	else:
 		grid_tip.text = "%s 點放在 %s。\n要換位置就再點一次。" % [lab, CoordPlane.pt_text(p)]
 
@@ -221,6 +223,16 @@ class CoordPlane extends TowerPlot.Plot:
 	var snap := 1.0
 	var _on_pick := Callable()
 
+	# ---------- 縮放、平移（只在點選格子點的時候） ----------
+	const ZOOM_MAX := 3.0
+	var zoom := 1.0
+	var pan := Vector2.ZERO              # 視野中心偏移了多少（坐標單位）
+	var _touches := {}                   # 手指編號 → 位置
+	var _pinch_d := 0.0                  # 雙指一開始的距離、中點
+	var _pinch_c := Vector2.ZERO
+	var _pinched := false                # 這次手指放下之後有沒有捏合過（捏合中的手指不能拿來放點）
+	var _pick_before := Vector2(INF, INF)
+
 	func reset(d: Dictionary) -> void:
 		data = d.duplicate(true)
 		data["geo"] = true
@@ -232,6 +244,7 @@ class CoordPlane extends TowerPlot.Plot:
 		_cache = {}
 		stage = 0
 		pick_off()
+		reset_view()
 
 	func pick_on(label: String, sn: float, cb: Callable) -> void:
 		picking = true
@@ -245,10 +258,41 @@ class CoordPlane extends TowerPlot.Plot:
 
 	func pick_off() -> void:
 		picking = false
+		_touches = {}
+		_pinched = false
+		zoom = 1.0
+		pan = Vector2.ZERO
 		pick = Vector2(INF, INF)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mouse_default_cursor_shape = Control.CURSOR_ARROW
 		queue_redraw()
+
+	func reset_view() -> void:
+		zoom = 1.0
+		pan = Vector2.ZERO
+		queue_redraw()
+
+	## 以畫面上的 sp 為中心縮放 f 倍（放大後的視野不會跑出原本的範圍）
+	func zoom_at(sp: Vector2, f: float) -> void:
+		var before := from_px(sp)
+		zoom = clampf(zoom * f, 1.0, ZOOM_MAX)
+		pan += before - from_px(sp)
+		_clamp_pan()
+		queue_redraw()
+
+	func pan_px(d: Vector2) -> void:
+		pan -= Vector2(d.x, -d.y) / _scale()
+		_clamp_pan()
+		queue_redraw()
+
+	func _clamp_pan() -> void:
+		var half := _frame().size / (_base_scale() * 2.0)
+		var k := 1.0 - 1.0 / zoom
+		pan = Vector2(clampf(pan.x, -half.x * k, half.x * k), clampf(pan.y, -half.y * k, half.y * k))
+
+	## 放大之後右上角的「還原」按鈕
+	func _reset_rect() -> Rect2:
+		return Rect2(size.x - 62.0, 8.0, 54.0, 26.0)
 
 	func has_pick() -> bool:
 		return is_finite(pick.x) and is_finite(pick.y)
@@ -276,26 +320,33 @@ class CoordPlane extends TowerPlot.Plot:
 	func _frame() -> Rect2:
 		return Rect2(Vector2(10, 10), size - Vector2(20, 20 + BOTTOM_PAD))
 
-	func _scale() -> float:
+	func _base_scale() -> float:
 		var xr: Array = data.x
 		var yr: Array = data.y
 		var r := _frame()
 		return minf(r.size.x / (float(xr[1]) - float(xr[0])), r.size.y / (float(yr[1]) - float(yr[0])))
 
-	func _to(p: Vector2) -> Vector2:
+	func _scale() -> float:
+		return _base_scale() * zoom
+
+	## 視野中心的坐標
+	func _mid() -> Vector2:
 		var xr: Array = data.x
 		var yr: Array = data.y
+		return Vector2((float(xr[0]) + float(xr[1])) / 2.0, (float(yr[0]) + float(yr[1])) / 2.0) + pan
+
+	func _to(p: Vector2) -> Vector2:
 		var sc := _scale()
 		var c := _frame().get_center()
-		return Vector2(c.x + (p.x - (float(xr[0]) + float(xr[1])) / 2.0) * sc, c.y - (p.y - (float(yr[0]) + float(yr[1])) / 2.0) * sc)
+		var m := _mid()
+		return Vector2(c.x + (p.x - m.x) * sc, c.y - (p.y - m.y) * sc)
 
 	## 畫面上的位置 → 坐標
 	func from_px(sp: Vector2) -> Vector2:
-		var xr: Array = data.x
-		var yr: Array = data.y
 		var sc := _scale()
 		var c := _frame().get_center()
-		return Vector2((sp.x - c.x) / sc + (float(xr[0]) + float(xr[1])) / 2.0, -(sp.y - c.y) / sc + (float(yr[0]) + float(yr[1])) / 2.0)
+		var m := _mid()
+		return Vector2((sp.x - c.x) / sc + m.x, -(sp.y - c.y) / sc + m.y)
 
 	## 畫面上看得到的坐標範圍（比 data.x、data.y 大一點，因為兩軸同比例）
 	func _world() -> Rect2:
@@ -308,7 +359,15 @@ class CoordPlane extends TowerPlot.Plot:
 	func _gui_input(e: InputEvent) -> void:
 		if not picking:
 			return
+		if _view_input(e):
+			accept_event()
+			return
+		# 捏合中（或剛捏合完、手指還沒全部放開）：不放點
+		if _pinched or _touches.size() >= 2:
+			return
 		var press: bool = e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed
+		if press:
+			_pick_before = pick
 		var drag: bool = e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
 		if not (press or drag):
 			return
@@ -324,6 +383,70 @@ class CoordPlane extends TowerPlot.Plot:
 				_on_pick.call(p)
 		accept_event()
 
+	## 縮放、平移、還原。處理掉了就回傳 true
+	func _view_input(e: InputEvent) -> bool:
+		if e is InputEventMouseButton and e.pressed:
+			if e.button_index == MOUSE_BUTTON_LEFT and zoom > 1.001 and _reset_rect().has_point(e.position):
+				reset_view()
+				return true
+			if e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				var f := 1.15 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.15
+				zoom_at(e.position, pow(f, maxf(e.factor, 1.0)) if e.factor > 0.0 else f)
+				return true
+			if e.button_index == MOUSE_BUTTON_RIGHT or e.button_index == MOUSE_BUTTON_MIDDLE:
+				return true
+		if e is InputEventMouseMotion and (e.button_mask & (MOUSE_BUTTON_MASK_RIGHT | MOUSE_BUTTON_MASK_MIDDLE)) != 0:
+			pan_px(e.relative)
+			return true
+		if e is InputEventMagnifyGesture:
+			zoom_at(e.position, e.factor)
+			return true
+		if e is InputEventPanGesture:
+			pan_px(-e.delta * 8.0)
+			return true
+		if e is InputEventScreenTouch:
+			if e.pressed:
+				if _touches.is_empty():
+					_pinched = false
+				_touches[e.index] = e.position
+			else:
+				_touches.erase(e.index)
+				if _touches.is_empty():
+					_pinched = false
+			if _touches.size() >= 2:
+				# 第二根手指放下：第一根手指剛剛放的點不算，改成捏合
+				if not _pinched:
+					_pinched = true
+					if pick != _pick_before:
+						pick = _pick_before
+						if _on_pick.is_valid():
+							_on_pick.call(pick)
+				_pinch_start()
+			return _pinched
+		if e is InputEventScreenDrag:
+			_touches[e.index] = e.position
+			if _touches.size() >= 2:
+				var ks: Array = _touches.keys()
+				var a: Vector2 = _touches[ks[0]]
+				var b: Vector2 = _touches[ks[1]]
+				var d := a.distance_to(b)
+				var c := (a + b) / 2.0
+				if _pinch_d > 1.0:
+					zoom_at(c, d / _pinch_d)
+				pan_px(c - _pinch_c)
+				_pinch_d = d
+				_pinch_c = c
+				return true
+			return _pinched
+		return false
+
+	func _pinch_start() -> void:
+		var ks: Array = _touches.keys()
+		var a: Vector2 = _touches[ks[0]]
+		var b: Vector2 = _touches[ks[1]]
+		_pinch_d = a.distance_to(b)
+		_pinch_c = (a + b) / 2.0
+
 	# ---------- 繪圖 ----------
 
 	func _draw_geo(font: Font) -> void:
@@ -333,6 +456,22 @@ class CoordPlane extends TowerPlot.Plot:
 			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
 		if picking and has_pick():
 			_draw_pick(font)
+		if picking:
+			_draw_zoom_ui(font)
+
+	## 放大之後：右上角的「還原」按鈕和倍率
+	func _draw_zoom_ui(font: Font) -> void:
+		var fs := UITheme.fs(12)
+		if zoom <= 1.001:
+			return
+		var rc := _reset_rect()
+		draw_style_box(UITheme.boxc(Color(0.08, 0.1, 0.2, 0.92), 8, Color(SnapCol.r, SnapCol.g, SnapCol.b, 0.7), 1, 0), rc)
+		var s2 := "還原"
+		var w2 := font.get_string_size(s2, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(font, rc.position + Vector2((rc.size.x - w2) / 2.0, 18.0), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, SnapCol)
+		var z := "%.1f×" % zoom
+		var wz := font.get_string_size(z, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(font, Vector2(rc.position.x - wz - 8.0, 26.0), z, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.45))
 
 	## 格線、坐標軸（有箭頭）、刻度數字、x、y、O
 	func _draw_grid(font: Font) -> void:

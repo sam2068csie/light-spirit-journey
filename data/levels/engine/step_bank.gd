@@ -51,6 +51,8 @@ static func choice(name: String, q: String, options: Array, correct: int, why: S
 
 ## 數字鍵盤填空：template 裡的 [0]、[1]… 是空格，answers 是每一格的答案（可以寫 "−3/2"、"1/4"）
 ##   mode："ordered" 依序比對（預設）、"set" 順序不限、"perm" 前面幾格順序不限但最後一格要對、"prop" 成比例就算對（例如方程式的係數）
+##   另外可以加（直接寫進回傳的字典）："groups": [[0, 1], …] 這幾格可以互換、"alts": [[…], …] 其他也算對的整組答案、
+##   "paren": true 填了負數照寫的樣子加括號（4 − (−2)），不要自動變成 4 + 2
 static func fill(name: String, q: String, template: String, answers: Array, line: String, nudge: String,
 		tag := "", mode := "ordered") -> Dictionary:
 	return _tag({"kind": "fill", "name": name, "q": q, "template": template, "answers": answers,
@@ -127,6 +129,13 @@ static func _check_step(st: Dictionary, where: String) -> Array:
 				n += 1
 			if n != st.answers.size():
 				out.append(w + " 空格 %d 個，答案卻有 %d 個" % [n, st.answers.size()])
+			for alt in st.get("alts", []):
+				if (alt as Array).size() != n:
+					out.append(w + " alts 的答案數量和空格不一樣")
+			for g in st.get("groups", []):
+				for i in g:
+					if int(i) < 0 or int(i) >= n:
+						out.append(w + " groups 的格子編號超出範圍")
 		"filter":
 			if st.cands.size() != st.keep.size():
 				out.append(w + " cands 和 keep 數量不一樣")
@@ -144,7 +153,7 @@ static func _check_step(st: Dictionary, where: String) -> Array:
 static func fix_roots(x, key := ""):
 	if x is Dictionary:
 		for k in x.keys():
-			if String(k) in ["answers", "cands", "keep", "ans", "tokens"]:
+			if String(k) in ["answers", "alts", "cands", "keep", "ans", "tokens"]:
 				continue
 			x[k] = fix_roots(x[k], String(k))
 	elif x is Array:
