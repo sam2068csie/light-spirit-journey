@@ -62,12 +62,12 @@ const ITEMS := [
 	{"id": "sky", "cat": "aura", "r": 1, "name": "天空藍", "col": Color("7cc8ff"), "desc": "晴天的顏色。"},
 	{"id": "aurora", "cat": "aura", "r": 2, "name": "極光漸層", "desc": "綠、青、紫慢慢變換，像北極的極光。"},
 	{"id": "rainbow", "cat": "aura", "r": 3, "name": "彩虹流光", "desc": "七種顏色輪流流動的傳說光芒。"},
-	{"id": "lemon", "cat": "aura", "r": 0, "name": "檸檬黃", "col": Color("fff07a"), "desc": "酸酸甜甜的黃色光芒。"},
+	{"id": "lemon", "cat": "aura", "r": 0, "name": "檸檬黃", "col": Color("fff200"), "glow": 1.6, "desc": "酸酸甜甜的黃色光芒。"},     # glow：光暈比較濃（不然和預設的淡金色分不出來）
 	{"id": "lavender", "cat": "aura", "r": 0, "name": "薰衣草紫", "col": Color("c3a6ff"), "desc": "淡淡的紫色光芒，讓人靜下心來算題目。"},
 	{"id": "sunset", "cat": "aura", "r": 1, "name": "夕陽橘", "col": Color("ffa36b"), "desc": "放學時天空的顏色。"},
 	{"id": "ocean", "cat": "aura", "r": 0, "name": "海洋藍綠", "col": Color("5fe0d6"), "desc": "像淺海一樣透亮的藍綠色光芒。"},
 	{"id": "ruby", "cat": "aura", "r": 1, "name": "紅寶石", "col": Color("ff6b8a"), "desc": "閃著紅寶石光澤的光芒。"},
-	{"id": "gold_aura", "cat": "aura", "r": 2, "name": "黃金光輝", "desc": "金色光芒一明一暗，身邊飄著金色的光點。"},
+	{"id": "gold_aura", "cat": "aura", "r": 2, "name": "黃金光輝", "glow": 1.4, "desc": "金色光芒一明一暗，身邊飄著金色的光點。"},
 	{"id": "galaxy", "cat": "aura", "r": 3, "name": "銀河星光", "desc": "身邊繞著小星星的深紫光芒。銀河裡大約有 10^{11} 顆星星。"},
 	# 拖尾
 	{"id": "star_trail", "cat": "trail", "r": 0, "name": "小星星", "desc": "飛過的地方會留下閃亮的小星星。"},

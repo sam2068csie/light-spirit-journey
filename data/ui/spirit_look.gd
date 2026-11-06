@@ -37,7 +37,7 @@ static func glow_color(eq: Dictionary, t: float) -> Color:
 		"galaxy":
 			return Color("8f7bff").lerp(Color("5a3fd0"), 0.5 + 0.5 * sin(t * 0.8))
 		"gold_aura":
-			return Color("ffc93a").lerp(Color("fff1a8"), 0.5 + 0.5 * sin(t * 2.0))
+			return Color("ffb21a").lerp(Color("ffd84a"), 0.5 + 0.5 * sin(t * 2.0))     # 一明一暗都要比預設的淡金色濃
 		"":
 			return BASE_GLOW
 	var it := Cos.item(a)
@@ -49,8 +49,9 @@ static func draw_back(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: f
 	var g := glow_color(eq, t)
 	if idle_trail and eq.get("trail", "") != "":
 		_idle_trail(ci, c, r, String(eq.trail), t)
-	UITheme.dot(ci, c, r * 2.45, Color(g.r, g.g, g.b, 0.12))
-	UITheme.dot(ci, c, r * 1.55, Color(g.r, g.g, g.b, 0.30))
+	var ga := float(Cos.item(String(eq.get("aura", ""))).get("glow", 1.0)) if eq.get("aura", "") != "" else 1.0     # 有些光芒的光暈比較濃
+	UITheme.dot(ci, c, r * 2.45, Color(g.r, g.g, g.b, 0.12 * ga))
+	UITheme.dot(ci, c, r * 1.55, Color(g.r, g.g, g.b, 0.30 * ga))
 	if eq.get("aura", "") == "galaxy":
 		for k in 9:
 			var a := t * 0.35 + k * TAU / 9.0
