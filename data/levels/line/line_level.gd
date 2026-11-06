@@ -23,6 +23,11 @@ extends "res://data/levels/engine/step_level.gd"
 ##          "traps": [[{"k": −2}, "調到這裡時的提示"], …], "keep": true（做完把那條線留在方格上）}
 ##         lines 裡也可以放會動的點和線段（拖動點）：{"k": "dot", "p": ["t", "0"], "s": "P"}、{"k": "seg", "a": ["t", "0"], "b": ["1", "1"]}
 ##         eq 的 {…} 可以用 sqrt、abs、pow：例如 "\\ol{PA} + \\ol{PB} ≈ {sqrt(pow(t - 1, 2) + 1) + …}"（不是分數時顯示到小數第二位）
+##   grids 點出所有格子點：{"kind": "grids", "name", "q", "targets": [[x, y], …], "line", "nudge", "tag"}
+##         點一下就判斷：點對的亮起來留著，點錯的熄掉（第一次點錯才扣一顆心）。全部找到就過關
+##   slide 也可以畫會動的圓：lines 裡放 {"k": "circle", "o": ["h", "k"], "r": "r"}（半徑算出來是 0 畫成一點，負的或不是數字就不畫）
+##         "drag": ["h", "k"]：在坐標方格上點一下或拖動，就把這兩個參數（圓心）移到那裡，滑桿跟著動（和多項式的平移一樣）
+##         圓也有看得到的後果：調對了圓規轉一圈把圓畫出來，調錯了圓晃一下就散掉
 ##   region 點選區域：直線把方格切成好幾塊，點一下塗色、再點一次取消，按「確定」
 ##         {"kind": "region", "name", "q", "line", "nudge", "tag",
 ##          "ineq": [[a, b, c, "<="], …]（要塗的地方：每一條 ax + by + c 和 0 的關係，"<" "<=" ">" ">="）,
@@ -91,6 +96,8 @@ func _forge_step() -> void:
 		_build_slide(steps[si])
 	elif si < steps.size() and String(steps[si].kind) == "region":
 		_build_region(steps[si])
+	elif si < steps.size() and String(steps[si].kind) == "grids":
+		_build_grids(steps[si])
 
 
 func _build_grid(st: Dictionary) -> void:
@@ -137,6 +144,9 @@ func _custom_go() -> void:
 		return
 	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "region":
 		_region_submit()
+		return
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "grids":
+		_grids_check_done()
 		return
 	super()
 
@@ -187,6 +197,9 @@ func _custom_reveal(msg: String) -> void:
 			var st: Dictionary = steps[j]
 			if String(st.kind) == "grid":
 				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")))
+			elif String(st.kind) == "grids":
+				for tg in st.targets:
+					pl.add_dot(Vector2(float(tg[0]), float(tg[1])), "", "gold", true)
 			elif String(st.kind) == "region":
 				pl.add_region(st.ineq, String(st.get("c", "lime")), false)
 		pl.region_off()
@@ -198,6 +211,12 @@ func test_answer(st: Dictionary) -> bool:
 	if String(st.kind) == "grid":
 		_pv().plane.pick = Vector2(float(st.target[0]), float(st.target[1]))
 		_refresh_grid()
+		return true
+	if String(st.kind) == "grids":
+		for tg in st.targets:
+			var p := Vector2(float(tg[0]), float(tg[1]))
+			if not grids_found.has(p):
+				grids_found.append(p)
 		return true
 	if String(st.kind) == "region":
 		var pl: CoordPlane = _pv().plane
@@ -220,6 +239,84 @@ func _tip_gap() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 14)
 	rank_box.add_child(gap)
+
+
+# ================= 點出所有格子點（grids） =================
+
+var grids_found: Array = []
+var grids_missed := false
+var grids_tip: Label
+
+
+func _build_grids(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	grids_found = []
+	grids_missed = false
+	_pv().plane.pick_on("", 1.0, _grids_tap, "tap")
+	grids_tip = Label.new()
+	grids_tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	grids_tip.custom_minimum_size = Vector2(300, 0)
+	grids_tip.add_theme_font_size_override("font_size", UITheme.fs(15))
+	grids_tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	rank_box.add_child(grids_tip)
+	_tip_gap()
+	go_btn.visible = false
+	_refresh_grids()
+
+
+func _refresh_grids() -> void:
+	if grids_tip == null or not is_instance_valid(grids_tip) or si >= steps.size():
+		return
+	var n: int = steps[si].targets.size()
+	grids_tip.text = "在坐標方格上點出每一個符合的格子點。\n已經找到 %d 個。" % grids_found.size() if grids_found.size() < n else "全部找到了！"
+
+
+func _grids_tap(p: Vector2) -> void:
+	if si >= steps.size() or String(steps[si].kind) != "grids" or busy:
+		return
+	var st: Dictionary = steps[si]
+	var pl: CoordPlane = _pv().plane
+	pl.pick = Vector2(INF, INF)
+	if grids_found.has(p):
+		return
+	var hit := false
+	for tg in st.targets:
+		if p.is_equal_approx(Vector2(float(tg[0]), float(tg[1]))):
+			hit = true
+	if hit:
+		grids_found.append(p)
+		pl.add_dot(p, "", String(st.get("c", "gold")), true)
+		pl.fx_burst(p)
+		Game.of(self).play("blip", 1.0 + 0.05 * grids_found.size(), -8.0)
+		_refresh_grids()
+		_grids_check_done()
+		return
+	pl.fx_miss(p)
+	var msg := "%s 不符合，燈沒有亮。%s" % [CoordPlane.pt_text(p), String(st.nudge)]
+	if not grids_missed:
+		grids_missed = true
+		_wrong(st, msg)
+	else:
+		Game.of(self).sfx("wrong")
+		_hint(msg, "bad")
+
+
+func _grids_check_done() -> void:
+	var st: Dictionary = steps[si]
+	if grids_found.size() < st.targets.size():
+		_hint("還有 %d 個沒找到。" % (st.targets.size() - grids_found.size()), "info")
+		return
+	Game.of(self).sfx("correct")
+	_pv().plane.pick_off()
+	_clear(rank_box)
+	rank_box.visible = false
+	_step_done(st, "")
 
 
 # ================= 點選區域（region） =================
@@ -325,6 +422,7 @@ var slide_vals := {}
 var slide_moved := false
 var slide_eq: Control
 var slide_val_labels := {}
+var slide_sliders := {}
 
 
 func _build_slide(st: Dictionary) -> void:
@@ -337,6 +435,7 @@ func _build_slide(st: Dictionary) -> void:
 	task_label.text = st.q
 	slide_vals = {}
 	slide_val_labels = {}
+	slide_sliders = {}
 	slide_moved = false
 	for p in st.params:
 		slide_vals[String(p.n)] = float(p.v)
@@ -373,6 +472,7 @@ func _build_slide(st: Dictionary) -> void:
 		vl.custom_minimum_size = Vector2(64, 0)
 		row.add_child(vl)
 		slide_val_labels[nm] = vl
+		slide_sliders[nm] = s
 		s.value_changed.connect(func(v: float):
 			slide_vals[nm] = v
 			slide_moved = true
@@ -382,6 +482,21 @@ func _build_slide(st: Dictionary) -> void:
 	go_btn.text = "看好了" if st.get("free", false) else "確定"
 	_pv().plane.dyn = st.get("lines", [])
 	_pv().plane.dyn_vals = slide_vals
+	if st.has("drag"):
+		var ps: Dictionary = {}
+		for p in st.params:
+			ps[String(p.n)] = p
+		var hx := String(st.drag[0])
+		var hy := String(st.drag[1])
+		_pv().plane.pick_on("", minf(float(ps[hx].step), float(ps[hy].step)), func(w: Vector2):
+			for pair in [[hx, w.x], [hy, w.y]]:
+				var p: Dictionary = ps[pair[0]]
+				var v: float = clampf(snappedf(float(pair[1]), float(p.step)), float(p.min), float(p.max))
+				slide_vals[pair[0]] = v
+				if slide_sliders.has(pair[0]) and is_instance_valid(slide_sliders[pair[0]]):
+					(slide_sliders[pair[0]] as HSlider).set_value_no_signal(v)
+			slide_moved = true
+			_refresh_slide(), "drag")
 	_refresh_slide()
 
 
@@ -430,6 +545,8 @@ func _slide_submit() -> void:
 			continue
 		if String(sh.k) == "line":
 			pl.fx_fall(sh)
+		elif String(sh.k) == "circle":
+			pl.fx_wobble(sh)
 		elif String(sh.k) == "dot":
 			pl.fx_miss(pl._v(sh.p))
 	_wrong(st, msg)
@@ -448,9 +565,15 @@ func _slide_done(st: Dictionary) -> void:
 				pl.kept.append(sh)
 			if not st.get("free", false):
 				pl.fx_lay(sh, keep)
+		elif String(sh.k) == "circle":
+			if not st.get("free", false):
+				pl.fx_sweep(sh, keep)
+			elif keep:
+				pl.kept.append(sh)
 		elif String(sh.k) == "dot" and not st.get("free", false):
 			pl.fx_burst(pl._v(sh.p))
 	pl.dyn = []
+	pl.pick_off()
 	go_btn.visible = false
 	_clear(rank_box)
 	rank_box.visible = false
@@ -479,7 +602,7 @@ class PlaneView extends ForgeView:
 	## 這一步要不要大張的坐標方格（點選格子點、全部做完）
 	func _want_big() -> bool:
 		var sts: Array = rd.get("steps", [])
-		return done or step >= sts.size() or String(sts[step].get("kind", "")) in ["grid", "slide", "region"]
+		return done or step >= sts.size() or String(sts[step].get("kind", "")) in ["grid", "slide", "region", "grids"]
 
 	## 左下角留給光靈和對話框
 	func _plane_rect() -> Rect2:
@@ -547,6 +670,7 @@ class CoordPlane extends TowerPlot.Plot:
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
 	var picking := false
 	var pick_label := "P"
+	var pick_mode := "point"             # point：放一個點，tap：點一下就判斷（點出所有格子點），drag：拖動參數（圓心）
 	var snap := 1.0
 	var _on_pick := Callable()
 
@@ -579,8 +703,9 @@ class CoordPlane extends TowerPlot.Plot:
 		pick_off()
 		reset_view()
 
-	func pick_on(label: String, sn: float, cb: Callable) -> void:
+	func pick_on(label: String, sn: float, cb: Callable, mode := "point") -> void:
 		picking = true
+		pick_mode = mode
 		pick_label = label
 		snap = sn if sn > 0.0 else 1.0
 		pick = Vector2(INF, INF)
@@ -791,11 +916,11 @@ class CoordPlane extends TowerPlot.Plot:
 	func has_pick() -> bool:
 		return is_finite(pick.x) and is_finite(pick.y)
 
-	func add_dot(p: Vector2, s: String, c := "gold") -> void:
+	func add_dot(p: Vector2, s: String, c := "gold", bare := false) -> void:
 		for d in dots:
 			if (d.p as Vector2).is_equal_approx(p) and String(d.s) == s:
 				return
-		dots.append({"p": p, "s": s, "c": c})
+		dots.append({"p": p, "s": s, "c": c, "bare": bare})
 		queue_redraw()
 
 	## 含參數的直線 → 算好係數的 line 圖層（a、b 都是 0 時回傳空的）
@@ -809,6 +934,18 @@ class CoordPlane extends TowerPlot.Plot:
 			out["ineq"] = iq
 			out.erase("at")
 			return out
+		if kk == "circle":
+			var o := [calc(str(ln.o[0]), vals), calc(str(ln.o[1]), vals)]
+			var rr := calc(str(ln.r), vals)
+			if is_nan(rr) or rr < -1e-9:
+				return {}
+			if rr < 1e-6:
+				return {"k": "dot", "p": o, "c": String(ln.get("c", "cyan")), "s": ""}
+			var oc := ln.duplicate()
+			oc["o"] = o
+			oc["r"] = rr
+			oc.erase("at")
+			return oc
 		if kk == "dot" or kk == "seg":
 			var out := ln.duplicate()
 			for key in ["p", "a", "b"]:
@@ -977,6 +1114,8 @@ class CoordPlane extends TowerPlot.Plot:
 		if press:
 			_pick_before = pick
 		var drag: bool = e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
+		if pick_mode == "tap":
+			drag = false
 		if not (press or drag):
 			return
 		var w := from_px(e.position)
@@ -984,7 +1123,7 @@ class CoordPlane extends TowerPlot.Plot:
 		var p := Vector2(snappedf(w.x, snap), snappedf(w.y, snap))
 		p.x = clampf(p.x, ceilf(wr.position.x / snap) * snap, floorf(wr.end.x / snap) * snap)
 		p.y = clampf(p.y, ceilf(wr.position.y / snap) * snap, floorf(wr.end.y / snap) * snap)
-		if not has_pick() or not p.is_equal_approx(pick):
+		if pick_mode == "tap" or not has_pick() or not p.is_equal_approx(pick):
 			pick = p
 			queue_redraw()
 			if _on_pick.is_valid():
@@ -1093,8 +1232,8 @@ class CoordPlane extends TowerPlot.Plot:
 			if not sh.is_empty():
 				_shape(sh, Vector2.ZERO, 0.0, font)
 		for d in dots:
-			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
-		if picking and has_pick():
+			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "" if d.get("bare", false) else "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
+		if picking and has_pick() and pick_mode == "point":
 			_draw_pick(font)
 		_draw_fx()
 		if picking:
@@ -1111,6 +1250,14 @@ class CoordPlane extends TowerPlot.Plot:
 	## 鋪木板：沿著直線一塊一塊鋪上去（stay：鋪好的木板留著）
 	func fx_lay(sh: Dictionary, stay: bool) -> void:
 		fx.append({"k": "lay", "t0": t, "sh": sh, "stay": stay})
+
+	## 圓規畫圓：沿著圓轉一圈畫出來（stay：畫好的圓留著）
+	func fx_sweep(sh: Dictionary, stay: bool) -> void:
+		fx.append({"k": "sweep", "t0": t, "sh": sh, "stay": stay})
+
+	## 圓晃一下就散掉
+	func fx_wobble(sh: Dictionary) -> void:
+		fx.append({"k": "wobble", "t0": t, "sh": sh})
 
 	## 斷掉：直線閃紅，木板掉進水裡
 	func fx_fall(sh: Dictionary) -> void:
@@ -1176,6 +1323,42 @@ class CoordPlane extends TowerPlot.Plot:
 					UITheme.dot(self, sp, 10.0, Color(rc.r, rc.g, rc.b, 0.25 * rc.a))
 					draw_line(sp + Vector2(-6, -6), sp + Vector2(6, 6), rc, 2.5, true)
 					draw_line(sp + Vector2(-6, 6), sp + Vector2(6, -6), rc, 2.5, true)
+				"sweep":
+					var oc := _to(_v(e.sh.o))
+					var rp := float(e.sh.r) * _unit()
+					var k := clampf(age / 1.0, 0.0, 1.0)
+					var col := _col(String(e.sh.get("c", "cyan")))
+					var fade := 1.0 if e.stay else clampf(1.0 - (age - 1.4) / 0.8, 0.0, 1.0)
+					if fade <= 0.0:
+						continue
+					var n := maxi(8, int(96 * k))
+					var pts := PackedVector2Array()
+					for i in n + 1:
+						var a := -PI / 2.0 + TAU * k * i / n
+						pts.append(oc + Vector2(cos(a), sin(a)) * rp)
+					draw_polyline(pts, Color(1.0, 0.86, 0.42, 0.25 * fade), 8.0, true)
+					draw_polyline(pts, Color(col.r, col.g, col.b, 0.95 * fade), 2.6, true)
+					if k < 1.0:
+						# 圓規：針插在圓心，筆尖跟著畫
+						var tip := pts[pts.size() - 1]
+						draw_line(oc, tip, Color(1, 1, 1, 0.35), 1.5, true)
+						UITheme.dot(self, oc, 4.0, Color(1, 1, 1, 0.8))
+						UITheme.dot(self, tip, 9.0, Color(1.0, 0.86, 0.42, 0.4))
+						UITheme.dot(self, tip, 4.0, Color(1.0, 0.95, 0.7, 1.0))
+					elif age < 1.6:
+						draw_arc(oc, rp, 0.0, TAU, 96, Color(1.0, 0.95, 0.7, 0.6 * (1.0 - (age - 1.0) / 0.6)), 5.0, true)
+				"wobble":
+					if age > 1.1:
+						continue
+					var oc := _to(_v(e.sh.o))
+					var rp := float(e.sh.r) * _unit()
+					var fl := clampf(1.0 - age / 1.1, 0.0, 1.0)
+					var pts := PackedVector2Array()
+					for i in 97:
+						var a := TAU * i / 96.0
+						var jr := rp * (1.0 + 0.06 * sin(a * 7.0 + age * 30.0) * fl) + 14.0 * age
+						pts.append(oc + Vector2(cos(a), sin(a)) * jr)
+					draw_polyline(pts, Color(1.0, 0.35, 0.4, 0.8 * fl), 2.5, true)
 				"lay":
 					var seg := _visible_seg(e.sh)
 					if seg.is_empty():
@@ -1223,7 +1406,7 @@ class CoordPlane extends TowerPlot.Plot:
 		# 鋪好留著的木板永遠保留，其他播完就丟掉
 		var still := []
 		for e in fx:
-			if String(e.k) == "lay" and e.stay:
+			if (String(e.k) == "lay" or String(e.k) == "sweep") and e.stay:
 				still.append(e)
 			elif keep.has(e):
 				still.append(e)
@@ -1247,7 +1430,7 @@ class CoordPlane extends TowerPlot.Plot:
 	func _draw_grid(font: Font) -> void:
 		var wr := _world()
 		var u := _unit()
-		var tick := 1 if u >= 30.0 else (2 if u >= 15.0 else 5)
+		var tick := 1 if u >= 30.0 else (2 if u >= 15.0 else (5 if u >= 7.0 else 10))
 		var fs := UITheme.fs(11)
 		for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x)) + 1):
 			var a := _to(Vector2(ix, wr.position.y))

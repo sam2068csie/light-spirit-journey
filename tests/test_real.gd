@@ -229,6 +229,13 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 						tv = float(p0.v) - float(p0.step) * 2.0
 					await slide_to(String(p0.n), tv)
 			else:
+				# 圓規：先在方格上點一下移動圓心（和學生一樣），再用 ‹ › 調剩下的
+				if st.has("drag") and not wrong:
+					var gx := float(st.goal.get(String(st.drag[0]), 0.0))
+					var gy := float(st.goal.get(String(st.drag[1]), 0.0))
+					await click_plane(Vector2(gx, gy))
+					if not is_equal_approx(float(lv.slide_vals.get(String(st.drag[0]), INF)), gx) or not is_equal_approx(float(lv.slide_vals.get(String(st.drag[1]), INF)), gy):
+						_issue("%s：在方格上點圓心沒有移過去（%s）" % [_where(), lv.slide_vals])
 				for k in st.goal.keys():
 					var v := float(st.goal[k])
 					if wrong:
@@ -239,6 +246,24 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					await slide_to(k, v)
 			await snap(String(lv.r.id) + "_調好")
 			await go()
+		"grids":
+			# 點出所有格子點：答錯時先點一個不在答案裡的格子點
+			if wrong:
+				var bad := Vector2(1, 1)
+				for tg in st.targets:
+					if Vector2(float(tg[0]), float(tg[1])).is_equal_approx(bad):
+						bad = Vector2(1, 2)
+				await click_plane(bad)
+				await snap(String(lv.r.id) + "_點錯")
+			else:
+				for tg in st.targets:
+					var p := Vector2(float(tg[0]), float(tg[1]))
+					if lv.grids_found.has(p):
+						continue
+					await click_plane(p)
+					if not lv.grids_found.has(p) and lv.si < lv.steps.size() and String(lv.steps[lv.si].kind) == "grids":
+						_issue("%s：點格子點 %s 沒有亮" % [_where(), p])
+				await snap(String(lv.r.id) + "_點完")
 		"region":
 			# 點選區域：點每一塊要塗的地方的代表點（答錯時點一塊不該塗的）
 			var pl = lv._pv().plane

@@ -53,6 +53,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_moonlake(ci, sz, t)
 		"paddy":
 			_paddy(ci, sz, t)
+		"workshop":
+			_workshop(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -944,3 +946,63 @@ static func _paddy(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var al := 0.15 + 0.15 * sin(t * 2.1 + i * 1.9)
 		UITheme.dot(ci, p, 6.0, Color(1.0, 0.85, 0.4, al * 0.35))
 		UITheme.dot(ci, p, 1.6, Color(1.0, 0.92, 0.6, al * 2.0))
+
+
+## C5 圓規工坊：月光照進工坊，木頭地板上一支大圓規慢慢轉，畫出發光的圓；牆上掛著大大小小的鐵環
+static func _workshop(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var fl := hh * 0.5
+	_grad(ci, sz, Color("1d1830"), Color("0d0b18"))
+	# 牆：一扇圓窗透進月光
+	var win := Vector2(w * 0.8, hh * 0.24)
+	UITheme.dot(ci, win, 70.0, Color(0.7, 0.75, 1.0, 0.06))
+	ci.draw_arc(win, 34.0, 0.0, TAU, 48, Color(0.55, 0.5, 0.7, 0.3), 3.0, true)
+	UITheme.dot(ci, win, 31.0, Color(0.6, 0.7, 1.0, 0.06))
+	ci.draw_line(win - Vector2(31, 0), win + Vector2(31, 0), Color(0.55, 0.5, 0.7, 0.25), 2.0)
+	ci.draw_line(win - Vector2(0, 31), win + Vector2(0, 31), Color(0.55, 0.5, 0.7, 0.25), 2.0)
+	# 月光照到地板上的光斑
+	ci.draw_colored_polygon(PackedVector2Array([win + Vector2(-20, 20), win + Vector2(20, 20), Vector2(w * 0.62, hh), Vector2(w * 0.36, hh)]),
+		Color(0.6, 0.7, 1.0, 0.035))
+	# 牆上掛的鐵環
+	for i in 4:
+		var c := Vector2(w * (0.1 + 0.11 * i), hh * (0.18 + 0.05 * (i % 2)))
+		var r := 12.0 + 7.0 * i
+		ci.draw_line(c - Vector2(0, r + 10.0), c - Vector2(0, r), Color(0.4, 0.38, 0.5, 0.5), 1.2)
+		ci.draw_arc(c, r, 0.0, TAU, 40, Color(0.75, 0.6, 0.85, 0.16), 2.0, true)
+	# 地板：木板（透視）
+	ci.draw_rect(Rect2(0, fl, w, hh - fl), Color(0.13, 0.1, 0.12, 0.95))
+	ci.draw_line(Vector2(0, fl), Vector2(w, fl), Color(0.7, 0.6, 0.85, 0.25), 1.5)
+	var vp := Vector2(w * 0.5, fl - 120.0)
+	for i in 13:
+		var x := w * (i - 1.0) / 10.0
+		ci.draw_line(vp.lerp(Vector2(x, hh), (fl - vp.y) / (hh - vp.y)), Vector2(x, hh), Color(0.3, 0.22, 0.2, 0.6), 1.0)
+	for j in 5:
+		var y := fl + (hh - fl) * pow((j + 1) / 5.0, 1.6)
+		ci.draw_line(Vector2(0, y), Vector2(w, y), Color(0.3, 0.22, 0.2, 0.4), 1.0)
+	# 大圓規在地上畫圓（橢圓：從斜上方看）
+	var cc := Vector2(w * 0.5, fl + (hh - fl) * 0.55)
+	var rx := w * 0.22
+	var ry := (hh - fl) * 0.22
+	var ang := fposmod(t * 0.5, TAU)
+	var pts := PackedVector2Array()
+	for i in 65:
+		var a := ang - TAU * i / 64.0 * 0.85
+		pts.append(cc + Vector2(cos(a) * rx, sin(a) * ry))
+	for i in pts.size() - 1:
+		var al := 0.5 * (1.0 - float(i) / pts.size())
+		ci.draw_line(pts[i], pts[i + 1], Color(0.8, 0.65, 1.0, al), 2.5, true)
+	var pen := cc + Vector2(cos(ang) * rx, sin(ang) * ry)
+	var hinge := cc + Vector2(cos(ang) * rx * 0.5, -90.0)
+	ci.draw_line(cc, hinge, Color(0.8, 0.72, 0.5, 0.75), 3.0, true)
+	ci.draw_line(hinge, pen, Color(0.8, 0.72, 0.5, 0.75), 3.0, true)
+	UITheme.dot(ci, hinge, 5.0, Color(0.9, 0.8, 0.55, 0.9))
+	UITheme.dot(ci, cc, 3.0, Color(1, 1, 1, 0.7))
+	UITheme.dot(ci, pen, 14.0, Color(0.85, 0.7, 1.0, 0.18))
+	UITheme.dot(ci, pen, 3.5, Color(0.95, 0.9, 1.0, 0.95))
+	# 飄著的木屑光點
+	for i in 14:
+		var p := Vector2(fposmod(h(i, 212) * w + t * (3.0 + 4.0 * h(i, 213)), w), (0.1 + 0.6 * h(i, 214)) * hh + 6.0 * sin(t * 0.8 + i))
+		var al := 0.12 + 0.12 * sin(t * 1.5 + i * 2.1)
+		UITheme.dot(ci, p, 5.0, Color(0.85, 0.75, 1.0, al * 0.3))
+		UITheme.dot(ci, p, 1.5, Color(0.95, 0.9, 1.0, al * 2.0))
