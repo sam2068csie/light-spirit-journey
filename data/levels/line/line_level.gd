@@ -14,6 +14,13 @@ extends "res://data/levels/engine/step_level.gd"
 ##         答對之後那一點會留在方格上
 ##         點選的時候可以縮放：手機雙指捏合（兩指一起移動 = 平移），電腦用滑鼠滾輪（右鍵或中鍵拖曳 = 平移），
 ##         放大之後右上角有「還原」
+##   slide 滑桿調參數：拉動滑桿，坐標方格上的直線即時跟著動
+##         {"kind": "slide", "name", "q", "line", "nudge", "tag",
+##          "params": [{"n": "m", "min": −3, "max": 3, "step": 0.5, "v": 1}, …],
+##          "lines": [{"abc": ["m", "-1", "k"], "c": "cyan", "s": "L"}, …]（ax + by + c = 0，係數是含參數的算式）,
+##          "eq": "y = {m}x + {k}"（右邊顯示目前的方程式，{…} 裡是算式；可省略）,
+##          "goal": {"m": 0.5, "k": −2}（調到這裡才算對）或 "free": true（自由觀察，拉過就可以按「看好了」）,
+##          "traps": [[{"k": −2}, "調到這裡時的提示"], …], "keep": true（做完把那條線留在方格上）}
 ##
 ## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
 
@@ -60,6 +67,8 @@ func _forge_step() -> void:
 	super()
 	if si < steps.size() and String(steps[si].kind) == "grid":
 		_build_grid(steps[si])
+	elif si < steps.size() and String(steps[si].kind) == "slide":
+		_build_slide(steps[si])
 
 
 func _build_grid(st: Dictionary) -> void:
@@ -100,6 +109,9 @@ func _custom_go() -> void:
 	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "grid":
 		_grid_submit()
 		return
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "slide":
+		_slide_submit()
+		return
 	super()
 
 
@@ -132,6 +144,7 @@ func _custom_reveal(msg: String) -> void:
 	if fview != null and r.type == "forge" and _pv().plane != null:
 		var pl: CoordPlane = _pv().plane
 		pl.pick_off()
+		pl.dyn = []
 		for j in range(si, steps.size()):
 			var st: Dictionary = steps[j]
 			if String(st.kind) == "grid":
@@ -145,7 +158,135 @@ func test_answer(st: Dictionary) -> bool:
 		_pv().plane.pick = Vector2(float(st.target[0]), float(st.target[1]))
 		_refresh_grid()
 		return true
+	if String(st.kind) == "slide":
+		for k in st.get("goal", {}).keys():
+			slide_vals[k] = float(st.goal[k])
+		slide_moved = true
+		_refresh_slide()
+		return true
 	return false
+
+
+# ================= 滑桿調參數（slide） =================
+
+var slide_vals := {}
+var slide_moved := false
+var slide_eq: Control
+var slide_val_labels := {}
+
+
+func _build_slide(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	slide_vals = {}
+	slide_val_labels = {}
+	slide_moved = false
+	for p in st.params:
+		slide_vals[String(p.n)] = float(p.v)
+	var col := step_color()
+	if st.has("eq"):
+		slide_eq = _wrap_label(18, UITheme.ACCENT)
+		slide_eq.max_width = 320
+		rank_box.add_child(slide_eq)
+	else:
+		slide_eq = null
+	for p in st.params:
+		var nm := String(p.n)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		rank_box.add_child(row)
+		var nl = _wrap_label(18, col)
+		nl.max_width = 28
+		nl.text = nm
+		nl.custom_minimum_size = Vector2(22, 0)
+		row.add_child(nl)
+		var s := UITheme.touch_slider()
+		s.min_value = float(p.min)
+		s.max_value = float(p.max)
+		s.step = float(p.step)
+		s.value = float(p.v)
+		s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		s.custom_minimum_size = Vector2(0, 28)
+		UITheme.tint_slider(s, col)
+		row.add_child(s)
+		UITheme.add_step_buttons(s, col)
+		var vl = _wrap_label(17, col)
+		vl.max_width = 64
+		vl.custom_minimum_size = Vector2(64, 0)
+		row.add_child(vl)
+		slide_val_labels[nm] = vl
+		s.value_changed.connect(func(v: float):
+			slide_vals[nm] = v
+			slide_moved = true
+			_refresh_slide())
+	go_btn.visible = true
+	go_btn.disabled = false
+	go_btn.text = "看好了" if st.get("free", false) else "確定"
+	_pv().plane.dyn = st.get("lines", [])
+	_pv().plane.dyn_vals = slide_vals
+	_refresh_slide()
+
+
+func _refresh_slide() -> void:
+	if si >= steps.size():
+		return
+	var st: Dictionary = steps[si]
+	for nm in slide_val_labels.keys():
+		var vl = slide_val_labels[nm]
+		if is_instance_valid(vl):
+			vl.text = "= " + CoordPlane.frac(float(slide_vals.get(nm, 0.0)))
+	if slide_eq != null and is_instance_valid(slide_eq):
+		slide_eq.text = CoordPlane.fill_eq(String(st.eq), slide_vals)
+	_pv().plane.dyn_vals = slide_vals
+	_pv().plane.queue_redraw()
+
+
+func _slide_submit() -> void:
+	var st: Dictionary = steps[si]
+	if st.get("free", false):
+		if not slide_moved:
+			_hint("先拉動滑桿，看看直線怎麼動。", "info")
+			return
+		_slide_done(st)
+		return
+	var goal: Dictionary = st.get("goal", {})
+	var ok := true
+	for k in goal.keys():
+		if absf(float(slide_vals.get(k, INF)) - float(goal[k])) > 1e-6:
+			ok = false
+	if ok:
+		_slide_done(st)
+		return
+	var msg := "還不對。提示：" + String(st.nudge)
+	for tr in st.get("traps", []):
+		var hit := true
+		for k in (tr[0] as Dictionary).keys():
+			if absf(float(slide_vals.get(k, INF)) - float(tr[0][k])) > 1e-6:
+				hit = false
+		if hit:
+			msg = String(tr[1])
+	_wrong(st, msg)
+
+
+func _slide_done(st: Dictionary) -> void:
+	Game.of(self).sfx("correct")
+	var pl: CoordPlane = _pv().plane
+	if st.get("keep", false):
+		for ln in st.get("lines", []):
+			var sh := pl.eval_line(ln, slide_vals)
+			if not sh.is_empty():
+				pl.kept.append(sh)
+	pl.dyn = []
+	go_btn.visible = false
+	_clear(rank_box)
+	rank_box.visible = false
+	_step_done(st, "")
 
 
 # ================= 畫面：推導紀錄＋坐標方格 =================
@@ -170,7 +311,7 @@ class PlaneView extends ForgeView:
 	## 這一步要不要大張的坐標方格（點選格子點、全部做完）
 	func _want_big() -> bool:
 		var sts: Array = rd.get("steps", [])
-		return done or step >= sts.size() or String(sts[step].get("kind", "")) == "grid"
+		return done or step >= sts.size() or String(sts[step].get("kind", "")) in ["grid", "slide"]
 
 	## 左下角留給光靈和對話框
 	func _plane_rect() -> Rect2:
@@ -217,6 +358,9 @@ class CoordPlane extends TowerPlot.Plot:
 	const SnapCol := Color(1.0, 0.86, 0.42)
 
 	var dots: Array = []                 # 答對之後留下的點：{p, s, c}
+	var dyn: Array = []                  # 滑桿步驟：跟著參數動的直線 {"abc": [算式…], "c", "s"}
+	var dyn_vals := {}
+	var kept: Array = []                 # 滑桿步驟做完留下來的直線（已經算好的 line 圖層）
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
 	var picking := false
 	var pick_label := "P"
@@ -241,6 +385,8 @@ class CoordPlane extends TowerPlot.Plot:
 			data["x"] = [-5, 5]
 			data["y"] = [-5, 5]
 		dots = []
+		dyn = []
+		kept = []
 		_cache = {}
 		stage = 0
 		pick_off()
@@ -303,6 +449,80 @@ class CoordPlane extends TowerPlot.Plot:
 				return
 		dots.append({"p": p, "s": s, "c": c})
 		queue_redraw()
+
+	## 含參數的直線 → 算好係數的 line 圖層（a、b 都是 0 時回傳空的）
+	func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
+		var abc := []
+		for e in ln.abc:
+			abc.append(calc(String(e), vals))
+		if absf(abc[0]) < 1e-9 and absf(abc[1]) < 1e-9:
+			return {}
+		var sh := {"k": "line", "abc": abc, "c": String(ln.get("c", "cyan")), "s": String(ln.get("s", "")), "w": float(ln.get("w", 2.5))}
+		if ln.has("dash"):
+			sh["dash"] = ln.dash
+		return sh
+
+	## 算式（可以用參數名稱）→ 數值
+	static func calc(e: String, vals: Dictionary) -> float:
+		var ex := Expression.new()
+		var names := PackedStringArray(vals.keys())
+		if ex.parse(e, names) != OK:
+			return 0.0
+		var v = ex.execute(vals.values())
+		return float(v) if not ex.has_execute_failed() and (v is float or v is int) else 0.0
+
+	## 分數的寫法：0.5 → \\frac{1}{2}、−1.5 → −\\frac{3}{2}
+	static func frac(v: float) -> String:
+		for d in range(1, 13):
+			var n := v * d
+			if absf(n - roundf(n)) < 1e-6:
+				var ni := int(roundf(n))
+				if d == 1:
+					return num(ni)
+				return ("−" if ni < 0 else "") + "\\frac{%d}{%d}" % [absi(ni), d]
+		return num(v)
+
+	## "y = {m}x + {k}" 把 {…} 換成數值：「+ −2」寫成「− 2」，x、y 前面的係數 1 不寫
+	static func fill_eq(tpl: String, vals: Dictionary) -> String:
+		var out := ""
+		var i := 0
+		while i < tpl.length():
+			var ch := tpl[i]
+			if ch != "{":
+				out += ch
+				i += 1
+				continue
+			var j := tpl.find("}", i)
+			var v := calc(tpl.substr(i + 1, j - i - 1), vals)
+			i = j + 1
+			var nxt := tpl[i] if i < tpl.length() else ""
+			var coef := nxt == "x" or nxt == "y"
+			if out.ends_with("+ ") and v < -1e-9:
+				out = out.substr(0, out.length() - 2) + "− "
+				v = -v
+			elif out.ends_with("− ") and v < -1e-9:
+				out = out.substr(0, out.length() - 2) + "+ "
+				v = -v
+			# 係數是 0：整項不寫（例如 0y、+ 0）
+			if absf(v) < 1e-9 and (coef or out.ends_with("+ ") or out.ends_with("− ")):
+				if out.ends_with("+ ") or out.ends_with("− "):
+					out = out.substr(0, out.length() - 2).rstrip(" ")
+				if coef:
+					i += 1
+				continue
+			if coef and absf(v - 1.0) < 1e-9:
+				continue
+			if coef and absf(v + 1.0) < 1e-9:
+				out += "−"
+				continue
+			out += frac(v)
+		# 第一項被省掉時，開頭的「+ 」「− 」整理一下
+		var re := RegEx.new()
+		re.compile("(^|：|= |\\n) ?\\+ ")
+		out = re.sub(out, "$1", true)
+		re.compile("(^|：|= |\\n) ?− ")
+		out = re.sub(out, "$1−", true)
+		return out
 
 	## (3, −2) 這種寫法（負號用 −）
 	static func pt_text(p: Vector2) -> String:
@@ -452,6 +672,12 @@ class CoordPlane extends TowerPlot.Plot:
 	func _draw_geo(font: Font) -> void:
 		_draw_grid(font)
 		super(font)
+		for ln in kept:
+			_shape(ln, Vector2.ZERO, 0.0, font)
+		for ln in dyn:
+			var sh := eval_line(ln, dyn_vals)
+			if not sh.is_empty():
+				_shape(sh, Vector2.ZERO, 0.0, font)
 		for d in dots:
 			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
 		if picking and has_pick():

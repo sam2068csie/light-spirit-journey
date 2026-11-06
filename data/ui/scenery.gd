@@ -47,6 +47,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_lighthouse(ci, sz, t)
 		"lakeside":
 			_lakeside(ci, sz, t)
+		"pier":
+			_pier(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -755,3 +757,72 @@ static func _lakeside(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var a := 0.14 + 0.12 * sin(t * 1.3 + i * 2.1)
 		UITheme.dot(ci, p, 5.0, Color(0.6, 0.9, 1.0, a * 0.3))
 		UITheme.dot(ci, p, 1.5, Color(0.8, 0.95, 1.0, a * 2.0))
+
+
+## C2 直線棧橋：黃昏的湖面，兩座直直的木棧橋往遠方延伸、交在一起，橋柱上掛著燈
+static func _pier(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var wl := hh * 0.56
+	_grad(ci, sz, Color("2a2240"), Color("120f22"))
+	_stars(ci, sz, t, 14, 0.32, Color(1.0, 0.92, 0.85), 181)
+	# 地平線上的夕陽餘暉
+	var gc := Color(1.0, 0.62, 0.35)
+	ci.draw_polygon(PackedVector2Array([Vector2(0, wl * 0.35), Vector2(w, wl * 0.35), Vector2(w, wl), Vector2(0, wl)]),
+		PackedColorArray([Color(gc, 0.0), Color(gc, 0.0), Color(gc, 0.24), Color(gc, 0.24)]))
+	UITheme.dot(ci, Vector2(w * 0.24, wl - 4.0), 60.0, Color(1.0, 0.7, 0.4, 0.07))
+	UITheme.dot(ci, Vector2(w * 0.24, wl - 4.0), 16.0, Color(1.0, 0.8, 0.55, 0.35))
+	_ridge(ci, Vector2(w, wl + 2.0), wl - 16.0, 12.0, 0.013, 2.1, Color(0.13, 0.1, 0.2, 0.95))
+	# 湖面
+	ci.draw_rect(Rect2(0, wl, w, hh - wl), Color(0.08, 0.07, 0.16, 0.9))
+	ci.draw_line(Vector2(0, wl), Vector2(w, wl), Color(1.0, 0.75, 0.5, 0.3), 1.5)
+	# 夕陽的倒影：水面上一條條晃動的光
+	for j in 7:
+		var yy := wl + 6.0 + j * 7.0
+		var half := 40.0 - j * 4.0 + 6.0 * sin(t * 1.3 + j)
+		ci.draw_line(Vector2(w * 0.24 - half, yy), Vector2(w * 0.24 + half, yy), Color(1.0, 0.72, 0.42, 0.16 - j * 0.015), 2.0)
+	# 兩座棧橋：從近處（畫面下方）筆直地延伸到遠方，透視收窄
+	var piers := [[Vector2(w * 0.86, hh + 10.0), Vector2(w * 0.46, wl + 4.0), 34.0], [Vector2(w * 0.18, hh + 10.0), Vector2(w * 0.62, wl + 4.0), 30.0]]
+	for pr in piers:
+		var a: Vector2 = pr[0]
+		var b: Vector2 = pr[1]
+		var wid: float = pr[2]
+		var d := (b - a).normalized()
+		var nrm := Vector2(-d.y, d.x)
+		var a1 := a + nrm * wid
+		var a2 := a - nrm * wid
+		var b1 := b + nrm * wid * 0.12
+		var b2 := b - nrm * wid * 0.12
+		ci.draw_colored_polygon(PackedVector2Array([a1, b1, b2, a2]), Color(0.32, 0.22, 0.16, 0.85))
+		# 木板的縫：越遠越密
+		for k in 14:
+			var u := 1.0 - pow(1.0 - k / 14.0, 1.8)
+			var p1 := a1.lerp(b1, u)
+			var p2 := a2.lerp(b2, u)
+			ci.draw_line(p1, p2, Color(0.12, 0.08, 0.06, 0.6), 1.0)
+		ci.draw_line(a1, b1, Color(0.55, 0.4, 0.28, 0.7), 1.5)
+		ci.draw_line(a2, b2, Color(0.55, 0.4, 0.28, 0.7), 1.5)
+		# 橋柱和燈
+		for k in 4:
+			var u := 0.12 + 0.26 * k
+			var base := a1.lerp(b1, u)
+			var ht := 40.0 * (1.0 - u * 0.85)
+			var top := base - Vector2(0, ht)
+			ci.draw_line(base, top, Color(0.45, 0.32, 0.22, 0.9), maxf(1.0, 3.0 * (1.0 - u)))
+			var fl := 0.85 + 0.15 * sin(t * 3.0 + k * 1.7 + a.x)
+			UITheme.dot(ci, top, 18.0 * (1.0 - u * 0.7) * fl, Color(1.0, 0.75, 0.4, 0.07))
+			UITheme.dot(ci, top, 3.0 * (1.0 - u * 0.5), Color(1.0, 0.85, 0.55, 0.8 * fl))
+	# 水面的細波紋
+	for j in 4:
+		var yy := wl + 30.0 + j * 18.0
+		var off := fmod(t * (8.0 + j * 3.0) + j * 53.0, 140.0)
+		var xx := -140.0 + off
+		while xx < w:
+			ci.draw_line(Vector2(xx, yy), Vector2(xx + 30.0, yy), Color(1.0, 0.8, 0.6, 0.06), 1.2)
+			xx += 140.0
+	# 慢慢飄的螢火
+	for i in 12:
+		var p := Vector2(fposmod(h(i, 182) * w + t * (3.0 + 5.0 * h(i, 183)), w), (0.12 + 0.4 * h(i, 184)) * hh + 6.0 * sin(t * 0.8 + i))
+		var al := 0.14 + 0.12 * sin(t * 1.4 + i * 2.3)
+		UITheme.dot(ci, p, 5.0, Color(1.0, 0.85, 0.5, al * 0.3))
+		UITheme.dot(ci, p, 1.5, Color(1.0, 0.9, 0.7, al * 2.0))

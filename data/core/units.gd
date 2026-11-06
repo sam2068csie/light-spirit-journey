@@ -27,7 +27,7 @@ const UNITS := [
 	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",
 	 "levels": [
 		{"id": "C1", "name": "坐標燈標", "topic": "坐標與斜率", "file": "level_line1_coord.gd", "bank": "line1_bank.gd", "color": UITheme.CYAN},
-		{"id": "C2", "name": "直線棧橋", "topic": "直線方程式", "file": "", "bank": "", "color": UITheme.GOLD},
+		{"id": "C2", "name": "直線棧橋", "topic": "直線方程式", "file": "level_line2_pier.gd", "bank": "line2_bank.gd", "color": UITheme.GOLD},
 		{"id": "C3", "name": "鏡面渡口", "topic": "對稱與距離", "file": "", "bank": "", "color": UITheme.LIME},
 		{"id": "C4", "name": "分光稻田", "topic": "二元一次不等式", "file": "", "bank": "", "color": UITheme.ORANGE},
 		{"id": "C5", "name": "圓規工坊", "topic": "圓方程式與求圓", "file": "", "bank": "", "color": UITheme.VIOLET},
