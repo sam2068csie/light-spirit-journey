@@ -49,6 +49,9 @@ func setup() -> void:
 	g.story_seen = ["world/g10", "world/g11"]
 	# 今天的連續簽到視窗當作已經跳過（全新的存檔會自動跳出來，蓋住主畫面、量效能也會多算）
 	g.streak["popup"] = load("res://data/core/daily_quests.gd").day_key()
+	# 這學期的段考範圍當作已經選過（還不確定＝照課本順序），大地圖才不會一打開就跳「這次段考考什麼？」
+	var U = load("res://data/core/units.gd")
+	g.exam_pick = {"高一": {"term": U.term_now("高一"), "units": []}, "高二": {"term": U.term_now("高二"), "units": []}}
 	await wait(0.3)
 
 

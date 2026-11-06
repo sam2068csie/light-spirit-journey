@@ -2970,7 +2970,7 @@ func _tut_steps() -> Array:
 		{"rect": func(): return _scr(pos, Vector2(44, 52)),
 		 "text": UITheme.kb("這是我！用方向鍵或 WASD 走路；用滑鼠的話，在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。", "這是我！在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。")},
 		{"rect": func(): return _goal_rect(),
-		 "text": "上面的金色橫幅是「主線目標」，告訴你下一步要做什麼；金色箭頭會指出要往哪裡走。"},
+		 "text": "上面的金色橫幅是「主線目標」，告訴你下一步要做什麼；金色箭頭會指出要往哪裡走。點一下橫幅，可以改這次段考的範圍。"},
 		{"rect": func(): return _scr(ZONES[3].gate + Vector2(0, -120), Vector2(90, 110)),
 		 "text": UITheme.kb("這是地區的大門。走到門前會跳出卡片，按 Enter 或「進入」就能進去。還被雲蓋住的地區，題目還在準備中。", "這是地區的大門。走到門前會跳出卡片，按「進入」就能進去。還被雲蓋住的地區，題目還在準備中。")},
 		{"rect": func(): return _tp_btn.get_global_rect(),

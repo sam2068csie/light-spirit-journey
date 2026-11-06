@@ -51,22 +51,58 @@ static func unit_lit(g, u: Dictionary) -> bool:
 	return c[1] > 0 and c[0] >= c[1]
 
 
-## 主線目標：照課本順序，第一個「開放了、但還沒全部點亮」的單元；全部點亮回傳 {}
-static func next_goal(g) -> Dictionary:
-	for u in Units.UNITS:
-		if Units.is_open(u) and not u.levels.is_empty() and not unit_lit(g, u):
-			var c := lit_count(g, u)
-			return {"uid": u.id, "title": u.title, "grade": Units.grade_of(u.id), "lit": c[0], "total": c[1]}
+## 玩家的年級（身分）：沒選過就當作現在看的那張地圖的年級
+static func my_grade(g, here_grade: String) -> String:
+	return String(g.grade_pick) if String(g.grade_pick) != "" else here_grade
+
+
+## 這學期的段考範圍（單元 id）；還沒選、或選的是別的學期 → []
+static func exam_units(g, grade: String) -> Array:
+	var ep: Dictionary = g.exam_pick.get(grade, {})
+	if String(ep.get("term", "")) != Units.term_now(grade):
+		return []
+	return ep.get("units", [])
+
+
+## 這學期還沒問過段考範圍（換學期了也要再問）
+static func needs_exam_pick(g, grade: String) -> bool:
+	var ep: Dictionary = g.exam_pick.get(grade, {})
+	return String(ep.get("term", "")) != Units.term_now(grade)
+
+
+static func set_exam_pick(g, grade: String, units: Array) -> void:
+	g.exam_pick[grade] = {"term": Units.term_now(grade), "units": units.duplicate()}
+	g.save_review()
+
+
+## 主線目標：只在自己的年級裡找「開放了、但還沒全部點亮」的單元
+##   先找這次段考範圍裡的（照課本順序），再照課本順序找其他的；全部點亮回傳 {}
+static func next_goal(g, grade: String) -> Dictionary:
+	var exam := exam_units(g, grade)
+	for pass_i in 2:
+		for u in Units.UNITS:
+			if Units.grade_of(u.id) != grade or (pass_i == 0) != exam.has(u.id):
+				continue
+			if Units.is_open(u) and not u.levels.is_empty() and not unit_lit(g, u):
+				var c := lit_count(g, u)
+				return {"uid": u.id, "title": u.title, "grade": grade, "lit": c[0], "total": c[1], "exam": pass_i == 0}
 	return {}
 
 
+static func world_name(grade: String) -> String:
+	return "光潮群島" if grade == "高二" else "曦光大陸"
+
+
 static func goal_text(g, here_grade: String) -> String:
-	var gl := next_goal(g)
+	var grade := my_grade(g, here_grade)
+	var gl := next_goal(g, grade)
 	if gl.is_empty():
-		return "★ 目前開放的聖地全部點亮了！到終焉之塔挑戰，或回小屋看看紀念品吧"
+		return "★ %s開放的聖地全部點亮了！到終焉之塔挑戰，或回小屋看看紀念品吧　▾" % world_name(grade)
+	var head := "★ 段考範圍：" if bool(gl.exam) else "★ 主線："
+	# 結尾的 ▾：點橫幅可以改段考範圍
 	if gl.grade != here_grade:
-		return "★ 主線：搭船到%s，點亮「%s」的聖地（%d／%d）" % ["光潮群島" if gl.grade == "高二" else "曦光大陸", gl.title, gl.lit, gl.total]
-	return "★ 主線：點亮「%s」的聖地（%d／%d）" % [gl.title, gl.lit, gl.total]
+		return head + "搭船到%s，點亮「%s」的聖地（%d／%d）　▾" % [world_name(gl.grade), gl.title, gl.lit, gl.total]
+	return head + "點亮「%s」的聖地（%d／%d）　▾" % [gl.title, gl.lit, gl.total]
 
 
 ## 有沒有剛拿到紀念品、還沒播過的小劇情（這個年級的單元）

@@ -3092,7 +3092,7 @@ func _tut_steps() -> Array:
 		{"rect": func(): return _scr(pos, Vector2(50, 50)),
 		 "text": UITheme.kb("這是我們的光舟！用方向鍵或 WASD 划船；也可以在畫面左半邊按住，用出現的搖桿掌舵。", "這是我們的光舟！在畫面左半邊按住，用出現的搖桿掌舵。")},
 		{"rect": func(): return _goal_rect(),
-		 "text": "上面的金色橫幅是「主線目標」；畫面邊緣的金色箭頭指著要去的島。"},
+		 "text": "上面的金色橫幅是「主線目標」；畫面邊緣的金色箭頭指著要去的島。點一下橫幅，可以改這次段考的範圍。"},
 		{"rect": func(): return _scr(_goal_pt, Vector2(60, 60)) if _goal_pt.x >= 0.0 else Rect2(),
 		 "text": UITheme.kb("這是島的碼頭。船開到碼頭旁邊會跳出卡片，按 Enter 或「上岸」就能登島。", "這是島的碼頭。船開到碼頭旁邊會跳出卡片，按「上岸」就能登島。")},
 		{"rect": func(): return _tp.get_global_rect(),

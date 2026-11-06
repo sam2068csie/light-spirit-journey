@@ -130,7 +130,8 @@ var equipped := {}                     # 穿戴中：類別 → id
 var tut := {}                          # 新手教學看過哪些：{"basic": true, "type:fit": true…}
 
 
-var grade_pick := ""                   # 第一次打開時選的身分（"高一"／"高二"）；空字串＝還沒選
+var grade_pick := ""                   # 身分（"高一"／"高二"）：主線只在這個年級裡找；空字串＝還沒選。切換地圖分頁不會改它
+var exam_pick := {}                    # 這次段考範圍：{"高二": {"term": "高二上", "units": ["exp"]}}；term 不是這學期了就再問一次
 
 
 var house := {}                        # 光靈小屋：{owned:[], placed:{格位:id}}
@@ -414,6 +415,7 @@ const SAVE_FIELDS := [
 	["house", "house", {}],
 	["tut", "tut", {}],
 	["grade_pick", "grade_pick", ""],
+	["exam_pick", "exam_pick", {}],
 ]
 
 

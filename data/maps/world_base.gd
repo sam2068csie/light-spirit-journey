@@ -11,6 +11,7 @@ const Units := preload("res://data/core/units.gd")
 const SL := preload("res://data/ui/spirit_look.gd")
 const WS := preload("res://data/maps/world_story.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
+const ExamPick := preload("res://data/ui/exam_pick.gd")
 
 signal enter_level(file: String)
 signal story_changed(on: bool)
@@ -38,6 +39,7 @@ var story_focus := Vector2(-1, -1)     # 劇情播放時鏡頭看的地方；(-1
 var _goal_text := ""
 var _goal_pt := Vector2(-1, -1)        # 主線目標在地圖上的位置
 var _goal_t := 0.0
+var _exam_open := false                # 「這次段考考什麼？」開著
 
 
 # ================= 子類別要提供的 =================
@@ -277,6 +279,12 @@ func _goal_rect() -> Rect2:
 func _gui_input(e: InputEvent) -> void:
 	if playing:
 		return
+	# 點上方的金色主線橫幅：選這次段考的範圍（主線先帶你去那些單元）
+	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed and _goal_text != "" \
+			and _goal_rect().grow(6.0).has_point(e.position):
+		open_exam_pick()
+		accept_event()
+		return
 	# 虛擬搖桿：在畫面左半邊按下去，搖桿就出現在手指下面；拖動決定方向和速度
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed and e.position.x < W * 0.5:
@@ -310,7 +318,7 @@ func _key_dir() -> Vector2:
 func _refresh_goal() -> void:
 	var g = Game.of(self)
 	_goal_text = WS.goal_text(g, _grade_name())
-	_goal_pt = _goal_world(WS.next_goal(g))
+	_goal_pt = _goal_world(WS.next_goal(g, WS.my_grade(g, _grade_name())))
 
 
 func _save() -> void:
@@ -348,6 +356,25 @@ func _story_check() -> void:
 	var su := WS.pending_souvenir(g, _grade_name())
 	if su != "":
 		await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
+	# 這學期還沒選過段考範圍（換學期了、或是舊存檔）：問一次
+	if is_inside_tree() and not playing and WS.needs_exam_pick(g, WS.my_grade(g, _grade_name())):
+		open_exam_pick()
+
+
+## 「這次段考考什麼？」：放在最上層（主畫面），選完更新主線橫幅和箭頭
+func open_exam_pick() -> void:
+	if playing or _exam_open:
+		return
+	var host: Node = get_tree().current_scene if get_tree().current_scene is Control else self
+	_exam_open = true
+	_hold = false
+	playing = true          # 視窗開著時地圖不動、橫幅先收起來
+	var layer := ExamPick.open(host, WS.my_grade(Game.of(self), _grade_name()), func(_gr: String):
+		if is_inside_tree():
+			_refresh_goal())
+	layer.tree_exited.connect(func():
+		_exam_open = false
+		playing = false)
 
 
 func close_overlay() -> bool:

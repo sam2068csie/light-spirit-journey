@@ -18,6 +18,7 @@ const MAP := {
 	"concepts_trig.gd": "res://data/levels/trig/concepts_trig.gd",
 	"cosmetics.gd": "res://data/core/cosmetics.gd",
 	"daily_quests.gd": "res://data/core/daily_quests.gd",
+	"exam_pick.gd": "res://data/ui/exam_pick.gd",
 	"exchange.gd": "res://data/ui/exchange.gd",
 	"exp_map.gd": "res://data/maps/exp_map.gd",
 	"feedback.gd": "res://data/ui/feedback.gd",

@@ -80,7 +80,7 @@ func _open_grade_pick() -> void:
 	col.add_child(sp)
 	col.add_child(UITheme.title_label("歡迎來到光靈的旅程！", 28, UITheme.ACCENT))
 	var sub := Label.new()
-	sub.text = "你現在是幾年級呢？我會帶你到那個年級的世界地圖。\n（之後隨時可以在地圖右上角切換）"
+	sub.text = "你現在是幾年級呢？我會帶你到那個年級的世界地圖。\n（之後點地圖上方的金色主線橫幅就能修改）"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", UITheme.fs(16))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -129,7 +129,8 @@ func _open_grade_pick() -> void:
 			g.sfx("success")
 			layer.queue_free()
 			_grade = gr
-			_show_page("units"))
+			# 接著問這學期的段考範圍（主線先帶他去那些單元）
+			ExamPick.open(self, gr, func(_gr: String): _show_page("units")))
 		row.add_child(b)
 
 
@@ -348,6 +349,8 @@ func _build_units_page() -> void:
 
 ## 選擇冒險：每個年級一張可以走動的世界地圖（高一：曦光大陸；高二：光潮群島），走到地區／島就進入那個單元的地圖
 const WorldG10 := preload("res://data/maps/g10_world.gd")
+const ExamPick := preload("res://data/ui/exam_pick.gd")
+const WS := preload("res://data/maps/world_story.gd")
 const WorldG11 := preload("res://data/maps/g11_sea.gd")
 
 
@@ -356,7 +359,7 @@ func _refresh_units() -> void:
 		c.queue_free()
 	var g = Game.of(self)
 	if _grade == "":
-		# 上次看的年級（第一次選的身分，之後切換分頁也會記住）；沒有就看目前的單元
+		# 自己的年級（身分）；沒選過就看目前的單元。切換分頁只是去看看，不會改身分
 		_grade = g.grade_pick if g.grade_pick != "" else Units.grade_of(g.cur_unit)
 	var w: Control = WorldG10.new() if _grade == "高一" else WorldG11.new()
 	_units_body.add_child(w)
@@ -392,9 +395,7 @@ func _set_grade(gr: String) -> void:
 		return
 	var dir := 1.0 if gr == "高二" else -1.0     # 高一 → 高二：往左滑（高二在右邊）
 	var old: Array = _units_body.get_children()
-	_grade = gr
-	Game.of(self).grade_pick = gr
-	Game.of(self).save_review()
+	_grade = gr      # 只是換一張地圖看看；身分（主線在哪個年級）要在「這次段考考什麼？」裡改
 	Game.of(self).sfx("click")
 	_grade_anim = true
 	var tw := create_tween().set_parallel()
@@ -462,10 +463,11 @@ func _unit_card(g, u: Dictionary, no: int) -> Control:
 	tl.add_theme_color_override("font_color", col if open else UITheme.TEXT_DIM)
 	v.add_child(tl)
 	var ex := Label.new()
-	ex.text = u.exam if String(u.exam) != "" else ("" if open else "新的世界還在建造中")
+	var in_exam: bool = open and WS.exam_units(Game.of(self), Units.grade_of(u.id)).has(u.id)
+	ex.text = "★ 這次段考範圍" if in_exam else ("" if open else "新的世界還在建造中")
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ex.add_theme_font_size_override("font_size", UITheme.fs(13))
-	ex.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	ex.add_theme_color_override("font_color", UITheme.ACCENT if in_exam else UITheme.TEXT_DIM)
 	v.add_child(ex)
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL

@@ -102,6 +102,21 @@ static func grade_of(uid: String) -> String:
 const DEFAULT := "exp"
 
 
+## 今天是哪個學期：7/1～隔年 1/31 是上學期，2/1～6/30 是下學期（grade = "高一"／"高二" → "高一上"、"高二下"…）
+static func term_now(grade: String, month := -1) -> String:
+	var m := month if month > 0 else int(Time.get_date_dict_from_system().month)
+	return grade + ("上" if m >= 7 or m == 1 else "下")
+
+
+## 某個學期的所有單元（照課本順序）
+static func term_units(term: String) -> Array:
+	var out := []
+	for u in UNITS:
+		if String(u.term) == term:
+			out.append(u)
+	return out
+
+
 static func unit(id: String) -> Dictionary:
 	for u in UNITS:
 		if u.id == id:
