@@ -296,10 +296,13 @@ func _initialize() -> void:
 	mm._grade = "高一"
 	mm._show_page("levels")
 	await wait(1.2)
-	var skip := btn_text(current_scene, "略過")
-	if skip != null:
+	# 劇情（序章、其他關點亮的劇情）：一直按「略過」到沒有為止
+	for k in 8:
+		var skip := btn_text(current_scene, "略過")
+		if skip == null:
+			break
 		await click(skip, "略過")
-		await wait(1.0)
+		await wait(1.2)
 	var map = mm._map
 	var si := -1
 	for i in map.m_sites.size():
@@ -481,18 +484,19 @@ func _play_speed() -> void:
 			pass
 		var pb: Dictionary = lv.problems[lv.sp_i]
 		var i0: int = lv.sp_i
+		var ans: Array = Array(pb.get("answers", [pb.get("ans", "")]))
 		if first:
-			await type_answer(_bump(String(pb.ans)))
+			var bad := ans.duplicate()
+			bad[0] = _bump(String(bad[0]))
+			await fill_all(bad)
 			await submit_fill()
 			await snap(String(lv.r.id) + "_答錯")
 			first = false
-			while String(lv.slot_vals[0]) != "":
-				await click(btn_text(lv.rank_box, "⌫"), "⌫")
-		await type_answer(String(pb.ans))
+		await fill_all(ans)
 		await submit_fill()
 		await wait(0.5)
 		if lv.sp_i == i0 and lv.keypad_on:
-			_issue("%s：速算答對沒有換題（%s = %s）" % [_where(), pb.eq, pb.ans])
+			_issue("%s：速算答對沒有換題（%s = %s）" % [_where(), pb.eq, ans])
 			return
 	await snap(String(lv.r.id) + "_speed_end")
 

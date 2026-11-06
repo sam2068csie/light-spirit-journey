@@ -808,7 +808,7 @@ func _play_speed(lv) -> void:
 		if pb.has("choices"):
 			lv._speed_pick(int(pb.correct))
 		else:
-			lv.slot_vals = Array(pb.get("answers", [pb.ans])).map(func(a): return String(a).replace("-", "−"))
+			lv.slot_vals = (Array(pb.answers) if pb.has("answers") else [pb.ans]).map(func(a): return String(a).replace("-", "−"))
 			lv._refresh_fill()
 			lv._fill_submit()
 		await frames(2)

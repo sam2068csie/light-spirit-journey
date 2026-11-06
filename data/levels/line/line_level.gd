@@ -21,6 +21,12 @@ extends "res://data/levels/engine/step_level.gd"
 ##          "eq": "y = {m}x + {k}"（右邊顯示目前的方程式，{…} 裡是算式；可省略）,
 ##          "goal": {"m": 0.5, "k": −2}（調到這裡才算對）或 "free": true（自由觀察，拉過就可以按「看好了」）,
 ##          "traps": [[{"k": −2}, "調到這裡時的提示"], …], "keep": true（做完把那條線留在方格上）}
+##         lines 裡也可以放會動的點和線段（拖動點）：{"k": "dot", "p": ["t", "0"], "s": "P"}、{"k": "seg", "a": ["t", "0"], "b": ["1", "1"]}
+##         eq 的 {…} 可以用 sqrt、abs、pow：例如 "\\ol{PA} + \\ol{PB} ≈ {sqrt(pow(t - 1, 2) + 1) + …}"（不是分數時顯示到小數第二位）
+## 動畫圖層（at 那一步出現時才開始播）：
+##   {"k": "path", "pts": [[x, y], …], "c", "dur": 1.5}  光線：沿著折線一段一段畫出來，最後有箭頭
+##   {"k": "fold", "pts": [[x, y], …], "to": [[x, y], …], "dur": 1.2, "marks": [[從, 到], …]}  摺紙：多邊形從 pts 慢慢翻到 to，marks 的點跟著翻
+## 延後到終焉之塔的題型記在 docs/line_tower_backlog.md（每做完一關都要更新）
 ##
 ## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
 
@@ -251,7 +257,7 @@ func _slide_submit() -> void:
 	var st: Dictionary = steps[si]
 	if st.get("free", false):
 		if not slide_moved:
-			_hint("先拉動滑桿，看看直線怎麼動。", "info")
+			_hint("先拉動滑桿，看看圖會怎麼變。", "info")
 			return
 		_slide_done(st)
 		return
@@ -280,7 +286,7 @@ func _slide_done(st: Dictionary) -> void:
 	if st.get("keep", false):
 		for ln in st.get("lines", []):
 			var sh := pl.eval_line(ln, slide_vals)
-			if not sh.is_empty():
+			if not sh.is_empty() and String(sh.k) == "line":
 				pl.kept.append(sh)
 	pl.dyn = []
 	go_btn.visible = false
@@ -361,6 +367,7 @@ class CoordPlane extends TowerPlot.Plot:
 	var dyn: Array = []                  # 滑桿步驟：跟著參數動的直線 {"abc": [算式…], "c", "s"}
 	var dyn_vals := {}
 	var kept: Array = []                 # 滑桿步驟做完留下來的直線（已經算好的 line 圖層）
+	var _anim0 := {}                     # 動畫圖層第一次出現的時間（path、fold）
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
 	var picking := false
 	var pick_label := "P"
@@ -387,6 +394,7 @@ class CoordPlane extends TowerPlot.Plot:
 		dots = []
 		dyn = []
 		kept = []
+		_anim0 = {}
 		_cache = {}
 		stage = 0
 		pick_off()
@@ -452,6 +460,14 @@ class CoordPlane extends TowerPlot.Plot:
 
 	## 含參數的直線 → 算好係數的 line 圖層（a、b 都是 0 時回傳空的）
 	func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
+		var kk := String(ln.get("k", "line"))
+		if kk == "dot" or kk == "seg":
+			var out := ln.duplicate()
+			for key in ["p", "a", "b"]:
+				if ln.has(key):
+					out[key] = [calc(str(ln[key][0]), vals), calc(str(ln[key][1]), vals)]
+			out.erase("at")
+			return out
 		var abc := []
 		for e in ln.abc:
 			abc.append(calc(String(e), vals))
@@ -473,6 +489,8 @@ class CoordPlane extends TowerPlot.Plot:
 
 	## 分數的寫法：0.5 → \\frac{1}{2}、−1.5 → −\\frac{3}{2}
 	static func frac(v: float) -> String:
+		if not is_finite(v):
+			return "—"
 		for d in range(1, 13):
 			var n := v * d
 			if absf(n - roundf(n)) < 1e-6:
@@ -488,7 +506,15 @@ class CoordPlane extends TowerPlot.Plot:
 		var i := 0
 		while i < tpl.length():
 			var ch := tpl[i]
-			if ch != "{":
+			# 排版用的大括號（\ol{PA}、\frac{1}{2}、m_{AB}、x^{2}）照抄，前面是字母、_、^、} 的都是
+			var prev := tpl[i - 1] if i > 0 else ""
+			var lit := prev != "" and (prev == "_" or prev == "^" or prev == "}" or (prev.to_lower() != prev.to_upper() and prev.unicode_at(0) < 128))
+			if ch != "{" or lit:
+				if ch == "{" and lit:
+					var j0 := tpl.find("}", i)
+					out += tpl.substr(i, j0 - i + 1)
+					i = j0 + 1
+					continue
 				out += ch
 				i += 1
 				continue
@@ -768,7 +794,61 @@ class CoordPlane extends TowerPlot.Plot:
 			return
 		super(font, sp, s, off, c, center)
 
+	## 動畫圖層：從第一次出現開始算，0 → 1
+	func _anim_k(sh: Dictionary) -> float:
+		var key := str(sh.get("pts", [])) + String(sh.k)
+		if not _anim0.has(key):
+			_anim0[key] = t
+		return clampf((t - float(_anim0[key])) / float(sh.get("dur", 1.4)), 0.0, 1.0)
+
 	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		if String(sh.k) == "path":
+			# 光線：沿著折線畫出來
+			var pts: Array = sh.pts
+			var total := 0.0
+			for i in range(1, pts.size()):
+				total += _v(pts[i]).distance_to(_v(pts[i - 1]))
+			var left := total * _anim_k(sh)
+			var col := _col(String(sh.get("c", "gold")))
+			var drawn := PackedVector2Array([_to(_v(pts[0]))])
+			var tip := _v(pts[0])
+			var dir := Vector2.RIGHT
+			for i in range(1, pts.size()):
+				var a := _v(pts[i - 1])
+				var b := _v(pts[i])
+				var L := a.distance_to(b)
+				if left <= 0.0:
+					break
+				var e := b if left >= L else a.lerp(b, left / L)
+				left -= L
+				drawn.append(_to(e))
+				tip = e
+				dir = (_to(b) - _to(a)).normalized()
+			if drawn.size() > 1:
+				draw_polyline(drawn, Color(col.r, col.g, col.b, 0.18), 9.0, true)
+				_pl(drawn, col, 2.5, false)
+			if drawn.size() > 1:
+				var tp := _to(tip)
+				var nrm := Vector2(-dir.y, dir.x)
+				draw_colored_polygon(PackedVector2Array([tp, tp - dir * 11.0 + nrm * 5.0, tp - dir * 11.0 - nrm * 5.0]), col)
+			return
+		if String(sh.k) == "fold":
+			# 摺紙：多邊形從 pts 翻到 to（先慢後快再慢）
+			var k := _anim_k(sh)
+			k = k * k * (3.0 - 2.0 * k)
+			var poly := PackedVector2Array()
+			for i in sh.pts.size():
+				poly.append(_to(_v(sh.pts[i]).lerp(_v(sh.to[i]), k)))
+			var fc := _col(String(sh.get("c", "cyan")))
+			draw_colored_polygon(poly, Color(fc.r, fc.g, fc.b, 0.16 + 0.1 * sin(k * PI)))
+			poly.append(poly[0])
+			_pl(poly, Color(fc.r, fc.g, fc.b, 0.7), 1.5, false)
+			# 紙上的點跟著翻過去
+			for mk in sh.get("marks", []):
+				var mp := _to(_v(mk[0]).lerp(_v(mk[1]), k))
+				UITheme.dot(self, mp, 9.0, Color(fc.r, fc.g, fc.b, 0.25))
+				UITheme.dot(self, mp, 4.0, fc.lightened(0.3))
+			return
 		if String(sh.k) == "right":
 			# 直角記號：比終焉之塔的大一點（不然會被頂點的圓點蓋住）
 			var cp := _to(_v(sh.p))

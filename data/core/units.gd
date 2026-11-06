@@ -28,7 +28,7 @@ const UNITS := [
 	 "levels": [
 		{"id": "C1", "name": "坐標燈標", "topic": "坐標與斜率", "file": "level_line1_coord.gd", "bank": "line1_bank.gd", "color": UITheme.CYAN},
 		{"id": "C2", "name": "直線棧橋", "topic": "直線方程式", "file": "level_line2_pier.gd", "bank": "line2_bank.gd", "color": UITheme.GOLD},
-		{"id": "C3", "name": "鏡面渡口", "topic": "對稱與距離", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "C3", "name": "鏡面渡口", "topic": "對稱與距離", "file": "level_line3_mirror.gd", "bank": "line3_bank.gd", "color": UITheme.LIME},
 		{"id": "C4", "name": "分光稻田", "topic": "二元一次不等式", "file": "", "bank": "", "color": UITheme.ORANGE},
 		{"id": "C5", "name": "圓規工坊", "topic": "圓方程式與求圓", "file": "", "bank": "", "color": UITheme.VIOLET},
 		{"id": "C6", "name": "割弦漣漪", "topic": "圓與直線", "file": "", "bank": "", "color": UITheme.BLUE},

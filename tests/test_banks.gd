@@ -63,7 +63,8 @@ func _tour_level(lid: String, file: String, bank) -> void:
 					if lv.problems[lv.sp_i].has("choices"):
 						lv._speed_pick(int(lv.problems[lv.sp_i].correct))
 					else:
-						lv.slot_vals = lv.problems[lv.sp_i].get("answers", [lv.problems[lv.sp_i].ans]).duplicate()
+						var pbx: Dictionary = lv.problems[lv.sp_i]
+						lv.slot_vals = (Array(pbx.answers) if pbx.has("answers") else [pbx.ans]).duplicate()
 						lv._fill_submit()
 					await frames(2)
 				ok(int(lv.get("streak")) > 0, "%s 速算答對有算分" % tag)

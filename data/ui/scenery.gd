@@ -49,6 +49,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_lakeside(ci, sz, t)
 		"pier":
 			_pier(ci, sz, t)
+		"moonlake":
+			_moonlake(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -826,3 +828,68 @@ static func _pier(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var al := 0.14 + 0.12 * sin(t * 1.4 + i * 2.3)
 		UITheme.dot(ci, p, 5.0, Color(1.0, 0.85, 0.5, al * 0.3))
 		UITheme.dot(ci, p, 1.5, Color(1.0, 0.9, 0.7, al * 2.0))
+
+
+## C3 鏡面渡口：月夜的鏡湖。月亮、燈塔、對岸的山都倒映在平靜的水面上，一道光從燈塔打到水面再反射出去
+static func _moonlake(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var wl := hh * 0.6
+	_grad(ci, sz, Color("101a33"), Color("070b18"))
+	_stars(ci, Vector2(w, wl), t, 22, 0.9, Color(0.85, 0.92, 1.0), 191)
+	# 月亮和倒影
+	var mc := Vector2(w * 0.86, wl - 34.0)          # 低低地掛在地平線上，不要壓到上面的題目
+	UITheme.dot(ci, mc, 60.0, Color(0.85, 0.95, 1.0, 0.05))
+	UITheme.dot(ci, mc, 17.0, Color(0.92, 0.96, 1.0, 0.75))
+	# 遠山（上下對稱）
+	var ridge := PackedVector2Array()
+	for i in 41:
+		var x := w * i / 40.0
+		ridge.append(Vector2(x, wl - 18.0 - 16.0 * sin(i * 0.55 + 1.3) - 10.0 * sin(i * 1.7)))
+	var up := PackedVector2Array([Vector2(0, wl)])
+	up.append_array(ridge)
+	up.append(Vector2(w, wl))
+	ci.draw_colored_polygon(up, Color(0.1, 0.14, 0.26, 0.95))
+	# 水面
+	ci.draw_rect(Rect2(0, wl, w, hh - wl), Color(0.04, 0.07, 0.15, 0.92))
+	var dn := PackedVector2Array([Vector2(0, wl)])
+	for p in ridge:
+		dn.append(Vector2(p.x, 2.0 * wl - p.y))
+	dn.append(Vector2(w, wl))
+	ci.draw_colored_polygon(dn, Color(0.1, 0.14, 0.26, 0.45))
+	ci.draw_line(Vector2(0, wl), Vector2(w, wl), Color(0.7, 0.9, 1.0, 0.3), 1.5)
+	# 月亮的倒影：一條一條晃動的光
+	var rm := Vector2(mc.x, 2.0 * wl - mc.y)
+	for j in 8:
+		var yy := rm.y - 18.0 + j * 5.5
+		var half := 18.0 - absf(j - 3.5) * 3.0 + 3.0 * sin(t * 1.6 + j)
+		ci.draw_line(Vector2(rm.x - half, yy), Vector2(rm.x + half, yy), Color(0.85, 0.95, 1.0, 0.22), 2.0)
+	# 燈塔和倒影
+	var lx := w * 0.16
+	var top := wl - 48.0
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(lx - 9, wl), Vector2(lx + 9, wl), Vector2(lx + 5, top), Vector2(lx - 5, top)]), Color(0.75, 0.8, 0.9, 0.55))
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(lx - 9, wl), Vector2(lx + 9, wl), Vector2(lx + 5, 2.0 * wl - top), Vector2(lx - 5, 2.0 * wl - top)]), Color(0.75, 0.8, 0.9, 0.18))
+	var fl := 0.8 + 0.2 * sin(t * 2.4)
+	UITheme.dot(ci, Vector2(lx, top - 6), 26.0 * fl, Color(0.75, 1.0, 0.6, 0.12))
+	UITheme.dot(ci, Vector2(lx, top - 6), 5.0, Color(0.85, 1.0, 0.7, 0.9))
+	# 一道光：燈塔 → 水面 → 反射出去（入射角 = 反射角），光點沿著路線跑
+	var hit := Vector2(w * 0.42, wl)
+	var src := Vector2(lx, top - 6)
+	var out := Vector2(2.0 * hit.x - src.x, src.y + 10.0)
+	var beam := Color(0.75, 1.0, 0.6, 0.08)
+	ci.draw_line(src, hit, beam, 2.0, true)
+	ci.draw_line(hit, out, beam, 2.0, true)
+	ci.draw_line(hit, Vector2(src.x, 2.0 * wl - src.y), Color(0.75, 1.0, 0.6, 0.06), 1.5, true)
+	var u := fposmod(t * 0.25, 1.0)
+	var pp := src.lerp(hit, u * 2.0) if u < 0.5 else hit.lerp(out, u * 2.0 - 1.0)
+	UITheme.dot(ci, pp, 9.0, Color(0.8, 1.0, 0.65, 0.25))
+	UITheme.dot(ci, pp, 2.5, Color(0.9, 1.0, 0.8, 0.9))
+	UITheme.dot(ci, hit, 14.0 * (0.7 + 0.3 * sin(t * 3.0)), Color(0.8, 1.0, 0.65, 0.12))
+	# 水面的細波紋
+	for j in 4:
+		var yy := wl + 34.0 + j * 20.0
+		var off := fmod(t * (6.0 + j * 2.0) + j * 47.0, 160.0)
+		var xx := -160.0 + off
+		while xx < w:
+			ci.draw_line(Vector2(xx, yy), Vector2(xx + 34.0, yy), Color(0.7, 0.9, 1.0, 0.05), 1.2)
+			xx += 160.0
