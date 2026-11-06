@@ -116,7 +116,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 			var c := sgn * d * int(nm[2]) - (a * x0 + b * y0)
 			if absi(c) > 60 or c == 0:
 				continue
-			pb = {"eq": "P%s 到\n%s" % [_pt(x0, y0), lin(a, b, c)], "q": "算出距離。", "template": "d = [0]", "answers": [str(d)],
+			pb = {"eq": "P%s 到\n%s" % [_pt(x0, y0), lin(a, b, c)], "q": "算出距離。", "template": "d(P, L) = [0]", "answers": [str(d)],
 				"tag": BankC3.T_DIST, "nudge": "\\frac{|%d × %s + %s × %s %s|}{√(%d^{2} + %d^{2})}，分母是 %d。" % [a, _wrap(x0), _wrap(b), _wrap(y0),
 					("+ %d" % c) if c > 0 else ("− %d" % -c), a, absi(b), nm[2]]}
 		var key := String(pb.eq)

@@ -34,6 +34,10 @@ extends "res://data/levels/engine/step_level.gd"
 ## 動畫圖層（at 那一步出現時才開始播）：
 ##   {"k": "path", "pts": [[x, y], …], "c", "dur": 1.5}  光線：沿著折線一段一段畫出來，最後有箭頭
 ##   {"k": "fold", "pts": [[x, y], …], "to": [[x, y], …], "dur": 1.2, "marks": [[從, 到], …]}  摺紙：多邊形從 pts 慢慢翻到 to，marks 的點跟著翻
+## 直接挑戰（variant 的 "challenge"：一個步驟，通常是最後答案的填空或點選）：
+##   一開始只出這一步，學生自己決定怎麼做。做對了就整題過關（推導紀錄補上完整的步驟、圖補上所有的點和區域）。
+##   卡住了按「一步一步來」才展開原本的 steps（最多兩顆星）。
+## 點選區域的步驟可以加 "bloom": true：塗對了，田裡的稻子一株一株長出來；塗錯的那幾塊會枯掉（變紅褐色）。
 ## 延後到終焉之塔的題型記在 docs/line_tower_backlog.md（每做完一關都要更新）
 ##
 ## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
@@ -73,6 +77,80 @@ func _pv() -> PlaneView:
 	return fview as PlaneView
 
 
+# ================= 直接挑戰（challenge） =================
+
+var challenge_on := false
+var challenge_btn: Button
+
+
+func _custom_start() -> void:
+	challenge_on = false
+	if r.get("type", "") == "forge" and r.has("challenge"):
+		if not r.has("_full"):
+			r["_full"] = r.steps
+		var ch: Dictionary = r.challenge.duplicate(true)
+		ch["challenge"] = true
+		r["steps"] = [ch]
+		challenge_on = true
+	elif r.has("_full"):
+		r["steps"] = r._full
+	super()
+
+
+## 「一步一步來」：放棄直接挑戰，展開原本的步驟（扣一顆星）
+func _challenge_hint() -> void:
+	if not challenge_on:
+		return
+	challenge_on = false
+	mistakes += 1
+	r["steps"] = r._full
+	steps = r.steps
+	si = 0
+	pre_done = {}
+	fview.step = 0
+	if _pv().plane != null:
+		_pv().plane.pick_off()
+		_pv().plane.region_off()
+	keypad_on = false
+	_hint("好，我們一步一步來。", "info")
+	_forge_step()
+
+
+func _add_challenge_btn() -> void:
+	if not challenge_on or si != 0:
+		return
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 6)
+	rank_box.add_child(gap)
+	challenge_btn = UITheme.ghost_button("卡住了？一步一步來（最多 ★★）", 15)
+	challenge_btn.custom_minimum_size = Vector2(0, 40)
+	challenge_btn.pressed.connect(_challenge_hint)
+	rank_box.add_child(challenge_btn)
+
+
+func _step_done(st: Dictionary, why: String) -> void:
+	if st.get("challenge", false) and challenge_on:
+		# 直接做出來了：推導紀錄補上完整的步驟，圖補上每一步的點和區域
+		challenge_on = false
+		var full: Array = r._full
+		var pl: CoordPlane = _pv().plane
+		for fs in full:
+			if String(fs.get("line", "")) != "":
+				fview.push_line(fs.line)
+			if String(fs.kind) == "grid" and pl != null:
+				pl.add_dot(Vector2(float(fs.target[0]), float(fs.target[1])), String(fs.get("label", "P")), String(fs.get("c", "gold")))
+			elif String(fs.kind) == "region" and pl != null:
+				pl.add_region(fs.ineq, String(fs.get("c", "lime")), fs.get("bloom", false))
+		r["steps"] = full
+		steps = full
+		si = full.size() - 1
+		var last: Dictionary = st.duplicate()
+		last["kind"] = "challenge_done"
+		super(last, why)
+		return
+	super(st, why)
+
+
 # ================= 點選格子點（grid） =================
 
 func _forge_step() -> void:
@@ -82,10 +160,14 @@ func _forge_step() -> void:
 	super()
 	if si < steps.size() and String(steps[si].kind) == "grid":
 		_build_grid(steps[si])
+		_add_challenge_btn()
 	elif si < steps.size() and String(steps[si].kind) == "slide":
 		_build_slide(steps[si])
 	elif si < steps.size() and String(steps[si].kind) == "region":
 		_build_region(steps[si])
+		_add_challenge_btn()
+	elif si < steps.size() and String(steps[si].kind) == "fill":
+		_add_challenge_btn()
 
 
 func _build_grid(st: Dictionary) -> void:
@@ -162,6 +244,11 @@ func _grid_submit() -> void:
 
 
 func _custom_reveal(msg: String) -> void:
+	if challenge_on:
+		challenge_on = false
+		r["steps"] = r._full
+		steps = r.steps
+		si = 0
 	if fview != null and r.type == "forge" and _pv().plane != null:
 		var pl: CoordPlane = _pv().plane
 		pl.pick_off()
@@ -171,7 +258,7 @@ func _custom_reveal(msg: String) -> void:
 			if String(st.kind) == "grid":
 				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")))
 			elif String(st.kind) == "region":
-				pl.kept_regions.append({"k": "region", "ineq": st.ineq, "c": String(st.get("c", "lime"))})
+				pl.add_region(st.ineq, String(st.get("c", "lime")), false)
 		pl.region_off()
 	super(msg)
 
@@ -278,7 +365,7 @@ func _region_submit() -> void:
 			missing.append(key)
 	if extra.is_empty() and missing.is_empty():
 		Game.of(self).sfx("correct")
-		pl.kept_regions.append({"k": "region", "ineq": st.ineq, "c": String(st.get("c", "lime"))})
+		pl.add_region(st.ineq, String(st.get("c", "lime")), st.get("bloom", false))
 		pl.region_off()
 		go_btn.visible = false
 		_clear(rank_box)
@@ -296,6 +383,11 @@ func _region_submit() -> void:
 				break
 	elif not missing.is_empty():
 		msg = "還有符合條件的地方沒有塗到。"
+	if st.get("bloom", false) and not extra.is_empty():
+		pl.wither(extra)
+		msg = "塗錯的田枯掉了！" + msg
+	if challenge_on:
+		msg += "\n（卡住了可以按「一步一步來」）"
 	_wrong(st, msg)
 
 
@@ -478,6 +570,12 @@ class PlaneView extends ForgeView:
 			return size.y - ph - 22.0
 		return super()
 
+	## 空的一行不寫進推導紀錄（直接挑戰做完時，答案已經在補上的步驟裡）
+	func push_line(text: String) -> void:
+		if text == "":
+			return
+		super(text)
+
 	func _draw_forge_bg() -> void:
 		Scenery.paint(self, theme_name, size, t)
 		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
@@ -498,6 +596,7 @@ class CoordPlane extends TowerPlot.Plot:
 	var cell_lines: Array = []           # 切開方格的直線 [a, b, c]
 	var cell_sel := {}                   # 塗了哪幾塊（正負號的組合 → true）
 	var cell_col := "lime"
+	var withered := {}                   # 塗錯、枯掉的那幾塊 → 枯掉的時間
 	var _on_cell := Callable()
 	var _anim0 := {}                     # 動畫圖層第一次出現的時間（path、fold）
 	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
@@ -559,11 +658,29 @@ class CoordPlane extends TowerPlot.Plot:
 
 	func region_on(lines: Array, col: String, cb: Callable) -> void:
 		pick_on("", 1.0, func(_p): pass)
+		withered = {}
 		cells_on = true
 		cell_lines = lines
 		cell_sel = {}
 		cell_col = col
 		_on_cell = cb
+
+	## 留在方格上的塗色（bloom：稻子一株一株長出來）
+	func add_region(ineq: Array, col: String, bloom: bool) -> void:
+		var rg := {"k": "region", "ineq": ineq, "c": col}
+		if bloom:
+			rg["bloom_t"] = t
+		kept_regions.append(rg)
+		queue_redraw()
+
+	## 塗錯的幾塊：枯掉（紅褐色，慢慢淡掉），選取也取消
+	func wither(keys: Array) -> void:
+		for k in keys:
+			withered[k] = t
+			cell_sel.erase(k)
+		if _on_cell.is_valid():
+			_on_cell.call()
+		queue_redraw()
 
 	func region_off() -> void:
 		cells_on = false
@@ -659,6 +776,36 @@ class CoordPlane extends TowerPlot.Plot:
 			var sg := 1.0 if String(q[3]).begins_with(">") else -1.0
 			poly = clip_half(poly, float(q[0]) * sg, float(q[1]) * sg, float(q[2]) * sg)
 		return poly
+
+	## 稻子：區域裡每個格子點長一小叢（k：長到多高 0～1，dead：枯掉、倒下來）
+	func _draw_stalks(poly: PackedVector2Array, col: Color, k: float, dead: bool) -> void:
+		if poly.size() < 3:
+			return
+		var bb := Rect2(poly[0], Vector2.ZERO)
+		for p in poly:
+			bb = bb.expand(p)
+		var stp := 1.0 if _unit() > 22.0 else 2.0
+		var x := ceilf(bb.position.x / stp) * stp + stp * 0.5
+		while x < bb.end.x:
+			var y := ceilf(bb.position.y / stp) * stp + stp * 0.5
+			while y < bb.end.y:
+				var wp := Vector2(x, y)
+				if Geometry2D.is_point_in_polygon(wp, poly):
+					var sp := _to(wp)
+					var delay := fposmod(x * 0.37 + y * 0.61, 1.0) * 0.4
+					var kk := clampf((k - delay) / 0.6, 0.0, 1.0)
+					if kk > 0.0:
+						var ht := 9.0 * kk
+						var sway := 1.2 * sin(t * 1.8 + x * 1.3 + y)
+						for lean in [-0.45, 0.0, 0.45]:
+							var tip := sp + Vector2(lean * ht + sway, -ht * (1.0 - absf(lean) * 0.3))
+							if dead:
+								tip = sp + Vector2(lean * 4.0 + 4.0, -2.0)
+							draw_line(sp, tip, Color(0.5, 0.7, 0.35, 0.55 * col.a) if not dead else col, 1.1, true)
+							if not dead:
+								UITheme.dot(self, tip, 1.6 * kk, Color(col.r, col.g, col.b, 0.75 * col.a))
+				y += stp
+			x += stp
 
 	func _fill_world(poly: PackedVector2Array, col: Color) -> void:
 		if poly.size() < 3:
@@ -970,6 +1117,9 @@ class CoordPlane extends TowerPlot.Plot:
 		for rg in kept_regions:
 			var c := _col(String(rg.get("c", "lime")))
 			_fill_world(region_poly(rg.ineq), Color(c.r, c.g, c.b, 0.2))
+			if rg.has("bloom_t"):
+				var k := clampf((t - float(rg.bloom_t)) / 1.4, 0.0, 1.0)
+				_draw_stalks(region_poly(rg.ineq), Color(1.0, 0.85, 0.45, 0.9), k, false)
 		for ln in dyn:
 			if String(ln.get("k", "")) == "region":
 				var rg := eval_line(ln, dyn_vals)
@@ -980,6 +1130,13 @@ class CoordPlane extends TowerPlot.Plot:
 			var wr := _world()
 			for key in cell_sel.keys():
 				_fill_world(cell_poly(key, wr), Color(c.r, c.g, c.b, 0.3 + 0.06 * sin(t * 3.0)))
+			for key in withered.keys():
+				var age := t - float(withered[key])
+				if age > 2.2:
+					continue
+				var fa := clampf(1.0 - age / 2.2, 0.0, 1.0)
+				_fill_world(cell_poly(key, wr), Color(0.55, 0.25, 0.15, 0.45 * fa))
+				_draw_stalks(cell_poly(key, wr), Color(0.6, 0.35, 0.2, 0.8 * fa), 1.0, true)
 		super(font)
 		for ln in kept:
 			_shape(ln, Vector2.ZERO, 0.0, font)
