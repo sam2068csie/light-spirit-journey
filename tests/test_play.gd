@@ -5,6 +5,7 @@ extends "test_base.gd"
 ##   ・中間「正在作答」的框不能壓到下方的圖
 ##   ・作答之後一定要進到下一步（卡住就是題目或答案有問題）
 ## 環境變數 ONLY=P1,P2 只玩某幾關；SHOTS=資料夾 會把有問題的畫面存下來（需要有畫面，不能 --headless）
+## ALLSHOTS=1（加上 SHOTS）：每一步作答前、作答後都截圖，用來一張一張檢查排版
 
 const Units := preload("res://data/core/units.gd")
 
@@ -71,8 +72,16 @@ func _play_level(lid: String, file: String, bank) -> void:
 
 
 # ---------------- 版面檢查 ----------------
+var _all_shots := OS.get_environment("ALLSHOTS") != ""      # ALLSHOTS=1：每一步都截圖（檢查排版用）
+var _shot_n := 0
+
+
 func _check(lv, when: String) -> void:
 	await frames(2)
+	if _all_shots:
+		_shot_n += 1
+		await wait(0.35)
+		await shot("%03d_%s_%s" % [_shot_n, cur_tag.replace("/", "_").replace("#", "_"), when])
 	var vp := (lv as Control).get_viewport_rect().size
 	var card: Control = lv.side_card
 	var cr := card.get_global_rect()
@@ -244,6 +253,11 @@ func _do_custom(lv, st: Dictionary, nm: String) -> void:
 	var kind := String(st.kind)
 	var tv = lv.fview
 	var lid := String(lv.level_id())
+	# 關卡自己會放答案的步驟（直線與圓的 grid…）：放好之後照一般的方式送出
+	if lv.has_method("test_answer") and lv.test_answer(st):
+		await _check(lv, nm + " 放好之後")
+		await _go(lv)
+		return
 	if lid.begins_with("L"):
 		await _do_exp(lv, st, nm)
 		return

@@ -8,7 +8,7 @@ extends RefCounted
 ##   2. 大關 id 和觀念標籤（tag）不能和別的單元重複：
 ##        指數與對數用 "L1"～"L8"、tag 用 exp_／log_／digits_… 開頭
 ##        平面向量建議用 "V1"～、tag 用 "vec_" 開頭；空間向量用 "S1"～、tag 用 "svec_" 開頭
-##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
+##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、高一直線與圓 "C1"～／"line_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
 ##      （check() 會檢查重複；這樣存檔裡的星星、錯題本、熟練度不會互相打架，舊存檔也不用轉換）
 ##   3. map：這個單元的世界地圖腳本；tower：終焉之塔的題庫（沒有就先留空）
 ##      concepts：觀念卡片檔（例如 "concepts_vec2.gd"，寫法照 concepts_exp.gd）
@@ -22,8 +22,19 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false,
-	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# 直線與圓：建造中（先做好地圖和第一關）。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看
+	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false, "preview": true,
+	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",
+	 "levels": [
+		{"id": "C1", "name": "坐標燈標", "topic": "坐標與斜率", "file": "level_line1_coord.gd", "bank": "line1_bank.gd", "color": UITheme.CYAN},
+		{"id": "C2", "name": "直線棧橋", "topic": "直線方程式", "file": "", "bank": "", "color": UITheme.GOLD},
+		{"id": "C3", "name": "鏡面渡口", "topic": "對稱與距離", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "C4", "name": "分光稻田", "topic": "二元一次不等式", "file": "", "bank": "", "color": UITheme.ORANGE},
+		{"id": "C5", "name": "圓規工坊", "topic": "圓方程式與求圓", "file": "", "bank": "", "color": UITheme.VIOLET},
+		{"id": "C6", "name": "割弦漣漪", "topic": "圓與直線", "file": "", "bank": "", "color": UITheme.BLUE},
+		{"id": "C7", "name": "切線燈環", "topic": "切線與圓冪", "file": "", "bank": "", "color": UITheme.PINK},
+		{"id": "C8", "name": "軌跡星環", "topic": "圓系與軌跡", "file": "", "bank": "", "color": UITheme.GOOD},
+	 ]},
 	# 多項式：P1～P8 全部做好，正式開放
 	{"id": "h1poly", "term": "高一上", "title": "多項式", "exam": "", "color": UITheme.VIOLET, "open": true,
 	 "world": "光靈的旅程：根之洞窟", "map": "poly_map.gd", "tower": "poly_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_poly.gd",

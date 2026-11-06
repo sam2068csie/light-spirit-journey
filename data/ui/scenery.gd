@@ -4,6 +4,7 @@ extends RefCounted
 ## 全部用時間 t 直接算位置（不存粒子狀態），每幀重畫也很便宜。
 ##   多項式：mine 係數礦燈、wheel 綜合除法水車、echo 回音石廊、mold 根之鑄模、
 ##           lake 拋物鏡湖、wick 極值燈芯、crystal 對稱水晶、river 符號地下河
+##   直線與圓：lakeside 圓規湖岸（C1 坐標燈標）
 ##   三角函數：ferry 弧之渡口、lagoon 扇形潟湖、steps 浪之階梯、tide 潮汐調音盤、
 ##             compass 和角羅盤、pool 倍角鏡池、lighthouse 疊合燈塔
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -44,6 +45,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_pool(ci, sz, t)
 		"lighthouse":
 			_lighthouse(ci, sz, t)
+		"lakeside":
+			_lakeside(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -700,3 +703,55 @@ static func _lighthouse(ci: CanvasItem, sz: Vector2, t: float) -> void:
 	UITheme.dot(ci, lamp + Vector2(0, 2), 6.0, Color(1.0, 0.95, 0.7, 0.95))
 	# 海浪
 	_sea(ci, sz, t, hh * 0.82, Color(0.45, 0.7, 1.0), 3)
+
+
+# ================= 直線與圓：圓規湖 =================
+
+## C1 坐標燈標：清晨的湖岸。遠山、湖面一圈一圈的圓形漣漪、右邊一排沿著直線排開的燈標、慢慢飄的光點
+static func _lakeside(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var wl := hh * 0.64
+	_grad(ci, sz, Color("1b2c4a"), Color("0c1628"))
+	_stars(ci, sz, t, 22, 0.45, Color(0.85, 0.95, 1.0), 171)
+	# 遠山
+	_ridge(ci, Vector2(w, wl + 2.0), wl - 24.0, 18.0, 0.011, 0.8, Color(0.09, 0.14, 0.26, 0.9))
+	# 湖面
+	ci.draw_rect(Rect2(0, wl, w, hh - wl), Color(0.05, 0.12, 0.22, 0.85))
+	ci.draw_line(Vector2(0, wl), Vector2(w, wl), Color(0.6, 0.85, 1.0, 0.25), 1.5)
+	# 湖面上一圈一圈擴散的圓（橢圓：從斜上方看）
+	for k in 3:
+		var per := 4.5 + k * 1.3
+		var ph := fposmod(t + k * 1.7, per) / per
+		var c := Vector2(w * (0.22 + 0.28 * k), wl + 26.0 + 14.0 * k)
+		var rx := 10.0 + ph * 120.0
+		var pts := PackedVector2Array()
+		for i in 33:
+			var a := TAU * i / 32.0
+			pts.append(c + Vector2(cos(a) * rx, sin(a) * rx * 0.22))
+		ci.draw_polyline(pts, Color(0.7, 0.92, 1.0, 0.2 * (1.0 - ph)), 1.3, true)
+	for j in 5:
+		var yy := wl + 10.0 + j * 9.0
+		var off := fmod(t * (10.0 + j * 3.0) + j * 71.0, 120.0)
+		var xx := -120.0 + off
+		while xx < w:
+			ci.draw_line(Vector2(xx, yy), Vector2(xx + 26.0, yy), Color(0.7, 0.9, 1.0, 0.08), 1.2)
+			xx += 120.0
+	# 一排燈標：沿著一條直線（往右上）排開，燈光倒映在水裡
+	for i in 6:
+		var u := i / 5.0
+		var base := Vector2(w * (0.58 + 0.38 * u), wl + 6.0 - 64.0 * u)
+		var ht := 46.0 - 14.0 * u
+		var lp := base + Vector2(0, -ht)
+		ci.draw_line(base, lp, Color(0.45, 0.55, 0.72, 0.3), 2.0)
+		var fl := 0.85 + 0.15 * sin(t * 3.0 + i * 1.3)
+		UITheme.dot(ci, lp, 22.0 * fl, Color(0.55, 0.9, 1.0, 0.05))
+		UITheme.dot(ci, lp, 3.0, Color(0.75, 0.95, 1.0, 0.55 * fl))
+		if base.y < wl + 8.0:
+			ci.draw_line(Vector2(lp.x, wl + (wl - lp.y) * 0.35), Vector2(lp.x, wl + (wl - lp.y) * 0.5), Color(0.6, 0.9, 1.0, 0.12 * fl), 2.0)
+	# 慢慢飄的光點
+	for i in 16:
+		var p := Vector2(fposmod(h(i, 172) * w + t * (4.0 + 6.0 * h(i, 173)), w), (0.15 + 0.45 * h(i, 174)) * hh + 6.0 * sin(t * 0.7 + i))
+		var a := 0.14 + 0.12 * sin(t * 1.3 + i * 2.1)
+		UITheme.dot(ci, p, 5.0, Color(0.6, 0.9, 1.0, a * 0.3))
+		UITheme.dot(ci, p, 1.5, Color(0.8, 0.95, 1.0, a * 2.0))

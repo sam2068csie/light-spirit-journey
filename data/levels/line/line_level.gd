@@ -1,0 +1,432 @@
+extends "res://data/levels/engine/step_level.gd"
+## 直線與圓（C1～C8）共用的關卡引擎：一步一步推導（step_level.gd）＋下方的坐標方格
+##
+## 題目（variant）可以多一個 "plane"：推導紀錄下方畫一塊坐標方格（x、y 同比例，有格線和刻度）
+##   {"x": [−2, 10], "y": [−2, 8], "shapes": [...]}
+##   shapes 和終焉之塔的幾何圖一樣（seg、poly、circle、dot、label、angle、right…），多一種 line（整條直線）：
+##     {"k": "line", "p": [x1, y1], "q": [x2, y2]}（過兩點）或 {"k": "line", "abc": [a, b, c]}（ax + by + c = 0）
+##   每個圖層都可以寫 "at"：第幾步開始出現（0 = 一開始就有）、"until"：第幾步之後消失
+##
+## 新的步驟（kind）：
+##   grid  點選格子點：在坐標方格上點一下，放下一個點（再點別的地方可以移動），按「確定位置」
+##         {"kind": "grid", "name", "q", "target": [x, y], "label": "D", "line", "nudge", "tag",
+##          "traps": [[x, y, "點到這裡時的提示"], …]（可省略）, "snap": 1（格子點；0.5 = 半格）}
+##         答對之後那一點會留在方格上
+##
+## 每一關覆寫 scene_theme()（背景，data/ui/scenery.gd）和平常的關卡資訊（level_id()…，見 step_level.gd）。
+
+const TowerPlot := preload("res://data/levels/tower/boss_tower.gd")
+const PLANE_BIG := 290.0          # 點選格子點、做完的時候：坐標方格大一點
+const PLANE_SMALL := 206.0        # 其他步驟：小一點，讓上面的推導紀錄和填空放得下
+
+var grid_tip: Label
+
+
+## 這一關的背景（data/ui/scenery.gd 的主題）
+func scene_theme() -> String:
+	return "lakeside"
+
+
+## 距離、半徑常常有根號：這一單元的填空都有「√」鍵
+func radicals_ok() -> bool:
+	return true
+
+
+func _ensure_fview() -> void:
+	if fview == null:
+		var v := PlaneView.new()
+		v.theme_name = scene_theme()
+		fview = v
+		stage.add_child(fview)
+		fview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		fview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fview.clip_contents = true
+		fview.log_title = "推導紀錄"
+		fview.work_word = "推導"
+		fview.speed_title = "速算"
+
+
+func _pv() -> PlaneView:
+	return fview as PlaneView
+
+
+# ================= 點選格子點（grid） =================
+
+func _forge_step() -> void:
+	if fview != null and _pv().plane != null:
+		_pv().plane.pick_off()
+	super()
+	if si < steps.size() and String(steps[si].kind) == "grid":
+		_build_grid(steps[si])
+
+
+func _build_grid(st: Dictionary) -> void:
+	_clear(predict_box)
+	predicting = false
+	keypad_on = false
+	rank_box.visible = true
+	_clear(rank_box)
+	task_label.visible = true
+	task_label.text = st.q
+	var lab := String(st.get("label", "P"))
+	_pv().plane.pick_on(lab, float(st.get("snap", 1.0)), func(_p): _refresh_grid())
+	grid_tip = Label.new()
+	grid_tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	grid_tip.custom_minimum_size = Vector2(300, 0)
+	grid_tip.add_theme_font_size_override("font_size", UITheme.fs(15))
+	grid_tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	rank_box.add_child(grid_tip)
+	go_btn.visible = true
+	go_btn.disabled = false
+	go_btn.text = "確定位置"
+	_refresh_grid()
+
+
+func _refresh_grid() -> void:
+	if grid_tip == null or not is_instance_valid(grid_tip) or si >= steps.size():
+		return
+	var st: Dictionary = steps[si]
+	var lab := String(st.get("label", "P"))
+	var p: Vector2 = _pv().plane.pick
+	if not _pv().plane.has_pick():
+		grid_tip.text = "在左下的坐標方格上點一下，放下 %s 點。" % lab
+	else:
+		grid_tip.text = "%s 點放在 %s。\n要換位置就再點一次。" % [lab, CoordPlane.pt_text(p)]
+
+
+func _custom_go() -> void:
+	if r.type == "forge" and si < steps.size() and String(steps[si].kind) == "grid":
+		_grid_submit()
+		return
+	super()
+
+
+func _grid_submit() -> void:
+	var st: Dictionary = steps[si]
+	var pl: CoordPlane = _pv().plane
+	var lab := String(st.get("label", "P"))
+	if not pl.has_pick():
+		_hint("先在坐標方格上點一下，放下 %s 點。" % lab, "info")
+		return
+	var want := Vector2(float(st.target[0]), float(st.target[1]))
+	var p: Vector2 = pl.pick
+	if p.is_equal_approx(want):
+		Game.of(self).sfx("correct")
+		pl.add_dot(want, lab, String(st.get("c", "gold")))
+		pl.pick_off()
+		go_btn.visible = false
+		_clear(rank_box)
+		rank_box.visible = false
+		_step_done(st, "")
+		return
+	var msg := "還不對。提示：" + String(st.nudge)
+	for tr in st.get("traps", []):
+		if p.is_equal_approx(Vector2(float(tr[0]), float(tr[1]))):
+			msg = String(tr[2])
+	_wrong(st, "你放在 %s。%s" % [CoordPlane.pt_text(p), msg])
+
+
+func _custom_reveal(msg: String) -> void:
+	if fview != null and r.type == "forge" and _pv().plane != null:
+		var pl: CoordPlane = _pv().plane
+		pl.pick_off()
+		for j in range(si, steps.size()):
+			var st: Dictionary = steps[j]
+			if String(st.kind) == "grid":
+				pl.add_dot(Vector2(float(st.target[0]), float(st.target[1])), String(st.get("label", "P")), String(st.get("c", "gold")))
+	super(msg)
+
+
+## 自動測試（tests/test_play.gd）：把這一步的答案放好，之後呼叫 _custom_go() 送出。認得的步驟回傳 true
+func test_answer(st: Dictionary) -> bool:
+	if String(st.kind) == "grid":
+		_pv().plane.pick = Vector2(float(st.target[0]), float(st.target[1]))
+		_refresh_grid()
+		return true
+	return false
+
+
+# ================= 畫面：推導紀錄＋坐標方格 =================
+
+class PlaneView extends ForgeView:
+	var plane: CoordPlane
+	var theme_name := "lakeside"
+
+	func setup(round: Dictionary) -> void:
+		super(round)
+		var pd: Dictionary = round.get("plane", {})
+		if plane == null:
+			plane = CoordPlane.new()
+			add_child(plane)
+		plane.reset(pd)
+		plane.visible = not pd.is_empty() and kind == "forge"
+		ph = PLANE_BIG if _want_big() else PLANE_SMALL
+		_place_plane()
+
+	var ph := PLANE_SMALL          # 目前的高度（大小之間慢慢變）
+
+	## 這一步要不要大張的坐標方格（點選格子點、全部做完）
+	func _want_big() -> bool:
+		var sts: Array = rd.get("steps", [])
+		return done or step >= sts.size() or String(sts[step].get("kind", "")) == "grid"
+
+	## 左下角留給光靈和對話框
+	func _plane_rect() -> Rect2:
+		return Rect2(92, size.y - ph - 12.0, size.x - 116, ph)
+
+	func _place_plane() -> void:
+		if plane == null:
+			return
+		var rc := _plane_rect()
+		plane.position = rc.position
+		plane.size = rc.size
+
+	func _process(delta: float) -> void:
+		super(delta)
+		if plane != null and plane.visible:
+			var want := PLANE_BIG if _want_big() else PLANE_SMALL
+			if absf(ph - want) > 0.5:
+				ph = lerpf(ph, want, 1.0 - exp(-10.0 * delta))
+				if absf(ph - want) <= 0.5:
+					ph = want
+				queue_redraw()
+			if plane.size != _plane_rect().size or plane.position != _plane_rect().position:
+				_place_plane()
+			if plane.stage != step:
+				plane.stage = step
+
+	func _plane_on() -> bool:
+		return plane != null and plane.visible
+
+	func _bottom_limit() -> float:
+		if _plane_on():
+			return size.y - ph - 22.0
+		return super()
+
+	func _draw_forge_bg() -> void:
+		Scenery.paint(self, theme_name, size, t)
+		var ma := clampf(1.0 - (t - miss_t) / 0.5, 0.0, 1.0)
+		if ma > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0.2, 0.25, 0.16 * ma))
+
+
+## 坐標方格：終焉之塔的幾何圖（x、y 同比例）＋格線、坐標軸、刻度，可以點選格子點
+class CoordPlane extends TowerPlot.Plot:
+	const SnapCol := Color(1.0, 0.86, 0.42)
+
+	var dots: Array = []                 # 答對之後留下的點：{p, s, c}
+	var pick := Vector2(INF, INF)        # 正在放的點（INF：還沒放）
+	var picking := false
+	var pick_label := "P"
+	var snap := 1.0
+	var _on_pick := Callable()
+
+	func reset(d: Dictionary) -> void:
+		data = d.duplicate(true)
+		data["geo"] = true
+		data["axes"] = false            # 坐標軸自己畫（有刻度）
+		if not data.has("x"):
+			data["x"] = [-5, 5]
+			data["y"] = [-5, 5]
+		dots = []
+		_cache = {}
+		stage = 0
+		pick_off()
+
+	func pick_on(label: String, sn: float, cb: Callable) -> void:
+		picking = true
+		pick_label = label
+		snap = sn if sn > 0.0 else 1.0
+		pick = Vector2(INF, INF)
+		_on_pick = cb
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		queue_redraw()
+
+	func pick_off() -> void:
+		picking = false
+		pick = Vector2(INF, INF)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mouse_default_cursor_shape = Control.CURSOR_ARROW
+		queue_redraw()
+
+	func has_pick() -> bool:
+		return is_finite(pick.x) and is_finite(pick.y)
+
+	func add_dot(p: Vector2, s: String, c := "gold") -> void:
+		for d in dots:
+			if (d.p as Vector2).is_equal_approx(p) and String(d.s) == s:
+				return
+		dots.append({"p": p, "s": s, "c": c})
+		queue_redraw()
+
+	## (3, −2) 這種寫法（負號用 −）
+	static func pt_text(p: Vector2) -> String:
+		return "(%s, %s)" % [num(p.x), num(p.y)]
+
+	static func num(v: float) -> String:
+		var s := str(int(round(v))) if is_equal_approx(v, round(v)) else str(snappedf(v, 0.01))
+		return s.replace("-", "−")
+
+	# ---------- 坐標換算 ----------
+
+	## 題目的範圍（data.x、data.y）放在這個框裡：下面留一條給左下角光靈的對話框（那裡只有格線，不放點）
+	const BOTTOM_PAD := 40.0
+
+	func _frame() -> Rect2:
+		return Rect2(Vector2(10, 10), size - Vector2(20, 20 + BOTTOM_PAD))
+
+	func _scale() -> float:
+		var xr: Array = data.x
+		var yr: Array = data.y
+		var r := _frame()
+		return minf(r.size.x / (float(xr[1]) - float(xr[0])), r.size.y / (float(yr[1]) - float(yr[0])))
+
+	func _to(p: Vector2) -> Vector2:
+		var xr: Array = data.x
+		var yr: Array = data.y
+		var sc := _scale()
+		var c := _frame().get_center()
+		return Vector2(c.x + (p.x - (float(xr[0]) + float(xr[1])) / 2.0) * sc, c.y - (p.y - (float(yr[0]) + float(yr[1])) / 2.0) * sc)
+
+	## 畫面上的位置 → 坐標
+	func from_px(sp: Vector2) -> Vector2:
+		var xr: Array = data.x
+		var yr: Array = data.y
+		var sc := _scale()
+		var c := _frame().get_center()
+		return Vector2((sp.x - c.x) / sc + (float(xr[0]) + float(xr[1])) / 2.0, -(sp.y - c.y) / sc + (float(yr[0]) + float(yr[1])) / 2.0)
+
+	## 畫面上看得到的坐標範圍（比 data.x、data.y 大一點，因為兩軸同比例）
+	func _world() -> Rect2:
+		var a := from_px(Vector2(0, size.y))
+		var b := from_px(Vector2(size.x, 0))
+		return Rect2(a, b - a)
+
+	# ---------- 點選 ----------
+
+	func _gui_input(e: InputEvent) -> void:
+		if not picking:
+			return
+		var press: bool = e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed
+		var drag: bool = e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
+		if not (press or drag):
+			return
+		var w := from_px(e.position)
+		var wr := _world()
+		var p := Vector2(snappedf(w.x, snap), snappedf(w.y, snap))
+		p.x = clampf(p.x, ceilf(wr.position.x / snap) * snap, floorf(wr.end.x / snap) * snap)
+		p.y = clampf(p.y, ceilf(wr.position.y / snap) * snap, floorf(wr.end.y / snap) * snap)
+		if not has_pick() or not p.is_equal_approx(pick):
+			pick = p
+			queue_redraw()
+			if _on_pick.is_valid():
+				_on_pick.call(p)
+		accept_event()
+
+	# ---------- 繪圖 ----------
+
+	func _draw_geo(font: Font) -> void:
+		_draw_grid(font)
+		super(font)
+		for d in dots:
+			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "%s%s" % [d.s, pt_text(d.p)], "c": d.c}, Vector2.ZERO, 0.0, font)
+		if picking and has_pick():
+			_draw_pick(font)
+
+	## 格線、坐標軸（有箭頭）、刻度數字、x、y、O
+	func _draw_grid(font: Font) -> void:
+		var wr := _world()
+		var u := _unit()
+		var tick := 1 if u >= 30.0 else (2 if u >= 15.0 else 5)
+		var fs := UITheme.fs(11)
+		for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x)) + 1):
+			var a := _to(Vector2(ix, wr.position.y))
+			var b := _to(Vector2(ix, wr.end.y))
+			draw_line(a, b, Color(1, 1, 1, 0.10 if ix % 5 == 0 else 0.05), 1.0)
+		for iy in range(int(ceilf(wr.position.y)), int(floorf(wr.end.y)) + 1):
+			var a := _to(Vector2(wr.position.x, iy))
+			var b := _to(Vector2(wr.end.x, iy))
+			draw_line(a, b, Color(1, 1, 1, 0.10 if iy % 5 == 0 else 0.05), 1.0)
+		var ax := Color(1, 1, 1, 0.5)
+		var o := _to(Vector2.ZERO)
+		var has_x := wr.position.y <= 0.0 and wr.end.y >= 0.0
+		var has_y := wr.position.x <= 0.0 and wr.end.x >= 0.0
+		if has_x:
+			var xa := _to(Vector2(wr.position.x, 0))
+			var xb := _to(Vector2(wr.end.x, 0))
+			draw_line(xa, xb, ax, 1.5, true)
+			draw_colored_polygon(PackedVector2Array([xb, xb + Vector2(-9, -4.5), xb + Vector2(-9, 4.5)]), ax)
+			draw_string(font, xb + Vector2(-14, -8), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x))):
+				if ix == 0 or ix % tick != 0:
+					continue
+				var p := _to(Vector2(ix, 0))
+				draw_line(p + Vector2(0, -3), p + Vector2(0, 3), ax, 1.0)
+				var s := num(ix)
+				var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				draw_string(font, p + Vector2(-w / 2.0, 15), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.45))
+		if has_y:
+			var ya := _to(Vector2(0, wr.position.y))
+			var yb := _to(Vector2(0, wr.end.y))
+			draw_line(ya, yb, ax, 1.5, true)
+			draw_colored_polygon(PackedVector2Array([yb, yb + Vector2(-4.5, 9), yb + Vector2(4.5, 9)]), ax)
+			draw_string(font, yb + Vector2(8, 14), "y", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			for iy in range(int(ceilf(wr.position.y)), int(floorf(wr.end.y))):
+				if iy == 0 or iy % tick != 0:
+					continue
+				var p := _to(Vector2(0, iy))
+				draw_line(p + Vector2(-3, 0), p + Vector2(3, 0), ax, 1.0)
+				var s := num(iy)
+				var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				draw_string(font, p + Vector2(-w - 6, 4), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.45))
+		if has_x and has_y:
+			draw_string(font, o + Vector2(-13, 14), "O", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(1, 1, 1, 0.55))
+
+	## 正在放的點：到兩軸的虛線、一圈一圈的光、名字和坐標
+	func _draw_pick(font: Font) -> void:
+		var sp := _to(pick)
+		var wr := _world()
+		var oy := clampf(0.0, wr.position.y, wr.end.y)
+		var ox := clampf(0.0, wr.position.x, wr.end.x)
+		_pl(PackedVector2Array([sp, _to(Vector2(pick.x, oy))]), Color(SnapCol.r, SnapCol.g, SnapCol.b, 0.45), 1.2, true)
+		_pl(PackedVector2Array([sp, _to(Vector2(ox, pick.y))]), Color(SnapCol.r, SnapCol.g, SnapCol.b, 0.45), 1.2, true)
+		var ph := fmod(t * 1.4, 1.0)
+		draw_arc(sp, 8.0 + 14.0 * ph, 0.0, TAU, 32, Color(SnapCol.r, SnapCol.g, SnapCol.b, 0.6 * (1.0 - ph)), 2.0, true)
+		UITheme.dot(self, sp, 9.0, Color(SnapCol.r, SnapCol.g, SnapCol.b, 0.25))
+		UITheme.dot(self, sp, 5.5, SnapCol)
+		_label(font, sp, "%s%s" % [pick_label, pt_text(pick)], [10, -10], SnapCol)
+
+	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		if String(sh.k) != "line":
+			super(sh, o, rot, font)
+			return
+		# 整條直線：過兩點 p、q，或 ax + by + c = 0
+		var p: Vector2
+		var d: Vector2
+		if sh.has("abc"):
+			var a := float(sh.abc[0])
+			var b := float(sh.abc[1])
+			var c := float(sh.abc[2])
+			d = Vector2(b, -a).normalized()
+			p = Vector2(-a * c, -b * c) / (a * a + b * b)
+		else:
+			p = _v(sh.p)
+			d = (_v(sh.q) - p).normalized()
+		var wr := _world().grow(1.0)
+		var big := wr.size.length() + (p - wr.get_center()).length()
+		var col := _col(String(sh.get("c", "cyan")))
+		_pl(PackedVector2Array([_to(p - d * big), _to(p + d * big)]), col, float(sh.get("w", 2.0)), sh.get("dash", false))
+		if String(sh.get("s", "")) != "":
+			# 名字標在畫面裡、靠右上那一端
+			var e := p + d * big
+			var s0 := p - d * big
+			var end_w := e if (e.x > s0.x or (is_equal_approx(e.x, s0.x) and e.y > s0.y)) else s0
+			var dir := (end_w - p).normalized()
+			var lp := p
+			for k in 80:
+				var q := p + dir * (k * 0.25)
+				if not _world().grow(-0.8).has_point(q):
+					break
+				lp = q
+			_label(font, _to(lp), String(sh.s), sh.get("off", [6, -6]), col)
