@@ -286,8 +286,14 @@ func _step_text() -> void:
 	for i in names.size():
 		var c := UITheme.GOOD if i < si_ else (UITheme.ACCENT if i == si_ else UITheme.TEXT_DIM)
 		dots += "[color=#%s]%s[/color]" % [c.to_html(false), "●" if i <= si_ else "○"]
-	step_label.text = "%s　[color=#%s]步驟 %d／%d：%s[/color]" % [dots, UITheme.ACCENT.to_html(false),
-		si_ + 1, names.size(), names[si_]] + _hearts_text()
+	# 還是太長（步驟多、名稱長）：先省掉「步驟」兩個字，再不行就只留名稱，愛心才不會被擠到第二行
+	step_label.text = dots
+	var one_line: float = step_label.get_combined_minimum_size().y
+	for head in ["步驟 %d／%d：" % [si_ + 1, names.size()], "%d／%d：" % [si_ + 1, names.size()], ""]:
+		step_label.text = "%s　[color=#%s]%s%s[/color]" % [dots, UITheme.ACCENT.to_html(false),
+			head, names[si_]] + _hearts_text()
+		if step_label.get_combined_minimum_size().y <= one_line + 2.0:
+			break
 
 
 ## 步驟列右邊的能量（有時間限制時也顯示秒數）

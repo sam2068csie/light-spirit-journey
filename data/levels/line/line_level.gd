@@ -536,7 +536,20 @@ class CoordPlane extends TowerPlot.Plot:
 		UITheme.dot(self, sp, 5.5, SnapCol)
 		_label(font, sp, "%s%s" % [pick_label, pt_text(pick)], [10, -10], SnapCol)
 
+	## 放大之後跑到畫面外的點：名字也不要畫（原本會被夾到邊上，看起來像是別的點）
+	func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) -> void:
+		if not Rect2(Vector2.ZERO, size).grow(2.0).has_point(sp):
+			return
+		super(font, sp, s, off, c, center)
+
 	func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
+		if String(sh.k) == "right":
+			# 直角記號：比終焉之塔的大一點（不然會被頂點的圓點蓋住）
+			var cp := _to(_v(sh.p))
+			var u := (_to(_v(sh.p) + _v(sh.u)) - cp).normalized() * 15.0
+			var v := (_to(_v(sh.p) + _v(sh.v)) - cp).normalized() * 15.0
+			_pl(PackedVector2Array([cp + u, cp + u + v, cp + v]), _col(String(sh.get("c", "gold"))), 1.8, false)
+			return
 		if String(sh.k) != "line":
 			super(sh, o, rot, font)
 			return
