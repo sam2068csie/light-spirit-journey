@@ -1395,7 +1395,7 @@ func _on_chord_drawn() -> void:
 	chord_phase = 2
 	task_label.visible = false
 	Game.of(self).sfx("ping")
-	_hint("[color=#ff7eb6]M[/color]：函數值的平均；[color=#5ad8ff]N[/color]：中點的函數值。", "info")
+	_hint("[color=#ff7eb6]M[/color]：函數值的平均，[color=#5ad8ff]N[/color]：中點的函數值。", "info")
 	var q: Dictionary = r.final
 	_show_question(q)
 	hint_panel.visible = true
@@ -1886,7 +1886,7 @@ func _on_stroke(pts: PackedVector2Array) -> void:
 	stage.stroke_bad = []
 	_pending_ui()
 	Game.of(self).play("blip", 1.1, -12.0)
-	_hint("可以繼續畫下一筆。\n畫完按「確認送出」；畫錯按「擦掉上一筆」。", "info")
+	_hint("可以繼續畫下一筆。\n畫完按「確認送出」，畫錯按「擦掉上一筆」。", "info")
 
 
 ## 已經畫了幾筆：送出／擦掉上一筆
@@ -2134,7 +2134,7 @@ func _check_quadrant(said_impossible: bool) -> void:
 		else:
 			_record("quadrant")
 			Game.of(self).sfx("wrong")
-			_fail("做得到喔！k 的正負決定是否進 Ⅲ；y 截距決定過 Ⅱ 或 Ⅳ。")
+			_fail("做得到喔！k 的正負決定是否進 Ⅲ，y 截距決定過 Ⅱ 或 Ⅳ。")
 		return
 	var target: Array = r.target.duplicate()
 	target.sort()
@@ -2364,7 +2364,7 @@ func _diagnose() -> String:
 		"abs_out":
 			if k_wrong:
 				_record("abs_reflect")
-				return "反彈點是 a^{x} + k = 0 的解；漸近線是 y = |k|。"
+				return "反彈點是 a^{x} + k = 0 的解，漸近線是 y = |k|。"
 		_:
 			if k_wrong:
 				_record("asymptote_shift")
@@ -2393,7 +2393,7 @@ func _diagnose_log(form: String, h_wrong: bool, k_wrong: bool) -> String:
 		"log_abs_out":
 			if k_wrong or h_wrong:
 				_record("log_abs")
-				return "反彈點是 log_{a}(x − h) + k = 0 的解；雷射牆 x = h。"
+				return "反彈點是 log_{a}(x − h) + k = 0 的解，雷射牆 x = h。"
 		_:
 			if h_wrong:
 				_record("log_asymptote")
@@ -2627,7 +2627,7 @@ func _tut_steps(key: String) -> Array:
 			return [{"rect": stg, "text": "先判斷圖形的凹口方向，再在舞台上連出弦，最後比大小。"}]
 		"type:forge":
 			return [
-				{"rect": side, "text": UITheme.kb("推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。", "推導題：一步一步往下做。選擇題直接點選項；填空題用卡片上的數字鍵盤。")},
+				{"rect": side, "text": UITheme.kb("推導題：一步一步往下做。選擇題直接點選項，填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。", "推導題：一步一步往下做。選擇題直接點選項，填空題用卡片上的數字鍵盤。")},
 				{"rect": stg, "text": "每答對一步，就會寫進左邊的推導紀錄。全部做完，就是一份完整的計算過程！"},
 			]
 		"type:speed":

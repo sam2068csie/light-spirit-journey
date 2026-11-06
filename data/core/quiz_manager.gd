@@ -207,7 +207,7 @@ const MISTAKE_INFO := {
 	"trig_quadsign":         {"name": "象限判斷正負後求值（再代入和差角公式）", "level": 1},
 	"trig_findangle":        {"name": "由 tan 求角的和差（再看角的範圍）", "level": 1},
 	"trig_tri":              {"name": "三角形內角和與 tan 的根與係數", "level": 1},
-	"trig_lineangle":        {"name": "兩直線的夾角（tan θ = |(m₂ − m₁) ÷ (1 + m₁m₂)|）", "level": 1},
+	"trig_lineangle":        {"name": "兩直線的夾角（tan θ 的夾角公式）", "level": 1},
 	"trig_geoapp":           {"name": "圖形與座標上的和角應用", "level": 1},
 	"trig_sumjudge":         {"name": "和角公式的真假判斷", "level": 1},
 	"trig_double":           {"name": "二倍角公式（sin 2θ、cos 2θ、tan 2θ 與鏡面反射）", "level": 1},

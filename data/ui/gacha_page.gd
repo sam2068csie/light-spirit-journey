@@ -131,7 +131,7 @@ func _ready() -> void:
 	_btn_shine = _pull_button(br, UITheme.CYAN, Color("1f7fa8"), Color("082436"))
 	_btn_shine.pressed.connect(func(): _pull("shine"))
 	var note := Label.new()
-	note.text = "十連保證至少一個稀有；閃光抽保證史詩以上。重複的裝扮會變成光之碎片。"
+	note.text = "十連保證至少一個稀有，閃光抽保證史詩以上。重複的裝扮會變成光之碎片。"
 	note.add_theme_font_size_override("font_size", UITheme.fs(13))
 	note.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

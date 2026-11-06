@@ -349,7 +349,7 @@ func _build_blocks(st: Dictionary) -> void:
 	go_btn.visible = true
 	go_btn.disabled = false
 	go_btn.text = "拼好了"
-	fview.live_q = "點右邊的積木拼出假設的式子（拼出來的式子寫在這裡）；要接下一項就點「+」。"
+	fview.live_q = "點右邊的積木拼出假設的式子（拼出來的式子寫在這裡）。要接下一項就點「+」。"
 	_refresh_blocks()
 
 

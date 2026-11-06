@@ -1141,7 +1141,7 @@ func play_abs_demo(p: Dictionary) -> bool:
 		"abs_out", "log_abs_out":
 			demo_steps = [
 				{"op": "draw", "cap": "① 先畫原本的 " + B},
-				{"op": "mark_below", "cap": "② x 軸上方（正的）不動；[color=#ff6b7a]x 軸下方是負的[/color]"},
+				{"op": "mark_below", "cap": "② x 軸上方（正的）不動，[color=#ff6b7a]x 軸下方是負的[/color]"},
 				{"op": "fold_up", "cap": "③ |負數| 變成正數：把下方那段[color=#ffcf5a]沿 x 軸往上翻[/color]"}]
 		"abs_y":
 			demo_steps = [

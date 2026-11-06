@@ -91,7 +91,7 @@ static func slots() -> Array:
 	var out := [
 		# ======================= 第一章．正負羅盤 =======================
 		{"id": "sign", "chapter": 1, "type": "forge", "title": "羅盤判讀", "type_name": "log 的正負",
-		 "story": "口訣：真、底同時大於 1 或同時小於 1，其值為正；反之為負。",
+		 "story": "口訣：真、底同時大於 1 或同時小於 1，其值為正，反之為負。",
 		 "insight": "log_{a} b > 0 ⇔ (a − 1)(b − 1) > 0。",
 		 "variants": [
 			{"eq": "判斷正負：log_{3} 5、log_{3} 0.5、log_{1/2} 3、log_{0.2} 0.3",
@@ -198,7 +198,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "ineq", "chapter": 1, "type": "forge", "title": "變向羅盤", "type_name": "對數不等式", "tilt": 1.0,
-		 "story": "底數 > 1 不變向、0 < 底數 < 1 變向；別忘真數 > 0。",
+		 "story": "底數 > 1 不變向、0 < 底數 < 1 變向。別忘真數 > 0。",
 		 "insight": "a > 1 ⇒ M > N > 0\n0 < a < 1 ⇒ 0 < M < N。",
 		 "variants": [
 			{"eq": "log_{2} (x + 3) ≤ 3",

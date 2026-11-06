@@ -5,6 +5,7 @@ extends "test_base.gd"
 ##   每段文字交給 MathLabel.lint() 檢查（規則寫在 math_text.gd）：
 ##     大括號成對、\frac{分子}{分母}、^ 後面接 {…}、根號自動補完後都有 {…}（才畫得出橫線）、沒有多跳脫的 \\
 ##   另外：篩選按鈕的候選值（cands）是一般文字，不能有 {、\、^ 這些排版符號
+##   標點：玩家看得到的文字不能有「；」和 ÷（也掃舊的 JSON 題庫）
 ## 新增題目或卡片之後跑這個測試：GODOT=… tests/run_tests.sh markup
 
 const Units := preload("res://data/core/units.gd")
@@ -46,6 +47,10 @@ func _initialize() -> void:
 			for k in cm:
 				if cm[k] is Dictionary or cm[k] is Array or cm[k] is String:
 					_scan(cm[k], "%s 的 %s" % [f, k])
+	# 舊的選擇題題庫（JSON）：只檢查標點
+	var jf := FileAccess.open("res://data/questions_exp_log.json", FileAccess.READ)
+	if jf != null:
+		_punct_all(JSON.parse_string(jf.get_as_text()), "questions_exp_log.json")
 	ok(problems == 0, "排版有 %d 個問題（見上面的 MARKUP 行）" % problems)
 	finish("MARKUP")
 
@@ -75,12 +80,47 @@ func _scan(v, where: String, key := "") -> void:
 			_scan(e, where, key)
 	elif v is String:
 		var s: String = v
+		_punct(s, where)
 		if not (s.contains("√") or s.contains("\\frac") or s.contains("^") or s.contains("{") or s.contains("∛")):
 			return
 		if s.begins_with("res://") or s.contains("%s") or s.contains("%d"):
 			return       # 檔案路徑、格式字串（之後才填數字）不檢查
 		for p in MathLabel.lint(s):
 			_report(where, s, p)
+
+
+## 玩家看得到的文字不用「；」、不用 ÷（docs/design_rules.md 第 3 節）
+##   例外：math_text.gd 的斷行標點表、拼公式的 ÷ 積木（會自動變成分數模式，畫面上看不到）
+func _punct(s: String, where: String) -> void:
+	if where.begins_with("math_text.gd") or s == "÷" or s == "；":
+		return
+	if s.contains("；"):
+		_report(where, s, "玩家看得到的文字不用「；」（改成逗號、句號或拆成兩句）")
+	if s.contains("÷"):
+		_report(where, s, "不用 ÷（寫成分數）")
+	# 直線與圓（C1～C8）：距離寫 d(P, L)、d(L₁, L₂)，不單獨寫 d
+	if where.begins_with("C") and _bare_d().search(s) != null:
+		_report(where, s, "距離要寫成 d(P, L)、d(L₁, L₂) 或「弦心距」，不單獨寫 d")
+
+
+var _bare_d_re: RegEx
+
+func _bare_d() -> RegEx:
+	if _bare_d_re == null:
+		_bare_d_re = RegEx.new()
+		_bare_d_re.compile("(?<![A-Za-z0-9\\\\_{%])d(?![A-Za-z(_])")
+	return _bare_d_re
+
+
+func _punct_all(v, where: String) -> void:
+	if v is Dictionary:
+		for k in v:
+			_punct_all(v[k], where)
+	elif v is Array:
+		for e in v:
+			_punct_all(e, where)
+	elif v is String:
+		_punct(v, where)
 
 
 func _report(where: String, s: String, p: String) -> void:

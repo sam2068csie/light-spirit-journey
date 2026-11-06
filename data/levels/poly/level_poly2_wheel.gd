@@ -163,7 +163,7 @@ static func gen_problems(_kind: String, n: int) -> Array:
 			"synth": {"coef": coef, "a": [a, 1], "ask": 3 if what == 0 else 2}}      # ask：所求的那一格（餘式／商式的常數項）
 		pb.q = ["用綜合除法算出餘式。", "用綜合除法算出商式的常數項（第三排、餘式左邊那一格）。"][what]
 		pb.template = ["餘式 = [0]", "商式的常數項 = [0]"][what]
-		pb.nudge = "左邊寫 %d；每一格 = 上面的係數 + %d × 前一格。" % [a, a]
+		pb.nudge = "左邊寫 %d。每一格 = 上面的係數 + %d × 前一格。" % [a, a]
 		out.append(pb)
 	return out
 

@@ -545,7 +545,7 @@ func _open_shelf() -> void:
 	Game.of(self).sfx("click")
 	var vb := _modal(Color("f0d29a"), 860, "紀念品櫃")
 	var tip := Label.new()
-	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品；全單元 100% 時，紀念品會發光並出現專屬特效"
+	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品。全單元 100% 時，紀念品會發光並出現專屬特效"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)

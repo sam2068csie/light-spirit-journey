@@ -423,7 +423,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "star", "chapter": 2, "type": "forge", "title": "星等望遠鏡", "type_name": "星等（對數尺度）",
-		 "story": "星等越小越亮；星等差 5，亮度差 100 倍。",
+		 "story": "星等越小越亮。星等差 5，亮度差 100 倍。",
 		 "insight": "m = −2.5 log (F/F_{0})：差 1 等 ⇔ 亮度約 2.5 倍。",
 		 "variants": [
 			{"eq": "星等 m = −2.5 log (F/F_{0})（織女星 m = 0）\n亮度只有織女星 1/100 的星，是幾等星？",

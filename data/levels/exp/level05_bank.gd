@@ -78,7 +78,7 @@ static func slots() -> Array:
 		{"id": "gate", "choices": BASES, "chapter": 1, "type": "fit", "title": "鏡像之門", "form": "log",
 		 "params": ["a"], "live": true, "mirror": true, "ghost": true, "square": true,
 		 "view": {"x": Vector2(-3, 6), "y": Vector2(-2.5, 4.5)},
-		 "story": "調整 a，讓對數光橋穿過寶石；看鏡中的指數分身怎麼動。",
+		 "story": "調整 a，讓對數光橋穿過寶石。看鏡中的指數分身怎麼動。",
 		 "predicts": [Q_FIXED,
 			{"q": "y = log_{a} x 的定義域是？",
 			 "options": ["x > 0", "x ≥ 0", "全體實數", "x > 1"], "correct": 0,

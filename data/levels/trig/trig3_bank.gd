@@ -310,7 +310,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "sym", "chapter": 2, "type": "forge", "title": "對稱軸與對稱中心",
-		 "story": "每一個波峰、波谷都是對稱軸；每一個穿過中線的地方都是對稱中心。",
+		 "story": "每一個波峰、波谷都是對稱軸，每一個穿過中線的地方都是對稱中心。",
 		 "insight": "sin x：對稱軸 x = π/2 + kπ（波峰、波谷），對稱中心 (kπ, 0)。cos x：對稱軸 x = kπ，對稱中心 (π/2 + kπ, 0)。",
 		 "variants": [
 			{"eq": "y = sin x 的對稱軸與對稱中心",
