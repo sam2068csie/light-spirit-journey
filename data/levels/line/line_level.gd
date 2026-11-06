@@ -34,9 +34,6 @@ extends "res://data/levels/engine/step_level.gd"
 ## 動畫圖層（at 那一步出現時才開始播）：
 ##   {"k": "path", "pts": [[x, y], …], "c", "dur": 1.5}  光線：沿著折線一段一段畫出來，最後有箭頭
 ##   {"k": "fold", "pts": [[x, y], …], "to": [[x, y], …], "dur": 1.2, "marks": [[從, 到], …]}  摺紙：多邊形從 pts 慢慢翻到 to，marks 的點跟著翻
-## 直接挑戰（variant 的 "challenge"：一個步驟，通常是最後答案的填空或點選）：
-##   一開始只出這一步，學生自己決定怎麼做。做對了就整題過關（推導紀錄補上完整的步驟、圖補上所有的點和區域）。
-##   卡住了按「一步一步來」才展開原本的 steps（最多兩顆星）。
 ## 點選區域的步驟可以加 "bloom": true：塗對了，田裡的稻子一株一株長出來；塗錯的那幾塊會枯掉（變紅褐色）。
 ## 延後到終焉之塔的題型記在 docs/line_tower_backlog.md（每做完一關都要更新）
 ##
@@ -77,80 +74,6 @@ func _pv() -> PlaneView:
 	return fview as PlaneView
 
 
-# ================= 直接挑戰（challenge） =================
-
-var challenge_on := false
-var challenge_btn: Button
-
-
-func _custom_start() -> void:
-	challenge_on = false
-	if r.get("type", "") == "forge" and r.has("challenge"):
-		if not r.has("_full"):
-			r["_full"] = r.steps
-		var ch: Dictionary = r.challenge.duplicate(true)
-		ch["challenge"] = true
-		r["steps"] = [ch]
-		challenge_on = true
-	elif r.has("_full"):
-		r["steps"] = r._full
-	super()
-
-
-## 「一步一步來」：放棄直接挑戰，展開原本的步驟（扣一顆星）
-func _challenge_hint() -> void:
-	if not challenge_on:
-		return
-	challenge_on = false
-	mistakes += 1
-	r["steps"] = r._full
-	steps = r.steps
-	si = 0
-	pre_done = {}
-	fview.step = 0
-	if _pv().plane != null:
-		_pv().plane.pick_off()
-		_pv().plane.region_off()
-	keypad_on = false
-	_hint("好，我們一步一步來。", "info")
-	_forge_step()
-
-
-func _add_challenge_btn() -> void:
-	if not challenge_on or si != 0:
-		return
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 6)
-	rank_box.add_child(gap)
-	challenge_btn = UITheme.ghost_button("卡住了？一步一步來（最多 ★★）", 15)
-	challenge_btn.custom_minimum_size = Vector2(0, 40)
-	challenge_btn.pressed.connect(_challenge_hint)
-	rank_box.add_child(challenge_btn)
-
-
-func _step_done(st: Dictionary, why: String) -> void:
-	if st.get("challenge", false) and challenge_on:
-		# 直接做出來了：推導紀錄補上完整的步驟，圖補上每一步的點和區域
-		challenge_on = false
-		var full: Array = r._full
-		var pl: CoordPlane = _pv().plane
-		for fs in full:
-			if String(fs.get("line", "")) != "":
-				fview.push_line(fs.line)
-			if String(fs.kind) == "grid" and pl != null:
-				pl.add_dot(Vector2(float(fs.target[0]), float(fs.target[1])), String(fs.get("label", "P")), String(fs.get("c", "gold")))
-			elif String(fs.kind) == "region" and pl != null:
-				pl.add_region(fs.ineq, String(fs.get("c", "lime")), fs.get("bloom", false))
-		r["steps"] = full
-		steps = full
-		si = full.size() - 1
-		var last: Dictionary = st.duplicate()
-		last["kind"] = "challenge_done"
-		super(last, why)
-		return
-	super(st, why)
-
-
 # ================= 點選格子點（grid） =================
 
 func _forge_step() -> void:
@@ -160,14 +83,10 @@ func _forge_step() -> void:
 	super()
 	if si < steps.size() and String(steps[si].kind) == "grid":
 		_build_grid(steps[si])
-		_add_challenge_btn()
 	elif si < steps.size() and String(steps[si].kind) == "slide":
 		_build_slide(steps[si])
 	elif si < steps.size() and String(steps[si].kind) == "region":
 		_build_region(steps[si])
-		_add_challenge_btn()
-	elif si < steps.size() and String(steps[si].kind) == "fill":
-		_add_challenge_btn()
 
 
 func _build_grid(st: Dictionary) -> void:
@@ -244,11 +163,6 @@ func _grid_submit() -> void:
 
 
 func _custom_reveal(msg: String) -> void:
-	if challenge_on:
-		challenge_on = false
-		r["steps"] = r._full
-		steps = r.steps
-		si = 0
 	if fview != null and r.type == "forge" and _pv().plane != null:
 		var pl: CoordPlane = _pv().plane
 		pl.pick_off()
@@ -386,8 +300,6 @@ func _region_submit() -> void:
 	if st.get("bloom", false) and not extra.is_empty():
 		pl.wither(extra)
 		msg = "塗錯的田枯掉了！" + msg
-	if challenge_on:
-		msg += "\n（卡住了可以按「一步一步來」）"
 	_wrong(st, msg)
 
 

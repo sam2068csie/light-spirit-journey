@@ -139,11 +139,6 @@ func _check_node(n: Node, cr: Rect2, when: String) -> void:
 
 # ---------------- 推導題 ----------------
 func _play_forge(lv) -> void:
-	# 直接挑戰：看一下挑戰的畫面，再按「一步一步來」把每一步都玩過（直接做對的路線由 test_real 測）
-	if lv.get("challenge_on") == true:
-		await _check(lv, "挑戰 作答前")
-		lv._challenge_hint()
-		await frames(3)
 	var guard := 0
 	while lv.si < lv.steps.size() and guard < 60:
 		guard += 1
