@@ -14,7 +14,7 @@ const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
-var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd）
+var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd、直線與圓 line_tower_bank.gd）
 
 const STAGE_W := 700.0
 const STAGE_H := 556.0
@@ -1652,7 +1652,7 @@ class NumLine extends Control:
 ## 每個圖層可以有 at：完成第幾步之後才出現（until：第幾步開始消失）。
 ## 三角函數：
 ##   "pi": 6 → 橫軸每 π/6 一條格線，刻度標 π/2、π、3π/2…（"pi_lab": 4 → 標到 π/4）
-## 幾何圖（"geo": true：x、y 等比例，沒有格線和坐標軸；要坐標軸寫 "axes": true）：
+## 幾何圖（"geo": true：x、y 等比例，沒有格線和坐標軸；要坐標軸寫 "axes": true，淡淡的方格寫 "grid": 1）：
 ##   "shapes": [{k: "seg", a: [x, y], b: [x, y]}, {k: "poly", pts: [[x, y]…], fill: "cyan"},
 ##     {k: "circle", o, r}, {k: "arc", o, r, a0, a1（度，逆時針）}, {k: "sector", o, r, a0, a1, fill},
 ##     {k: "dot", p}, {k: "label", p, s, off: [dx, dy]}, {k: "angle", o, a0, a1}（角的小弧）, {k: "right", p, u, v}（直角記號）]
@@ -1911,6 +1911,19 @@ class Plot extends Control:
 		return Vector2(float(a[0]), float(a[1]))
 
 	func _draw_geo(font: Font) -> void:
+		if data.has("grid"):
+			# 淡淡的方格（"grid": 1 → 每 1 單位一條），坐標題比較好看出格子點
+			var xr0: Array = data.x
+			var yr0: Array = data.y
+			var gs := float(data.grid)
+			var gx := ceilf(xr0[0] / gs) * gs
+			while gx <= xr0[1] + 1e-6:
+				draw_line(_to(Vector2(gx, yr0[0])), _to(Vector2(gx, yr0[1])), Color(1, 1, 1, 0.06), 1.0)
+				gx += gs
+			var gy := ceilf(yr0[0] / gs) * gs
+			while gy <= yr0[1] + 1e-6:
+				draw_line(_to(Vector2(xr0[0], gy)), _to(Vector2(xr0[1], gy)), Color(1, 1, 1, 0.06), 1.0)
+				gy += gs
 		if data.get("axes", false):
 			var xr: Array = data.x
 			var yr: Array = data.y

@@ -24,7 +24,7 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# 直線與圓：建造中（先做好地圖和第一關）。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看
 	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false, "preview": true,
-	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",
+	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "line_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",
 	 "levels": [
 		{"id": "C1", "name": "坐標燈標", "topic": "坐標與斜率", "file": "level_line1_coord.gd", "bank": "line1_bank.gd", "color": UITheme.CYAN},
 		{"id": "C2", "name": "直線棧橋", "topic": "直線方程式", "file": "level_line2_pier.gd", "bank": "line2_bank.gd", "color": UITheme.GOLD},

@@ -510,7 +510,7 @@ func _lose_cases() -> void:
 	await _keypad_case()
 	# 1. 只剩一顆心時答錯：示範解法、看攀登結果
 	var lose_ids: Array = {"exp": ["r_logsum", "j_rules", "l_twolog", "b_ineq"], "h1poly": ["pr_two", "pj_coef", "pl_sign", "pb_garden", "pg_shift"],
-		"trig": ["tc_half", "tj_sign", "tq_tide", "tb_gun", "tg_pick"]}[unit]
+		"trig": ["tc_half", "tj_sign", "tq_tide", "tb_gun", "tg_pick"], "h1line": ["lc_nearest", "lj_slope", "lc_semi", "lb_chord", "lt_mirror"]}[unit]
 	for id in lose_ids:
 		cur_tag = id + "（心用完）"
 		var bt = await _open(id, 1)
@@ -527,7 +527,7 @@ func _lose_cases() -> void:
 		await _bcheck(bt, "心用完")
 		await shot(unit + "_lose_" + id)
 	# 2. 時間到
-	for id in {"exp": ["e_closed", "q_bact"], "h1poly": ["pp_twoway", "pg_pair"], "trig": ["te_quad", "tq_wheel"]}[unit]:
+	for id in {"exp": ["e_closed", "q_bact"], "h1poly": ["pp_twoway", "pg_pair"], "trig": ["te_quad", "tq_wheel"], "h1line": ["ll_minarea", "lq_boats"]}[unit]:
 		cur_tag = id + "（時間到）"
 		var bt = await _open(id, 3, 2.0)
 		if bt == null:
@@ -540,7 +540,7 @@ func _lose_cases() -> void:
 		await _bcheck(bt, "時間到")
 		await shot(unit + "_timeout_" + id)
 	# 3. 審判錯一張不扣心、錯兩張扣一顆
-	var jid: String = {"exp": "j_value", "h1poly": "pj_tworem", "trig": "tj_period"}[unit]
+	var jid: String = {"exp": "j_value", "h1poly": "pj_tworem", "trig": "tj_period", "h1line": "lj_circle"}[unit]
 	cur_tag = jid + "（錯一張）"
 	var bj = await _open(jid)
 	if bj != null:
