@@ -13,8 +13,6 @@ var Bank: Script
 var unit := "exp"
 const VP := Vector2(1152, 648)
 
-var _all_shots := false
-
 
 func _initialize() -> void:
 	await setup()

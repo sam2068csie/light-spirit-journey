@@ -199,6 +199,12 @@ func _check_static() -> void:
 			if not SL.q_prop(dbl, ans):
 				good = false
 		ok(good, "%s 速算：方程式乘上一個數也算對" % e[0])
+	# 終焉之塔的填空：± 裡的格子正負號都可以
+	var BT: Script = load("res://data/levels/tower/boss_tower.gd")
+	var pm := {"template": "(cos α, cos β) = (±[0], ∓[1])", "ans": ["3/5", "12/13"]}
+	ok(BT.fill_slots_ok(pm, ["−3/5", "12/13"]) == [true, true], "終焉之塔：±[0] 填 −3/5 也對")
+	ok(BT.fill_slots_ok(pm, ["3/5", "−5/13"]) == [true, false], "終焉之塔：±[1] 填錯的數還是錯")
+	ok(BT.fill_slots_ok({"template": "a = [0]", "ans": ["3/5"]}, ["−3/5"]) == [false], "終焉之塔：一般的格子正負號有差")
 	# 對數的「施放法則」：用換底也算得出來的題目，換底不能當錯的選項
 	var b4 = load(Paths.of("level04_bank.gd"))
 	var bad := []

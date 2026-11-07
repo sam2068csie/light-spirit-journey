@@ -1320,6 +1320,20 @@ static func fill_match(got: String, want: String) -> bool:
 	return got.replace(" ", "").replace("-", "−") == want.replace(" ", "").replace("-", "−")
 
 
+## 每一格對不對。正負號不影響的格子（±[0]、∓[1]、[0]^{2}、|[0]|）填正的、負的都算對（和八大關一樣）
+static func fill_slots_ok(st: Dictionary, vals: Array) -> Array:
+	var free: Array = StepLevel._sign_free(String(st.template))
+	var out := []
+	for i in vals.size():
+		var g := String(vals[i])
+		var w := String(st.ans[i])
+		if free.has(i):
+			g = g.trim_prefix("−").trim_prefix("-")
+			w = w.trim_prefix("−").trim_prefix("-")
+		out.append(fill_match(g, w))
+	return out
+
+
 func _check_fill() -> void:
 	var s: Dictionary = steps[si]
 	# 有格子還沒填好（空的、只打了「3/」）：提醒就好，不扣心
@@ -1331,8 +1345,9 @@ func _check_fill() -> void:
 				"可填整數、負數或小數，例如 −0.86" if fill_dot else ("可填整數、分數或根號，例如 −√3/2" if fill_rad else "可填整數、負數或分數，例如 −3/2")], "info")
 			return
 	var ok := true
+	var good := fill_slots_ok(s, fill_vals)
 	for i in fill_vals.size():
-		fill_bad[i] = not fill_match(String(fill_vals[i]), String(s.ans[i]))
+		fill_bad[i] = not bool(good[i])
 		if fill_bad[i]:
 			ok = false
 	if ok:
