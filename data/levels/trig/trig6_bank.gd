@@ -431,7 +431,7 @@ static func _slots() -> Array:
 				_c("同除誰", "每一項都是 sin、cos 的二次（sin²θ、sin θ cos θ、cos²θ）。兩邊同除以什麼，就能全部變成 tan θ？", ["cos²θ", "sin²θ", "cos θ", "sin θ cos θ"], 0,
 					"sin²θ 除以 cos²θ = tan²θ、sin θ cos θ 除以 cos²θ = tan θ、cos²θ 除以 cos²θ = 1。", "tan θ = sin θ 除以 cos θ，分母要放 cos。", "兩邊同除以 cos²θ", T_TANREP),
 				_f("填係數", "同除 cos²θ，令 t = tan θ。", "[0]t² + [1]t + ([2]) = 0", ["2", "3", "-2"],
-					"2t² + 3t − 2 = 0", "係數照抄：sin² 的 2、sin cos 的 3、cos² 的 −2。", T_TANREP),
+					"2t² + 3t − 2 = 0", "係數照抄：sin² 的 2、sin cos 的 3、cos² 的 −2。", T_TANREP, "prop"),
 				_f("因式分解", "十字交乘：2 = 2 × 1、−2 = (−1) × 2。", "(2t − [0])(t + [1]) = 0", ["1", "2"],
 					"2t² + 3t − 2 = (2t − 1)(t + 2)", "展開檢查：2t² + 4t − t − 2。", T_TANREP),
 				_f("解 t", "兩個括號分別等於 0。", "t = [0] 或 [1]", ["1/2", "-2"],

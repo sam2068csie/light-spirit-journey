@@ -55,6 +55,12 @@ const CASES := [
 	# 方程式的係數成比例
 	["C8", "chord2", 0, 2, ["1", "1"], true],
 	["C8", "chord2", 0, 2, ["1", "2"], false],
+	# 三角函數：兩項相加可以換順序、方程式的係數成比例
+	["G2", "wheel", 1, 1, ["20√3", "40"], true],
+	["G2", "wheel", 1, 1, ["20√3", "20"], false],
+	["G6", "ratio", 0, 1, ["4", "6", "−4"], true],
+	["G6", "ratio", 0, 1, ["−2", "−3", "2"], true],
+	["G6", "ratio", 0, 1, ["2", "3", "2"], false],
 	# 原本就有的：分數、小數、沒化簡的根號
 	["C3", "parallel", 0, 2, ["7.5", "5/2"], true],
 	["C6", "chord", 1, 4, ["√80"], true],
@@ -193,3 +199,12 @@ func _check_static() -> void:
 			if not SL.q_prop(dbl, ans):
 				good = false
 		ok(good, "%s 速算：方程式乘上一個數也算對" % e[0])
+	# 對數的「施放法則」：用換底也算得出來的題目，換底不能當錯的選項
+	var b4 = load(Paths.of("level04_bank.gd"))
+	var bad := []
+	for slot in b4.slots():
+		for v in slot.get("variants", []):
+			for st in v.get("steps", []):
+				if String(st.get("kind", "")) == "rule" and String(st.correct) in ["mpow", "recip"] and Array(st.rules).has("base"):
+					bad.append(String(st.q))
+	ok(bad.is_empty(), "對數法則：次方、倒數的題目不能拿換底當錯的選項 %s" % str(bad))
