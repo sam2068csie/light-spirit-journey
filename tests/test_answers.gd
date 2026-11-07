@@ -61,6 +61,19 @@ const CASES := [
 	["C1", "mid", 0, 3, ["52", "√52"], true],
 ]
 
+## 多項式的拼積木：另一種也對的拼法不扣能量（只提醒照題目的順序），錯的還是扣
+## [關卡, 題組 id, 題目編號, 第幾步, 積木（用 "+" 分項）, "ok" 算對／"alt" 只提醒／"bad" 算錯]
+const BLOCKS := [
+	["P3", "ladder", 2, 0, ["A", "(x − 3)", "(x + 2)", "+", "3x + 7"], "alt"],
+	["P3", "ladder", 2, 0, ["x + 3", "+", "(x^{2} + x − 2)", "A"], "ok"],
+	["P3", "ladder", 2, 0, ["A", "(x − 3)", "+", "3x + 7"], "bad"],
+	["P4", "twodiv", 0, 0, ["(x^{2} − x + 2)", "(ax + b)", "+", "−x + 1"], "alt"],
+	["P4", "twodiv", 0, 0, ["(x^{2} − x + 2)", "(ax + b)", "+", "2x + 3"], "bad"],
+	["P4", "twodiv", 1, 0, ["(ax + b)", "(x^{2} + 1)", "+", "5x + 3"], "alt"],
+	["P4", "twodiv", 1, 0, ["(x^{2} + 1)", "(ax + b)", "+", "x − 1"], "bad"],
+	["P4", "newton", 0, 0, ["P", "(x − 201)", "(x − 202)", "+", "Q", "(x − 202)", "+", "R"], "alt"],
+]
+
 
 func _initialize() -> void:
 	await setup()
@@ -118,6 +131,46 @@ func _initialize() -> void:
 		lv._fill_submit()
 		await frames(2)
 		ok(lv.si > k, "%s：正解也要算對" % tag)
+	for c in BLOCKS:
+		var lid := String(c[0])
+		if lid != cur:
+			g.goto(String(files[lid][0]))
+			await wait(0.8)
+			lv = current_scene
+			for n in lv.get_children():
+				if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+					n.queue_free()
+			await frames()
+			lv.journey_mode = true
+			bank = load(Paths.of(String(files[lid][1])))
+			cur = lid
+		var slot := {}
+		for s in bank.slots():
+			if String(s.id) == String(c[1]):
+				slot = s
+		var tag := "%s/%s#%d 第 %d 步 拼 %s" % [lid, c[1], c[2], c[3], " ".join(PackedStringArray(c[4]))]
+		if slot.is_empty():
+			ok(false, "%s：找不到題組" % tag)
+			continue
+		lv.rounds = [lv.make_round(slot, slot.variants[int(c[2])])]
+		lv.ri = 0
+		lv._start_round()
+		await frames(3)
+		if lv.get("intro_block") != null:
+			lv._intro_finish()
+		await frames(2)
+		var k := int(c[3])
+		lv.si = k
+		lv._forge_step()
+		await frames(2)
+		ok(String(lv.steps[k].kind) == "blocks", "%s：這一步是拼積木" % tag)
+		var m0: int = lv.mistakes
+		lv.blk_seq = Array(c[4]).duplicate()
+		lv._blocks_submit(lv.steps[k])
+		await frames(2)
+		var want := String(c[5])
+		var got := "ok" if lv.si > k else ("bad" if lv.mistakes > m0 else "alt")
+		ok(got == want, "%s：應該是 %s，結果是 %s" % [tag, want, got])
 	finish("ANSWERS")
 
 
