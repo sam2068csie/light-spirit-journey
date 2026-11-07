@@ -123,7 +123,10 @@ def is_square(x):
 def term(c, v, first):
     c = F(c)
     ac = abs(c)
-    body = ("" if (ac == 1 and v) else t(ac)) + v
+    if v and not isint(ac):
+        body = "(" + t(ac) + ")" + v          # 分數係數加括號：(3/2)x
+    else:
+        body = ("" if (ac == 1 and v) else t(ac)) + v
     if first:
         return (M if c < 0 else "") + body
     return (" " + M + " " if c < 0 else " + ") + body

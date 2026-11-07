@@ -107,6 +107,7 @@ const MAP := {
 	"poly8_bank.gd": "res://data/levels/poly/poly8_bank.gd",
 	"poly_map.gd": "res://data/maps/poly_map.gd",
 	"poly_tower_bank.gd": "res://data/levels/tower/poly_tower_bank.gd",
+	"poly_tower_data.gd": "res://data/levels/tower/poly_tower_data.gd",
 	"quest_panel.gd": "res://data/ui/quest_panel.gd",
 	"quiz_manager.gd": "res://data/core/quiz_manager.gd",
 	"review_center.gd": "res://data/core/review_center.gd",
