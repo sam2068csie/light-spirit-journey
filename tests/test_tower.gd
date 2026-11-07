@@ -4,6 +4,8 @@ extends "test_play.gd"
 ##   wrong：每一步先答錯一次再答對（看提示有沒有擠出畫面、心有沒有正確扣）
 ##   lose ：三顆心用完、時間到，都要示範完整解法並出現「看攀登結果」
 ##   run  ：從第 1 層爬到塔頂（舊題型也照正確答案玩），檢查樓層、心、試煉層、結算畫面
+##   pick ：不玩，只模擬選題爬很多輪：一輪不重複、跨輪先出沒看過的「題目#變體」、難度跟樓層
+## 每一題的每一組數字（vars）都會玩到；截圖名稱 id_v1_… 是第 2 組數字
 ## 環境變數 TMODE=items,wrong 只跑某幾種；ONLY=j_rules,b_drug 只玩某幾題；UNITS=exp,h1poly 只測某幾個單元；SHOTS=資料夾 存截圖
 ## 題型：choice、judge、roots、line、sign（數線標正負號）、pick（選圖）、fill（數字鍵盤）都會照學生的方式操作
 
@@ -19,7 +21,7 @@ func _initialize() -> void:
 	_all_shots = OS.get_environment("ALLSHOTS") != ""
 	var modes := OS.get_environment("TMODE")
 	if modes == "":
-		modes = "items,wrong,lose,run"
+		modes = "items,wrong,lose,run,pick"
 	var only := OS.get_environment("ONLY")
 	var units := OS.get_environment("UNITS")
 	for u in Units.UNITS:
@@ -33,10 +35,13 @@ func _initialize() -> void:
 		for it in Bank.items():
 			if only != "" and not (String(it.id) in only.split(",")):
 				continue
-			if "items" in modes:
-				await _play_item(String(it.id), false)
-			if "wrong" in modes:
-				await _play_item(String(it.id), true)
+			for vi in Center.tower_variants(it):
+				if "items" in modes:
+					await _play_item(String(it.id), false, vi)
+				if "wrong" in modes:
+					await _play_item(String(it.id), true, vi)
+		if "pick" in modes and only == "":
+			_pick_sim()
 		if "lose" in modes and only == "":
 			await _lose_cases()
 		if "run" in modes and only == "":
@@ -47,20 +52,21 @@ func _initialize() -> void:
 
 # ================= 一題一題玩 =================
 
-func _open(id: String, hearts := 3, time := 900.0):
+func _open(id: String, hearts := 3, time := 900.0, vi := 0):
 	g.session = {}          # 不是真的在攀登：按「前往下一層」不會跳走
-	g.goto("boss_tower.gd", {"review": {"level": "T", "slot": id}, "tower_floor": 7, "tower_hearts": hearts, "tower_time": time, "unit": unit})
+	g.goto("boss_tower.gd", {"review": {"level": "T", "slot": id, "vi": vi}, "tower_floor": 7, "tower_hearts": hearts, "tower_time": time, "unit": unit})
 	await wait(0.9)
 	var bt = current_scene
-	if bt == null or bt.get("steps") == null or String(bt.item.get("id", "")) != id:
+	if bt == null or bt.get("steps") == null or String(bt.item.get("id", "")) != id or int(bt.item.get("vi", 0)) != vi:
 		_issue("%s 開不起來" % id)
 		return null
 	return bt
 
 
-func _play_item(id: String, wrong: bool) -> void:
+func _play_item(id0: String, wrong: bool, vi := 0) -> void:
+	var id := id0 + ("_v%d" % vi if vi > 0 else "")     # 截圖和訊息用的名字
 	cur_tag = id + ("（先答錯）" if wrong else "")
-	var bt = await _open(id)
+	var bt = await _open(id0, 3, 900.0, vi)
 	if bt == null:
 		return
 	if wrong:
@@ -204,11 +210,23 @@ func _set_signs(bt, signs: Array) -> void:
 ## 題庫本身的檢查：選項不重複、正解在選項裡、填空答案打得出來、排版正確
 func _check_bank() -> void:
 	var ids := {}
-	for it in Bank.items():
-		var id := String(it.id)
-		if ids.has(id):
-			_issue("題目代號重複：%s" % id)
-		ids[id] = true
+	var all := []
+	for it0 in Bank.items():
+		if ids.has(String(it0.id)):
+			_issue("題目代號重複：%s" % it0.id)
+		ids[String(it0.id)] = true
+		for vi in Center.tower_variants(it0):
+			all.append(Center.tower_item(Bank, String(it0.id), vi))
+	var stems := {}
+	for it in all:
+		var id := String(it.id) + ("_v%d" % int(it.vi) if int(it.vi) > 0 else "")
+		var sk := String(it.id) + "|" + String(it.stem) + "|" + JSON.stringify(it.steps)
+		if stems.has(sk):
+			_issue("%s 和 %s 是同一組數字" % [id, stems[sk]])
+		stems[sk] = id
+		for k in ["kind", "tier", "title", "id"]:
+			if it.get(k) != Bank.by_id(String(it.id)).get(k):
+				_issue("%s：變體不能改 %s" % [id, k])
 		if not Bank.KIND_NAME.has(it.kind):
 			_issue("%s 的題型 %s 沒有名字" % [id, it.kind])
 		for st in it.steps:
@@ -596,8 +614,8 @@ func _climb() -> void:
 			_issue("同一輪攀登裡重複出了 %s（第 %d 層和第 %d 層）" % [key, int(seen[key]), f])
 		seen[key] = f
 		if file == "boss_tower.gd":
-			if String(sc.item.id) != String(it.slot):
-				_issue("塔要出 %s，畫面上卻是 %s" % [it.slot, sc.item.id])
+			if String(sc.item.id) != String(it.slot) or int(sc.item.get("vi", 0)) != int(it.get("vi", 0)):
+				_issue("塔要出 %s#%d，畫面上卻是 %s#%d" % [it.slot, int(it.get("vi", 0)), sc.item.id, int(sc.item.get("vi", 0))])
 			if int(Center.tower_max_tier(f)) < int(sc.item.tier) and String(sc.item.kind) != "boss":
 				_issue("第 %d 層出了難度 %d 的題目" % [f, int(sc.item.tier)])
 			if sc.floor_label.text != "第 %d 層" % f:
@@ -703,3 +721,54 @@ func _click(ctl: Control, pos: Vector2) -> void:
 		e.position = pos
 		e.global_position = ctl.global_position + pos
 		ctl._gui_input(e)
+
+
+# ================= 模擬選題：爬很多輪 =================
+
+## 不玩題目，只照 game.gd 的方式選題、記錄：
+##   ・每一輪：試煉層出試煉題、不重複、難度不超過樓層
+##   ・跨輪：前幾輪（題目#變體夠用的時候）完全不重複
+func _pick_sim() -> void:
+	cur_tag = unit + " 選題模擬"
+	var top := Center.tower_top(unit)
+	var nvar := 0
+	var nboss := 0
+	for q in Bank.items():
+		nvar += Center.tower_variants(q)
+		if q.kind == "boss":
+			nboss += Center.tower_variants(q)
+	var seen: Array = []
+	var all_keys := {}
+	var runs := 8
+	var overlap_free := 0
+	for r in runs:
+		var hist: Array = []
+		var run_keys := {}
+		var rep := 0
+		for f in range(1, top + 1):
+			var it: Dictionary = Center.tower_pick(f, hist, unit, seen)
+			hist.append({"level": it.level, "slot": it.slot, "title": it.title, "stars": 3, "floor": f, "type": it.get("type", "")})
+			if String(it.level) != "T":
+				continue
+			var q: Dictionary = Bank.by_id(String(it.slot))
+			if (f % 5 == 0) != (q.kind == "boss"):
+				_issue("模擬第 %d 輪第 %d 層出了 %s（%s）" % [r + 1, f, it.slot, q.kind])
+			if q.kind != "boss" and int(q.tier) > Center.tower_max_tier(f):
+				_issue("模擬第 %d 輪第 %d 層出了難度 %d 的 %s" % [r + 1, f, int(q.tier), it.slot])
+			if q.kind == "boss" and f <= 10 and int(q.tier) > 2:
+				_issue("模擬第 %d 輪第 %d 層的試煉題太難：%s" % [r + 1, f, it.slot])
+			if run_keys.has(String(it.slot)):
+				_issue("模擬第 %d 輪重複出了 %s" % [r + 1, it.slot])
+			run_keys[String(it.slot)] = true
+			var key := "%s#%d" % [it.slot, int(it.get("vi", 0))]
+			if all_keys.has(key):
+				rep += 1
+			all_keys[key] = true
+			seen = seen.filter(func(x): return x != key)
+			seen.append(key)
+		if rep == 0:
+			overlap_free += 1
+		print("  模擬第 %d 輪：新題 %d 題，和前面幾輪重複 %d 題（累積看過 %d／%d 組）" % [r + 1, run_keys.size(), rep, all_keys.size(), nvar])
+	# 題目#變體夠多的單元：前三輪一定完全不重複
+	if nvar >= 3 * top and nboss >= 12 and overlap_free < 3:
+		_issue("題目夠多，前三輪卻有重複（%d 輪完全不重複）" % overlap_free)

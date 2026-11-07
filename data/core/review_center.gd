@@ -315,7 +315,8 @@ static func tower_pool(unit: String = Units.DEFAULT) -> Array:
 ##   ・其他樓層大約七成出段考風格的新題型（真假審判、驗根、數線、極值、應用），三成出八大關的舊題型喘口氣
 ##   ・新題型的難度跟著樓層上升：1～4 層難度 1，6～9 層難度 2 以下，之後全部都會出
 ##   ・避開最近出過的題目，也不連續出同一種題型／同一個大關
-static func tower_pick(floor_n: int, recent: Array, unit: String = Units.DEFAULT) -> Dictionary:
+##   ・新題目每題有好幾組數字（vars）：seen 是前幾輪出過的「代號#變體」，先出沒看過的、再出最久以前看過的
+static func tower_pick(floor_n: int, recent: Array, unit: String = Units.DEFAULT, seen: Array = []) -> Dictionary:
 	var used := {}
 	for it in recent.slice(maxi(0, recent.size() - 12)):
 		used[String(it.level) + "/" + String(it.slot)] = true
@@ -326,9 +327,9 @@ static func tower_pick(floor_n: int, recent: Array, unit: String = Units.DEFAULT
 	var last: Dictionary = recent.back() if not recent.is_empty() else {}
 	if floor_n % 5 == 0:
 		# 試煉層：同一輪攀登裡不重複（用完就是塔頂，見 tower_top）
-		return _tower_new(floor_n, used, last, true, unit)
+		return _tower_new(floor_n, used, last, true, unit, seen)
 	if floor_n == 1 or randf() < 0.7:
-		var it := _tower_new(floor_n, used, last, false, unit)
+		var it := _tower_new(floor_n, used, last, false, unit, seen)
 		if not it.is_empty():
 			return it
 	return _tower_old(floor_n, used, last, unit)
@@ -338,7 +339,27 @@ static func tower_max_tier(floor_n: int) -> int:
 	return 1 if floor_n <= 4 else (2 if floor_n <= 10 else 3)
 
 
-static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: bool, unit: String = Units.DEFAULT) -> Dictionary:
+## 一題有幾組數字（題目本身 + vars）
+static func tower_variants(q: Dictionary) -> int:
+	return 1 + Array(q.get("vars", [])).size()
+
+
+## 一題的第 vi 組數字：vi = 0 是題目本身，vars 的每一組蓋過 stem、plot、steps 等欄位
+static func tower_item(bank: Script, id: String, vi := 0) -> Dictionary:
+	var q: Dictionary = bank.by_id(id)
+	if q.is_empty():
+		return q
+	var vars: Array = q.get("vars", [])
+	var out := q.duplicate()
+	out.erase("vars")
+	vi = clampi(vi, 0, vars.size())
+	if vi > 0:
+		out.merge(vars[vi - 1], true)
+	out["vi"] = vi
+	return out
+
+
+static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: bool, unit: String = Units.DEFAULT, seen: Array = []) -> Dictionary:
 	var bank := tower_bank(unit)
 	if bank == null:
 		return {}
@@ -355,10 +376,20 @@ static func _tower_new(floor_n: int, used: Dictionary, last: Dictionary, boss: b
 		cands = pool.filter(func(q): return not used.has("T/" + q.id))
 	if cands.is_empty():
 		return {}
+	# 每一題的每一組數字：前幾輪沒出過的優先，都出過了就挑最久以前出的那三分之一
+	var pairs := []
+	for q in cands:
+		for vi in tower_variants(q):
+			pairs.append([q, vi, seen.find("%s#%d" % [q.id, vi])])
+	pairs.sort_custom(func(a, b): return int(a[2]) < int(b[2]))
+	var fresh := pairs.filter(func(p): return int(p[2]) < 0)
+	if fresh.is_empty():
+		fresh = pairs.slice(0, maxi(1, ceili(pairs.size() / 3.0)))
 	# 高樓層偏好難一點的題目
-	var top := cands.filter(func(q): return int(q.tier) == tier)
-	var q: Dictionary = (top if not top.is_empty() and randf() < 0.6 else cands).pick_random()
-	return {"level": "T", "slot": q.id, "vi": 0, "title": bank.KIND_NAME[q.kind] + "・" + q.title,
+	var top := fresh.filter(func(p): return int(p[0].tier) == tier)
+	var pk: Array = (top if not top.is_empty() and randf() < 0.6 else fresh).pick_random()
+	var q: Dictionary = pk[0]
+	return {"level": "T", "slot": q.id, "vi": int(pk[1]), "title": bank.KIND_NAME[q.kind] + "・" + q.title,
 		"type": q.kind, "tmul": tower_tmul(q), "tag": ""}
 
 
@@ -388,12 +419,15 @@ static func _tower_old(floor_n: int, used: Dictionary, last: Dictionary, unit: S
 	return it
 
 
-## 塔頂：每 5 層一個試煉層，試煉題用完（一輪不重複）就是塔頂
+## 塔頂：最多 30 層。每 5 層一個試煉層，一輪不重複；試煉題不夠 6 題的單元，用完就是塔頂
+const TOWER_FLOORS := 30
+
+
 static func tower_top(unit: String = Units.DEFAULT) -> int:
 	var bank := tower_bank(unit)
 	if bank == null:
 		return 0
-	return 5 * bank.items().filter(func(q): return q.kind == "boss").size()
+	return mini(TOWER_FLOORS, 5 * bank.items().filter(func(q): return q.kind == "boss").size())
 
 
 ## 每一層的限時（越高越短）

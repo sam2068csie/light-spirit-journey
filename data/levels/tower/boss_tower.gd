@@ -84,14 +84,15 @@ func _ready() -> void:
 	if Bank == null:
 		Bank = Center.tower_bank("exp")
 	if a.has("review"):
-		item = Bank.by_id(String(a.review.slot))
+		item = Center.tower_item(Bank, String(a.review.slot), int(a.review.get("vi", 0)))
 		floor_n = int(a.get("tower_floor", 1))
 		hearts = int(a.get("tower_hearts", MAX_HEARTS))
 		time_total = float(a.get("tower_time", 120.0))
 	else:
 		test_mode = true
 		var all: Array = Bank.items()
-		item = all.pick_random() if not a.has("id") else Bank.by_id(String(a.id))
+		var id: String = String(all.pick_random().id) if not a.has("id") else String(a.id)
+		item = Center.tower_item(Bank, id, int(a.get("vi", 0)))
 		time_total = 150.0 * float(item.get("tmul", 1.0))
 	if item.is_empty():
 		item = Bank.items()[0]

@@ -63,12 +63,14 @@ var last_wrong := {}                   # 觀念 tag → 最後一次答錯的時
 var cur_unit := "exp"                  # 目前在玩的單元
 
 
-var _per_unit := {}                    # 單元 → {daily, tower_best, tower_runs, map_sel}
+var _per_unit := {}                    # 單元 → {daily, tower_best, tower_runs, map_sel, tower_seen}
 
 
 func _pu() -> Dictionary:
 	if not _per_unit.has(cur_unit):
-		_per_unit[cur_unit] = {"daily": {}, "tower_best": 0, "tower_runs": 0, "map_sel": -1}
+		_per_unit[cur_unit] = {"daily": {}, "tower_best": 0, "tower_runs": 0, "map_sel": -1, "tower_seen": []}
+	if not _per_unit[cur_unit].has("tower_seen"):
+		_per_unit[cur_unit]["tower_seen"] = []
 	return _per_unit[cur_unit]
 
 
@@ -100,6 +102,13 @@ var tower_best: int:                   # 終焉之塔（目前單元）：最高
 		return int(_pu().tower_best)
 	set(v):
 		_pu().tower_best = v
+
+
+var tower_seen: Array:                 # 終焉之塔（目前單元）：最近幾輪出過的新題「代號#變體」，新的在後面（跨輪避開重複）
+	get:
+		return _pu().tower_seen
+	set(v):
+		_pu().tower_seen = v
 
 
 var tower_runs: int:                   # 累積攀登次數
@@ -505,10 +514,11 @@ func _load_units(data: Dictionary) -> void:
 		for k in u:
 			var d: Dictionary = u[k]
 			_per_unit[String(k)] = {"daily": d.get("daily", {}), "tower_best": int(d.get("tower_best", 0)),
-				"tower_runs": int(d.get("tower_runs", 0)), "map_sel": int(d.get("map_sel", -1))}
+				"tower_runs": int(d.get("tower_runs", 0)), "map_sel": int(d.get("map_sel", -1)),
+				"tower_seen": Array(d.get("tower_seen", [])).map(func(x): return String(x))}
 	else:
 		_per_unit["exp"] = {"daily": data.get("daily", {}), "tower_best": int(data.get("tower_best", 0)),
-			"tower_runs": int(data.get("tower_runs", 0)), "map_sel": -1}
+			"tower_runs": int(data.get("tower_runs", 0)), "map_sel": -1, "tower_seen": []}
 	cur_unit = String(data.get("unit", "exp"))
 	var cu: Dictionary = preload("res://data/core/units.gd").unit(cur_unit)
 	if not (bool(cu.open) or (bool(cu.get("preview", false)) and dev_unlock_all)):

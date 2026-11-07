@@ -136,7 +136,7 @@ func _process(delta: float) -> void:
 
 
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.08-b"
+const BUILD := "2026.11.08-c"
 
 
 ## 今天的修煉題（換日就重新出題）
@@ -215,6 +215,7 @@ func session_report(stars: int) -> void:
 # ---------- 終焉之塔 ----------
 
 const TOWER_HEARTS := 3
+const TOWER_SEEN_MAX := 200       # 跨輪記憶最多記幾題（夠蓋過好幾輪）
 
 
 ## 開始攀登：從第 1 層、三顆心開始
@@ -226,7 +227,7 @@ func start_tower() -> void:
 func _launch_tower_floor() -> void:
 	var center = load(Paths.of("review_center.gd"))
 	var f: int = session.floor
-	var it: Dictionary = center.tower_pick(f, session.history, cur_unit)
+	var it: Dictionary = center.tower_pick(f, session.history, cur_unit, tower_seen)
 	session["cur"] = it
 	var info: Dictionary = center.level_info(it.level)
 	goto(info.file, {"review": it, "review_kind": "tower", "review_i": f - 1, "review_n": f,
@@ -244,6 +245,12 @@ func tower_report(stars: int, hearts: int) -> void:
 	session.hearts = hearts
 	if stars > 0 and it.level != "T":
 		mark_cleared(it.level + "/" + it.slot, int(it.vi))
+	if it.level == "T":
+		# 跨輪記憶：最近出過的新題（代號#變體），下一輪先出沒看過的
+		var key := "%s#%d" % [it.slot, int(it.get("vi", 0))]
+		var seen: Array = tower_seen.filter(func(x): return x != key)
+		seen.append(key)
+		tower_seen = seen.slice(maxi(0, seen.size() - TOWER_SEEN_MAX))
 	var center = load(Paths.of("review_center.gd"))
 	if hearts > 0:
 		quest_event("tower_floor", {"floor": int(session.floor)})
