@@ -22,8 +22,8 @@ const UNITS := [
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
-	# 直線與圓：建造中（先做好地圖和第一關）。preview = true → 開發者功能「一鍵開放全部關卡」打開時可以先進去看
-	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": false, "preview": true,
+	# 直線與圓：八大關＋終焉之塔都做好了，2026/11/08 正式開放
+	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": true,
 	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "line_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",
 	 "levels": [
 		{"id": "C1", "name": "坐標燈標", "topic": "坐標與斜率", "file": "level_line1_coord.gd", "bank": "line1_bank.gd", "color": UITheme.CYAN},
