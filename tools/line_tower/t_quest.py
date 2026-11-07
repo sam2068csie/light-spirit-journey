@@ -119,7 +119,7 @@ def lq_apollo(a0, k):
     return {"id": "lq_apollo", "kind": "quest", "tier": 3, "title": "燈塔和小船", "tmul": 1.3,
             "stem": "湖上兩座燈塔 A(−%d, 0)、B(%d, 0)。小船 P 一直保持「到 A 的距離是到 B 的 %s」。(1) 小船的航線 (2) △PAB 面積的最大值 (3) 小船離 A 最遠多遠？" % (a0, a0, word),
             "plot": geo(xr, yr, [pt((-a0, 0), "A", "gold", 0, (-8, 18)), pt((a0, 0), "B", "gold", 0, (-8, 18)),
-                                 circ((h, 0), R, "cyan", at=3), pt((h, 0), "K", "cyan", 3, (6, 18)),
+                                 circ((h, 0), R, "cyan", at=3), pt((h, 0), "K", "cyan", 3, (6, -8)),
                                  poly_sh([(-a0, 0), (a0, 0), (h, R)], "lime", fill="lime", alpha=0.15, at=3), pt((h, R), "P", "lime", 3)]),
             "steps": [
                 choice("設 P(x, y)，條件寫成：", ["\\ol{PA}^{2} = %d\\ol{PB}^{2}" % k2, "\\ol{PA} = %d\\ol{PB}" % k2, "\\ol{PA}^{2} = %d\\ol{PB}^{2}" % k, "%d\\ol{PA} = \\ol{PB}" % k],

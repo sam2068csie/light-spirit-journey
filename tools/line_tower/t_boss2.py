@@ -64,7 +64,7 @@ def lb_touch(L, T, Q, offs):
                 choice("圓和 L 切於 T，圓心一定在？", ["過 T 且和 L 垂直的直線上", "過 T 且和 L 平行的直線上", "L 上", "過 Q 且和 L 垂直的直線上"],
                        "切線和半徑垂直：半徑 \\ol{KT} ⊥ L", "(1)　\\ol{KT} ⊥ L", part="(1)"),
                 choice("L 的法向量是 %s。過 T%s 且和 L 垂直的直線：" % (P(a_, b_), P(*T)), opts_p,
-                       "方向就是 L 的法向量 %s，代 T 進去求常數" % P(a_, b_), "(1)　圓心在 %s 上" % perp),
+                       "方向就是 L 的法向量 %s，代 T 進去求常數" % P(a_, b_), "圓心在 %s 上" % perp),
                 choice("圓心到 T、Q 一樣遠，也在 \\ol{TQ} 的中垂線上：", bopts, "T、Q 的 %s 坐標一樣，中垂線看中點" % ("y" if T[1] == Q[1] else "x"),
                        "\\ol{TQ} 的中垂線 %s" % bis, part="(2)"),
                 fill("聯立：", "(2)　圓心 K([0], [1])，r^{2} = [2]", [a(C[0]), a(C[1]), a(r2)],
@@ -85,7 +85,7 @@ def lb_square(V0, s, Pp, offs):
     lo, hi = min(sl), max(sl)
     ctr = (x0 + F(s, 2), y0 + F(s, 2))
     mc = F(ctr[1] - Pp[1]) / (ctr[0] - Pp[0])
-    lineS = "y = m(%s) %s %s" % ("x" if Pp[0] == 0 else "x %s %s" % ("+" if Pp[0] < 0 else M, t(abs(Pp[0]))), "+" if Pp[1] > 0 else M, t(abs(Pp[1])))
+    lineS = ("y = mx %s %s" % ("+" if Pp[1] > 0 else M, t(abs(Pp[1])))) if Pp[0] == 0 else "y = m(%s) %s %s" % ("x" if Pp[0] == 0 else "x %s %s" % ("+" if Pp[0] < 0 else M, t(abs(Pp[0]))), "+" if Pp[1] > 0 else M, t(abs(Pp[1])))
     if Pp[1] == 0:
         lineS = "y = m(%s)" % ("x" if Pp[0] == 0 else "x %s %s" % ("+" if Pp[0] < 0 else M, t(abs(Pp[0]))))
     xr, yr = box(V + [Pp], pad=1.0)
@@ -154,10 +154,14 @@ def lb_pencil(R2, L, Mline, X, Y):
             "steps": [
                 fill("L 代進 C 解聯立：", "(1)　交點 ([0], [1])、([2], [3])（x 小的先寫）", [a(X[0]), a(X[1]), a(Y[0]), a(Y[1])],
                      "從 L 解出一個變數，代進 x^{2} + y^{2} = %d" % R2, part="(1)"),
-                choice("過兩個交點的圓都可以寫成：", [fam, "(x^{2} + y^{2} − %d)(%s) = 0" % (R2, poly([(a_, "x"), (b_, "y"), (c_, "")])),
-                                              "x^{2} + y^{2} + k(%s) = %d" % (poly([(a_, "x"), (b_, "y"), (c_, "")]), R2 + 1), "k(x^{2} + y^{2}) = %s" % poly([(a_, "x"), (b_, "y"), (c_ - 1, "")])],
+                choice("記 C = x^{2} + y^{2} − %d、L = %s。過兩個交點的圓都可以寫成：" % (R2, poly([(a_, "x"), (b_, "y"), (c_, "")])),
+                       ["C + kL = 0", "C · L = 0", "C + L = k", "kC = L + 1"],
                        "C + kL = 0：交點同時讓 C、L 都是 0", "(2)　" + fam, part="(2)"),
-                fill("展開後 x、y 的係數是 %s、%s，所以圓心是：" % (cx(a_, "k"), cx(b_, "k")), "圓心 = ([0] × k, [1] × k)", [a(F(-a_, 2)), a(F(-b_, 2))], "圓心 = (−D/2, −E/2)"),
+                choice("展開後 x、y 的係數是 %s、%s，所以圓心是：" % (cx(a_, "k"), cx(b_, "k")),
+                       _uniq(["(%s, %s)" % (cx(F(-a_, 2), "k"), cx(F(-b_, 2), "k"))],
+                             ["(%s, %s)" % (cx(F(a_, 2), "k"), cx(F(b_, 2), "k")), "(%s, %s)" % (cx(-a_, "k"), cx(-b_, "k")),
+                              "(%s, %s)" % (cx(F(-b_, 2), "k"), cx(F(-a_, 2), "k")), "(%s, %s)" % (cx(F(-a_, 2), "k"), cx(F(b_, 2), "k"))]),
+                       "x^{2} + y^{2} + Dx + Ey + F = 0 的圓心是 (−D/2, −E/2)", "圓心 (%s, %s)" % (cx(F(-a_, 2), "k"), cx(F(-b_, 2), "k"))),
                 fill("圓心代進 %s：" % Ms, "k = [0]", [a(k)], "%s × (%sk) + %s × (%sk) = %s" % (t(p), t(F(-a_, 2)), tp(q), t(F(-b_, 2)), t(s))),
                 choice("k 代回去：", [eq2] + wrong, "x^{2} + y^{2} − %d + (%s)(%s) = 0" % (R2, t(k), poly([(a_, "x"), (b_, "y"), (c_, "")])), "(2)　" + eq2),
                 choice("過兩個交點的圓，哪一個最小？", ["以兩交點連線為直徑的圓", "圓心在原點的圓", "圓心在 %s 上的那個" % Ms, "和 L 相切的圓"],
@@ -289,7 +293,7 @@ def lb_count3(R, k, a_, b_):
                                  ln(a_, b_, -(c3.val() + k * dsh), xr, yr, "gold", dash=True, at=3)]),
             "steps": [
                 fill("圓心到 L：", "d(O, L) = \\frac{|c|}{[0]}", [n.ans()], "√{%d + %d}" % (a_ * a_, b_ * b_)),
-                choice("到 L 的距離是 %d 的點，都在哪裡？" % k, ["和 L 平行、距離 %d 的兩條直線上" % k, "以 O 為圓心、半徑 %d 的圓上" % k, "和 L 垂直的直線上", "L 上"],
+                choice("到 L 的距離是 %d 的點，都在哪裡？" % k, ["平行 L、距離 %d 的兩條線上" % k, "以 O 為圓心、半徑 %d 的圓上" % k, "和 L 垂直的直線上", "L 上"],
                        "到一條直線距離固定的點，是兩條平行線", "這些點 = 圓和兩條平行線的交點"),
                 choice("恰有 3 個點：一條平行線和圓相切（1 點），另一條交兩點。這時", ["d(O, L) = %d − %d" % (R, k), "d(O, L) = %d + %d" % (R, k), "d(O, L) = %d" % k, "d(O, L) = %d" % R],
                        "離圓心比較遠的那條平行線要剛好相切：d(O, L) + %d = %d" % (k, R), "3 個點 ⇔ d(O, L) = %d" % (R - k), part="(1)"),
