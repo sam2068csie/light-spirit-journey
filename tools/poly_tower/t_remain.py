@@ -127,7 +127,8 @@ def pr_back(s, p, q, A, B):
     good = "(%s)x %s" % (ab(xa, xb), ("+ " + ab(ca, cb)) if not ab(ca, cb).startswith(M) else (M + " " + ab(-ca, -cb)))
     def lin_ab(xa_, xb_, ca_, cb_):
         c = ab(ca_, cb_)
-        return "(%s)x %s" % (ab(xa_, xb_), ("+ " + c) if not c.startswith(M) else (M + " " + c[1:]))
+        xs_ = ("%sx" % ab(xa_, xb_)) if xa_ == 0 and xb_ == 1 else "(%s)x" % ab(xa_, xb_)
+        return "%s %s" % (xs_, ("+ " + c) if not c.startswith(M) else (M + " " + c[1:]))
     opts = uniq([lin_ab(xa, xb, ca, cb)], [lin_ab(-s, 1, 0, -s), lin_ab(-s + p, 1, q, -s), lin_ab(xa, xb, -ca, cb), lin_ab(-s, 1, -q, -s)])
     # 比較係數
     eqx = "%s = %s" % (ab(xa, xb), t(R.c[1] if R.deg() >= 1 else 0))
@@ -138,7 +139,7 @@ def pr_back(s, p, q, A, B):
                     ["%s(ax + b)" % fac(s), "ax + b", "%s + (ax + b)" % fac(s), R.text()],
                     "f(x) = (%s)Q(x) + ax + b，乘上 %s 以後第一項還是 %s 的倍式" % (D.text(), dv(s), D.text()),
                     "%sf(x) 和 %s(ax + b) 除以 %s 的餘式相同" % (fac(s), fac(s), D.text())),
-                 ch("%s(ax + b) = ax^{2} + (%s)x %s。把 x^{2} 換成 %s 降次，餘式是？" % (fac(s), ab(-s, 1), (M + " " + t(s) + "b") if s > 0 else ("+ " + t(-s) + "b"), (-(D - Poly([0, 0, 1]))).text()),
+                 ch("%s(ax + b) = ax^{2} + (%s)x %s。把 x^{2} 換成 %s 降次，餘式是？" % (fac(s), ab(-s, 1), (M + " " + ("" if s == 1 else t(s)) + "b") if s > 0 else ("+ " + ("" if s == -1 else t(-s)) + "b"), (-(D - Poly([0, 0, 1]))).text()),
                     opts, "ax^{2} 換成 a(%s)" % (-(D - Poly([0, 0, 1]))).text(), "%s(ax + b) 除以 %s 的餘式 = %s" % (fac(s), D.text(), opts[0])),
                  fl("和 %s 比較係數：%s，%s。解聯立：" % (R.text(), eqx, eqc), "a = [0]，b = [1]", [a(A), a(B)], "兩式消去一個未知數",
                     write="答：餘式 %s" % Poly([B, A]).text())])
@@ -154,7 +155,7 @@ def pr_nest(L, r1, r2):
     sg = lambda v: ("+ " + t(v)) if v >= 0 else (M + " " + t(-v))
     return item("pr_nest", "remain", 2, "兩層除法", 1.1,
                 "g(x) 除以 %s 的餘式為 %s，f(x) 除以 g(x) 的商式為 %s、餘式為 %s。求 f(x) 除以 (%s)^{2} 的餘式。" % (Ls, t(r1), Ls, t(r2), Ls),
-                [ch("f(x) 除以 g(x) 的除法寫成：f(x) = ？", ["(%s)g(x) %s" % (Ls, sg(r2)), "g(x)h(x) %s" % sg(r2), "(%s) + g(x) %s" % (Ls, sg(r2)), "%sg(x) + %s" % (t(r2), Ls)],
+                [ch("f(x) 除以 g(x) 的除法寫成：f(x) = ？", ["(%s)g(x) %s" % (Ls, sg(r2)), "g(x)h(x) %s" % sg(r2), "(%s) + g(x) %s" % (Ls, sg(r2)), "%sg(x) + %s" % (co1(r2), Ls)],
                     "被除式 = 除式 × 商式 + 餘式", "f(x) = (%s)g(x) %s" % (Ls, sg(r2)), pre="g(x) = (%s)h(x) %s" % (Ls, sg(r1))),
                  ch("把 g(x) 代進去，f(x) = ？", uniq(["(%s)^{2}h(x) %s(%s) %s" % (Ls, "+ " + t(r1) if r1 > 0 else M + " " + (t(-r1) if r1 != -1 else ""), Ls, sg(r2))],
                                                  ["(%s)^{2}h(x) %s" % (Ls, sg(r1 + r2)), "(%s)h(x) %s" % (Ls, sg(r1 + r2)), "(%s)^{2}h(x) %s" % (Ls, sg(-r2))]),
@@ -173,6 +174,7 @@ def pr_twosq(p, q, A, B, r1):
     # u = x − q
     al, be = R1.c[1], R1.c[0]       # r1 = αx + β = αu + (αq + β)
     aqb = "%s" % poly([(q, "a"), (1, "b")])
+    aqbp = "(%s)" % aqb if q != 0 else aqb
     c0 = d * d
     c1 = 2 * d
     r2u1, r2u0 = r2.c[1], r2(q)     # r2 = r2u1·u + r2(q)
@@ -190,13 +192,13 @@ def pr_twosq(p, q, A, B, r1):
                 [ch("R(x) 怎麼假設最好？", ["%s^{2}(ax + b) + %s" % (xp, R1.text()), "ax + b", "%s(ax + b) + %s" % (xp, R1.text()), "%s^{2} + %s" % (xp, R1.text())],
                     "R(x) 最多三次，它除以 %s^{2} 的餘式也要是 %s" % (xp, R1.text()), "R(x) = %s^{2}(ax + b) + %s" % (xp, R1.text()),
                     pre="除式 %s^{2}%s^{2} 是四次，餘式 R(x) 最多三次" % (xp, xq)),
-                 fl("%s^{2} = (u %s %s)^{2} = u^{2} %s %su + %s，ax + b = au + (%s)。R 除以 u^{2} 的餘式只看常數項和 u 項。常數項：" % (
-                     xp, "+" if d > 0 else M, t(abs(d)), "+" if c1 > 0 else M, t(abs(c1)), t(c0), aqb),
-                    "常數項 = [0](%s) + %s" % (aqb, t(al * q + be)), [a(c0)], "%s × (%s)" % (t(c0), aqb),
-                    pre="令 u = x − %s，x = %s" % (tp(q), u_sub)),
+                 fl("%s^{2} = (u %s %s)^{2} = u^{2} %s %su + %s，ax + b = au + %s。R 除以 u^{2} 的餘式只看常數項和 u 項。常數項：" % (
+                     xp, "+" if d > 0 else M, t(abs(d)), "+" if c1 > 0 else M, t(abs(c1)), t(c0), aqbp),
+                    "常數項 = [0]%s%s" % (aqbp, addp(t(al * q + be))), [a(c0)], "%s × %s" % (t(c0), aqbp),
+                    pre=("令 u = %s，x = %s" % (fac(q).strip("()"), u_sub)) if q != 0 else "令 u = x"),
                  fl("比較常數項：要等於 %s 除以 u^{2} 的常數項 %s。" % (r2.text(), t(r2u0)), "%s = [0]" % aqb, [a(s_ab)],
-                    "%s(%s) = %s − %s" % (t(c0), aqb, t(r2u0), tp(al * q + be))),
-                 fl("u 的係數：%s(%s) + %sa + %s 要等於 %s。代入 %s = %s：" % (t(c1), aqb, t(c0), tp(al), t(r2u1), aqb, t(s_ab)),
+                    "%s%s = %s − %s" % (t(c0), aqbp, t(r2u0), tp(al * q + be))),
+                 fl("u 的係數：%s%s + %sa%s 要等於 %s。代入 %s = %s：" % (t(c1), aqbp, t(c0), addp(t(al)), t(r2u1), aqb, t(s_ab)),
                     "a = [0]，b = [1]", [a(A), a(B)], "%sa = %s − %s − %s" % (t(c0), t(r2u1), tp(al), tp(c1 * s_ab))),
                  ch("所以餘式 R(x) = ？", uniq([Rx.text()], wrong), "%s^{2}(%s) + %s" % (xp, Poly([B, A]).text(), R1.text()),
                     "答：%s^{2}(%s) + %s = %s" % (xp, Poly([B, A]).text(), R1.text(), Rx.text()))])
@@ -222,16 +224,16 @@ def pr_near(cs, c, dx):
                 "f(x) = %s，求 f(%s) 的近似值（四捨五入到小數點後第二位）。" % (f.text(), xs),
                 [fl("第一次綜合除法（係數 %s，除以 %s）：餘數就是 c。" % (cs_s, dv(c)), "c = f(%d) = [0]" % c, [a(C)],
                     "代 x = %d" % c, write="第一次的商：%s" % q1.text(),
-                    pre="連續用 %s 做綜合除法，把 f(x) 寫成 %s(x − %d)^{3} + a(x − %d)^{2} + b(x − %d) + c" % (dv(c), t(cs[0]), c, c, c)),
+                    pre="連續用 %s 做綜合除法，把 f(x) 寫成 %s(x − %d)^{3} + a(x − %d)^{2} + b(x − %d) + c" % (dv(c), "" if cs[0] == 1 else t(cs[0]), c, c, c)),
                  fl("第二次：把商 %s 再除以 %s，餘數就是 b。" % (q1.text(), dv(c)), "b = [0]", [a(B)], "代 x = %d 進 %s" % (c, q1.text()),
                     write="第二次的商：%s" % q2.text()),
                  fl("第三次：把 %s 除以 %s，餘數就是 a。" % (q2.text(), dv(c)), "a = [0]", [a(A)], "代 x = %d 進 %s" % (c, q2.text()),
-                    write="f(x) = %s(x − %d)^{3} + %s(x − %d)^{2} + %s(x − %d) + %s" % (t(cs[0]), c, tp(A), c, tp(B), c, tp(C))),
+                    write="f(x) = %s(x − %d)^{3}%s(x − %d)^{2}%s(x − %d)%s" % ("" if cs[0] == 1 else t(cs[0]), c, addp(t(A)), c, addp(t(B)), c, addp(t(C)))),
                  ch("x = %s 時 x − %d = %s。到小數點後第二位，要算到哪一項？" % (xs, c, str(dx)),
                     ["一次項就夠：%s + %s(%s)" % (t(C), tp(B), str(dx)), "只看常數項 %s" % t(C), "要四項全部算", "只算三次項"],
                     "%s(%s)^{2} = %s，不會影響第二位" % (t(A), str(dx), dec(sq, 6).rstrip("0")),
                     "f(%s) ≈ %s + %s(%s) + %s(%s)^{2} + …" % (xs, t(C), tp(B), str(dx), tp(A), str(dx))),
-                 fl("到小數點後第二位：", "答：f(%s) ≈ %s + %s + %s ≈ [0]" % (xs, t(C), dec(B * d, 4).rstrip("0").rstrip("."), dec(sq, 6).rstrip("0")),
+                 fl("到小數點後第二位：", "答：f(%s) ≈ %s%s%s ≈ [0]" % (xs, t(C), addp(dec(B * d, 4).rstrip("0").rstrip(".")), addp(dec(sq, 6).rstrip("0"))),
                     [dec(exact)], "%s 四捨五入" % dec(lin_ + sq, 6).rstrip("0"))])
 
 

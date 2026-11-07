@@ -32,7 +32,7 @@ def pj_coef(A, B, flags):
     w4 = a3 * b1
     assert w4 != c4
     cards.append(card("x^{4} 項的係數是 %s" % t(c4 if flags[1] else w4), bool(flags[1]),
-                      "%s · %s + %s · %s = %s" % (cx(a3, "x^{3}"), cx(b1, "x"), tp_t(cx(a2, "x^{2}")), cx(b2, "x^{2}"), cx(c4, "x^{4}"))))
+                      "%s · %s + %s · %s = %s" % (cx(a3, "x^{3}"), tp_t(cx(b1, "x")), tp_t(cx(a2, "x^{2}")), tp_t(cx(b2, "x^{2}")), cx(c4, "x^{4}"))))
     # 3 x^3（錯的：漏掉 a1·b2）
     w3 = c3 - a1 * b2
     assert w3 != c3 and a1 * b2 != 0
@@ -150,21 +150,22 @@ def pj_center(A, h, p, k, d):
     assert p * A < 0
     r = rt(F(-p, A))
     xs = fac(h)
+    As = "" if A == 1 else str(A)
     lin_m, lin_c = p, k - p * h
     cards = [
-        card("y = f(x) 圖形的對稱中心是 (%d, %d)" % (h, k), True, "f(x) = %d%s^{3} %s %d%s + %d" % (A, xs, "+" if p > 0 else M, abs(p), xs, k)),
-        card("y = f(x) 與直線 y = %d 有三個交點" % k, True, "%dt^{3} %s %dt = 0 ⇒ t = 0、±%s，三個交點" % (A, "+" if p > 0 else M, abs(p), r.text())),
+        card("y = f(x) 圖形的對稱中心是 (%d, %d)" % (h, k), True, "f(x) = %s%s^{3} %s %d%s + %d" % (As, xs, "+" if p > 0 else M, abs(p), xs, k)),
+        card("y = f(x) 與直線 y = %d 有三個交點" % k, True, "%st^{3} %s %dt = 0 ⇒ t = 0、±%s，三個交點" % (As, "+" if p > 0 else M, abs(p), r.text())),
         card("在對稱中心附近，圖形近似於直線 y = %s" % poly([(lin_m, "x"), (lin_c, "")]), True,
              "對稱中心附近 f(x) ≈ %d%s + %d" % (p, xs, k)),
         card("f(%d) + f(%d) = %d" % (h - d, h + d, k), False, "%d、%d 對稱於 x = %d，f(%d) + f(%d) = 2 × %d = %d" % (h - d, h + d, h, h - d, h + d, k, 2 * k)),
         card("若三次函數 g(x) 的首項係數也是 %d、對稱中心也是 (%d, %d)，則 g(x) = f(x)" % (A, h, k), False,
-             "g(x) = %d%s^{3} + p%s + %d，p 不一定是 %d" % (A, xs, xs, k, p))]
+             "g(x) = %s%s^{3} + p%s + %d，p 不一定是 %d" % (As, xs, xs, k, p))]
     return item("pj_center", "judge", 2, "三次函數的特徵", 1.25,
                 "f(x) = %s。下列敘述哪些正確？" % f.text(),
-                [fl("連續用 %s 做綜合除法，寫成 %d%s^{3} + p%s^{2} + q%s + k：" % (fac(h).strip("()"), A, xs, xs, xs),
-                    "f(x) = %d%s^{3} + [0]%s^{2} + [1]%s + [2]" % (A, xs, xs, xs), ["0", a(p), a(k)],
+                [fl("連續用 %s 做綜合除法，寫成 %s%s^{3} + p%s^{2} + q%s + k：" % (fac(h).strip("()"), As, xs, xs, xs),
+                    "f(x) = %s%s^{3} + [0]%s^{2} + [1]%s + [2]" % (As, xs, xs, xs), ["0", a(p), a(k)],
                     "k = f(%d) = %d，二次項係數是 0，因為對稱中心的 x 坐標 %s = %d" % (h, k, "\\frac{%s}{%s}" % (t(-f.c[2]), t(3 * A)), h)),
-                 judge("用 f(x) = %d%s^{3} %s %d%s + %d 判斷每一張。" % (A, xs, "+" if p > 0 else M, abs(p), xs, k), _ok(cards))])
+                 judge("用 f(x) = %s%s^{3} %s %d%s + %d 判斷每一張。" % (As, xs, "+" if p > 0 else M, abs(p), xs, k), _ok(cards))])
 
 
 # ---------- pj_ineq：不等式的解 ----------
@@ -300,7 +301,7 @@ def pj_struct(p, q, k, r, A_val_t):
         card("f(x) 除以 %s 的餘式為 r(%d)" % (xp.strip("()"), p), False, "f(%d) = %d · %d + r(%d) = %d + r(%d)" % (p, k, (p - q) ** 2, p, k * (p - q) ** 2, p)),
         card("若 f(%d) = %s、f(%d) = %s，則 r(%d) = %s" % (p, t(fp), q, t(fq), tt, t(R(tt))), True,
              "r(%d) = %s、r(%d) = %s，所以 r(x) = %s" % (p, t(R(p)), q, t(fq), R.text())),
-        card("f(x) 除以 %s^{2} 的商式為 %s Q(x) + %d" % (xq, xp, k), True, "前兩項都有 %s^{2}，提出來就是商式，剩下 r(x) 是餘式" % xq),
+        card("f(x) 除以 %s^{2} 的商式為 %sQ(x) + %d" % (xq, xp, k), True, "前兩項都有 %s^{2}，提出來就是商式，剩下 r(x) 是餘式" % xq),
         card("f(x) 除以 %s^{2} 的餘式為 f(%d)" % (xq, q), False, "餘式是一次式 r(x)，不是常數 f(%d)" % q),
         card("f(x) 除以 %s%s 的餘式為 %s + r(x)" % (xp, xq, Poly([-q * k * (p - q), k * (p - q)]).text()), True,
              "%d%s^{2} = %d%s%s %s %d%s" % (k, xq, k, xp, xq, "+" if k * (p - q) > 0 else M, abs(k * (p - q)), xq))]
@@ -327,7 +328,7 @@ def pj_cubgraph(rs, k, m, s, xr, yr):
     ftext = f.text()
     cards = [
         card("f(x) = %s" % facs, False, "這樣 f(0) = %s，要乘 %s 才會過 (0, %s)" % (t(y0 / k), t(k), t(y0))),
-        card("f(x) = %s 有三個相異實根" % cx(m), True, "g(x) = f(x) − %s 的圖形和 x 軸交三點（變號三次）" % cx(m)),
+        card("f(x) = %s 有三個相異實根" % cx(m), True, "g(x) = f(x) %s 的圖形和 x 軸交三點（變號三次）" % (("− " + cx(m)) if m > 0 else ("+ " + cx(-m)))),
         card("f(2x) ≤ 0 的解為 x ≤ %s 或 %s ≤ x ≤ %s" % (t(F(r1, 2)), t(F(r2, 2)), t(F(r3, 2))), True,
              "f(t) ≤ 0 的解是 t ≤ %s 或 %s ≤ t ≤ %s，t = 2x" % (t(r1), t(r2), t(r3))),
         card("y = f(x) 圖形的對稱中心的 x 坐標為 %s" % t(h), True, "f(x) = %s，h = −b/(3a) = %s" % (ftext, t(h))),

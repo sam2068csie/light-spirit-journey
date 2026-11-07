@@ -164,12 +164,12 @@ def pb_remsys(p, r1, q, gam, tt):
                 "f(x) 除以 %s^{2} 的餘式為 %s，除以 %s 的餘式為 %s。\n(1) 求 f(x) 除以 %s^{2}%s 的餘式　(2) 求 f(x) 除以 %s 的餘式　(3) 若 f(x) 是首項係數 1 的三次式，求 f(%d)" % (
                     xp, R1.text(), dv(q), t(gam), xp, xq, dv(p), tt),
                 [ch("餘式 R(x) 最多二次。R(x) 除以 %s^{2} 的餘式也要是 %s，所以 R(x) = ？" % (xp, R1.text()),
-                    ["a%s^{2} + %s" % (xp, R1.text()), "a%s%s + %s" % (xp, xq, R1.text()), "a%s^{2} + %s" % (xq, R1.text()), "%s + a" % R1.text()],
-                    "f(x) = %s^{2}%sQ(x) + R(x)：前一項是 %s^{2} 的倍式" % (xp, xq, xp), "(1)　R(x) = a%s^{2} + %s" % (xp, R1.text()), part="(1)"),
+                    ["a%s^{2}%s" % (xp, addp(R1.text())), "a%s%s%s" % (xp, xq, addp(R1.text())), "a%s^{2}%s" % (xq, addp(R1.text())), "%s + a" % R1.text()],
+                    "f(x) = %s^{2}%sQ(x) + R(x)：前一項是 %s^{2} 的倍式" % (xp, xq, xp), "(1)　R(x) = a%s^{2}%s" % (xp, addp(R1.text())), part="(1)"),
                  fl("代 x = %d：f(%d) = R(%d) = %s。" % (q, q, q, t(gam)), "a · %s + %s = %s ⇒ a = [0]" % (t((q - p) ** 2), tp(R1(q)), t(gam)), [a(a_)],
                     "%sa = %s − %s" % (t((q - p) ** 2), t(gam), tp(R1(q))), part="(1)"),
                  ch("展開 R(x)：", uniq([R.text()], [(R1 - a_ * Poly.roots([p, p])).text(), (a_ * Poly.roots([q, q]) + R1).text(), (a_ * Poly.roots([p, p])).text()]),
-                    "%s%s^{2} + %s" % (t(a_) if a_ != 1 else "", xp, R1.text()), "(1)　R(x) = %s" % R.text(), part="(1)"),
+                    "%s%s^{2}%s" % (t(a_) if a_ not in (1, -1) else ("" if a_ == 1 else M), xp, addp(R1.text())), "(1)　R(x) = %s" % R.text(), part="(1)"),
                  fl("f(x) 除以 %s 的餘式 = f(%d) = R(%d)：" % (dv(p), p, p), "(2)　餘式 = [0]", [a(R1(p))], "R(%d) = %s" % (p, t(R(p))), part="(2)"),
                  fl("f(x) = %s^{2}%s + R(x)（首項係數 1，商式是 1）：" % (xp, xq), "(3)　f(%d) = %s + %s = [0]" % (tt, t((tt - p) ** 2 * (tt - q)), tp(R(tt))), [a(f(tt))],
                     "%s^{2} × %s" % (tp(tt - p), tp(tt - q)), part="(3)")])
@@ -212,7 +212,7 @@ def pb_paramroots(al, be, t0):
                     "兩根都在 %s 右邊：開口向上的拋物線，頂點在 %s 右邊、在 x = %s 時是正的、和 x 軸交兩點" % (t(t0), t(t0), t(t0)),
                     "判別式 > 0、對稱軸 m > %s、f(%s) > 0" % (t(t0), t(t0))),
                  fl("判別式 > 0：\\frac{判別式}{4} = %s > 0。" % D.text("m"), "m < [0] 或 m > [1]", [a(rd[0]), a(rd[1])], "%s 因式分解" % D.text("m")),
-                 fl("f(%s) = %s = %s > 0：" % (t(t0), feq, fsimp), "m %s [0]" % rel, [a(mf)], "移項%s" % ("，除以負數要變號" if cf < 0 else "")),
+                 fl(("f(%s) = %s = %s > 0：" % (t(t0), feq, fsimp)) if feq != fsimp else ("f(%s) = %s > 0：" % (t(t0), fsimp)), "m %s [0]" % rel, [a(mf)], "移項%s" % ("，除以負數要變號" if cf < 0 else "")),
                  step("line", q="三個條件（m > %s、判別式、f(%s)）一起成立的部分封印起來。" % (t(t0), t(t0)), row="m", marks=[t(x) for x in marks], seg=seg, pt=[0] * len(marks),
                       write="答：" + ans)])
 

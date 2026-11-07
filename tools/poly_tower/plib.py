@@ -254,3 +254,8 @@ def item(id_, kind, tier, title, tmul, stem, steps, plot=None, routes=None):
         d["routes"] = routes
     d["steps"] = steps
     return d
+
+
+def addp(s):
+    """「 + 式子」：式子是負的開頭就寫成「 − …」"""
+    return (" " + M + " " + s[1:]) if s.startswith(M) else (" + " + s)
