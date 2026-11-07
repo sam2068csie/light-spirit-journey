@@ -65,16 +65,18 @@ def lt_inner(r1, r2, D):
     m2 = F(r1 * r1) / (p * p - r1 * r1)
     m = rt(m2)
     pt_ = tf(p)
+    g_ = math.gcd(r1, r2)
+    q1, q2 = r1 // g_, r2 // g_
     if r1 == r2:
         right = "\\ol{OK} 的中點"
         opts = [right, "\\ol{OK} 延長線上", "\\ol{OK} 上，2 : 1", "O 和 K 中間，靠近 O"]
         hint = "相似三角形：比等於半徑比 1 : 1，P 是中點"
         wr = "P 是 \\ol{OK} 的中點"
     else:
-        right = "\\ol{OK} 上，%d : %d" % (r1, r2)
-        opts = [right, "\\ol{OK} 延長線上，%d : %d" % (r1, r2), "\\ol{OK} 的中點", "\\ol{OK} 上，%d : %d" % (r2, r1)]
+        right = "\\ol{OK} 上，%d : %d" % (q1, q2)
+        opts = [right, "\\ol{OK} 延長線上，%d : %d" % (q1, q2), "\\ol{OK} 的中點", "\\ol{OK} 上，%d : %d" % (q2, q1)]
         hint = "相似三角形：比等於半徑比 %d : %d，而且在兩圓中間（內分）" % (r1, r2)
-        wr = "P 內分 \\ol{OK} 成 %d : %d" % (r1, r2)
+        wr = "P 內分 \\ol{OK} 成 %d : %d" % (q1, q2)
     xr = [-r1 - 0.6, D + r2 + 0.4]
     yr = [-max(r1, r2) - 0.6, max(r1, r2) + 0.6]
     mv = m.val()
