@@ -132,14 +132,14 @@ def lc_semi(R, s):
     shapes = [{"k": "arc", "o": [0, 0], "r": R, "a0": 0, "a1": 180, "c": "cyan"},
               ln(s, -1, R, xr, yr, "pink", dash=True, at=3), ln(s, -1, R * math.sqrt(2), xr, yr, "pink", dash=True, at=3),
               pt((-R, 0), "", "cyan"), pt((R, 0), "", "cyan")]
-    opts2 = ["斜率 %d，k 變大往上移" % s, "繞著 (0, k) 轉", "斜率是 k 的直線", "繞著原點轉"]
+    opts2 = ["斜率 %s，k 變大往上移" % t(s), "繞著 (0, k) 轉", "斜率是 k 的直線", "繞著原點轉"]
     return {"id": "lc_semi", "kind": "circle", "tier": 2, "title": "半圓和平移的直線", "tmul": 1.2,
             "stem": "方程式 √{%d − x^{2}} = %s 有兩個相異實根，求 k 的範圍。" % (R * R, rhs),
             "plot": geo(xr, yr, shapes),
             "steps": [
                 choice("y = √{%d − x^{2}} 的圖形是？" % (R * R), ["上半圓（含左右兩個端點）", "下半圓", "整個圓", "右半圓"],
                        "兩邊平方 x^{2} + y^{2} = %d，而且 y ≥ 0" % (R * R), "y = √{%d − x^{2}}：半徑 %d 的上半圓" % (R * R, R)),
-                choice("y = %s 呢？" % rhs, opts2, "斜率固定是 %d，k 是 y 截距" % s, "y = %s：斜率 %d，上下平移" % (rhs, s)),
+                choice("y = %s 呢？" % rhs, opts2, "斜率固定是 %s，k 是 y 截距" % t(s), "y = %s：斜率 %s，上下平移" % (rhs, t(s))),
                 fill("兩個關鍵位置：剛好通過%s端點 %s，以及和半圓相切（\\frac{|k|}{√{2}} = %d）：" % (side, P(*end), R),
                      "通過 %s：k = [0]，相切：k = [1]" % P(*end), [Rt, R2a],
                      "0 = %s + k。切點在%s上方，k 取正的" % (t(s * end[0]), side)),

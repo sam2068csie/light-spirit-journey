@@ -187,7 +187,7 @@ def _box_mirror(K, r, A, A1, info):
 def items():
     return [
         [lt_param((2, -1), (1, 2)), lt_param((-1, 3), (1, 4)), lt_param((3, 1), (1, -2))],
-        [lt_inner(2, 1, 6), lt_inner(2, 2, 5), lt_inner(4, 2, 10)],
+        [lt_inner(2, 1, 6), lt_inner(4, 4, 10), lt_inner(6, 3, 15)],
         [lt_mirror((3, -2), 2, (0, -3), {}), lt_mirror((2, -5), 1, (0, -3), {"T": (8, 6), "T'": (8, -8)}),
          lt_mirror((3, -2), 2, (0, -1), {})],
     ]
