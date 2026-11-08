@@ -134,6 +134,7 @@ const MAP := {
 	"trig7_bank.gd": "res://data/levels/trig/trig7_bank.gd",
 	"trig_map.gd": "res://data/maps/trig_map.gd",
 	"trig_tower_bank.gd": "res://data/levels/tower/trig_tower_bank.gd",
+	"trig_tower_data.gd": "res://data/levels/tower/trig_tower_data.gd",
 	"tutorial.gd": "res://data/ui/tutorial.gd",
 	"unit_map_base.gd": "res://data/maps/unit_map_base.gd",
 	"units.gd": "res://data/core/units.gd",
