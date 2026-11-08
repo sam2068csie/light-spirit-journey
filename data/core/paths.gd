@@ -22,6 +22,7 @@ const MAP := {
 	"exam_pick.gd": "res://data/ui/exam_pick.gd",
 	"exchange.gd": "res://data/ui/exchange.gd",
 	"exp_map.gd": "res://data/maps/exp_map.gd",
+	"explog_tower_data.gd": "res://data/levels/tower/explog_tower_data.gd",
 	"feedback.gd": "res://data/ui/feedback.gd",
 	"function_graph.gd": "res://data/ui/function_graph.gd",
 	"fx_layer.gd": "res://data/ui/fx_layer.gd",
