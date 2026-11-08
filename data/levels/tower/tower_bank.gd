@@ -1,8 +1,8 @@
 extends RefCounted
 ## 指數與對數的終焉之塔題庫（參考各校 114 學年度高二上第二次段考的考法改編，數字與情境都換過）
-##   題目 47 題（試煉大題 12 題），每題 3 組數字。題目本身由 tools/explog_tower/gen.py 產生到 explog_tower_data.gd：
+##   題目 47 題（試煉大題 12 題），每題 3 組數字。題目本身由 tools/towerlib/gen.py 產生到 explog_tower_data.gd：
 ##   每一題是一個模板 + 幾組手挑的數字，答案、提示、錯誤選項都由程式算，每一組都用 assert 驗算
-##   （改題目請改 tools/explog_tower/t_*.py 再跑 gen.py）。
+##   （改題目請改 tools/explog_tower/t_*.py 再跑 python3 tools/towerlib/gen.py explog）。
 ##
 ## 每一題：
 ##   id      唯一代號

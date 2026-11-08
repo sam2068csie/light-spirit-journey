@@ -17,7 +17,12 @@ jobs:
           unzip -q godot.zip
           mv Godot_v4.7.2-stable_linux.x86_64 godot
           chmod +x godot
-      - name: 跑測試（載入、題庫、主要畫面）
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安裝 numpy（終焉之塔的題目產生器要用）
+        run: python -m pip install -q numpy
+      - name: 跑測試（題庫和產生器一致、載入、題庫、主要畫面）
         run: GODOT=./godot tests/run_tests.sh
       - name: 效能守門（draw calls 預算，用虛擬螢幕真的畫出來）
         run: |

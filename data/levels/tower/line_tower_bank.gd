@@ -1,8 +1,8 @@
 extends RefCounted
 ## 直線與圓（高一上）的終焉之塔題庫：塔頂 30 層，題目 36 題（試煉大題 12 題），每題 3 組數字
 ##   題目從 docs/line_tower_backlog.md 挑八大關沒有收的題型，數字、情境全部重新設計。
-##   題目本身由 tools/line_tower/gen.py 產生到 line_tower_data.gd：每一題是一個模板 + 幾組手挑的數字，
-##   答案、提示、錯誤選項都由程式算，每一組都用 assert 驗算（改題目請改 tools/line_tower/t_*.py 再跑 gen.py）。
+##   題目本身由 tools/towerlib/gen.py 產生到 line_tower_data.gd：每一題是一個模板 + 幾組手挑的數字，
+##   答案、提示、錯誤選項都由程式算，每一組都用 assert 驗算（改題目請改 tools/line_tower/t_*.py 再跑 python3 tools/towerlib/gen.py line）。
 ##   不收圓冪、不收線性規劃；直線和圓的關係不用判別式，一律用 d 和 r 比。
 ##
 ## 題目的格式和 poly_tower_bank.gd 一樣（id、kind、tier、title、stem、tmul、plot、steps）。

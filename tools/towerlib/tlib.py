@@ -1,7 +1,6 @@
-# 三角函數的終焉之塔：角（π 的倍數）、特別角的值、a + b√n、驗算
-#   數字格式、選擇題／填空／審判卡、幾何圖的共用工具借用 tools/line_tower/lib.py。
-import os, sys, math, re
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "line_tower"))   # 放最後：t_*.py 同名的要用三角自己的
+# 終焉之塔的共用出題工具（第二層）：角（π 的倍數）、特別角的值、a + b√n、數值驗算、審判卡
+#   最早給三角函數的塔用，指數與對數的塔也在用。底層的數字格式、選擇題／填空借用同資料夾的 lib.py。
+import math, re
 from lib import *          # noqa: F401,F403
 from lib import _f         # noqa: F401
 

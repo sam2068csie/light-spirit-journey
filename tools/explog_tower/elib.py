@@ -1,7 +1,7 @@
 # 指數與對數的終焉之塔：共用工具
-#   a + b√n、數值驗算、審判卡、步驟借用 tools/trig_tower/tlib.py（它再借 tools/line_tower/lib.py）。
+#   a + b√n、數值驗算、審判卡、步驟借用 tools/towerlib/tlib.py（它再借同資料夾的 lib.py）。
 import os, sys, math
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "trig_tower"))   # 放最後：t_*.py 同名的要用指對數自己的
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "towerlib"))   # 放最後：t_*.py 同名的要用這座塔自己的
 from tlib import *          # noqa: F401,F403
 
 L2, L3 = 0.3010, 0.4771      # 題目給的 log 2、log 3

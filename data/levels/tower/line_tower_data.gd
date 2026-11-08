@@ -1,5 +1,5 @@
 extends RefCounted
-## 自動產生，不要手改：python3 tools/line_tower/gen.py
+## 自動產生，不要手改：python3 tools/towerlib/gen.py line
 ##   題目模板和每一組數字在 tools/line_tower/t_*.py，答案都由程式算、assert 驗算過。
 ##   每一題的 vars 是另外幾組數字（蓋過 stem、plot、steps），塔每一輪會先出沒看過的那組。
 
@@ -5044,7 +5044,7 @@ static func data() -> Array:
 							"q": "整理：",
 							"template": "7h + k = [0]",
 							"ans": [
-								"-8"
+								"−8"
 							],
 							"hint": "移項：h、k 放左邊，數字放右邊"
 						},
@@ -5053,7 +5053,7 @@ static func data() -> Array:
 							"q": "d(I, L_{1}) = d(I, L_{3})：13(3h + 4k + 12) = 5(5h − 12k + 6)，整理再除以 14：",
 							"template": "h + 8k = [0]",
 							"ans": [
-								"-9"
+								"−9"
 							],
 							"hint": "39h + 52k + 156 = 25h − 60k + 30 ⇒ 14h + 112k = −126"
 						},
@@ -5210,7 +5210,7 @@ static func data() -> Array:
 							"q": "整理：",
 							"template": "7h + k = [0]",
 							"ans": [
-								"-16"
+								"−16"
 							],
 							"hint": "移項：h、k 放左邊，數字放右邊"
 						},

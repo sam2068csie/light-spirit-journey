@@ -1,5 +1,5 @@
 extends RefCounted
-## 自動產生，不要手改：python3 tools/explog_tower/gen.py
+## 自動產生，不要手改：python3 tools/towerlib/gen.py explog
 ##   題目模板和每一組數字在 tools/explog_tower/t_*.py，答案都由程式算、assert 驗算過。
 ##   每一題的 vars 是另外幾組數字（蓋過 stem、plot、steps），塔每一輪會先出沒看過的那組。
 

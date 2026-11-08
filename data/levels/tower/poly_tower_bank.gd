@@ -2,8 +2,8 @@ extends RefCounted
 ## 多項式（高一）的終焉之塔題庫：題目 60 題（試煉大題 12 題），每題 3 組數字
 ##   考法參考各校 113 學年度高一第三次段考（建中、北一女、師大附中、成功、中山女中、松山）
 ##   和輔導班講義裡八大關沒有收的難題；數字、情境全部換過。
-##   題目本身由 tools/poly_tower/gen.py 產生到 poly_tower_data.gd：每一題是一個模板 + 幾組手挑的數字，
-##   答案、提示、錯誤選項都由程式算，每一組都用 assert 驗算（改題目請改 tools/poly_tower/t_*.py 再跑 gen.py）。
+##   題目本身由 tools/towerlib/gen.py 產生到 poly_tower_data.gd：每一題是一個模板 + 幾組手挑的數字，
+##   答案、提示、錯誤選項都由程式算，每一組都用 assert 驗算（改題目請改 tools/poly_tower/t_*.py 再跑 python3 tools/towerlib/gen.py poly）。
 ##
 ## 題目的格式和 tower_bank.gd 一樣（id、kind、tier、title、stem、tmul、plot、steps），另外：
 ##   {t: "pick", q, graphs: [正確的圖, 錯誤的圖…], whys: [每張圖錯在哪（第 0 張留空）], hint, write}

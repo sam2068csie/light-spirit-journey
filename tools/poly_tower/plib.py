@@ -1,7 +1,7 @@
 # 多項式的終焉之塔：多項式運算、式子格式、各種步驟
-#   數字格式、選擇題／填空／審判卡的共用工具借用 tools/line_tower/lib.py。
+#   數字格式、選擇題／填空／審判卡的共用工具借用 tools/towerlib/lib.py。
 import os, sys, math
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "line_tower"))   # 放最後：t_*.py 同名的要用多項式自己的
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "towerlib"))   # 放最後：t_*.py 同名的要用這座塔自己的
 from lib import *          # noqa: F401,F403  F、t、tf、tp、a、rt、Surd、poly、choice、fill、judge、card…
 import numpy as np
 
