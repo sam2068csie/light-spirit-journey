@@ -172,7 +172,7 @@ func _build_dev() -> void:
 	u1.text = "開放全部關卡"
 	ul.add_child(u1)
 	var u2 := Label.new()
-	u2.text = "每一章的旅程不用照順序解鎖"
+	u2.text = "不用照順序解鎖"
 	u2.add_theme_font_size_override("font_size", UITheme.fs(13))
 	u2.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	ul.add_child(u2)
@@ -333,11 +333,11 @@ func _refresh_notify() -> void:
 	_notify_time.text = g.notify_time
 	_notify_time.modulate.a = 1.0 if g.notify_on else 0.4
 	if not g.notifier.available():
-		_notify_note.text = "光靈會在這個時間傳通知想念你（手機版）"
+		_notify_note.text = "好幾天沒來時，光靈會在這時間通知你（手機版）"
 	elif g.notify_on and not g.notifier.has_permission():
 		_notify_note.text = "手機還沒允許通知：請在跳出的視窗按「允許」"
 	else:
-		_notify_note.text = "好幾天沒來時，光靈會在這個時間傳通知想念你"
+		_notify_note.text = "好幾天沒來時，光靈會在這時間通知你"
 
 
 func _arrow(t: String) -> Button:

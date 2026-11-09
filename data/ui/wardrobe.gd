@@ -160,9 +160,9 @@ func _refresh() -> void:
 		_info_name.add_theme_color_override("font_color", Cos.RARITY[r].color if r > 0 else UITheme.TEXT)
 		_info_desc.text = it.desc
 	else:
-		_info_name.text = "點右邊的裝扮試穿看看"
+		_info_name.text = "點右邊的裝扮試穿"
 		_info_name.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		_info_desc.text = "沒有的裝扮可以到扭蛋機抽抽看！"
+		_info_desc.text = "沒有的可以去扭蛋機抽"
 
 
 func _tile(it: Dictionary, g) -> Control:

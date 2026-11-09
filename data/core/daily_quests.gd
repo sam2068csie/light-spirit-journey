@@ -8,10 +8,10 @@ const RESET_HOUR := 5            # 早上 5 點換日：熬夜過 12 點不會�
 
 ## 每日挑戰：依日期輪流
 const CHALLENGES := {
-	"perfect": {"title": "完美解題", "desc": "任選一題，拿到三顆星。", "need": 1, "go": "levels"},
-	"tower3": {"title": "攀登終焉之塔", "desc": "在終焉之塔爬到第 3 層。", "need": 3, "go": "tower"},
-	"timed": {"title": "限時試煉", "desc": "通過 1 題限時題（各章的試煉）。", "need": 1, "go": "levels"},
-	"daily": {"title": "完成今日修煉", "desc": "到修煉之間，做完今天的修煉題。", "need": 1, "go": "review"},
+	"perfect": {"title": "完美解題", "desc": "任一題拿到三顆星", "need": 1, "go": "levels"},
+	"tower3": {"title": "攀登終焉之塔", "desc": "爬到第 3 層", "need": 3, "go": "tower"},
+	"timed": {"title": "限時試煉", "desc": "通過 1 題限時試煉", "need": 1, "go": "levels"},
+	"daily": {"title": "完成今日修煉", "desc": "做完今日修煉", "need": 1, "go": "review"},
 }
 const CH_ORDER := ["perfect", "tower3", "timed", "daily"]
 
@@ -50,10 +50,10 @@ static func challenge_today() -> String:
 static func defs(ch: String) -> Array:
 	var c: Dictionary = CHALLENGES.get(ch, CHALLENGES.perfect)
 	return [
-		{"id": "login", "key": "login", "title": "每日登入", "desc": "打開遊戲就完成了！", "need": 1, "dust": 20, "go": ""},
-		{"id": "ans3", "key": "ans", "title": "小試身手", "desc": "在任意關卡答對 3 題。", "need": 3, "dust": 30, "go": "levels"},
-		{"id": "ans5", "key": "ans", "title": "勤學不倦", "desc": "在任意關卡答對 5 題。", "need": 5, "dust": 40, "go": "levels"},
-		{"id": "weak", "key": "weak", "title": "弱點特訓", "desc": "到修煉之間，完成 1 題修煉題。", "need": 1, "dust": 50, "go": "review"},
+		{"id": "login", "key": "login", "title": "每日登入", "desc": "打開遊戲就完成", "need": 1, "dust": 20, "go": ""},
+		{"id": "ans3", "key": "ans", "title": "小試身手", "desc": "任意關卡答對 3 題", "need": 3, "dust": 30, "go": "levels"},
+		{"id": "ans5", "key": "ans", "title": "勤學不倦", "desc": "任意關卡答對 5 題", "need": 5, "dust": 40, "go": "levels"},
+		{"id": "weak", "key": "weak", "title": "弱點特訓", "desc": "完成 1 題修煉題", "need": 1, "dust": 50, "go": "review"},
 		{"id": "ch", "key": "ch", "title": "每日挑戰：" + c.title, "desc": c.desc, "need": c.need, "dust": 60, "go": c.go},
 	]
 

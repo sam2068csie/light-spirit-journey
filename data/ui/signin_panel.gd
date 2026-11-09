@@ -150,7 +150,7 @@ func _build() -> void:
 
 	# 說明＋中斷提示
 	var info := Label.new()
-	info.text = "漏簽的日子，光靈的守護會自動補上（每連續簽到 7 天多一個，最多 %d 個）。守護不夠時，連續天數保留一半，不會歸零。" % g.GUARD_MAX
+	info.text = "漏簽時守護會自動補上（連簽 7 天多一個，最多 %d 個）。守護不夠，連續天數減半。" % g.GUARD_MAX
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", UITheme.fs(15))
 	info.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -158,10 +158,10 @@ func _build() -> void:
 	if can and int(pv.missed) > 0:
 		var warn := Label.new()
 		if int(pv.guards_used) > 0:
-			warn.text = "上次簽到後漏了 %d 天：這次簽到會用掉 %d 個守護補上，連續天數不中斷！" % [int(pv.missed), int(pv.guards_used)]
+			warn.text = "漏了 %d 天：用 %d 個守護補上，連續不中斷！" % [int(pv.missed), int(pv.guards_used)]
 			warn.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 		else:
-			warn.text = "上次簽到後漏了 %d 天，守護不夠：連續天數會保留一半（%d → %d 天）。" % [int(pv.missed), int(g.streak.count), int(g.streak.count) / 2]
+			warn.text = "漏了 %d 天，守護不夠：連續天數減半（%d → %d 天）。" % [int(pv.missed), int(g.streak.count), int(g.streak.count) / 2]
 			warn.add_theme_color_override("font_color", UITheme.ORANGE)
 		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		warn.add_theme_font_size_override("font_size", UITheme.fs(15))

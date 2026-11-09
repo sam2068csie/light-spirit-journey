@@ -80,7 +80,7 @@ func _open_grade_pick() -> void:
 	col.add_child(sp)
 	col.add_child(UITheme.title_label("歡迎來到光靈的旅程！", 28, UITheme.ACCENT))
 	var sub := Label.new()
-	sub.text = "你現在是幾年級呢？我會帶你到那個年級的世界地圖。\n（之後點地圖上方的金色主線橫幅就能修改）"
+	sub.text = "你現在幾年級？\n（之後點地圖上方的金色橫幅可修改）"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", UITheme.fs(16))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -147,7 +147,7 @@ func _ask_notify() -> void:
 	col.add_child(sp)
 	col.add_child(UITheme.title_label("要讓光靈提醒你嗎？", 24, UITheme.ACCENT))
 	var l := Label.new()
-	l.text = "好幾天沒來的時候，光靈會在 %s 傳一則通知想念你。\n每天都有來玩的話，就不會打擾你。（可以在設定裡關掉或改時間）" % g.notify_time
+	l.text = "好幾天沒來時，光靈會在 %s 通知你。\n（可在設定裡關掉或改時間）" % g.notify_time
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	l.custom_minimum_size = Vector2(400, 0)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -605,7 +605,7 @@ func _refresh_review() -> void:
 	dh.add_child(streak)
 	if items.is_empty():
 		var empty := Label.new()
-		empty.text = "還沒有可以複習的題目。\n先去「世界地圖」闖幾段旅程吧！答錯的觀念會自動收進這裡。"
+		empty.text = "還沒有複習題。\n答錯的觀念會自動收進這裡。"
 		empty.add_theme_font_size_override("font_size", UITheme.fs(15))
 		empty.add_theme_color_override("font_color", UITheme.TEXT)
 		dcol.add_child(empty)
@@ -654,8 +654,8 @@ func _refresh_review() -> void:
 	var weakest: Array = Center.weakest(g, 8, g.cur_unit)
 	if weakest.is_empty():
 		var ok := Label.new()
-		ok.text = "目前沒有待加強的觀念，太厲害了！\n繼續闖關，或做今日修煉保持手感。" if total > 0 and solid > 0 \
-			else "還沒有錯題紀錄。闖關時答錯的觀念，會排在這裡等你回來練。"
+		ok.text = "目前沒有待加強的觀念，太厲害了！" if total > 0 and solid > 0 \
+			else "還沒有錯題紀錄。"
 		ok.add_theme_font_size_override("font_size", UITheme.fs(15))
 		ok.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		ok.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1020,11 +1020,11 @@ func _refresh_tower() -> void:
 	col.add_theme_constant_override("separation", 10)
 	p.add_child(col)
 	col.add_child(_h("挑戰規則", UITheme.ROSE))
-	for rule in [["▲", "共 %d 層，每層一題，段考題型與八大關混合" % Center.tower_top(g.cur_unit)],
-			["◷", "每層限時，從 260 秒開始越來越短"],
-			["♥", "只有三顆心：答錯、超時扣一顆（真假審判錯 2 張以上才扣）"],
-			["✦", "每 5 層是「試煉層」大題，同一趟不重複"],
-			["◎", "通過一層得星塵，同一層每天限領一次"]]:
+	for rule in [["▲", "共 %d 層，每層一題" % Center.tower_top(g.cur_unit)],
+			["◷", "每層限時，越往上越短"],
+			["♥", "三顆心：答錯或超時扣一顆"],
+			["✦", "每 5 層是試煉大題"],
+			["◎", "每層星塵每天限領一次"]]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		var ic := Label.new()
@@ -1063,7 +1063,7 @@ func _refresh_tower() -> void:
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(fill)
 	var tip := Label.new()
-	tip.text = "題型改編自各校段考。卡住就去世界地圖或修煉之間練習！"
+	tip.text = "題型改編自各校段考"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(520, 0)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
@@ -1110,9 +1110,9 @@ func _show_tower_result(res: Dictionary) -> void:
 	elif floors > 0:
 		var paid := int(rw.get("paid", floors))
 		if paid >= Center.tower_top(Game.of(self).cur_unit):
-			tl.text = "今天整座塔的星塵都領過了，明天再來領新的星塵"
+			tl.text = "今天的星塵都領過了，明天再來"
 		else:
-			tl.text = "今天第 1～%d 層的星塵已經領過了，爬得更高才有新的星塵" % paid
+			tl.text = "第 1～%d 層今天已領過，爬更高才有星塵" % paid
 		tl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		tl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	else:

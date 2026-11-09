@@ -55,7 +55,7 @@ static func open(host: Node, grade: String, on_done: Callable = Callable()) -> C
 	var rebuild := func(self_ref: Callable) -> void:
 		var gr: String = st.grade
 		var term := Units.term_now(gr)
-		sub.text = "%s學期・可以複選，主線會先帶你去這些單元。\n之後點地圖上方的金色橫幅就能修改。" % term
+		sub.text = "%s學期・可複選\n（之後點地圖上方的金色橫幅可修改）" % term
 		for c in grow.get_children():
 			c.queue_free()
 		for c in cards.get_children():
