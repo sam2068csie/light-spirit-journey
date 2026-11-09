@@ -198,6 +198,62 @@ def tb_rect(R):
                                  {"k": "label", "p": [fx(R / 2 - 0.2), fx(R * S3 / 2 + 0.3)], "s": "B"}]})
 
 
+def tb_rect_semi(R):
+    """半圓裡的矩形：周長 4R cos θ + 2R sin θ 疊合求最大（tan θ = 1/2），再求那時的面積"""
+    P = lambda th: 4 * R * cos(th) + 2 * R * sin(th)
+    _, mx = ext(P, 0, PI / 2)
+    assert near(mx, 2 * R * math.sqrt(5), 1e-6)
+    th = math.atan(0.5)
+    area = F(4 * R * R, 5)
+    assert near(area, 2 * R * cos(th) * R * sin(th))
+    Cx, Cy = R * cos(th), R * sin(th)
+    return item("tb_rect", "boss", 3, "扇形裡的矩形", 1.65,
+                "半徑 %d 的半圓，矩形 ABCD 的 A、B 在直徑上，C、D 在半圓上，O 是圓心，∠COB = θ（0 < θ < π/2）。\n(1) 用 θ 表示 \\ol{AB}、\\ol{BC}　(2) 矩形周長的最大值　(3) 周長最大時，矩形的面積" % R,
+                [fl("C 的坐標是 (%d cos θ, %d sin θ)，矩形左右對稱：" % (R, R), "(1)　\\ol{AB} = [0] cos θ，\\ol{BC} = [1] sin θ", [str(2 * R), str(R)],
+                    "\\ol{OB} = %d cos θ，\\ol{AB} = 2\\ol{OB}" % R, part="(1)"),
+                 fl("周長 = 2(\\ol{AB} + \\ol{BC})：", "(2)　周長 = [0] cos θ + [1] sin θ", [str(4 * R), str(2 * R)], "2 × %d、2 × %d" % (2 * R, R), part="(2)"),
+                 fl("提出 %d 再疊合：%d(2 cos θ + sin θ)。" % (2 * R, 2 * R), "周長最長 = [0]√5", [str(2 * R)], "%d √{2^{2} + 1^{2}}" % (2 * R), part="(2)"),
+                 fl("最長時 cos θ : sin θ = 2 : 1（和係數成比例）：", "(3)　tan θ = [0]", ["1/2"], "sin θ/cos θ", part="(3)"),
+                 fl("sin θ = √{5}/5、cos θ = 2√{5}/5：", "答：面積 = \\ol{AB} · \\ol{BC} = [0]", [a(area)], "%d cos θ × %d sin θ" % (2 * R, R), part="(3)")],
+                plot={"x": [-R - 0.6, R + 0.6], "y": [-0.6, R + 0.6], "geo": True, "h": 160,
+                      "shapes": [{"k": "sector", "o": [0, 0], "r": R, "a0": 0, "a1": 180, "c": "cyan", "fill": "cyan", "alpha": 0.08},
+                                 {"k": "seg", "a": [-R, 0], "b": [R, 0], "c": "cyan"},
+                                 {"k": "poly", "pts": [[fx(-Cx), 0], [fx(Cx), 0], [fx(Cx), fx(Cy)], [fx(-Cx), fx(Cy)]], "c": "gold", "fill": "gold", "alpha": 0.15},
+                                 {"k": "seg", "a": [0, 0], "b": [fx(Cx), fx(Cy)], "c": "faint", "dash": True},
+                                 {"k": "angle", "o": [0, 0], "a0": 0, "a1": fx(math.degrees(th)), "r": 26, "s": "θ"},
+                                 {"k": "label", "p": [fx(-Cx), -0.4], "s": "A"}, {"k": "label", "p": [fx(Cx), -0.4], "s": "B"},
+                                 {"k": "dot", "p": [fx(Cx), fx(Cy)], "s": "C", "off": [8, -6]}, {"k": "label", "p": [fx(-Cx - 0.35), fx(Cy + 0.3)], "s": "D"},
+                                 {"k": "label", "p": [0, -0.4], "s": "O"}]})
+
+
+def tb_rect_quarter(R):
+    """四分之一圓裡、一個頂點在圓心的矩形：面積用二倍角、周長用疊合，最大都在 θ = π/4"""
+    Ar = lambda th: R * cos(th) * R * sin(th)
+    Pr = lambda th: 2 * R * (cos(th) + sin(th))
+    _, amax = ext(Ar, 0, PI / 2)
+    _, pmax = ext(Pr, 0, PI / 2)
+    pm = Q(0, 2 * R, 2)
+    assert near(amax, F(R * R, 2), 1e-6) and near(pmax, pm, 1e-6)
+    th = PI / 4
+    Px, Py = R * cos(th), R * sin(th)
+    return item("tb_rect", "boss", 3, "扇形裡的矩形", 1.65,
+                "半徑 %d 的四分之一圓 OAB（∠AOB = π/2），P 在弧上，∠POA = θ。矩形 OQPS 的 Q 在 \\ol{OA} 上、S 在 \\ol{OB} 上。\n(1) 用 θ 表示矩形的面積　(2) 面積的最大值與此時的 θ　(3) 矩形周長的最大值" % R,
+                [fl("直角 △OQP：\\ol{OP} = %d 是斜邊。" % R, "(1)　\\ol{OQ} = [0] cos θ，\\ol{OS} = \\ol{QP} = [1] sin θ", [str(R), str(R)], "鄰邊、對邊", part="(1)"),
+                 fl("面積 = \\ol{OQ} · \\ol{OS}，用二倍角：", "面積 = [0] sin θ cos θ = [1] sin 2θ", [str(R * R), a(F(R * R, 2))], "sin θ cos θ = (1/2) sin 2θ", part="(1)"),
+                 fl("0 < 2θ < π，sin 2θ 最大是 1：", "(2)　面積最大 [0]，此時 θ = [1]π", [a(F(R * R, 2)), "1/4"], "2θ = π/2", part="(2)"),
+                 fl("周長 = %d(cos θ + sin θ)，疊合：" % (2 * R), "(3)　周長 = [0] sin(θ + [1]π)", [pm.ans(), "1/4"],
+                    "%d √{2}，cos(π/4) = √{2}/2" % (2 * R), part="(3)"),
+                 fl("π/4 < θ + π/4 < 3π/4，sin 可以取到 1：", "答：周長最長 [0]", [pm.ans()], "θ + π/4 = π/2", part="(3)")],
+                plot={"x": [-0.6, R + 0.6], "y": [-0.6, R + 0.6], "geo": True, "h": 180,
+                      "shapes": [{"k": "sector", "o": [0, 0], "r": R, "a0": 0, "a1": 90, "c": "cyan", "fill": "cyan", "alpha": 0.08},
+                                 {"k": "poly", "pts": [[0, 0], [fx(Px), 0], [fx(Px), fx(Py)], [0, fx(Py)]], "c": "gold", "fill": "gold", "alpha": 0.15},
+                                 {"k": "seg", "a": [0, 0], "b": [fx(Px), fx(Py)], "c": "faint", "dash": True},
+                                 {"k": "angle", "o": [0, 0], "a0": 0, "a1": 45, "r": 26, "s": "θ"},
+                                 {"k": "dot", "p": [fx(Px), fx(Py)], "s": "P", "off": [8, -6]}, {"k": "label", "p": [fx(Px), -0.4], "s": "Q"},
+                                 {"k": "label", "p": [-0.35, fx(Py)], "s": "S"}, {"k": "label", "p": [-0.3, -0.3], "s": "O"},
+                                 {"k": "label", "p": [R + 0.3, -0.3], "s": "A"}, {"k": "label", "p": [-0.3, R + 0.3], "s": "B"}]})
+
+
 # ---------- tb_sides：兩邊和的範圍 ----------
 
 def tb_sides(C, c):
@@ -250,6 +306,6 @@ def items():
         [tb_segment(6, F(2, 3)), tb_segment(4, F(1, 2)), tb_segment(6, F(1, 3))],
         [tb_clock(2), tb_clock(3), tb_clock(4)],
         [tb_homog(2), tb_homog(3), tb_homog(F(1, 2))],
-        [tb_rect(6), tb_rect(3), tb_rect(2)],
+        [tb_rect(6), tb_rect_semi(5), tb_rect_quarter(4)],
         [tb_sides(F(1, 3), Q(0, 2, 3)), tb_sides(F(1, 3), 3), tb_sides(F(2, 3), 3)],
     ]

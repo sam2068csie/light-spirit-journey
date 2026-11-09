@@ -66,7 +66,7 @@ def tb_path(R):
     th = math.atan(2)
     s = 20.0 / R
     Ax, Ay = R * sin(th) * s, R * cos(th) * s
-    return item("tb_path", "boss", 3, "「工」字步道", 1.65,
+    return item("tb_path", "boss", 3, "池塘步道", 1.65,
                 "半徑 %d 公尺的圓形池塘裡修「工」字步道：上下兩條等長且平行的弦 \\ol{AB}、\\ol{CD}，加上連接兩弦中點 M、N 的步道（經過圓心 O）。設 ∠AOM = θ（0 < θ < π/2）。\n(1) 把總長 L 用 θ 表示　(2) L 最長多少？(3) 此時 \\ol{MN} 多長？" % R,
                 [fl("\\ol{AB} = 2\\ol{AM}，\\ol{MN} = 2\\ol{OM}：", "L = 2\\ol{AB} + \\ol{MN} = [0] sin θ + [1] cos θ", [str(c1), str(c2)],
                     "\\ol{AB} = 2\\ol{AM}，\\ol{MN} = 2\\ol{OM}", part="(1)", pre="(1)　直角 △AOM：\\ol{AM} = %d sin θ、\\ol{OM} = %d cos θ" % (R, R)),
@@ -84,6 +84,65 @@ def tb_path(R):
                                  {"k": "label", "p": [fx(-Ax - 1.4), fx(-Ay - 2.1)], "s": "C"}, {"k": "label", "p": [fx(Ax + 1.4), fx(-Ay - 2.1)], "s": "D"},
                                  {"k": "label", "p": [2.6, fx(Ay + 2.1)], "s": "M"}, {"k": "label", "p": [2.6, fx(-Ay - 2.3)], "s": "N"},
                                  {"k": "label", "p": [2.8, -1.6], "s": "O"}]})
+
+
+def tb_path_T(R):
+    """「T」字：弦 AB ＋ 從中點 M 經過 O 到最低點 N；L = 2R sin θ + R cos θ + R"""
+    L = lambda th: 2 * R * sin(th) + R * cos(th) + R
+    _, mx = ext(L, 0, PI / 2)
+    assert near(mx, R * math.sqrt(5) + R, 1e-6)
+    MNb = Q(0, F(R, 5), 5)                       # R cos θ 的部分（cos θ = √5/5）
+    assert near(float(MNb) + R, R / math.sqrt(5) + R)
+    th = math.atan(2)
+    Ax, Ay = 20 * sin(th), 20 * cos(th)
+    return item("tb_path", "boss", 3, "池塘步道", 1.65,
+                "半徑 %d 公尺的圓形池塘裡修「T」字步道：一條弦 \\ol{AB}，加上從 \\ol{AB} 的中點 M 經過圓心 O、一直走到池塘最低點 N 的步道。設 ∠AOM = θ（0 < θ < π/2）。\n(1) 把總長 L 用 θ 表示　(2) L 最長多少？(3) 此時 \\ol{MN} 多長？" % R,
+                [fl("\\ol{AB} = 2\\ol{AM}，\\ol{MN} = \\ol{OM} + \\ol{ON}：", "L = [0] sin θ + [1] cos θ + [2]", [str(2 * R), str(R), str(R)],
+                    "\\ol{ON} 是半徑 %d" % R, part="(1)", pre="(1)　直角 △AOM：\\ol{AM} = %d sin θ、\\ol{OM} = %d cos θ" % (R, R)),
+                 fl("前兩項提出 %d 再疊合：" % R, "(2)　L = %d(2 sin θ + cos θ) + %d，最長 [0]√5 + [1] 公尺" % (R, R), [str(R), str(R)],
+                    "%d √{2^{2} + 1^{2}} + %d" % (R, R), part="(2)"),
+                 fl("最長時 sin θ : cos θ = 2 : 1（和係數成比例）：", "(3)　tan θ = [0]，cos θ = [1]", ["2", Q(0, F(1, 5), 5).ans()], "斜邊 √{5}", part="(3)"),
+                 fl("\\ol{MN} = %d cos θ + %d：" % (R, R), "答：\\ol{MN} = [0]√5 + [1] 公尺", [a(MNb.b), str(R)], "%d · √{5}/5" % R, part="(3)")],
+                plot={"x": [-21.5, 21.5], "y": [-21.5, 21.5], "geo": True, "h": 200,
+                      "shapes": [{"k": "circle", "o": [0, 0], "r": 20, "c": "dim"},
+                                 {"k": "seg", "a": [fx(-Ax), fx(Ay)], "b": [fx(Ax), fx(Ay)], "c": "cyan", "w": 2.6},
+                                 {"k": "seg", "a": [0, fx(Ay)], "b": [0, -20], "c": "cyan", "w": 2.6},
+                                 {"k": "seg", "a": [0, 0], "b": [fx(-Ax), fx(Ay)], "c": "faint", "dash": True},
+                                 {"k": "angle", "o": [0, 0], "a0": 90, "a1": fx(90 + math.degrees(th)), "r": 18, "s": "θ"},
+                                 {"k": "label", "p": [fx(-Ax - 1.4), fx(Ay + 1.9)], "s": "A"}, {"k": "label", "p": [fx(Ax + 1.4), fx(Ay + 1.9)], "s": "B"},
+                                 {"k": "label", "p": [2.6, fx(Ay + 2.1)], "s": "M"}, {"k": "label", "p": [2.6, -22.3], "s": "N"},
+                                 {"k": "label", "p": [2.8, -1.6], "s": "O"}]})
+
+
+def tb_path_Y(R):
+    """「Y」字：A、B 是水平直徑的兩端，J 在 O 正下方，\\ol{JA}、\\ol{JB}、\\ol{JS}（S 是最低點）；∠JAO = θ
+       L = 2R/cos θ + R − R tan θ = R + R(2 − sin θ)/cos θ，最短在 sin θ = 1/2"""
+    L = lambda th: 2 * R / cos(th) + R - R * tan(th)
+    mn, _ = ext(L, 0, PI / 4)
+    assert near(mn, R + R * S3, 1e-6) and near(L(PI / 6), R + R * S3)
+    th = PI / 6
+    Jy = -20 * tan(th)
+    return item("tb_path", "boss", 3, "池塘步道", 1.65,
+                "半徑 %d 公尺的圓形池塘，A、B 是一條水平直徑的兩端，S 是池塘最低點。要修「Y」字步道：在半徑 \\ol{OS} 上選一點 J，修 \\ol{JA}、\\ol{JB}、\\ol{JS} 三段。設 ∠JAO = θ（0 ≤ θ < π/4）。\n(1) 把總長 L 用 θ 表示　(2) L 最短多少？(3) 此時 θ 是多少？" % R,
+                [fl("直角 △JOA：\\ol{OA} = %d 是鄰邊。" % R, "(1)　\\ol{JA} = [0]/cos θ，\\ol{JS} = [1] − %d tan θ" % R, [str(R), str(R)],
+                    "\\ol{OJ} = %d tan θ，\\ol{JS} = \\ol{OS} − \\ol{OJ}" % R, part="(1)"),
+                 ch("L = 2\\ol{JA} + \\ol{JS}，通分：", ["L = %d + %d(2 − sin θ)/cos θ" % (R, R), "L = %d + %d(2 + sin θ)/cos θ" % (R, R),
+                                                       "L = %d(2 − sin θ)/cos θ" % R, "L = %d + %d(1 − sin θ)/cos θ" % (R, R)],
+                    "−%d tan θ = −%d sin θ/cos θ，和 %d/cos θ 合起來" % (R, R, 2 * R), "L = %d + %d k，k = (2 − sin θ)/cos θ" % (R, R), part="(1)"),
+                 ch("k = (2 − sin θ)/cos θ ⇒ k cos θ + sin θ = 2。這個方程式有解的條件：", ["k^{2} + 1 ≥ 4", "k + 1 ≥ 2", "k^{2} + 1 ≤ 4", "k ≥ 2"],
+                    "a cos θ + b sin θ 的範圍是 ±√{a^{2} + b^{2}}", "(2)　√{k^{2} + 1} ≥ 2 ⇒ k ≥ √{3}（k > 0）", part="(2)"),
+                 fl("k 最小 √{3}：", "L 最短 = [0] + [1]√3 公尺", [str(R), str(R)], "%d + %d · √{3}" % (R, R), part="(2)"),
+                 fl("等號成立時 √{3} cos θ + sin θ = 2，疊合成 2 sin(θ + π/3) = 2：", "答：(3)　θ = [0]π", ["1/6"], "θ + π/3 = π/2", part="(3)")],
+                plot={"x": [-21.5, 21.5], "y": [-21.5, 21.5], "geo": True, "h": 200,
+                      "shapes": [{"k": "circle", "o": [0, 0], "r": 20, "c": "dim"},
+                                 {"k": "seg", "a": [-20, 0], "b": [20, 0], "c": "faint", "dash": True},
+                                 {"k": "seg", "a": [-20, 0], "b": [0, fx(Jy)], "c": "cyan", "w": 2.6},
+                                 {"k": "seg", "a": [20, 0], "b": [0, fx(Jy)], "c": "cyan", "w": 2.6},
+                                 {"k": "seg", "a": [0, fx(Jy)], "b": [0, -20], "c": "cyan", "w": 2.6},
+                                 {"k": "angle", "o": [-20, 0], "a0": fx(-math.degrees(th)), "a1": 0, "r": 24, "s": "θ"},
+                                 {"k": "label", "p": [-21.0, 2.0], "s": "A"}, {"k": "label", "p": [21.0, 2.0], "s": "B"},
+                                 {"k": "label", "p": [2.4, -22.3], "s": "S"}, {"k": "label", "p": [2.6, fx(Jy - 1.2)], "s": "J"},
+                                 {"k": "label", "p": [1.6, 1.8], "s": "O"}]})
 
 
 # ---------- tb_coin：滾動的圓盤 ----------
@@ -284,7 +343,7 @@ def tb_circum(tA, tB, R):
 def items():
     return [
         [tb_gun(7, 18, 12), tb_gun(7, 25, 10), tb_gun(2, 16, 6)],
-        [tb_path(20), tb_path(10), tb_path(15)],
+        [tb_path(20), tb_path_T(10), tb_path_Y(10)],
         [tb_coin(6, "B", 7), tb_coin(4, "D", F(14, 3)), tb_coin(6, "C", 4)],
         [tb_wave(F(1, 3), 4), tb_wave(F(1, 6), 2), tb_wave(F(1, 4), Q(0, 2, 2))],
         [tb_hex(6, 2), tb_hex(4, 2), tb_hex(6, 3)],

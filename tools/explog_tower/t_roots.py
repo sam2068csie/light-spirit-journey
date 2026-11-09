@@ -191,3 +191,96 @@ def items():
         [r_pq(3, 3, 4, (3, -2), (1, -2)), r_pq(3, 3, 5, (3, -5), (1, -1)), r_pq(5, 4, 3, (5, -1), (1, -3))],
         [r_xlog(2, 1, 2, -1), r_xlog(6, 1, 3, -2), r_xlog(3, 2, 3, -1)],
     ]
+
+
+# ================= 擴充（2026/11/09） =================
+
+# ---------- r_abs：絕對值的真數 ----------
+
+def r_abs(b, c, k):
+    N = b ** k
+    x1, x2 = c + N, c - N
+    lb = logb(b)
+    xc = poly([(1, "x"), (-c, "")])
+    for x in (x1, x2):
+        assert abs(lg(b, abs(x - c)) - k) < 1e-9
+    return item("r_abs", "roots", 1, "絕對值的真數", 1.0, "解方程式 %s |%s| = %d。" % (lb, xc, k),
+                [DOM(["x ≠ %s" % t(c), "x > %s" % t(c), "x > 0", "全體實數"], "真數 |%s| > 0，只要 %s ≠ 0" % (xc, xc), "定義域：x ≠ %s" % t(c)),
+                 fl("拿掉 log：", "|%s| = [0]" % xc, [str(N)], "%s N = %d 代表 N = %d^{%d}" % (lb, k, b, k)),
+                 ch("絕對值拆開：", ["%s = %d 或 %s = −%d" % (xc, N, xc, N), "%s = %d" % (xc, N), "%s = ±%d^{2}" % (xc, N), "x = ±%d" % N],
+                    "|A| = N 代表 A = N 或 A = −N", "%s = ±%d　→　x = %s 或 x = %s" % (xc, N, t(x1), t(x2))),
+                 R([("x = %s" % t(x1), True, "x ≠ %s，代回成立" % t(c)), ("x = %s" % t(x2), True, "絕對值裡是負的沒關係：|%s| = %d" % (t(x2 - c), N))],
+                   "和定義域比對：有沒有不合的根？（沒有就直接確認）", "答：x = %s 或 x = %s" % (t(x1), t(x2)))])
+
+
+# ---------- r_chain：底數是次方 ----------
+
+def r_chain(b, m, k):
+    u = F(k * m, m + 1)
+    assert isint(u)
+    u = int(u)
+    x = b ** u
+    assert abs(lg(b, x) + lg(b ** m, x) - k) < 1e-9
+    bm = b ** m
+    return item("r_chain", "roots", 1, "換成同底數", 1.0, "解方程式 log_{%d} x + log_{%d} x = %d。" % (b, bm, k),
+                [DOM(["x > 0", "x ≠ 0", "x > 1", "全體實數"], "真數 x > 0", "定義域：x > 0"),
+                 ch("log_{%d} x 換成以 %d 為底：" % (bm, b), ["(1/%d) log_{%d} x" % (m, b), "%d log_{%d} x" % (m, b), "log_{%d} x − %d" % (b, m), "log_{%d} (x/%d)" % (b, m)],
+                    "%d = %d^{%d}，log_{a^{m}} x = (1/m) log_{a} x" % (bm, b, m), "log_{%d} x = (1/%d) log_{%d} x" % (bm, m, b)),
+                 fl("令 u = log_{%d} x：u + u/%d = %d。" % (b, m, k), "u = [0]", [str(u)], "(%d/%d)u = %d" % (m + 1, m, k)),
+                 fl("換回 x：", "答：x = %d^{%d} = [0]" % (b, u), [str(x)], "u = log_{%d} x 代表 x = %d^{u}" % (b, b))])
+
+
+# ---------- r_recip：互為倒數 ----------
+
+def r_recip(b, k, c, u1, u2):
+    assert u1 + u2 == c and u1 * u2 == -k and u1 > 0 > u2
+    xs = [F(b) ** u for u in (u1, u2)]
+    for x in xs:
+        x = float(x)
+        assert abs(lg(b, x) - k * lg(x, b) - c) < 1e-9
+    kc = "" if k == 1 else "%d " % k
+    stem = "log_{%d} x − %slog_{x} %d = %d" % (b, kc, b, c)
+    eqt = quad_t(1, -c, -k, "u") + " = 0"
+    return item("r_recip", "roots", 2, "互為倒數", 1.1, "解方程式 %s。" % stem,
+                [DOM(["x > 0 且 x ≠ 1", "x > 0", "x ≠ 1", "x > 1"], "log_{x} 的底數 x > 0 而且 x ≠ 1", "定義域：x > 0 且 x ≠ 1"),
+                 ch("log_{x} %d 和 log_{%d} x 的關係：" % (b, b), ["log_{x} %d = 1/log_{%d} x" % (b, b), "log_{x} %d = −log_{%d} x" % (b, b),
+                                                          "log_{x} %d = log_{%d} x" % (b, b), "log_{x} %d = %d log_{%d} x" % (b, b, b)],
+                    "換底：log_{x} %d = log %d/log x" % (b, b), "令 u = log_{%d} x，log_{x} %d = 1/u" % (b, b)),
+                 ch("u − %s/u = %d，兩邊乘 u：" % (str(k), c), uniq([eqt], [quad_t(1, -c, k, "u") + " = 0", quad_t(1, c, -k, "u") + " = 0", quad_t(1, -k, -c, "u") + " = 0"]),
+                    "u ≠ 0（x ≠ 1），可以乘", "%s　→　(%s)(%s) = 0" % (eqt, poly([(1, "u"), (-u1, "")]), poly([(1, "u"), (-u2, "")]))),
+                 R([("x = %s" % t(xs[0]), True, "u = %d，x = %d^{%d}" % (u1, b, u1)), ("x = %s" % t(xs[1]), True, "u = %d，x = %d^{%d} > 0 而且 ≠ 1" % (u2, b, u2))],
+                   "換回 x，和定義域比對：有沒有不合的根？", "答：x = %s 或 x = %s" % (t(xs[0]), t(xs[1])))])
+
+
+# ---------- r_ratio：兩種底數 ----------
+
+def r_ratio(p, q, B, C):
+    """p^{2x} − B (pq)^x + C q^{2x} = 0；t = (p/q)^x：t² − Bt + C = 0，兩根 1 和 C"""
+    assert 1 + C == B
+    r = F(p, q)
+    stem = "%d^{x} − %d · %d^{x} + %d · %d^{x} = 0" % (p * p, B, p * q, C, q * q)
+    f = lambda x: (p * p) ** x - B * (p * q) ** x + C * (q * q) ** x
+    x2 = math.log(C) / math.log(float(r))
+    assert abs(f(0)) < 1e-9 and abs(f(x2)) < 1e-6
+    rt_ = t(r)
+    return item("r_ratio", "roots", 3, "兩種底數", 1.15, "解方程式 %s。" % stem,
+                [ch("同除以 %d^{x}，令 t = (%s)^{x}：" % (q * q, rt_), ["t^{2} − %dt + %d = 0" % (B, C), "t^{2} − %dt + %d = 0" % (B, q * q), "t − %d + %d = 0" % (B, C),
+                                                                "t^{2} + %dt + %d = 0" % (B, C)],
+                    "%d^{x}/%d^{x} = (%s)^{2x} = t^{2}，%d^{x}/%d^{x} = (%s)^{x} = t" % (p * p, q * q, rt_, p * q, q * q, rt_),
+                    "t^{2} − %dt + %d = 0　→　(t − 1)(t − %d) = 0" % (B, C, C), pre="t = (%s)^{x} > 0" % rt_),
+                 R([("t = 1", True, "t > 0"), ("t = %d" % C, True, "t > 0")], "兩個 t 都要檢查：哪個不合？（都合就直接確認）", "t = 1 或 t = %d" % C),
+                 fl("(%s)^{x} = 1：" % rt_, "x = [0]", ["0"], "任何正數的 0 次方是 1"),
+                 ch("(%s)^{x} = %d，x = ？" % (rt_, C), ["log_{%s} %d" % (rt_, C), "log_{%d} (%s)" % (C, rt_), "%d/(%s)" % (C, rt_), "%d" % C],
+                    "a^{x} = N 代表 x = log_{a} N", "答：x = 0 或 x = log_{%s} %d" % (rt_, C))])
+
+
+_items0 = items
+
+
+def items():
+    return _items0() + [
+        [r_abs(2, 1, 2), r_abs(3, -2, 2), r_abs(10, 3, 1)],
+        [r_chain(2, 2, 6), r_chain(3, 2, 3), r_chain(2, 3, 8)],
+        [r_recip(2, 2, 1, 2, -1), r_recip(3, 6, 1, 3, -2), r_recip(2, 3, 2, 3, -1)],
+        [r_ratio(3, 2, 4, 3), r_ratio(2, 3, 3, 2), r_ratio(5, 2, 6, 5)],
+    ]

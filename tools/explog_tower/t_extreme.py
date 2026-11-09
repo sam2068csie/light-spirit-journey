@@ -188,3 +188,107 @@ def items():
         [e_closed(-2, 1, 4, 5), e_closed(-1, 2, 2, 3), e_closed(-3, 0, 8, 20)],
         [e_xpow(3, 4, -1, 3), e_xpow(2, 4, 0, 5), e_xpow(2, 2, -1, 4)],
     ]
+
+
+# ================= 擴充（2026/11/09） =================
+
+def bpow(b, h):
+    """b^h，h 是整數或半整數：Q"""
+    h = F(h)
+    if isint(h):
+        return Q(F(b) ** int(h))
+    assert (2 * h).denominator == 1
+    return Q.sqrt(F(b) ** int(2 * h))
+
+
+# ---------- e_logquad：對數的二次式 ----------
+
+def e_logquad(b, K, C):
+    h = F(K, 2)
+    mn = C - h * h
+    x0 = bpow(b, h)
+    f = lambda x: lg(b, x) ** 2 - K * lg(b, x) + C
+    xs = [float(x0) * 2 ** (i / 400) for i in range(-2000, 2001)]
+    assert abs(min(map(f, xs)) - float(mn)) < 1e-9 and abs(f(float(x0)) - float(mn)) < 1e-9
+    lb = "log_{%d}" % b
+    return item("e_logquad", "extreme", 1, "對數的二次式", 1.0,
+                "求 f(x) = (%s x)^{2} − %d %s x + %d 的最小值，以及此時 x 的值。" % (lb, K, lb, C),
+                [ch("令 u = %s x，u 的範圍是？" % lb, ["全體實數", "u > 0", "u ≥ 1", "u ≥ 2"], "x 可以是任何正數，%s x 可以是任何實數" % lb, "令 u = %s x，u 是任何實數" % lb),
+                 ch("配方：f(x) = ？", uniq([vf(h, mn, "u")], [vf(h, C, "u"), vf(K, C - K * K, "u"), vf(-h, mn, "u"), vf(h, mn + 1, "u")]),
+                    "u^{2} − %du = %s − %s" % (K, vf(h, 0, "u"), t(h * h)), "f(x) = %s，頂點 u = %s" % (vf(h, mn, "u"), t(h))),
+                 fl("u 是任何實數，頂點就在範圍裡：", "最小值 [0]", [a(mn)], "配方後的常數項"),
+                 fl("此時 x = ？", "答：%s x = %s ⇒ x = [0]" % (lb, t(h)), [x0.ans()], "x = %d^{%s}" % (b, t(h)))],
+                plot={"x": [float(h) - 3.0, float(h) + 3.0], "y": [float(mn) - 1.0, float(mn) + 6.0], "var": "u",
+                      "curves": [{"f": gq(1, -K, C), "c": "orange", "at": 1}], "pts": [{"x": float(h), "y": float(mn), "label": "(%s, %s)" % (t(h), t(mn)), "at": 2}]})
+
+
+# ---------- e_prodlog：兩個對數相乘 ----------
+
+def lg_arg(b, r):
+    """log_b (x / b^r) 的真數寫法：x/8、3x、x"""
+    if r == 0:
+        return "x"
+    v = b ** abs(r)
+    return "x/%d" % v if r > 0 else "%dx" % v
+
+
+def e_prodlog(b, r1, r2):
+    """f = log_b (x/b^{r1}) · log_b (x/b^{r2}) = (u − r1)(u − r2)"""
+    h = F(r1 + r2, 2)
+    mn = -F(r2 - r1, 2) ** 2
+    x0 = bpow(b, h)
+    f = lambda x: (lg(b, x) - r1) * (lg(b, x) - r2)
+    xs = [float(x0) * 2 ** (i / 400) for i in range(-2000, 2001)]
+    assert abs(min(map(f, xs)) - float(mn)) < 1e-9 and abs(f(float(x0)) - float(mn)) < 1e-9
+    lb = "log_{%d}" % b
+    ex = quad_t(1, -(r1 + r2), r1 * r2, "u")
+    fac = "(%s)(%s)" % (poly([(1, "u"), (-r1, "")]), poly([(1, "u"), (-r2, "")]))
+    return item("e_prodlog", "extreme", 2, "兩個對數相乘", 1.1,
+                "求 f(x) = %s (%s) · %s (%s) 的最小值，以及此時 x 的值。" % (lb, lg_arg(b, r1), lb, lg_arg(b, r2)),
+                [ch("令 u = %s x，%s (%s) = ？" % (lb, lb, lg_arg(b, r1)), uniq(["u %s %d" % ("−" if r1 > 0 else "+", abs(r1))],
+                                                                       ["u %s %d" % ("+" if r1 > 0 else "−", abs(r1)), "%du" % b ** abs(r1), "u/%d" % b ** abs(r1)]),
+                    "log (MN) = log M + log N，log (M/N) = log M − log N", "f = %s = %s" % (fac, ex)),
+                 ch("配方：f = ？", uniq([vf(h, mn, "u")], [vf(h, r1 * r2, "u"), vf(-h, mn, "u"), vf(h, -mn, "u")]),
+                    "u^{2}%s 配方" % cof(-(r1 + r2), "u"), "f = %s，頂點 u = %s" % (vf(h, mn, "u"), t(h))),
+                 fl("u 是任何實數，頂點就在範圍裡：", "最小值 [0]", [a(mn)], "配方後的常數項"),
+                 fl("此時 x = ？", "答：%s x = %s ⇒ x = [0]" % (lb, t(h)), [x0.ans()], "x = %d^{%s}" % (b, t(h)))],
+                plot={"x": [float(h) - 3.0, float(h) + 3.0], "y": [float(mn) - 1.0, float(mn) + 6.0], "var": "u",
+                      "curves": [{"f": gq(1, -(r1 + r2), r1 * r2), "c": "orange", "at": 1}],
+                      "pts": [{"x": float(h), "y": float(mn), "label": "(%s, %s)" % (t(h), t(mn)), "at": 2}]})
+
+
+# ---------- e_sumxy：條件下的對數和 ----------
+
+def e_sumxy(b, A, B, S):
+    """x, y > 0，Ax + By = S，log_b x + log_b y 的最大值（算幾）"""
+    P = F(S * S, 4 * A * B)
+    xv, yv = F(S, 2 * A), F(S, 2 * B)
+    assert xv * yv == P
+    k = round(math.log(P, b))
+    assert F(b) ** k == P
+    xs = [S / A * i / 4000 for i in range(1, 4000)]
+    assert abs(max(lg(b, x) + lg(b, (S - A * x) / B) for x in xs) - k) < 1e-6
+    lb = logb(b)
+    ax = "%sx" % ("" if A == 1 else str(A))
+    by = "%sy" % ("" if B == 1 else str(B))
+    return item("e_sumxy", "extreme", 2, "條件下的對數和", 1.1,
+                "x > 0、y > 0，且 %s + %s = %d。求 %s x + %s y 的最大值，以及此時的 x、y。" % (ax, by, S, lb, lb),
+                [ch("%s x + %s y = ？" % (lb, lb), ["%s (xy)" % lb, "%s (x + y)" % lb, "(%s x)(%s y)" % (lb, lb), "%s (x/y)" % lb],
+                    "log M + log N = log (MN)", "%s x + %s y = %s (xy)，xy 越大越大" % (lb, lb, lb)),
+                 ch("%s 和 %s 都是正的，用算幾不等式：" % (ax, by), ["%s · %s ≤ (%d/2)^{2}" % (ax, by, S), "%s + %s ≤ 2√{xy}" % (ax, by),
+                                                          "%s · %s ≥ (%d/2)^{2}" % (ax, by, S), "xy ≤ %d" % S],
+                    "(a + b)/2 ≥ √{ab} ⇒ ab ≤ ((a + b)/2)^{2}", "%s · %s ≤ %d" % (ax, by, (S // 2) ** 2) if S % 2 == 0 else ""),
+                 fl("所以 xy 最大是多少？", "xy ≤ [0]", [a(P)], "%d ÷ %d" % ((S // 2) ** 2, A * B) if A * B != 1 else "(%d/2)^{2}" % S),
+                 fl("%s (xy) 的最大值：" % lb, "最大值 %s %s = [0]" % (lb, t(P)), [str(k)], "%s = %d^{%d}" % (t(P), b, k)),
+                 fl("等號成立在 %s = %s：" % (ax, by), "答：x = [0]，y = [1]", [a(xv), a(yv)], "%s = %s = %d/2" % (ax, by, S))])
+
+
+_items0 = items
+
+
+def items():
+    return _items0() + [
+        [e_logquad(2, 4, 5), e_logquad(3, 2, 4), e_logquad(2, 6, 10)],
+        [e_prodlog(2, 1, 3), e_prodlog(3, -1, 2), e_prodlog(2, -2, 1)],
+        [e_sumxy(10, 1, 1, 20), e_sumxy(10, 1, 4, 40), e_sumxy(2, 2, 1, 16)],
+    ]
