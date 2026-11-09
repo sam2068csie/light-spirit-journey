@@ -14,19 +14,19 @@ const StoryPlayer := preload("res://data/maps/story_player.gd")
 ## 每一句：{text, who（"光靈" 或空白＝旁白）, focus（鏡頭看哪裡：地圖座標；可以是字串，由地圖自己解讀）}
 const STORY := {
 	"g10": [
-		{"text": "數學世界原本由無數座「聖地」照亮。每一座聖地，都守著一個數學的祕密。", "focus": "wide"},
+		{"text": "數學世界原本由無數座「聖地」照亮，每座都守著一個數學祕密。", "focus": "wide"},
 		{"text": "直到某天，混亂之霧湧來。曲線斷裂、數字失序，聖地的光一盞一盞熄滅了……", "focus": "wide"},
 		{"text": "曦光大陸的西南角，有一間小木屋。屋裡還亮著一顆小小的光——", "focus": "house"},
 		{"text": "……嗯？早、早安！我是光靈！外面怎麼霧濛濛的？", "who": "光靈", "focus": "house"},
-		{"text": "聽說只要解開聖地的謎題，光就會回來。那我們一起把整個世界重新點亮吧！", "who": "光靈", "focus": "house"},
-		{"text": "曦光大陸有九個地區，對應高一的九個單元。地區之間沒有順序，想先去哪裡都可以。", "focus": "zones"},
-		{"text": "東南邊的渡口可以搭船到高二的光潮群島。更遠的地方……之後再去探險吧！", "focus": "ferry"},
-		{"text": "每點亮一個單元的所有聖地，就能帶回一件紀念品，擺進小屋的紀念品櫃喔！", "who": "光靈", "focus": "house"},
+		{"text": "解開聖地的謎題，光就會回來。我們一起把世界點亮吧！", "who": "光靈", "focus": "house"},
+		{"text": "曦光大陸的九個地區，就是高一的九個單元，想先去哪都可以。", "focus": "zones"},
+		{"text": "東南邊的渡口可以搭船到高二的光潮群島。", "focus": "ferry"},
+		{"text": "點亮一個單元的聖地，就能帶回一件紀念品喔！", "who": "光靈", "focus": "house"},
 	],
 	"g11": [
 		{"text": "渡船穿過晨霧，駛進一片閃著微光的海——光潮群島。", "focus": "harbor"},
-		{"text": "七座島漂在海上，各自守著高二的一個單元。島和島之間沒有順序，想先去哪座都可以。", "focus": "wide"},
-		{"text": "哇，好多島！我們開船過去吧～靠近島的碼頭，就能上岸了。", "who": "光靈", "focus": "harbor"},
+		{"text": "七座島各守著高二的一個單元，想先去哪座都可以。", "focus": "wide"},
+		{"text": "哇，好多島！開船過去吧～", "who": "光靈", "focus": "harbor"},
 		{"text": "你看，雙島那邊還有一點點光在閃……先去那裡看看好不好？", "who": "光靈", "focus": "goal"},
 	],
 }
@@ -97,7 +97,7 @@ static func goal_text(g, here_grade: String) -> String:
 	var grade := my_grade(g, here_grade)
 	var gl := next_goal(g, grade)
 	if gl.is_empty():
-		return "★ %s開放的聖地全部點亮了！到終焉之塔挑戰，或回小屋看看紀念品吧　▾" % world_name(grade)
+		return "★ %s開放的聖地全部點亮了！　▾" % world_name(grade)
 	var head := "★ 段考範圍：" if bool(gl.exam) else "★ 主線："
 	# 結尾的 ▾：點橫幅可以改段考範圍
 	if gl.grade != here_grade:
@@ -119,9 +119,9 @@ static func souvenir_lines(uid: String) -> Array:
 	var u := Units.unit(uid)
 	var sv := SA.info(uid)
 	return [
-		{"text": "「%s」的聖地全部點亮了！霧散開，光又回到了這片土地。" % u.title, "focus": "unit"},
-		{"text": "島上的光靈們送了我們一件紀念品——「%s」！已經送到小屋的紀念品櫃囉～" % sv.name, "who": "光靈", "focus": "unit"},
-		{"text": "把每一段旅程的所有題型都答對，紀念品還會發光喔。下一站去哪裡呢？", "who": "光靈", "focus": "unit"},
+		{"text": "「%s」的聖地全部點亮了！光回到了這片土地。" % u.title, "focus": "unit"},
+		{"text": "拿到紀念品「%s」！已經送到小屋囉～" % sv.name, "who": "光靈", "focus": "unit"},
+		{"text": "每種題型都答對，紀念品還會發光喔！", "who": "光靈", "focus": "unit"},
 	]
 
 

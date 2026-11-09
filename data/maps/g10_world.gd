@@ -717,7 +717,7 @@ func _open_zone(i: int) -> void:
 	var col: VBoxContainer = o[1]
 	col.add_child(UITheme.title_label(z.name, 28, z.color))
 	var l := Label.new()
-	l.text = "「%s」還被雲霧籠罩著，關卡正在準備中。\n題目放好之後，雲就會散開，從這裡進入旅程！" % z.chapter
+	l.text = "「%s」的題目還在準備中。" % z.chapter
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", UITheme.fs(16))
 	l.add_theme_color_override("font_color", UITheme.TEXT)
@@ -2968,17 +2968,17 @@ func _goal_world(gl: Dictionary) -> Vector2:
 func _tut_steps() -> Array:
 	return [
 		{"rect": func(): return _scr(pos, Vector2(44, 52)),
-		 "text": UITheme.kb("這是我！用方向鍵或 WASD 走路。用滑鼠的話，在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。", "這是我！在畫面左半邊按住，就會出現搖桿，往哪裡拖我就往哪裡走。")},
+		 "text": UITheme.kb("這是我！用方向鍵或 WASD 走路，或在左半邊按住拖曳。", "這是我！在左半邊按住拖曳就能走路。")},
 		{"rect": func(): return _goal_rect(),
-		 "text": "上面的金色橫幅是「主線目標」，告訴你下一步要做什麼。金色箭頭會指出要往哪裡走。點一下橫幅，可以改這次段考的範圍。"},
+		 "text": "金色橫幅是下一步目標，箭頭指出方向。點橫幅可改段考範圍。"},
 		{"rect": func(): return _scr(ZONES[3].gate + Vector2(0, -120), Vector2(90, 110)),
-		 "text": UITheme.kb("這是地區的大門。走到門前會跳出卡片，按 Enter 或「進入」就能進去。還被雲蓋住的地區，題目還在準備中。", "這是地區的大門。走到門前會跳出卡片，按「進入」就能進去。還被雲蓋住的地區，題目還在準備中。")},
+		 "text": UITheme.kb("走到地區大門前，按 Enter 或「進入」。被雲蓋住的還在準備中。", "走到地區大門前，按「進入」。被雲蓋住的還在準備中。")},
 		{"rect": func(): return _tp_btn.get_global_rect(),
-		 "text": UITheme.kb("不想走路的話，按「單元列表」（M），直接選要去的單元。", "不想走路的話，按「單元列表」，直接選要去的單元。")},
+		 "text": UITheme.kb("不想走路？按「單元列表」（M）直接選。", "不想走路？按「單元列表」直接選。")},
 		{"rect": func(): return _scr(HOUSE + Vector2(0, -80), Vector2(110, 110)),
-		 "text": "這是我們的小屋！走過去就能進屋：擺家具、看紀念品、接每日任務。"},
+		 "text": "這是我們的小屋：擺家具、看紀念品、接每日任務。"},
 		{"rect": func(): return Rect2(W - 18 - 210, 14, 210, 44),
-		 "text": "右上角可以切換高一、高二的地圖。好啦，出發吧！"},
+		 "text": "右上角切換高一、高二地圖。出發吧！"},
 	]
 
 

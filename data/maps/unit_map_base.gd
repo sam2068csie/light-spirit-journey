@@ -244,7 +244,7 @@ func _gui_input(e: InputEvent) -> void:
 func _tower_pressed() -> void:
 	var g = Game.of(self)
 	if String(Units.unit(m_unit).get("tower", "")) == "":
-		_notice("終焉之塔", "塔裡的題目還在準備中，\n等%d 座聖地蓋好之後就會開放！" % m_sites.size())
+		_notice("終焉之塔", "%d 座聖地蓋好後開放！" % m_sites.size())
 		return
 	g.sfx("open")
 	open_tower.emit()
@@ -262,7 +262,7 @@ func select(i: int, sound := true) -> void:
 func _enter(i: int) -> void:
 	var info: Dictionary = Center.level_info(m_sites[i].id)
 	if String(info.get("file", "")) == "":
-		_notice(String(info.name), "這座聖地還在建造中，\n很快就能出發了！")
+		_notice(String(info.name), "這座聖地還在建造中。")
 		return
 	enter_level.emit(info.file)
 
