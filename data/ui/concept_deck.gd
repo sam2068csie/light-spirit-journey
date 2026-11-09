@@ -324,7 +324,7 @@ func _show_list() -> void:
 	t.add_theme_color_override("font_color", UITheme.TEXT)
 	head.add_child(t)
 	var sub := Label.new()
-	sub.text = "想看哪一張就點哪一張　·　第一次完成一張：星塵 +%d" % REWARD
+	sub.text = "第一次完成一張：星塵 +%d" % REWARD
 	sub.add_theme_font_size_override("font_size", UITheme.fs(14))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -687,7 +687,7 @@ func _build_card(inner0: VBoxContainer, cd: Dictionary) -> void:
 	if not texts.is_empty():
 		for d in cd.get("decoys", []):
 			texts.append([String(d), -1])
-		_feedback.text = "[color=#9aa3c7]把右邊的積木拖進對應的空格。小心：有一兩塊是多出來的！[/color]"
+		_feedback.text = "[color=#9aa3c7]把積木拖進空格。小心有多出來的！[/color]"
 		_make_tray(split, texts, 300.0)
 	else:
 		_feedback.text = "[color=#6ee7a0]✔ 全部填好了！[/color]" + ("" if not cd.has("check") or _prog(idx).check else "　[color=#9aa3c7]最後來一題小測驗。[/color]")
@@ -1074,7 +1074,7 @@ func _build_order(inner: VBoxContainer, cd: Dictionary) -> void:
 	if placed.size() >= steps.size():
 		_feedback.text = "[color=#6ee7a0]✔ 流程完成！[/color]　" + _hl(cd.get("done", ""), color)
 		return
-	_feedback.text = "[color=#9aa3c7]照思考的順序，把下面的步驟拖進 1、2、3…的格子。有一塊是錯的步驟！[/color]"
+	_feedback.text = "[color=#9aa3c7]照順序把步驟拖進格子。有一塊是錯的！[/color]"
 	var texts: Array = []
 	for si in steps.size():
 		if not placed.has(si):
@@ -1174,7 +1174,7 @@ func _on_check(rb: Button, right: bool, ck: Dictionary) -> void:
 		_style_row(rb, UITheme.BAD)
 		rb.disabled = true
 		_wobble(rb)
-		_feedback.text = "[color=#ff6b7a]✘ 不是這個，再想想！[/color]　" + _hl(ck.get("hint", "回卡片看一下也可以。"), color)
+		_feedback.text = "[color=#ff6b7a]✘ 不是這個，再想想！[/color]　" + _hl(ck.get("hint", ""), color)
 	_update_nav()
 
 

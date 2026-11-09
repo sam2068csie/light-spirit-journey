@@ -438,7 +438,7 @@ func _build_fill(st: Dictionary) -> void:
 	card.visible = not _inline_fill()
 	if _inline_fill() and n <= 4:      # 格子多的時候格子排成兩列，這行說明拿掉，免得按鍵被擠出畫面
 		var tip := Label.new()
-		tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
+		tip.text = "填入左邊推導紀錄裡的空格。"
 		tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 		tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		rank_box.add_child(tip)
@@ -1068,7 +1068,7 @@ func _build_filter(st: Dictionary) -> void:
 		row.add_child(b)
 		filter_btns.append(b)
 	var tip := Label.new()
-	tip.text = st.get("tip", "點一下可以切換「保留」或「丟掉」。")
+	tip.text = st.get("tip", "點一下切換保留／丟掉。")
 	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)
@@ -1230,7 +1230,7 @@ func _build_order(st: Dictionary) -> void:
 		order_seq = []
 		_refresh_order())
 	var tip := Label.new()
-	tip.text = "點已選的項目也可以把它拿回來。"
+	tip.text = "再點一次可以拿回來。"
 	tip.add_theme_font_size_override("font_size", UITheme.fs(13))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	rank_box.add_child(tip)

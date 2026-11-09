@@ -1383,7 +1383,7 @@ func _enter_step2() -> void:
 			go_btn.visible = false
 			formula_label.visible = true
 			task_label.visible = true
-			task_label.text = "在左邊點一下 P、再點一下 Q，把兩點連成一條弦。"
+			task_label.text = "點 P、再點 Q，連成一條弦。"
 			stage.chord_on = true
 	_update_hud()
 
@@ -1797,7 +1797,7 @@ func _sketch_start() -> void:
 
 func _sketch_draw_ui() -> void:
 	step_label.text = UITheme.step_bar(_steps(), 1)
-	task_label.text = "在左圖畫出這個函數（畫滿畫面，可分多筆），再按「確認送出」。"
+	task_label.text = "在左圖畫出這個函數（畫滿畫面，可分多筆）。"
 	go_btn.visible = false
 	stage.draw_on = true
 
@@ -1886,7 +1886,7 @@ func _on_stroke(pts: PackedVector2Array) -> void:
 	stage.stroke_bad = []
 	_pending_ui()
 	Game.of(self).play("blip", 1.1, -12.0)
-	_hint("可以繼續畫下一筆。\n畫完按「確認送出」，畫錯按「擦掉上一筆」。", "info")
+	_hint("可以繼續畫下一筆。", "info")
 
 
 ## 已經畫了幾筆：送出／擦掉上一筆
@@ -1923,7 +1923,7 @@ func _redraw_stroke() -> void:
 		stroke_pending = false
 		go_btn.visible = false
 		alt_btn.visible = false
-		_hint("擦掉了。重新畫吧，這次不算作答，也不扣能量。", "info")
+		_hint("擦掉了，重新畫吧。", "info")
 	else:
 		_pending_ui()
 		_hint("擦掉上一筆了。還剩 %d 筆。" % stage.strokes.size(), "info")
@@ -2585,53 +2585,51 @@ func _tut_steps(key: String) -> Array:
 	match key:
 		"basic":
 			return [
-				{"text": "嗨！我是光靈～第一次來這裡嗎？我帶你看一下畫面，很快就好！"},
-				{"rect": stg, "text": "左邊是「舞台」：圖形、題目和推導紀錄都在這裡。有些題目要直接在舞台上點、拖或畫。"},
-				{"rect": func(): return _union([_grect(story_label), _grect(step_label)]),
-				 "text": "右邊卡片最上面是這一題的故事，和你現在走到第幾步。"},
-				{"rect": side, "text": "作答都在這張卡片裡：照著金色的字做，選擇、填空、拖滑桿都在這裡。"},
+				{"text": "嗨！我是光靈～帶你快速看一下畫面！"},
+				{"rect": stg, "text": "左邊是「舞台」：圖形和推導紀錄。有些題目要在這裡點、拖或畫。"},
+				{"rect": side, "text": "右邊卡片是作答區：照著金色的字做。"},
 				{"rect": func(): return _grect(side_btns) if _grect(go_btn).size.x > 2.0 else Rect2(),
-				 "text": UITheme.kb("需要送出的時候，按最下面的金色按鈕（也可以按 Enter）。", "需要送出的時候，按最下面的金色按鈕。")},
-				{"rect": func(): return _grect(pips) if _grect(pips).size.x > 40.0 else Rect2(), "text": "上面這排圓點是這一關的旅程：一個圓點一題，答對會亮起來。"},
+				 "text": UITheme.kb("按金色按鈕送出（或按 Enter）。", "按金色按鈕送出。")},
+				{"rect": func(): return _grect(pips) if _grect(pips).size.x > 40.0 else Rect2(), "text": "一個圓點一題，答對會亮起來。"},
 				{"rect": func(): return Rect2(score_label.global_position - Vector2(44, 2), Vector2(1128 - score_label.global_position.x + 44, 52)),
-				 "text": UITheme.kb("右上角是你的星塵和暫停鍵（Esc）。暫停選單裡的「操作說明」可以再看一次教學。", "右上角是你的星塵和暫停鍵。暫停選單裡的「操作說明」可以再看一次教學。")},
+				 "text": UITheme.kb("星塵和暫停鍵（Esc）。暫停選單可以再看一次教學。", "星塵和暫停鍵。暫停選單可以再看一次教學。")},
 				{"rect": func(): return _grect(scratch._btn) if scratch else Rect2(),
-				 "text": "暫停鍵左邊的筆是「計算紙」：按下去整個畫面都能手寫，寫完按「收起」就能作答（計時不會停喔）。"},
-				{"text": "答錯也沒關係，我會在卡片裡給你提示，太久沒動我也會跑出來幫忙。準備好了就出發吧！"},
+				 "text": "筆是「計算紙」：整個畫面都能手寫（計時不會停）。"},
+				{"text": "答錯會有提示，卡住我也會來幫忙。出發吧！"},
 			]
 		"type:fit":
 			return [
-				{"rect": side, "text": "這種題目先回答預言題，想一想參數是多少。"},
+				{"rect": side, "text": "先預測參數是多少。"},
 				{"rect": func(): return _grect(sliders_box) if _grect(sliders_box).size.y > 10.0 else _grect(side_card),
-				 "text": "接著拖動滑桿調整參數，讓舞台上的光橋穿過所有寶石，再按按鈕點亮光橋！"},
+				 "text": "再拖滑桿，讓光橋穿過所有寶石！"},
 			]
 		"type:draw":
 			return [
-				{"rect": stg, "text": "徒手作圖：先在舞台上點出曲線經過的整數點（卡片會告訴你共有幾個）。"},
-				{"rect": stg, "text": "接著用滑鼠或手指，在舞台上一筆畫出整條曲線。畫歪了可以重畫，吻合度 60 分就過關！"},
+				{"rect": stg, "text": "先在舞台上點出曲線經過的整數點。"},
+				{"rect": stg, "text": "再把整條曲線畫出來，吻合度 60% 就過關！"},
 			]
 		"type:cross":
 			return [
-				{"rect": stg, "text": "交點獵人：在舞台上先後畫出兩個函數的圖形。"},
-				{"rect": side, "text": "兩條都畫對之後，在卡片裡回答它們交了幾次。"},
+				{"rect": stg, "text": "先畫出兩個函數的圖形。"},
+				{"rect": side, "text": "再回答它們交了幾次。"},
 			]
 		"type:table":
-			return [{"rect": side, "text": "列表作圖：一格一格比較兩個函數的大小，找出交點在哪個區間，最後數交點。"}]
+			return [{"rect": side, "text": "逐格比較兩個函數的大小，找出交點所在區間。"}]
 		"type:rank":
-			return [{"rect": stg, "text": "幫舞台上的每一條曲線配上正確的底數：底數越大，越陡（或越平）？"}]
+			return [{"rect": stg, "text": "幫每條曲線配上正確的底數。"}]
 		"type:quadrant":
-			return [{"rect": side, "text": "調整參數，讓燈塔的光只經過題目指定的象限。"}]
+			return [{"rect": side, "text": "調整參數，讓光只經過指定的象限。"}]
 		"type:count":
-			return [{"rect": side, "text": "先拖動滑桿完成調頻任務，看看交點個數怎麼變，最後回答範圍題。"}]
+			return [{"rect": side, "text": "拖滑桿完成任務，看交點個數怎麼變，再回答範圍題。"}]
 		"type:chord":
-			return [{"rect": stg, "text": "先判斷圖形的凹口方向，再在舞台上連出弦，最後比大小。"}]
+			return [{"rect": stg, "text": "判斷凹口方向、連出弦，再比大小。"}]
 		"type:forge":
 			return [
-				{"rect": side, "text": UITheme.kb("推導題：一步一步往下做。選擇題直接點選項，填空題用卡片上的數字鍵盤，也可以用實體鍵盤打字。", "推導題：一步一步往下做。選擇題直接點選項，填空題用卡片上的數字鍵盤。")},
-				{"rect": stg, "text": "每答對一步，就會寫進左邊的推導紀錄。全部做完，就是一份完整的計算過程！"},
+				{"rect": side, "text": UITheme.kb("一步一步往下做，填空可用鍵盤打字。", "一步一步往下做。")},
+				{"rect": stg, "text": "答對的步驟會寫進左邊的推導紀錄。"},
 			]
 		"type:speed":
-			return [{"rect": side, "text": "速算挑戰：時間內連續作答，答對越多、連對越多，分數越高！答錯會扣 5 秒喔。"}]
+			return [{"rect": side, "text": "限時連續作答，答錯扣 5 秒！"}]
 		"type:tune":
-			return [{"rect": stg, "text": "拖動參數，看圖形怎麼變，再回答範圍題。"}]
+			return [{"rect": stg, "text": "拖滑桿看圖形怎麼變，再回答範圍題。"}]
 	return []
