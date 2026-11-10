@@ -380,9 +380,9 @@ func _first_time_tutorial() -> void:
 	var pen_rect := func() -> Rect2:
 		return pen.get_global_rect().grow(8) if is_instance_valid(pen) else Rect2()
 	Tut.run(self, [
-		{"text": "歡迎來到終焉之塔！這裡是段考風格的大題，一層一題，越往上越難。", "face": "happy"},
-		{"rect": hud, "text": "整趟攀登只有三顆心，每一層都有時間限制。答錯、超時都會扣一顆心。", "face": "normal"},
-		{"rect": pen_rect, "text": "終焉之塔難度較高，請善用右上角的手寫計算功能！按這支筆，就能直接在畫面上寫算式。", "face": "happy"}])
+		{"text": "歡迎來到終焉之塔！一層一題，越往上越難。", "face": "happy"},
+		{"rect": hud, "text": "只有三顆心，答錯或超時扣一顆。", "face": "normal"},
+		{"rect": pen_rect, "text": "按這支筆，可以直接在畫面上寫算式！", "face": "happy"}])
 
 
 ## 這一步開始前先寫上推導板的「已知」（例如「令 t = 2^{x}（t > 0）」），不是這一步的答案
@@ -543,7 +543,7 @@ func _lose_heart() -> void:
 	tw.tween_property(hl, "scale", Vector2.ONE, 0.15)
 	hl.pivot_offset = hl.size / 2.0
 	if hearts <= 0:
-		buddy.say("心用完了……我們看一下完整的解法吧！", "worried", 3.0)
+		buddy.say("心用完了……看看完整的解法吧！", "worried", 3.0)
 	else:
 		buddy.say(Buddy.line("wrong"), "worried", 2.0)
 
@@ -882,12 +882,12 @@ func _check_judge() -> void:
 	elif wrong == 1:
 		penalty += 1
 		Game.of(self).sfx("tick")
-		_hint("錯了 1 張，不扣心。看一下紅色那張的理由。", "info")
+		_hint("錯了 1 張，不扣心。", "info")
 	else:
 		_lose_heart()
 		if _out_of_hearts():
 			return
-		_hint("錯了 %d 張，扣一顆心。每張卡片下面都有理由。" % wrong, "bad")
+		_hint("錯了 %d 張，扣一顆心。" % wrong, "bad")
 	_wait_continue()
 
 
@@ -957,7 +957,7 @@ func _check_roots() -> void:
 		_lose_heart()
 		if _out_of_hearts():
 			return
-		_hint("判斷有誤，扣一顆心。看看每個根的理由。", "bad")
+		_hint("判斷有誤，扣一顆心。", "bad")
 	_write(String(steps[si].get("write", "")))
 	_wait_continue()
 
@@ -978,13 +978,13 @@ func _build_line(s: Dictionary) -> void:
 		numline.add_row(String(s.row), s.signs.size(), kind_col, "sign")
 		action_btn.text = "標好了！"
 		action_btn.visible = true
-		_hint("點數線上的每一段，標上 ＋ 或 −（再點一下換成另一個）。", "info")
+		_hint("點每一段，標上 ＋ 或 −。", "info")
 		_scroll_board_end()
 		return
 	numline.add_row(String(s.row), s.seg.size(), kind_col)
 	action_btn.text = "封印！"
 	action_btn.visible = true
-	_hint("點數線上的「區段」選範圍，點「端點」決定要不要包含（實心＝包含）。", "info")
+	_hint("點區段選範圍，點端點切換包含（實心）。", "info")
 	_scroll_board_end()
 
 
@@ -1008,7 +1008,7 @@ func _check_line() -> void:
 		numline.show_answer(s.seg, s.pt)
 	if _out_of_hearts():
 		return
-	_hint(("正負號不對，扣一顆心。正確的正負號已經標出來了。" if is_sign else "位置不對，扣一顆心。正確的範圍已經畫出來了。")
+	_hint(("正負號不對，扣一顆心。" if is_sign else "位置不對，扣一顆心。")
 		+ ("\n" + String(s.hint) if s.has("hint") else ""), "bad")
 	_write(String(s.get("write", "")))
 	_wait_continue()
@@ -1135,7 +1135,7 @@ func _build_fill(s: Dictionary) -> void:
 	fill_rad = bool(s.get("rad", Bank.get_script_constant_map().get("RADICALS", false))) or s.ans.any(func(a): return String(a).contains("√"))
 	fill_live = _write(String(s.template))
 	var tip := Label.new()
-	tip.text = "空格在左邊的推導紀錄裡，用下面的按鍵填入。"
+	tip.text = "填入左邊推導紀錄裡的空格。"
 	tip.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	tip.custom_minimum_size = Vector2(CARD_W, 0)
 	tip.add_theme_font_size_override("font_size", UITheme.fs(15))
