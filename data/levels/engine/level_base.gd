@@ -331,8 +331,8 @@ func _back_to_list() -> void:
 	if review_mode:
 		Game.of(self).session_abort()
 		return
-	round_gen += 1
-	busy = true
+	round_gen.bump()
+	phase = Phase.END
 	stage.running = false
 	_close_modals()
 	if journey_mode:

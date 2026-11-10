@@ -34,6 +34,7 @@ const MAP := {
 	"game_economy.gd": "res://data/core/game_economy.gd",
 	"game_state.gd": "res://data/core/game_state.gd",
 	"game_theme.gd": "res://data/ui/game_theme.gd",
+	"gen_token.gd": "res://data/core/gen_token.gd",
 	"house.gd": "res://data/house/house.gd",
 	"house_items.gd": "res://data/house/house_items.gd",
 	"level01_bank.gd": "res://data/levels/exp/level01_bank.gd",

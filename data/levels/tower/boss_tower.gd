@@ -10,6 +10,7 @@ extends Control
 const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
+const Gen := preload("res://data/core/gen_token.gd")
 const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
@@ -27,7 +28,11 @@ const BUDDY_PAD := 54.0     # 推導板底部留給光靈對話框的高度
 
 var item: Dictionary = {}
 var steps: Array = []
-var si := 0                 # 目前第幾步
+var step_gen := Gen.new()   # 世代號碼（gen_token.gd）：si 每改一次就 bump，等待中的自動前進用它判斷是不是還在同一步
+var si := 0:                # 目前第幾步
+	set(v):
+		si = v
+		step_gen.bump()
 var floor_n := 1
 var hearts := MAX_HEARTS
 var time_left := 120.0
@@ -755,9 +760,9 @@ func _on_choice(k: int, b: Button) -> void:
 			o.disabled = true
 		_write(String(s.get("write", "")))
 		_hint("答對了！", "good")
-		var gen := si
+		var gen := step_gen.now()
 		await get_tree().create_timer(0.7).timeout
-		if gen == si and not done:
+		if not step_gen.stale(gen) and not done:
 			_advance()
 	else:
 		b.disabled = true
@@ -996,9 +1001,9 @@ func _check_line() -> void:
 		Game.of(self).sfx("correct")
 		_hint("封印成功！", "good")
 		_write(String(s.get("write", "")))
-		var gen := si
+		var gen := step_gen.now()
 		await get_tree().create_timer(0.8).timeout
-		if gen == si and not done:
+		if not step_gen.stale(gen) and not done:
 			_advance()
 		return
 	_lose_heart()
@@ -1085,9 +1090,9 @@ func _on_pick(k: int, b: Button) -> void:
 				t.modulate.a = 0.45
 		_write(String(s.get("write", "")))
 		_hint("答對了！", "good")
-		var gen := si
+		var gen := step_gen.now()
 		await get_tree().create_timer(0.9).timeout
-		if gen == si and not done:
+		if not step_gen.stale(gen) and not done:
 			_advance()
 	else:
 		b.disabled = true
@@ -1367,9 +1372,9 @@ func _check_fill() -> void:
 		fill_on = false
 		_write(String(s.get("write", "")))
 		_hint("答對了！", "good")
-		var gen := si
+		var gen := step_gen.now()
 		await get_tree().create_timer(0.8).timeout
-		if gen == si and not done:
+		if not step_gen.stale(gen) and not done:
 			_advance()
 		return
 	# 填錯的格子標紅，游標移到第一個錯的格子

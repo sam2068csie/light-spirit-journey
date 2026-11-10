@@ -125,13 +125,13 @@ static func souvenir_lines(uid: String) -> Array:
 	]
 
 
-## 播放一段劇情：host 是大地圖，要有 story_focus（Vector2，(-1, -1) = 跟著玩家）和 focus_point(name, uid) -> Vector2
+## 播放一段劇情：host 是大地圖（world_base.gd），要有 set_story_playing(on)、story_focus（Vector2，(-1, -1) = 跟著玩家）和 focus_point(name, uid) -> Vector2
 static func play(host: Control, key: String, lines: Array, title: String, uid := "") -> void:
 	var g = Game.of(host)
 	var layer := CanvasLayer.new()
 	layer.layer = 40
 	host.add_child(layer)
-	host.set("playing", true)
+	host.call("set_story_playing", true)
 	if host.has_signal("story_changed"):
 		host.emit_signal("story_changed", true)
 	var pl = StoryPlayer.new()
@@ -148,7 +148,7 @@ static func play(host: Control, key: String, lines: Array, title: String, uid :=
 		await pl.outro()
 	layer.queue_free()
 	host.set("story_focus", Vector2(-1, -1))
-	host.set("playing", false)
+	host.call("set_story_playing", false)
 	if host.has_signal("story_changed"):
 		host.emit_signal("story_changed", false)
 	g.mark_story("world/" + key)

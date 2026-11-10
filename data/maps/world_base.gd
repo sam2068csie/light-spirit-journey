@@ -26,7 +26,7 @@ var pos := Vector2.ZERO
 var cam := Vector2.ZERO
 var zoom := 1.0
 var t := 0.0
-var playing := false
+var story_playing := false              # 劇情播放中（world_story.play 透過 set_story_playing 設定）
 var _busy := false
 var _hold := false
 var _hold_pt := Vector2.ZERO
@@ -40,6 +40,16 @@ var _goal_text := ""
 var _goal_pt := Vector2(-1, -1)        # 主線目標在地圖上的位置
 var _goal_t := 0.0
 var _exam_open := false                # 「這次段考考什麼？」開著
+
+
+## 地圖凍結：劇情播放中，或段考範圍視窗開著。凍結時不能移動，也不畫搖桿、主線橫幅、靠近時的卡片
+func frozen() -> bool:
+	return story_playing or _exam_open
+
+
+## world_story.play 開始／結束劇情時呼叫
+func set_story_playing(on: bool) -> void:
+	story_playing = on
 
 
 # ================= 子類別要提供的 =================
@@ -168,7 +178,7 @@ func _light_tick(delta: float) -> void:
 	for key in _lit_anim.keys():
 		var a: Dictionary = _lit_anim[key]
 		if float(a.t) < 0.0:
-			if playing or _busy or not is_visible_in_tree() or is_instance_valid(_overlay):
+			if frozen() or _busy or not is_visible_in_tree() or is_instance_valid(_overlay):
 				continue
 			if not _view().grow(-60.0).intersects(_light_box(key)):
 				continue
@@ -239,7 +249,7 @@ func _draw_dressed(p: Vector2, r: float, left: bool) -> void:
 
 
 func _draw_goal() -> void:
-	if playing or _goal_text == "":
+	if frozen() or _goal_text == "":
 		return
 	var tp := Vector2(-1, -1)
 	if _goal_pt.x >= 0.0:
@@ -250,7 +260,7 @@ func _draw_goal() -> void:
 
 ## 虛擬搖桿（螢幕座標）：按著的時候畫在手指下面；沒按的時候左下角淡淡地提示
 func _draw_joystick() -> void:
-	if playing:
+	if frozen():
 		return
 	var font := UITheme.bold_font()
 	if _hold:
@@ -277,7 +287,7 @@ func _goal_rect() -> Rect2:
 
 
 func _gui_input(e: InputEvent) -> void:
-	if playing:
+	if frozen():
 		return
 	# 點上方的金色主線橫幅：選這次段考的範圍（主線先帶你去那些單元）
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed and _goal_text != "" \
@@ -343,7 +353,7 @@ func _story_check() -> void:
 	await get_tree().create_timer(0.7).timeout
 	while is_inside_tree() and not is_visible_in_tree():
 		await get_tree().create_timer(0.3).timeout
-	if not is_inside_tree() or playing:
+	if not is_inside_tree() or frozen():
 		return
 	var g = Game.of(self)
 	if not WS.seen(g, _world_key()):
@@ -357,24 +367,22 @@ func _story_check() -> void:
 	if su != "":
 		await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
 	# 這學期還沒選過段考範圍（換學期了、或是舊存檔）：問一次
-	if is_inside_tree() and not playing and WS.needs_exam_pick(g, WS.my_grade(g, _grade_name())):
+	if is_inside_tree() and not frozen() and WS.needs_exam_pick(g, WS.my_grade(g, _grade_name())):
 		open_exam_pick()
 
 
 ## 「這次段考考什麼？」：放在最上層（主畫面），選完更新主線橫幅和箭頭
 func open_exam_pick() -> void:
-	if playing or _exam_open:
+	if frozen():
 		return
 	var host: Node = get_tree().current_scene if get_tree().current_scene is Control else self
-	_exam_open = true
+	_exam_open = true       # 視窗開著時地圖不動、橫幅先收起來（frozen()）
 	_hold = false
-	playing = true          # 視窗開著時地圖不動、橫幅先收起來
 	var layer := ExamPick.open(host, WS.my_grade(Game.of(self), _grade_name()), func(_gr: String):
 		if is_inside_tree():
 			_refresh_goal())
 	layer.tree_exited.connect(func():
-		_exam_open = false
-		playing = false)
+		_exam_open = false)
 
 
 func close_overlay() -> bool:

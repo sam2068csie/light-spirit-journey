@@ -636,7 +636,7 @@ func _build_ui() -> void:
 
 func _update_card() -> void:
 	var k := String(_near.get("kind", ""))
-	_card.visible = k != "" and not is_instance_valid(_overlay) and not _busy and not playing
+	_card.visible = k != "" and not is_instance_valid(_overlay) and not _busy and not frozen()
 	if not _card.visible:
 		return
 	match k:
@@ -930,7 +930,7 @@ func _open_chest() -> void:
 # ================= 輸入 =================
 
 func _unhandled_input(e: InputEvent) -> void:
-	if playing:
+	if frozen():
 		return
 	if not is_visible_in_tree() or is_instance_valid(_overlay):
 		return
@@ -977,7 +977,7 @@ func _place_root() -> void:
 func _process(delta: float) -> void:
 	t += delta
 	_fade.visible = _fade.color.a > 0.004          # 完全透明時不畫（全螢幕的一層）
-	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy and not playing
+	var active := is_visible_in_tree() and not is_instance_valid(_overlay) and not _busy and not frozen()
 	_goal_t -= delta
 	if _goal_t <= 0.0:
 		_goal_t = 1.0
@@ -2867,7 +2867,7 @@ func _p_hud(L) -> void:
 		L.draw_rect(Rect2(0, 0, W, w), Color(0, 0, 0.05, a))
 		L.draw_rect(Rect2(0, H - w, W, w), Color(0, 0, 0.05, a))
 	_draw_minimap(L, font)
-	if not playing and _goal_text != "":
+	if not frozen() and _goal_text != "":
 		var tp := Vector2(-1, -1)
 		if _goal_pt.x >= 0.0:
 			var C := Vector2(W, H) / 2.0
@@ -2880,7 +2880,7 @@ func _p_hud(L) -> void:
 
 
 func _draw_joy(L, font: Font) -> void:
-	if playing:
+	if frozen():
 		return
 	if _hold:
 		UITheme.dot(L, _joy_base, JOY_R + 6.0, Color(0.05, 0.08, 0.2, 0.35))

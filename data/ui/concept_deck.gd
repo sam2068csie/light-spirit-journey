@@ -12,6 +12,7 @@ extends VBoxContainer
 const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
+const Gen := preload("res://data/core/gen_token.gd")
 
 signal closed(start: bool)   # start = true：按了清單上的「開始挑戰」
 
@@ -46,7 +47,7 @@ var _slots: Array = []          # 這張卡片的空格
 var _tiles: Array = []          # 積木區裡的積木
 var _tray: Control
 var _drag: ConceptTile
-var _gen := 0                   # 換頁就 +1（非同步排版時用來判斷還是不是同一張）
+var _gen := Gen.new()           # 世代號碼（gen_token.gd）：換頁就 bump（非同步排版時用來判斷還是不是同一張）
 var _hint_i := 0
 var _pointer: ConceptPointer
 var _idle := 0.0
@@ -297,7 +298,7 @@ func _complete(i: int) -> void:
 # ───────────────────────── 卡片清單 ─────────────────────────
 
 func _clear_slide() -> void:
-	_gen += 1
+	_gen.bump()
 	for ch in _slide.get_children():
 		ch.queue_free()
 	_rows.clear()
@@ -763,7 +764,7 @@ func _make_tray(parent: Control, texts: Array, width: float) -> void:
 		tl.modulate.a = 0.0
 		_tray.add_child(tl)
 		_tiles.append(tl)
-	_scatter(_gen, rng)
+	_scatter(_gen.now(), rng)
 
 
 func _draw_tray(tray: Control) -> void:
@@ -783,7 +784,7 @@ func _draw_tray(tray: Control) -> void:
 func _scatter(gen: int, rng: RandomNumberGenerator) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if gen != _gen or _tray == null or not is_instance_valid(_tray):
+	if _gen.stale(gen) or _tray == null or not is_instance_valid(_tray):
 		return
 	var w := maxf(_tray.size.x, _tray.custom_minimum_size.x)
 	if w < 100.0:

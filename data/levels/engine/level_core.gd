@@ -15,6 +15,7 @@ signal level_cleared(stars: int)
 const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
+const Gen := preload("res://data/core/gen_token.gd")
 const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Concepts := preload("res://data/ui/concept_cards.gd")
@@ -53,11 +54,51 @@ var vals := {}
 var energy := MAX_ENERGY
 var tries := 0
 var predicted_ok := false
-var predicting := false
 var predict_tries := 0
 var cur_q: Dictionary = {}       # 目前顯示中的選擇題（預言或 count 的最終題）
-var revealing := false
-var busy := false
+## ---- 一題的狀態機 ----
+## 階段（以前是 busy、demoed 兩個旗標）：
+##   PLAY 作答中 ──按「點亮」──▶ RUN 光橋點亮中 ──失敗──▶ PLAY
+##                                            └─成功──▶ END
+##   PLAY／RUN ──能量（心）用完、時間到──▶ DEMO 示範正解中 ──▶ END
+##   END：這一題結束（結算畫面、或離開到題目列表）。下一題 _start_round 回到 PLAY
+enum Phase { PLAY, RUN, DEMO, END }
+var phase := Phase.PLAY
+var demoed := false            # 這一題看過示範了（進 DEMO 之後一直是 true，直到下一題）
+## 不在作答中（點亮、示範、結束）：所有作答的按鈕、拖曳都不理
+var busy: bool:
+	get:
+		return phase != Phase.PLAY
+
+## 作答中正在等哪一種輸入（以前是 predicting、marking、stroke_pending 三個旗標，同時只會有一個）
+##   ANSWER 選擇題（預言題、最後的範圍題）　MARK 徒手作圖前點整數點　STROKE 畫好了，等「確認送出」或「重畫」
+enum Wait { NONE, ANSWER, MARK, STROKE }
+var wait := Wait.NONE
+var predicting: bool:
+	get:
+		return wait == Wait.ANSWER
+	set(v):
+		_set_wait(Wait.ANSWER, v)
+var marking: bool:
+	get:
+		return wait == Wait.MARK
+	set(v):
+		_set_wait(Wait.MARK, v)
+var stroke_pending: bool:              # 徒手作圖：畫好了，等學生按「確認送出」或「重畫一次」
+	get:
+		return wait == Wait.STROKE
+	set(v):
+		_set_wait(Wait.STROKE, v)
+
+
+func _set_wait(w: Wait, on: bool) -> void:
+	if on:
+		if wait != Wait.NONE and wait != w:
+			push_warning("WAIT 衝突：%s 還沒結束就換成 %s（%s）" % [Wait.keys()[wait], Wait.keys()[w], r.get("type", "")])
+		wait = w
+	elif wait == w:
+		wait = Wait.NONE
+
 var time_left := 0.0
 var score := 0
 var total_stars := 0
@@ -107,7 +148,7 @@ var next_q_btn: Button
 var chain_i := 0              # 連續預言題（chain）：已經問到第幾題
 var chord_phase := 0          # 凹口比大小：0 判斷凹口、1 連弦、2 比大小
 var chord_errs := 0           # 凹口比大小：這一題答錯幾次
-var round_gen := 0            # 每開始一題就 +1；等待中的動畫用它判斷題目是不是已經換了
+var round_gen := Gen.new()    # 世代號碼（gen_token.gd）：每開始一題就 bump；等待中的動畫用它判斷題目是不是已經換了
 var score_label: Label
 var _dust_anim := false       # 星塵數字正在往上跳
 var story_label: MathLabel
@@ -886,7 +927,7 @@ func _start_round() -> void:
 	if scratch:
 		scratch.clear()      # 換下一題：清掉計算紙
 	formula_fs = 30
-	round_gen += 1
+	round_gen.bump()
 	wrong_streak = 0
 	idle_t = 0.0
 	idle_shown = false
@@ -917,8 +958,9 @@ func _start_round() -> void:
 	mislocks = 0
 	goal_idx = 0
 	predicted_ok = false
-	revealing = false
-	busy = false
+	phase = Phase.PLAY
+	demoed = false
+	wait = Wait.NONE
 	time_left = r.get("time", 0.0)
 	last_count = -1
 	cross_done = false
@@ -956,7 +998,7 @@ func _start_round() -> void:
 		_show_question(r.predict)
 	if not journey_mode and not review_mode and r.chapter == 2 and (ri == 0 or rounds[ri - 1].chapter == 1):
 		_show_chapter_card()
-	_tut_check.call_deferred(round_gen)
+	_tut_check.call_deferred(round_gen.now())
 
 
 func _steps() -> Array:
@@ -1390,7 +1432,7 @@ func _enter_step2() -> void:
 
 ## 凹口比大小：弦畫好了，接著比大小
 func _on_chord_drawn() -> void:
-	if revealing or chord_phase != 1:
+	if demoed or chord_phase != 1:
 		return
 	chord_phase = 2
 	task_label.visible = false
@@ -1459,7 +1501,7 @@ func _on_go() -> void:
 		return
 	match r.type:
 		"fit":
-			busy = true
+			phase = Phase.RUN
 			tries += 1
 			go_btn.disabled = true
 			_set_sliders(false)
@@ -1489,7 +1531,7 @@ func _on_impossible() -> void:
 # ---------- fit：光靈奔跑結束 ----------
 
 func _on_run_finished(success: bool, reason: String) -> void:
-	if revealing:
+	if demoed:
 		_hint("這是正確的光橋：\n" + _formula() + "\n\n" + r.insight, "info")
 		_end_round()
 		_abs_demo(true)
@@ -1804,7 +1846,6 @@ func _sketch_draw_ui() -> void:
 
 # ---------- 找整數點：畫圖之前，先標出曲線經過的整數點 ----------
 
-var marking := false
 var mark_errs := 0
 
 
@@ -1870,7 +1911,6 @@ func _mark_finish(msg: String) -> void:
 		_sketch_draw_ui()
 
 
-var stroke_pending := false              # 徒手作圖：畫好了，等學生按「確認送出」或「重畫一次」
 var pending_pts := PackedVector2Array()
 
 
@@ -2079,9 +2119,9 @@ func _check_cross_done() -> void:
 		return
 	cross_done = true
 	_set_sliders(false)
-	var gen := round_gen
+	var gen := round_gen.now()
 	await get_tree().create_timer(0.7, false).timeout
-	if gen != round_gen:
+	if round_gen.stale(gen):
 		return
 	stage.celebrate()
 	_finish_round(predicted_ok, predict_tries)
@@ -2196,9 +2236,9 @@ func _check_goal() -> void:
 
 ## 終焉之塔：心用完了，示範答案後結束攀登
 func _tower_out() -> void:
-	if not revealing and not busy:
+	if not demoed and not busy:
 		_reveal("三顆心都用完了…")
-	elif not revealing:
+	elif not demoed:
 		_end_round()
 
 
@@ -2210,7 +2250,7 @@ func _fail(msg: String) -> void:
 		_reveal("能量用完了…")
 		return
 	_hint(msg, "bad")
-	busy = false
+	phase = Phase.PLAY
 	_set_sliders(true)
 	go_btn.disabled = false
 	_update_hud()
@@ -2220,11 +2260,11 @@ func _fail(msg: String) -> void:
 func _reveal(msg: String) -> void:
 	if tower_mode and msg.begins_with("時間到"):
 		energy -= 1          # 終焉之塔：超時也扣一顆心
-	busy = true
-	revealing = true
+	phase = Phase.DEMO
+	demoed = true
 	perfect_run = 0
-	stroke_pending = false
 	marking = false
+	stroke_pending = false
 	stage.mark_on = false
 	alt_btn.visible = false
 	if buddy:
@@ -2300,7 +2340,7 @@ func _finish_round(perfect: bool, attempts: int) -> void:
 
 
 func _end_round() -> void:
-	busy = true
+	phase = Phase.END
 	predicting = false
 	step_label.text = UITheme.step_bar(_steps(), _steps().size())
 	go_btn.visible = false
@@ -2418,7 +2458,7 @@ func _buddy_react(kind: String) -> void:
 		wrong_streak += 1
 		if wrong_streak == 3:
 			buddy.say(Buddy.line("wrong3"), "worried", 3.0)
-		elif not revealing:
+		elif not demoed:
 			buddy.say(Buddy.line("wrong"), "worried", 1.8)
 	elif kind == "good":
 		wrong_streak = 0
@@ -2547,10 +2587,10 @@ func _tut_check(gen: int) -> void:
 	# 推導題的開場（題目一個字一個字浮現）跑完再開始
 	while is_inside_tree() and get("intro_block") != null:
 		await get_tree().create_timer(0.2).timeout
-	if not is_inside_tree() or gen != round_gen:
+	if not is_inside_tree() or round_gen.stale(gen):
 		return
 	await get_tree().create_timer(0.45).timeout
-	if not is_inside_tree() or gen != round_gen or get_tree().paused:
+	if not is_inside_tree() or round_gen.stale(gen) or get_tree().paused:
 		return
 	for k in keys:
 		g.tut[k] = true
