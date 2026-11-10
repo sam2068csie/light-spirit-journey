@@ -136,7 +136,7 @@ func _process(delta: float) -> void:
 
 
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.10-e"
+const BUILD := "2026.11.10-f"
 
 
 ## 今天的修煉題（換日就重新出題）
@@ -161,8 +161,45 @@ func daily_done() -> bool:
 		and not daily.get("results", []).has(-1)
 
 
+# ---------- 進行中的一趟（session） ----------
+# session 是「靠 kind 分辨形狀」的字典，只在這一段裡建立、推進、清空：
+#   {}                                                  沒有在修煉或攀登
+#   {kind: "daily"／"free", items, i, results}          修煉：做到第 i 題，results 是做完的
+#   {kind: "tower", floor, hearts, history, cur}        攀登：在第 floor 層，cur 是這一層的題目
+# 關卡只呼叫 level_report／level_abort，不用管自己是修煉還是攀登。
+
+const REVIEW_KINDS := ["daily", "free"]
+
+
+func in_review() -> bool:
+	return String(session.get("kind", "")) in REVIEW_KINDS
+
+
+func in_tower() -> bool:
+	return String(session.get("kind", "")) == "tower"
+
+
+## 關卡回報這一題／這一層的結果：修煉就往下一題，攀登就往上一層（hearts = 剩下幾顆心，只有攀登用得到）
+##   沒有在修煉或攀登（例如測試直接開關卡）就什麼都不做
+func level_report(stars: int, hearts: int) -> void:
+	if in_tower():
+		_tower_report(stars, hearts)
+	elif in_review():
+		_review_report(stars)
+
+
+## 暫停選單的「結束修煉／放棄攀登」：攀登的話，目前這一層不算
+func level_abort() -> void:
+	if in_tower():
+		_tower_end(int(session.floor) - 1)
+	else:
+		session = {}
+		goto("main_menu.gd", {"page": "review"})
+
+
 ## 開始一場修煉。kind = "daily"（今日修煉，可以從中斷的地方繼續）或 "free"（自由練習）
 func start_session(kind: String, items: Array) -> void:
+	assert(kind in REVIEW_KINDS, "start_session：不認得的 kind " + kind)
 	if items.is_empty():
 		return
 	var start := 0
@@ -180,10 +217,8 @@ func _launch_session_item() -> void:
 	goto(info.file, {"review": it, "review_i": session.i, "review_n": session.items.size(), "review_kind": session.kind})
 
 
-## 關卡回報這一題的結果（stars = 0 表示看示範過關）
-func session_report(stars: int) -> void:
-	if session.is_empty():
-		return
+## 修煉的一題做完了（stars = 0 表示看示範過關）
+func _review_report(stars: int) -> void:
 	var it: Dictionary = session.items[session.i]
 	session.results.append({"tag": it.tag, "stars": stars, "title": it.get("title", ""), "level": it.level})
 	if stars > 0:
@@ -235,10 +270,8 @@ func _launch_tower_floor() -> void:
 		"tower_time": center.tower_time(f) * float(it.get("tmul", 1.0))})
 
 
-## 關卡回報這一層的結果：hearts = 剩下幾顆心
-func tower_report(stars: int, hearts: int) -> void:
-	if session.get("kind", "") != "tower":
-		return
+## 攀登的一層結束了：hearts = 剩下幾顆心
+func _tower_report(stars: int, hearts: int) -> void:
 	var it: Dictionary = session.cur
 	session.history.append({"level": it.level, "slot": it.slot, "title": it.title, "stars": stars, "floor": session.floor,
 		"type": it.get("type", "")})
@@ -267,16 +300,8 @@ func tower_report(stars: int, hearts: int) -> void:
 
 ## 爬塔動畫播完：進入下一層
 func tower_continue() -> void:
-	if session.get("kind", "") == "tower":
+	if in_tower():
 		_launch_tower_floor()
-
-
-## 放棄攀登（暫停選單）：目前這一層不算
-func tower_abort() -> void:
-	if session.get("kind", "") != "tower":
-		session_abort()
-		return
-	_tower_end(int(session.floor) - 1)
 
 
 func _tower_end(floors: int, summit := false) -> void:
@@ -288,11 +313,6 @@ func _tower_end(floors: int, summit := false) -> void:
 	var res := {"floors": floors, "record": record, "history": session.history, "summit": summit, "reward": rw}
 	session = {}
 	goto("main_menu.gd", {"page": "tower", "tower_result": res})
-
-
-func session_abort() -> void:
-	session = {}
-	goto("main_menu.gd", {"page": "review"})
 
 
 # ================= 換場景 =================

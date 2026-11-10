@@ -57,15 +57,14 @@ func _ready() -> void:
 		_show_tower_result(a.tower_result)
 	if a.has("summary"):
 		_show_summary(a.summary, a.get("summary_kind", "daily"))
-	# 第一次打開遊戲：先選身分（高一／高二），選完直接進那個年級的世界地圖
-	if g.grade_pick == "" and pg == "title" and g.stars.is_empty() and g.cleared.is_empty():
-		_open_grade_pick.call_deferred()
-	# 今天第一次打開：自動跳出連續簽到
-	elif not a.has("tower_result") and not a.has("summary") and g.streak_should_popup():
-		_open_signin.call_deferred()
-	# 第一次玩完一段之後回到主畫面：問要不要讓光靈提醒（手機版、只問一次）
-	elif not g.notify_asked and g.notifier.available() and not g.stars.is_empty():
-		_ask_notify.call_deferred()
+	# 先跳出什麼（選身分、簽到、問通知）：順序寫在 first_run.gd
+	match FirstRun.menu_step(g, a):
+		"grade":
+			_open_grade_pick.call_deferred()
+		"signin":
+			_open_signin.call_deferred()
+		"notify":
+			_ask_notify.call_deferred()
 
 
 ## 第一次打開：選身分
@@ -350,6 +349,7 @@ func _build_units_page() -> void:
 ## 選擇冒險：每個年級一張可以走動的世界地圖（高一：曦光大陸；高二：光潮群島），走到地區／島就進入那個單元的地圖
 const WorldG10 := preload("res://data/maps/g10_world.gd")
 const ExamPick := preload("res://data/ui/exam_pick.gd")
+const FirstRun := preload("res://data/core/first_run.gd")
 const WS := preload("res://data/maps/world_story.gd")
 const WorldG11 := preload("res://data/maps/g11_sea.gd")
 

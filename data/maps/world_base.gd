@@ -12,6 +12,7 @@ const SL := preload("res://data/ui/spirit_look.gd")
 const WS := preload("res://data/maps/world_story.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const ExamPick := preload("res://data/ui/exam_pick.gd")
+const FirstRun := preload("res://data/core/first_run.gd")
 
 signal enter_level(file: String)
 signal story_changed(on: bool)
@@ -356,19 +357,26 @@ func _story_check() -> void:
 	if not is_inside_tree() or frozen():
 		return
 	var g = Game.of(self)
-	if not WS.seen(g, _world_key()):
-		await WS.play(self, _world_key(), WS.STORY[_world_key()], WS.TITLES[_world_key()])
-		if is_inside_tree():
-			_refresh_goal()
-			await get_tree().create_timer(0.3).timeout
-			Tut.run(self, _tut_steps())
-		return
-	var su := WS.pending_souvenir(g, _grade_name())
-	if su != "":
-		await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
-	# 這學期還沒選過段考範圍（換學期了、或是舊存檔）：問一次
-	if is_inside_tree() and not frozen() and WS.needs_exam_pick(g, WS.my_grade(g, _grade_name())):
-		open_exam_pick()
+	# 一步做完再問下一步：序章 → 紀念品 → 段考範圍，順序寫在 first_run.gd
+	for _guard in 16:
+		if not is_inside_tree() or frozen():
+			return
+		match FirstRun.map_step(g, _world_key(), _grade_name()):
+			"prologue":
+				await WS.play(self, _world_key(), WS.STORY[_world_key()], WS.TITLES[_world_key()])
+				if is_inside_tree():
+					_refresh_goal()
+					await get_tree().create_timer(0.3).timeout
+					Tut.run(self, _tut_steps())
+				return      # 教學在跑：段考範圍下次進地圖再問
+			"souvenir":
+				var su := WS.pending_souvenir(g, _grade_name())
+				await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
+			"exam":
+				open_exam_pick()
+				return
+			_:
+				return
 
 
 ## 「這次段考考什麼？」：放在最上層（主畫面），選完更新主線橫幅和箭頭

@@ -84,7 +84,7 @@ var daily: Dictionary:                 # 目前單元的今日修煉 {date, item
 var review_days: Array = []            # 完成每日修煉的日期
 
 
-var session := {}                      # 進行中的修煉：{kind, items, i, results}
+var session := {}                      # 進行中的修煉或攀登（形狀看 kind，見 game.gd 的 session 那一段）
 
 
 var map_sel: int:                      # 世界地圖上最後選的聖地（從關卡回來時光靈停在這裡）

@@ -24,6 +24,7 @@ const MAP := {
 	"exp_map.gd": "res://data/maps/exp_map.gd",
 	"explog_tower_data.gd": "res://data/levels/tower/explog_tower_data.gd",
 	"feedback.gd": "res://data/ui/feedback.gd",
+	"first_run.gd": "res://data/core/first_run.gd",
 	"function_graph.gd": "res://data/ui/function_graph.gd",
 	"fx_layer.gd": "res://data/ui/fx_layer.gd",
 	"g10_world.gd": "res://data/maps/g10_world.gd",

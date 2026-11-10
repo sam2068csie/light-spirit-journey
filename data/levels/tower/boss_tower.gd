@@ -111,7 +111,7 @@ func _ready() -> void:
 	pause_menu.list_label = "放棄攀登"
 	pause_menu.list_action = func():
 		if not test_mode:
-			Game.of(self).tower_abort()
+			Game.of(self).level_abort()
 	pause_menu.report_info = func() -> String:
 		return "終焉之塔大題 %s「%s」，第 %d 步" % [item.get("id", "?"), item.get("title", ""), si + 1]
 	add_child(pause_menu)
@@ -630,7 +630,7 @@ func _on_next() -> void:
 	if test_mode:
 		Game.of(self).goto("boss_tower.gd")
 		return
-	Game.of(self).tower_report(_stars, hearts)
+	Game.of(self).level_report(_stars, hearts)
 
 
 func _process(delta: float) -> void:

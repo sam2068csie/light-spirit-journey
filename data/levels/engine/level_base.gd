@@ -239,7 +239,7 @@ func _review_begin(a: Dictionary) -> void:
 		if sl.id == it.slot:
 			slot = sl
 	if slot.is_empty():
-		Game.of(self).session_report(0)
+		Game.of(self).level_report(0, int(a.get("tower_hearts", MAX_ENERGY)))
 		return
 	var vi := clampi(int(it.vi), 0, slot.variants.size() - 1)
 	journey_mode = false
@@ -325,11 +325,8 @@ func _close_modals() -> void:
 
 ## 暫停選單的「返回關卡列表」：停下這一題，回到這一章的題目列表
 func _back_to_list() -> void:
-	if tower_mode:
-		Game.of(self).tower_abort()
-		return
 	if review_mode:
-		Game.of(self).session_abort()
+		Game.of(self).level_abort()
 		return
 	round_gen.bump()
 	phase = Phase.END

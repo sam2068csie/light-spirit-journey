@@ -2535,11 +2535,8 @@ func _update_hud() -> void:
 
 
 func _on_next() -> void:
-	if tower_mode:
-		Game.of(self).tower_report(round_stars, energy)
-		return
-	if review_mode:
-		Game.of(self).session_report(round_stars)
+	if review_mode:         # 修煉或攀登（tower_mode 也算）：交給 Game 決定下一步
+		Game.of(self).level_report(round_stars, energy)
 		return
 	ri += 1
 	if ri < rounds.size():

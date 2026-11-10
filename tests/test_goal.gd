@@ -9,6 +9,7 @@ const Center := preload("res://data/core/review_center.gd")
 const Units := preload("res://data/core/units.gd")
 const WS := preload("res://data/maps/world_story.gd")
 const ExamPick := preload("res://data/ui/exam_pick.gd")
+const FirstRun := preload("res://data/core/first_run.gd")
 
 var _added := []
 
@@ -80,6 +81,22 @@ func _initialize() -> void:
 	# 上學期選的，到下學期不算數
 	g.exam_pick["高二"] = {"term": "高二下" if t2 == "高二上" else "高二上", "units": ["exp"]}
 	ok(WS.exam_units(g, "高二").is_empty() and WS.needs_exam_pick(g, "高二"), "換學期：之前選的段考範圍不算，要再問一次")
+
+	# 先跳出什麼的順序（first_run.gd）
+	var keep := [g.grade_pick, g.stars, g.cleared, g.story_seen.duplicate()]
+	g.grade_pick = ""
+	g.stars = {}
+	g.cleared = {}
+	ok(FirstRun.menu_step(g, {}) == "grade", "第一次打開主畫面：先選身分")
+	g.grade_pick = keep[0]
+	g.stars = keep[1]
+	g.cleared = keep[2]
+	g.story_seen.erase("world/g11")
+	ok(FirstRun.map_step(g, "g11", "高二") == "prologue", "第一次打開光潮群島：先播序章")
+	g.story_seen.append("world/g11")
+	var want := "souvenir" if WS.pending_souvenir(g, "高二") != "" else "exam"
+	ok(FirstRun.map_step(g, "g11", "高二") == want, "看過序章、換學期：接著是 %s" % want)
+	g.story_seen = keep[3]
 
 	# 視窗：選指對數 → 確定
 	g.goto("main_menu.gd")
