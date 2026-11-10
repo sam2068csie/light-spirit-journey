@@ -106,7 +106,7 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．直線的五種寫法 =======================
 		{"id": "pointslope", "chapter": 1, "type": "forge", "title": "從燈標出發的棧橋",
-		 "story": "棧橋從燈標 A 出發，往右走 1 格就往上爬 m 格。知道一個點和斜率，就寫得出整座橋。",
+		 "story": "知道一個點和斜率，就寫得出整座棧橋。",
 		 "insight": "點斜式：過 (x₀, y₀)、斜率 m 的直線：y − y₀ = m(x − x₀)\n化成一般式 ax + by + c = 0 時，係數盡量是整數。",
 		 "variants": [
 			{"eq": "直線 L 過 A(2, 1)、斜率 \\frac{3}{2}\n求 L 的方程式",
@@ -171,7 +171,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "slopeint", "chapter": 1, "type": "forge", "title": "調整棧橋",
-		 "story": "斜截式 y = mx + k：m 決定橋有多斜，k 是橋和 y 軸的交點。拉動滑桿，把棧橋接到兩座燈標上。",
+		 "story": "斜截式 y = mx + k：m 是斜率，k 是 y 截距。拉動滑桿，把棧橋接到兩座燈標上。",
 		 "insight": "斜截式 y = mx + k：斜率 m、y 截距 k\nf(x) = mx + k 時，任兩點的差商 \\frac{f(b) − f(a)}{b − a} 都等於 m。",
 		 "variants": [
 			{"eq": "棧橋 y = mx + k 要接到燈標 A(0, −2) 和 B(4, 0)\n調出 m 和 k",
@@ -200,7 +200,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "general", "chapter": 1, "type": "forge", "title": "看係數畫棧橋",
-		 "story": "一般式 ax + by + c = 0 看不出斜率和截距，要自己算：令 y = 0 得 x 截距，令 x = 0 得 y 截距。",
+		 "story": "一般式 ax + by + c = 0：令 y = 0 得 x 截距，令 x = 0 得 y 截距。",
 		 "insight": "一般式 ax + by + c = 0（b ≠ 0）：斜率 −\\frac{a}{b}、x 截距 −\\frac{c}{a}、y 截距 −\\frac{c}{b}\n看圖判斷係數：先看斜率的正負，再看截距的正負。",
 		 "variants": [
 			{"eq": "直線 ax + by + 6 = 0 的斜率是 \\frac{2}{3}、x 截距是 −3\n求 a、b",
@@ -229,7 +229,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "intercept", "chapter": 1, "type": "forge", "title": "和湖岸圍出的三角地",
-		 "story": "棧橋和兩條湖岸步道（x 軸、y 軸）圍出一塊三角形的地。知道兩個截距，就能直接寫出直線。",
+		 "story": "知道 x、y 兩個截距，就能直接寫出直線。",
 		 "insight": "截距式：x 截距 a、y 截距 b（都不是 0）：\\frac{x}{a} + \\frac{y}{b} = 1\n和兩軸圍出的三角形面積 = \\frac{1}{2}|a||b|。過原點的直線兩個截距都是 0，不能用截距式。",
 		 "variants": [
 			{"eq": "直線 L 的 x 截距是 4、y 截距是 −3\n求 L 的方程式，和它與兩軸圍出的面積",
@@ -270,7 +270,7 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．直線之間的關係 =======================
 		{"id": "parperp", "chapter": 2, "type": "forge", "title": "平行的棧橋",
-		 "story": "新的棧橋要和舊的平行或垂直：平行時 x、y 的係數照抄，垂直時係數對調、其中一個變號。",
+		 "story": "平行時 x、y 的係數照抄，垂直時係數對調、其中一個變號。",
 		 "insight": "和 ax + by + c = 0 平行：ax + by = k\n和它垂直：bx − ay = k\n再把通過的點代進去求 k。",
 		 "variants": [
 			{"eq": "L：2x + 3y − 6 = 0，P(1, 2)\n求過 P 且和 L 平行、垂直的直線",
@@ -300,7 +300,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "shift", "chapter": 2, "type": "forge", "title": "整座棧橋搬家",
-		 "story": "把整座棧橋往右搬 3 格、往下搬 2 格：橋上每一點都跟著搬，橋的斜率不變。",
+		 "story": "把棧橋往右搬 3 格、往下搬 2 格：斜率不變。",
 		 "insight": "直線向右 h、向上 k：x 換成 x − h，y 換成 y − k\n平移不改變斜率。",
 		 "variants": [
 			{"eq": "L：y = 2x + 1 向右平移 3、向下平移 2\n求平移後的直線 L′",
@@ -332,7 +332,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "system", "chapter": 2, "type": "forge", "title": "兩座棧橋會不會相遇",
-		 "story": "兩座棧橋的方程式聯立：相交就恰有一組解，平行永遠不相遇就無解，完全疊在一起就有無限多組解。",
+		 "story": "兩直線聯立：相交恰一組解，平行無解，重合無限多組解。",
 		 "insight": "a₁x + b₁y = c₁、a₂x + b₂y = c₂：\n\\frac{a₁}{a₂} ≠ \\frac{b₁}{b₂}：恰一組解（相交）\n\\frac{a₁}{a₂} = \\frac{b₁}{b₂} ≠ \\frac{c₁}{c₂}：無解（平行）　\\frac{a₁}{a₂} = \\frac{b₁}{b₂} = \\frac{c₁}{c₂}：無限多組解（重合）",
 		 "variants": [
 			{"eq": "L₁：kx + 2y = 4、L₂：2x + ky = k + 2\n討論聯立方程式解的個數",
@@ -356,7 +356,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "threeline", "chapter": 2, "type": "forge", "title": "圍不出湖心島",
-		 "story": "三座棧橋要圍出一座三角形的湖心島。如果有兩座平行，或三座交在同一點，就圍不出來。",
+		 "story": "三座棧橋要圍出三角形。有兩座平行，或三座交於一點，就圍不出來。",
 		 "insight": "三直線無法圍成三角形 ⇔ 其中兩條平行（或重合），或三條交於一點\n判斷三角形的形狀：看有沒有兩條的斜率相乘是 −1。",
 		 "variants": [
 			{"eq": "L₁：x + y = 2、L₂：x − y = 0、L₃：ax + y = 4\n三條直線無法圍成三角形，求 a",
@@ -386,7 +386,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "fixed", "chapter": 2, "type": "forge", "title": "繞著燈柱轉的棧橋",
-		 "story": "有一座棧橋可以繞著燈柱旋轉。不管轉到哪裡，它都經過燈柱——這一點就是「恆過定點」。",
+		 "story": "棧橋繞著燈柱轉，不管轉到哪裡都經過燈柱——「恆過定點」。",
 		 "insight": "(a₁x + b₁y + c₁) + k(a₂x + b₂y + c₂) = 0 恆過兩直線 a₁x + b₁y + c₁ = 0、a₂x + b₂y + c₂ = 0 的交點\n過 P 的直線和線段 \\ol{AB} 相交：斜率介在 m_{PA}、m_{PB} 之間（轉動的過程沒有經過鉛直線時）。",
 		 "variants": [
 			{"eq": "L：(1 + k)x + (1 − k)y + k − 3 = 0\n不論 k 是多少，L 都通過哪一點？",

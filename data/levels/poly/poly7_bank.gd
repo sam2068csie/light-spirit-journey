@@ -81,7 +81,7 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．水晶的對稱 =======================
 		{"id": "mono", "chapter": 1, "type": "forge", "title": "單項的水晶",
-		 "story": "y = ax^{3} 是最簡單的水晶曲線。抓住水晶（對稱中心）拖過去、調整 a，讓它和虛線重合。",
+		 "story": "拖動對稱中心、調整 a，讓 y = ax^{3} 和虛線重合。",
 		 "insight": "y = a(x − h)^{3} + k 是 y = ax^{3} 平移得到：對稱中心 (h, k)\n|a| 越大越陡，a < 0 上下翻過來。",
 		 "variants": [
 			{"eq": "讓水晶曲線和虛線重合，再回答問題",
@@ -110,7 +110,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "four", "chapter": 1, "type": "forge", "title": "四種水晶",
-		 "story": "y = ax^{3} + px 的水晶在原點。a、p 的正負決定它長什麼樣子：一路走，還是有起伏？",
+		 "story": "y = ax^{3} + px：a、p 的正負決定圖形是一路走，還是有起伏？",
 		 "insight": "y = ax^{3} + px 對稱於原點。a、p 同號：一路往上（a > 0）或一路往下（a < 0）\na、p 異號：中間有起伏，和 x 軸交三點。",
 		 "variants": [
 			{"eq": "水晶固定在原點，調 a、p 拼出 y = x^{3} − 4x",
@@ -140,7 +140,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "center", "chapter": 1, "type": "forge", "title": "找到水晶",
-		 "story": "一般式 ax^{3} + bx^{2} + cx + d 也藏著水晶。把它化成 a(x − h)^{3} + p(x − h) + k，水晶就在 (h, k)。",
+		 "story": "ax^{3} + bx^{2} + cx + d 化成 a(x − h)^{3} + p(x − h) + k，對稱中心就是 (h, k)。",
 		 "insight": "y = ax^{3} + bx^{2} + cx + d = a(x − h)^{3} + p(x − h) + k：h = −\\frac{b}{3a}、k = f(h)。也可以用 x − h 連續做綜合除法：餘式依序是 k、p、0。",
 		 "variants": [
 			{"eq": "f(x) = 2x^{3} − 6x^{2} + 5x + 2\n用 x − 1 連續綜合除法，找出水晶",
@@ -166,7 +166,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "mirror", "chapter": 1, "type": "forge", "title": "轉半圈",
-		 "story": "水晶曲線繞著水晶轉半圈會和自己重合。曲線上的一點轉過去，一定落在曲線上。",
+		 "story": "繞對稱中心轉半圈會和自己重合。曲線上一點轉過去，一定落在曲線上。",
 		 "insight": "(s, t) 在圖形上 ⇒ (2h − s, 2k − t) 也在圖形上（兩點的中點是對稱中心 (h, k)）\n所以 f(h + t) + f(h − t) = 2k。",
 		 "variants": [
 			{"eq": "y = −x^{3} + 3x^{2} − 2x + 1 上有 A(−1, 7)、B(a, b)\nA、B 對稱於對稱中心，求 a + b",
@@ -190,7 +190,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "read", "chapter": 1, "type": "forge", "title": "看圖判斷",
-		 "story": "只給你一張圖。從右邊往哪走、有沒有起伏、水晶在哪裡，判斷係數的正負。",
+		 "story": "從圖判斷係數的正負：右邊往哪走、有沒有起伏、對稱中心在哪。",
 		 "insight": "a(x − h)^{3} + p(x − h) + k：右邊往上 a > 0、往下 a < 0\n有起伏 ⇔ a、p 異號\n水晶 (h, k) 的位置決定 h、k 的正負。",
 		 "variants": [
 			{"eq": "y = a(x − h)^{3} + p(x − h) + k 的圖形如下（◆ 是水晶）\n判斷 g(x) = ax^{2} + px + h 的圖形",
@@ -225,7 +225,7 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．遠看與近看 =======================
 		{"id": "far", "chapter": 2, "type": "forge", "title": "遠看的水晶",
-		 "story": "站得越遠，曲線的起伏越看不見——最後只剩下最高次項的樣子。",
+		 "story": "離得越遠，只剩下最高次項的樣子。",
 		 "insight": "廣域特徵：x 很大（很小）時，ax^{3} + bx^{2} + cx + d 近似 ax^{3}，只要看最高次項。",
 		 "variants": [
 			{"eq": "f(x) = −x^{3} + 6x^{2} + 2x − 20\n遠看像什麼？",
@@ -250,7 +250,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "near", "chapter": 2, "type": "forge", "title": "近看的水晶",
-		 "story": "湊到很近很近，曲線看起來就像一條直線。用綜合除法找出這條直線，再拿它來估算。",
+		 "story": "靠得很近，曲線就像一條直線。用綜合除法找出它，再拿來估算。",
 		 "insight": "局部特徵：用綜合除法化成 f(x) = a(x − h)^{3} + b(x − h)^{2} + c(x − h) + d，在 x = h 附近近似直線 y = c(x − h) + d（一次近似）。",
 		 "variants": [
 			{"eq": "f(x) = x^{3} − 4x^{2} + 6x − 1\n估計 f(2.01)，並求誤差",
@@ -281,7 +281,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "build", "chapter": 2, "type": "forge", "title": "水晶的方程式",
-		 "story": "知道通過的點、廣域特徵、對稱中心或局部特徵——這些線索拼起來，就能寫出整條水晶曲線。",
+		 "story": "通過的點、遠處的樣子、對稱中心——線索拼起來，就能寫出三次函數。",
 		 "insight": "廣域特徵 ⇒ a\n對稱中心 (h, k) ⇒ h = −\\frac{b}{3a}、f(h) = k\nx = 0 附近近似 y = mx + n ⇒ c = m、d = n。",
 		 "variants": [
 			{"eq": "三次函數 y = f(x) 通過 (1, 0)、(−2, 0)，廣域特徵近似 y = 2x^{3}\nf(x) 除以 x − 2 的餘式是 8，求 f(x)",
@@ -314,7 +314,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "hline", "chapter": 2, "type": "forge", "title": "水晶與光線",
-		 "story": "一道水平光線 y = k 掃過水晶曲線。交點會有幾個？會不會一個都沒有？",
+		 "story": "水平線 y = k 和三次曲線有幾個交點？",
 		 "insight": "三次函數沒有最高點也沒有最低點，和任意水平線都有交點（1 個、2 個或 3 個）。",
 		 "variants": [
 			{"eq": "y = x^{3} − 3x 和水平線 y = k\n交點有幾個？",
@@ -337,7 +337,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "水晶鑑定",
-		 "story": "水晶鑑定師要一句一句檢查：哪些說法是真的，哪些是假的？",
+		 "story": "哪些說法是真的，哪些是假的？",
 		 "insight": "記住四件事：對稱中心 (h, k)\n有起伏 ⇔ a、p 異號\n廣域特徵近似 ax^{3}\n局部特徵用綜合除法看一次項。",
 		 "variants": [
 			{"eq": "f(x) = ax^{3} + bx（a ≠ 0）\n判斷每一句的對錯",

@@ -146,7 +146,7 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．圓系與兩個圓 =======================
 		{"id": "family", "chapter": 1, "type": "forge", "title": "繞著兩點轉的圓",
-		 "story": "直線 L 割過星環 C，留下兩個交點。有一整族的圓，全都經過這兩個交點。怎麼一次寫出它們？",
+		 "story": "直線 L 和圓 C 交於兩點。過這兩點的圓有一整族，怎麼一次寫出？",
 		 "insight": "過圓 C = 0 和直線 L = 0 交點的圓：C + kL = 0（k 是常數）\n在交點上 C = 0、L = 0，所以 C + kL = 0 一定成立。再代一個點求 k。",
 		 "variants": [
 			{"eq": "過圓 C：x^{2} + y^{2} − 25 = 0 和直線 L：x − y + 1 = 0 的交點，而且過 Q(4, 1) 的圓\n求這個圓",
@@ -189,7 +189,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "cotan", "chapter": 1, "type": "forge", "title": "同時擦過兩個星環的光",
-		 "story": "兩個星環一大一小。有兩道光同時擦過兩個星環（外公切線），兩道光交會在 P。P 在哪裡？光是哪兩條？",
+		 "story": "兩圓的兩條外公切線交於 P。P 在哪裡？切線是哪兩條？",
 		 "insight": "外公切線的交點 P 在連心線上，而且 \\ol{PK₁} : \\ol{PK₂} = r₁ : r₂（兩個直角三角形相似）\n找到 P 之後，就是圓外一點的切線（第七關）。",
 		 "variants": [
 			{"eq": "C₁：(x + 1)^{2} + y^{2} = 1、C₂：(x − 3)^{2} + (y − 2)^{2} = 9\n求兩條外公切線的交點 P 和外公切線",
@@ -220,7 +220,7 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．留下足跡的星 =======================
 		{"id": "mid", "chapter": 2, "type": "forge", "title": "中點的足跡",
-		 "story": "星星 P 繞著星環走，A 是一座固定的燈塔。\\ol{AP} 的中點 M 會留下什麼樣的足跡？",
+		 "story": "P 在圓上走，A 固定。\\ol{AP} 的中點 M 的軌跡是什麼？",
 		 "insight": "求軌跡：設動點 (x, y)，用 x、y 表示已知的動點 P，再代進 P 滿足的式子\n中點軌跡：P = (2x − a, 2y − b)。",
 		 "variants": [
 			{"eq": "A(6, 0)，P 在圓 x^{2} + y^{2} = 4 上走\n求 \\ol{AP} 的中點 M 的軌跡",
@@ -239,7 +239,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "centroid", "chapter": 2, "type": "forge", "title": "重心的足跡",
-		 "story": "A 是星環的圓心，B 是一顆固定的星，P 在星環上走。△ABP 的重心 G 留下什麼足跡？哪裡要小心？",
+		 "story": "A 是圓心，B 固定，P 在圓上走。△ABP 的重心 G 的軌跡？哪裡要小心？",
 		 "insight": "重心軌跡：G = \\frac{A + B + P}{3} ⇒ P = 3G − A − B，再代進 P 的式子\nA、B、P 共線時不是三角形，那兩點要從軌跡拿掉。",
 		 "variants": [
 			{"eq": "圓 C：(x + 3)^{2} + (y − 1)^{2} = 9 的圓心是 A，B(3, 1)，P 在 C 上\n求 △ABP 的重心 G 的軌跡",
@@ -263,7 +263,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "angle60", "chapter": 2, "type": "forge", "title": "看星環的角度",
-		 "story": "從 P 看星環，兩條切線剛好夾 60°。這樣的 P 會走出什麼形狀？",
+		 "story": "從 P 看圓，兩條切線夾 60°。P 的軌跡是什麼？",
 		 "insight": "兩條切線夾 60° ⇒ ∠KPT = 30°，直角三角形 KTP 的斜邊 \\ol{PK} = 2r\n\\ol{PK} 是定值，P 的軌跡就是以 K 為圓心的圓。",
 		 "variants": [
 			{"eq": "圓 (x − 1)^{2} + y^{2} = 4 外一點 P，過 P 的兩條切線夾 60°\n求 P 的軌跡",
@@ -282,7 +282,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "chordmid", "chapter": 2, "type": "forge", "title": "弦中點的足跡",
-		 "story": "光線繞著燈 A 轉，在星環上割出一條一條的弦。每一條弦的中點 M 留下什麼足跡？",
+		 "story": "過 A 的直線割圓成弦，弦的中點 M 的軌跡是什麼？",
 		 "insight": "弦的中點 M：\\ol{OM} ⊥ 弦（第六關），所以 ∠OMA = 90°\nM 在以 \\ol{OA} 為直徑的圓上（直角對直徑，第五關）。",
 		 "variants": [
 			{"eq": "圓 x^{2} + y^{2} = 25 內一點 A(2, 4)，過 A 的弦的中點是 M\n求 M 的軌跡",
@@ -303,7 +303,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "apollo", "chapter": 2, "type": "forge", "title": "兩倍遠的燈",
-		 "story": "星星 P 到燈塔 A 的距離，一直是到燈塔 B 的 2 倍。P 會走出什麼形狀？",
+		 "story": "P 到 A 的距離一直是到 B 的 2 倍。P 的軌跡是什麼？",
 		 "insight": "\\ol{PA} = k\\ol{PB}（k ≠ 1）的點，軌跡是一個圓（阿波羅尼斯圓）\n列式：兩邊平方，\\ol{PA}^{2} = k^{2}\\ol{PB}^{2}，展開整理再配方。",
 		 "variants": [
 			{"eq": "A(6, 0)、B(3, 0)，動點 P 滿足 \\ol{PA} = 2\\ol{PB}\n求 P 的軌跡",

@@ -93,8 +93,8 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．坐標的基本功 =======================
 		{"id": "mid", "chapter": 1, "type": "forge", "title": "兩盞燈的正中間",
-		 "story": "湖邊的燈標兩兩成對。要在兩盞燈的正中間再點一盞，就要找中點，要知道兩盞燈離多遠，就要算距離。",
-		 "insight": "A(x₁, y₁)、B(x₂, y₂)：中點 M = (\\frac{x₁ + x₂}{2}, \\frac{y₁ + y₂}{2})\n距離 \\ol{AB} = √((x₂ − x₁)^{2} + (y₂ − y₁)^{2})，就是橫向、縱向走的格數用畢氏定理。",
+		 "story": "兩盞燈的正中間再點一盞，就要找中點，要知道兩盞燈多遠，就要算距離。",
+		 "insight": "A(x₁, y₁)、B(x₂, y₂)：中點 M = (\\frac{x₁ + x₂}{2}, \\frac{y₁ + y₂}{2})\n距離 \\ol{AB} = √((x₂ − x₁)^{2} + (y₂ − y₁)^{2})",
 		 "variants": [
 			{"eq": "A(−1, 2)、B(5, 6)\n求 \\ol{AB} 的中點 M 和 \\ol{AB} 的長",
 			 "plane": _plane([-3, 8], [-1, 8], [_seg([-1, 2], [5, 6]), _p("A", -1, 2), _p("B", 5, 6)]),
@@ -124,8 +124,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "divide", "chapter": 1, "type": "forge", "title": "照比例放燈",
-		 "story": "棧橋上的燈不一定放在正中間：「\\ol{AP} : \\ol{PB} = 3 : 1」就是把橋分成 4 等份，燈放在從 A 走 3 份的地方。",
-		 "insight": "P 在 \\ol{AB} 上、\\ol{AP} : \\ol{PB} = m : n：P = \\frac{n·A + m·B}{m + n}（離 B 越近，B 的權重越大）\n也可以想成：從 A 出發，往 B 走全程的 \\frac{m}{m + n}。",
+		 "story": "燈不一定放在正中間：「\\ol{AP} : \\ol{PB} = 3 : 1」就是分成 4 等份，從 A 走 3 份。",
+		 "insight": "P 在 \\ol{AB} 上、\\ol{AP} : \\ol{PB} = m : n：P = \\frac{n·A + m·B}{m + n}（離 B 越近，B 的權重越大）",
 		 "variants": [
 			{"eq": "A(−2, 1)、B(6, 5)，P 在 \\ol{AB} 上\n且 \\ol{AP} : \\ol{PB} = 3 : 1，求 P",
 			 "plane": _plane([-3, 7], [-1, 6], [_seg([-2, 1], [6, 5]), _p("A", -2, 1), _p("B", 6, 5)]),
@@ -161,7 +161,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "para", "chapter": 1, "type": "forge", "title": "第四盞燈",
-		 "story": "湖邊有三盞燈，第四盞要讓它們圍成平行四邊形。平行四邊形的兩條對角線互相平分——它們的中點是同一點。",
+		 "story": "第四盞燈要和三盞燈圍成平行四邊形。平行四邊形的兩條對角線中點相同。",
 		 "insight": "平行四邊形 ABCD：\\ol{AC}、\\ol{BD} 的中點相同 ⇒ A + C = B + D（坐標相加）\n只給三個點、沒說順序時，第四點有 3 種可能。",
 		 "variants": [
 			{"eq": "平行四邊形 ABCD 中\nA(1, 1)、B(5, 2)、C(6, 5)，求 D",
@@ -203,7 +203,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "centroid", "chapter": 1, "type": "forge", "title": "三角形的重心",
-		 "story": "三盞燈圍成一個三角形。把三角形的木板放在一根針上，要放在哪裡才不會倒？那一點就是重心。",
+		 "story": "三角形木板放在針上，放哪裡才不會倒？那一點就是重心。",
 		 "insight": "重心 G = 三條中線的交點 = (\\frac{x₁ + x₂ + x₃}{3}, \\frac{y₁ + y₂ + y₃}{3})\n重心把中線分成 2 : 1（靠頂點那段比較長）。",
 		 "variants": [
 			{"eq": "A(−2, −1)、B(6, 1)、C(2, 6)\n求 △ABC 的重心 G",
@@ -241,7 +241,7 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．斜率與三心 =======================
 		{"id": "slope", "chapter": 2, "type": "forge", "title": "棧橋的斜率",
-		 "story": "棧橋往右延伸時，有的往上爬、有的往下走。往右走 1 格，往上爬幾格？這個數字叫做斜率。",
+		 "story": "往右走 1 格，往上爬幾格？這個數字叫做斜率。",
 		 "insight": "斜率 m = \\frac{y₂ − y₁}{x₂ − x₁} = \\frac{縱向}{橫向}：往右走 1 格，往上走 m 格\nm > 0 往右上、m < 0 往右下、m = 0 水平、鉛直線沒有斜率。",
 		 "variants": [
 			{"eq": "直線 L 通過 A(−1, −2)、B(3, 4)\n求 L 的斜率，並找出 L 上的另一點",
@@ -273,7 +273,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "collinear", "chapter": 2, "type": "forge", "title": "三盞燈一直線",
-		 "story": "三盞燈要排在同一條棧橋上，A 到 B 的斜率和 A 到 C 的斜率就要一樣。",
+		 "story": "A、B、C 共線，A 到 B 和 A 到 C 的斜率就要一樣。",
 		 "insight": "A、B、C 共線 ⇔ m_{AB} = m_{AC}（或有兩點的 x 坐標相同、三點都在同一條鉛直線上）\n三點「無法構成三角形」就是共線。",
 		 "variants": [
 			{"eq": "A(−1, 5)、B(2, −1)、C(a, 3) 三點共線\n求 a",
@@ -363,7 +363,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "bisector", "chapter": 2, "type": "forge", "title": "角平分線的燈",
-		 "story": "∠A 的角平分線打到對邊 \\ol{BC} 上的 D 點。D 不在 \\ol{BC} 的正中間，而是照兩邊的長度分。",
+		 "story": "∠A 的角平分線交 \\ol{BC} 於 D。D 照兩邊的長度分 \\ol{BC}。",
 		 "insight": "△ABC 中，∠A 的平分線交 \\ol{BC} 於 D ⇒ \\ol{BD} : \\ol{DC} = \\ol{AB} : \\ol{AC}（內分）\n再用分點公式：D = \\frac{\\ol{AC}·B + \\ol{AB}·C}{\\ol{AB} + \\ol{AC}}。",
 		 "variants": [
 			{"eq": "A(1, 1)、B(6, 1)、C(9, 7)\n∠A 的平分線交 \\ol{BC} 於 D，求 D",
@@ -384,7 +384,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "circum", "chapter": 2, "type": "forge", "title": "三戶人家的音樂會",
-		 "story": "村長想找一個地方辦音樂會，離三戶人家 A、B、C 一樣遠。到三個頂點等距離的點，是三角形的外心。",
+		 "story": "離三戶人家 A、B、C 一樣遠的點，是三角形的外心。",
 		 "insight": "外心 = 三邊中垂線的交點，到三個頂點的距離相等（外接圓的圓心）\n做法：兩條中垂線求交點，或設 P(x, y) 列 \\ol{PA} = \\ol{PB} = \\ol{PC}。",
 		 "variants": [
 			{"eq": "A(0, 0)、B(8, 0)、C(2, 6)\n求到 A、B、C 距離都相等的點 K",

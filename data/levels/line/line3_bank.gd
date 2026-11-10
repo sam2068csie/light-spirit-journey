@@ -126,7 +126,7 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．鏡子裡的點 =======================
 		{"id": "perpbis", "chapter": 1, "type": "forge", "title": "兩座燈塔的正中線",
-		 "story": "渡口兩邊各有一座燈塔。站在哪裡，到兩座燈塔一樣遠？這些點排成一條直線：中垂線。",
+		 "story": "到兩座燈塔一樣遠的點，排成一條直線：中垂線。",
 		 "insight": "\\ol{AB} 的中垂線：過 \\ol{AB} 的中點、和 \\ol{AB} 垂直\n中垂線上的每一點 P 都滿足 \\ol{PA} = \\ol{PB}。",
 		 "variants": [
 			{"eq": "A(1, 5)、B(5, 1)\n求 \\ol{AB} 的中垂線",
@@ -152,7 +152,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "reflect", "chapter": 1, "type": "forge", "title": "水面下的倒影",
-		 "story": "燈塔 P 倒映在鏡面 L 的另一邊。P 和倒影 P′ 的連線垂直 L，而且被 L 平分。",
+		 "story": "P 和倒影 P′ 的連線垂直 L，而且被 L 平分。",
 		 "insight": "P 對直線 L 的對稱點 P′：\\ol{PP′} ⊥ L，\\ol{PP′} 的中點 H 在 L 上（H 是 P 在 L 上的投影點）\n做法：過 P 作 L 的垂直線，交 L 於 H，P′ = 2H − P。",
 		 "variants": [
 			{"eq": "P(4, 1)、直線 L：x − y + 1 = 0\n求 P 在 L 上的投影點 H 和對稱點 P′",
@@ -180,7 +180,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "fold", "chapter": 1, "type": "forge", "title": "摺一張地圖",
-		 "story": "把渡口的地圖摺起來，讓燈塔 A 剛好疊在燈塔 B 上。摺痕在哪裡？碼頭 C 會被摺到哪裡？",
+		 "story": "把地圖摺起來，讓 A 疊在 B 上。摺痕在哪裡？C 會被摺到哪裡？",
 		 "insight": "摺紙讓 A、B 重合：摺痕是 \\ol{AB} 的中垂線\n其他點摺過去的位置：對摺痕的對稱點。",
 		 "variants": [
 			{"eq": "摺紙讓 A(1, 0) 和 B(3, 4) 重合\n求摺痕，和點 C(6, 5) 摺過去的位置 C′",
@@ -206,7 +206,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "light", "chapter": 1, "type": "forge", "title": "水面反射的光",
-		 "story": "燈塔的光打在平靜的水面上，反射到對岸。入射角等於反射角——光走的是最短的路。",
+		 "story": "入射角等於反射角——光走的是最短的路。",
 		 "insight": "光從 A 經直線 L 反射到 B：把 A 對 L 對稱到 A′，連 A′B 和 L 的交點就是反射點\n路徑長 = \\ol{A′B}。反射兩次就對稱兩次。",
 		 "variants": [
 			{"eq": "光從 A(1, 2) 射到水面（x 軸），反射後經過 B(5, 6)\n求反射點 R",
@@ -243,7 +243,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "minsum", "chapter": 1, "type": "forge", "title": "最短的渡船路線",
-		 "story": "渡船要從 A 出發，先到河岸（x 軸）上的碼頭 P 載客，再開到 B。碼頭放在哪裡，路線最短？",
+		 "story": "從 A 先到 x 軸上的碼頭 P，再到 B。P 放在哪裡，路線最短？",
 		 "insight": "A、B 在直線 L 的同側，P 在 L 上：\\ol{PA} + \\ol{PB} 最小 ⇔ P 在 \\ol{A′B} 上（A′ 是 A 對 L 的對稱點）\n最小值 = \\ol{A′B}。√((x − a)^{2} + b^{2}) 是 (x, 0) 到 (a, b) 的距離。",
 		 "variants": [
 			{"eq": "A(1, 1)、B(5, 3)，P 在 x 軸上\n求 \\ol{PA} + \\ol{PB} 的最小值",
@@ -302,7 +302,7 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．渡口的距離 =======================
 		{"id": "ptdist", "chapter": 2, "type": "forge", "title": "燈塔到航道的距離",
-		 "story": "航道是一條直線。燈塔到航道多遠？從燈塔垂直走到航道，就是最短的距離。",
+		 "story": "從燈塔垂直走到航道，就是最短的距離。",
 		 "insight": "P(x₀, y₀) 到 L：ax + by + c = 0 的距離 d(P, L) = \\frac{|ax₀ + by₀ + c|}{√(a^{2} + b^{2})}\n已知距離反求點：絕對值拿掉會有兩種情形。",
 		 "variants": [
 			{"eq": "P(2, −1) 到直線 L：3x + 4y − 12 = 0 的距離",
@@ -344,7 +344,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "distline", "chapter": 2, "type": "forge", "title": "繞著燈塔轉的航道",
-		 "story": "航道要經過燈塔 P(7, 1)，而且和渡口（原點）的距離剛好是 5。這樣的航道有幾條？",
+		 "story": "航道過 P(7, 1)，和原點的距離是 5。這樣的航道有幾條？",
 		 "insight": "過定點 P、和某點 Q 距離固定的直線 L：設 y − y₀ = m(x − x₀)，代入 d(Q, L) 的公式解 m\n別忘了檢查鉛直線 x = x₀（它沒有斜率，設斜率時會漏掉）。",
 		 "variants": [
 			{"eq": "直線 L 過 P(7, 1)，原點到 L 的距離是 5\n求 L",
@@ -365,7 +365,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "parallel", "chapter": 2, "type": "forge", "title": "兩條平行的航道",
-		 "story": "兩條平行的航道之間有多寬？在其中一條上隨便取一點，量到另一條的距離。",
+		 "story": "兩平行航道多寬？在一條上取一點，量到另一條的距離。",
 		 "insight": "平行線 L₁：ax + by + c₁ = 0、L₂：ax + by + c₂ = 0 的距離 d(L₁, L₂) = \\frac{|c₁ − c₂|}{√(a^{2} + b^{2})}\nx、y 的係數一定要先調成一樣！",
 		 "variants": [
 			{"eq": "L₁：3x + 4y − 5 = 0、L₂：6x + 8y + 15 = 0\n求兩直線的距離",
@@ -389,7 +389,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "ratio", "chapter": 2, "type": "forge", "title": "航道切過渡橋",
-		 "story": "渡橋 \\ol{AB} 橫跨航道 L。L 把 \\ol{AB} 切成兩段，兩段的比就是 A、B 到 L 的距離比。",
+		 "story": "L 把 \\ol{AB} 切成兩段，兩段的比就是 A、B 到 L 的距離比。",
 		 "insight": "A、B 在 L 的兩側（直線 L 和 \\ol{AB} 相交於 P）：\\ol{AP} : \\ol{PB} = d(A, L) : d(B, L)\n（兩個垂線段和 \\ol{AB} 形成相似三角形）",
 		 "variants": [
 			{"eq": "A(−1, 1)、B(5, 1)，直線 L：x + y − 4 = 0 交 \\ol{AB} 於 P\n求 \\ol{AP} : \\ol{PB} 和 P",
@@ -411,7 +411,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "bisect", "chapter": 2, "type": "forge", "title": "兩條航道的中線",
-		 "story": "兩條航道交叉，船要走在兩條航道的正中間——到兩條航道的距離一樣。這樣的路線就是角平分線。",
+		 "story": "到兩條航道距離一樣的路線，就是角平分線。",
 		 "insight": "L₁、L₂ 的角平分線：到兩線等距的點 \\frac{|a₁x + b₁y + c₁|}{√(a₁^{2} + b₁^{2})} = \\frac{|a₂x + b₂y + c₂|}{√(a₂^{2} + b₂^{2})}\n拿掉絕對值有兩條，兩條角平分線互相垂直。",
 		 "variants": [
 			{"eq": "L₁：3x + 4y − 10 = 0、L₂：4x − 3y + 5 = 0\n求兩直線的角平分線",
@@ -430,7 +430,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "incenter", "chapter": 2, "type": "forge", "title": "三角島的燈塔",
-		 "story": "湖心有一座三角形的小島。燈塔要蓋在離三邊一樣遠的地方——三角形的內心。",
+		 "story": "離三角形三邊一樣遠的點——內心。",
 		 "insight": "內心 = 三條內角平分線的交點，到三邊等距（內切圓的圓心）\n設內心的坐標、列「到邊的距離 = r」，解出兩個答案時看圖挑在三角形裡面的。",
 		 "variants": [
 			{"eq": "△OAB：O(0, 0)、A(6, 0)、B(0, 8)\n求內心 I 和內切圓半徑 r",

@@ -141,8 +141,8 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．合成一道光 =======================
 		{"id": "form", "chapter": 1, "type": "forge", "title": "兩道光合成一道",
-		 "story": "燈塔有兩盞燈：一盞隨 sin x 閃，一盞隨 cos x 閃。把它們疊起來，其實只是一道比較強、位置偏了一點的光。",
-		 "insight": "a sin x + b cos x = r sin(x + φ)，其中 r = √(a² + b²)，cos φ = \\frac{a}{r}，sin φ = \\frac{b}{r}。r 提出來以後，sin x 的係數是 cos φ、cos x 的係數是 sin φ。",
+		 "story": "sin x 和 cos x 疊起來，只是一道更強、偏了一點的光。",
+		 "insight": "a sin x + b cos x = r sin(x + φ)：r = √(a² + b²)，cos φ = \\frac{a}{r}，sin φ = \\frac{b}{r}",
 		 "variants": [
 			{"eq": "把 sin x + √3 cos x\n化成 r sin(x + φ)",
 			 "steps": [
@@ -186,7 +186,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "expand", "chapter": 1, "type": "forge", "title": "用積木合成",
-		 "story": "先用疊合公式算出 r 和 φ，再用積木把式子拼成一個 sin，看光線有沒有重合。",
+		 "story": "算出 r 和 φ，再拼成一個 sin，看光線有沒有重合。",
 		 "insight": "a sin x + b cos x = r sin(x + φ)：r = √(a² + b²)，cos φ = a/r、sin φ = b/r。算好 r 和 φ 再拼，不用心算。",
 		 "variants": [
 			{"eq": "把 sin x + cos x\n合成一個 sin",
@@ -213,8 +213,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "quad", "chapter": 1, "type": "forge", "title": "φ 在哪個象限",
-		 "story": "係數有負號的時候，cos φ 或 sin φ 會是負的，φ 就不在第一象限。照疊合公式一步一步來，看 cos φ、sin φ 的正負決定 φ。",
-		 "insight": "疊合公式照用：r = √(a² + b²)，cos φ = \\frac{a}{√{a² + b²}}、sin φ = \\frac{b}{√{a² + b²}}（負號要跟著）。cos φ 的正負決定左右、sin φ 的正負決定上下，先定象限再找角度。只算 tan φ 會差 180°。",
+		 "story": "係數有負號時，φ 不在第一象限。看 cos φ、sin φ 的正負決定 φ。",
+		 "insight": "r = √(a² + b²)，cos φ = \\frac{a}{r}、sin φ = \\frac{b}{r}（負號要跟著）。看 cos φ、sin φ 的正負定象限。只算 tan φ 會差 180°。",
 		 "variants": [
 			{"eq": "把 −sin x + √3 cos x\n化成 r sin(x + φ)",
 			 "steps": [
@@ -252,8 +252,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "peak", "chapter": 1, "type": "forge", "title": "燈塔的亮點",
-		 "story": "合成之後，燈塔的光只有一個亮點，也只有一個最暗的地方。拖動 x，看看光束什麼時候最亮。",
-		 "insight": "r sin(x + φ) 的最大值是 r，發生在 x + φ = 90° + 360°k\n最小值是 −r，發生在 x + φ = 270° + 360°k\n等於 0 在 x + φ = 180°k。週期是 2π。",
+		 "story": "合成後只有一個最亮、一個最暗。拖動 x，看什麼時候最亮。",
+		 "insight": "r sin(x + φ)：最大 r（x + φ = 90° + 360°k），最小 −r（x + φ = 270° + 360°k）。",
 		 "variants": [
 			{"eq": "f(x) = sin x + √3 cos x\n求最大值、最小值",
 			 "steps": [
@@ -292,7 +292,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "bright", "chapter": 1, "type": "forge", "title": "比比誰最亮",
-		 "story": "不用合成出角度，也能比較誰的光最強：只要算每一道光的 r。",
+		 "story": "比較誰的光最強：只要算每道光的 r。",
 		 "insight": "a sin x + b cos x 的最大值是 √(a² + b²)，最小值是 −√(a² + b²)。比較大小只要比 a² + b²，不用開根號。",
 		 "variants": [
 			{"eq": "四道光，比較最大亮度",
@@ -349,8 +349,8 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．疊合的變身 =======================
 		{"id": "nonsp", "chapter": 2, "type": "forge", "title": "非特殊角",
-		 "story": "7、24、25 這種三邊的光，φ 不是特殊角——但沒關係，只要記得 cos φ、sin φ 的分數，最亮的時候 sin x 和 cos x 也就知道了。",
-		 "insight": "φ 不是特殊角時，不用算出角度：r = √(a² + b²)，cos φ = a/r，sin φ = b/r。最大值發生在 x + φ = 90°，所以 sin x = cos φ = a/r，cos x = sin φ = b/r。最小值發生時，sin x = −a/r，cos x = −b/r。",
+		 "story": "7、24、25 的 φ 不是特殊角——記住 cos φ、sin φ 的分數就好。",
+		 "insight": "φ 不是特殊角也不用算角度：最大時 x + φ = 90°，sin x = cos φ = a/r，cos x = sin φ = b/r。最小時 sin x = −a/r，cos x = −b/r。",
 		 "variants": [
 			{"eq": "f(x) = 7 sin x + 24 cos x\n求最大值，並求最大時的 sin x、cos x",
 			 "steps": [
@@ -385,8 +385,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "range", "chapter": 2, "type": "forge", "title": "限制範圍",
-		 "story": "x 只能走一小段的時候，光束可能沒機會到頂：最大最小值不一定在最亮最暗的地方，也可能卡在端點。",
-		 "insight": "先疊合成 r sin(x + φ)，再把 x 的範圍加上 φ，得到 x + φ 的範圍。在單位圓上看這段弧：包含 90° 才有最大值 r，包含 270° 才有最小值 −r，不然就在端點。",
+		 "story": "x 有範圍時，極值可能卡在端點。",
+		 "insight": "先疊合成 r sin(x + φ)，求 x + φ 的範圍：包含 90° 才有最大 r，包含 270° 才有最小 −r，不然看端點。",
 		 "variants": [
 			{"eq": "f(x) = √3 sin x + cos x，\n0° ≤ x ≤ 180°，求最大最小值",
 			 "steps": [
@@ -436,8 +436,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "homog", "chapter": 2, "type": "forge", "title": "齊次型",
-		 "story": "sin x cos x、cos²x 這些「二次」的式子，用倍角和降冪公式一換，就變成 sin 2x、cos 2x 的疊合。",
-		 "insight": "2 sin x cos x = sin 2x\ncos²x = \\frac{1 + cos 2x}{2}\nsin²x = \\frac{1 − cos 2x}{2}\ncos²x − sin²x = cos 2x。換完之後 a sin 2x + b cos 2x 照樣疊合，只是角度是 2x，週期變成 π。",
+		 "story": "sin x cos x、cos²x 用倍角、降冪一換，就變成 sin 2x、cos 2x 的疊合。",
+		 "insight": "2 sin x cos x = sin 2x\ncos²x = \\frac{1 + cos 2x}{2}\nsin²x = \\frac{1 − cos 2x}{2}\n換完再疊合 a sin 2x + b cos 2x，週期 π。",
 		 "variants": [
 			{"eq": "f(x) = 2√3 sin x cos x + 2cos²x − 1\n化成 r sin(2x + φ)",
 			 "steps": [
@@ -476,8 +476,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "param", "chapter": 2, "type": "forge", "title": "參數型",
-		 "story": "sin x + cos x 和 sin x cos x 常常一起出現。令 k = sin x + cos x，平方一下，另一個就變成 k 的式子——三角函數搖身一變，變成二次函數。",
-		 "insight": "令 k = sin x ± cos x，則 −√2 ≤ k ≤ √2（疊合的範圍）。k² = 1 ± 2 sin x cos x = 1 ± sin 2x，所以 sin x cos x 可以用 k 表示。原式變成 k 的二次函數，配方後在 −√2 ≤ k ≤ √2 找最大最小：頂點在範圍內看頂點，不在範圍內看端點。",
+		 "story": "令 k = sin x + cos x，平方後 sin x cos x 也變成 k 的式子——變成二次函數。",
+		 "insight": "令 k = sin x ± cos x（−√2 ≤ k ≤ √2），k² = 1 ± 2 sin x cos x。原式變成 k 的二次函數，比較頂點和端點。",
 		 "variants": [
 			{"eq": "f(x) = sin x − cos x + sin 2x\n令 k = sin x − cos x，求最大最小值",
 			 "steps": [
@@ -521,7 +521,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "combo", "chapter": 2, "type": "forge", "title": "兩道光再疊",
-		 "story": "sin x 加上一道已經平移過的光，例如 cos(x + 60°)：先把平移過的那道展開，再整個疊合。",
+		 "story": "sin x + cos(x + 60°)：先展開平移過的那道，再疊合。",
 		 "insight": "遇到 sin(x + α) 或 cos(x + α) 的和：先用和角公式展開成 sin x、cos x，合併同類項，再 a sin x + b cos x = r sin(x + φ)。",
 		 "variants": [
 			{"eq": "f(x) = √3 sin x + cos(x + 60°)\n求最大值",
@@ -557,8 +557,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "apply", "chapter": 2, "type": "forge", "title": "燈塔的應用",
-		 "story": "周長、長度的最大值：先用角度把長和寬寫出來，再合成一道光。",
-		 "insight": "應用題的做法：① 設一個角 θ，用 sin θ、cos θ 表示長度 ② 得到 a sin θ + b cos θ ③ 疊合 r sin(θ + φ)，最大值 r（記得檢查 θ 的範圍能不能取到）。",
+		 "story": "周長、長度的最大值：用角度寫出長和寬，再疊合。",
+		 "insight": "① 設角 θ，用 sin θ、cos θ 表示長度 ② 得 a sin θ + b cos θ ③ 疊合，最大值 r（檢查 θ 的範圍取不取得到）。",
 		 "variants": [
 			{"eq": "半徑 30 公尺的圓形池塘，\n內接一個長方形的木框，求周長最大值",
 			 "steps": [
@@ -600,7 +600,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "真假判斷",
-		 "story": "段考最愛的「下列何者為真」：疊合的選項，一個一個合成、代入檢查。",
+		 "story": "「下列何者為真」：疊合的選項，逐一合成、代入檢查。",
 		 "insight": "r = √(a² + b²) 不是 a + b。sin 和 cos 的位置別弄反：cos φ = a/r，sin φ = b/r。最大值和最大值發生的位置是兩件事。",
 		 "variants": [
 			{"eq": "f(x) = √3 sin x − cos x，\n下列的敘述對還是錯？",
@@ -623,7 +623,7 @@ static func _slots() -> Array:
 
 		{"id": "boss2", "chapter": 2, "type": "forge", "title": "大師試煉", "time": 300.0,
 		 "story": "限時 300 秒！限制範圍、倍角齊次、疊合……燈塔最後的光，交給你了。",
-		 "insight": "疊合的流程：整理成 a sin x + b cos x（齊次型先用倍角降冪）→ r = √(a² + b²)、找 φ → r sin(x + φ) → 看 x + φ 的範圍，決定最大最小值。",
+		 "insight": "整理成 a sin x + b cos x（齊次型先降冪）→ 求 r、φ → 看 x + φ 的範圍定最大最小。",
 		 "variants": [
 			{"eq": "f(x) = 3√3 sin x − 3 cos x，\n0° ≤ x ≤ 180°，求最大最小值",
 			 "steps": [

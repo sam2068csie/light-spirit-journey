@@ -235,7 +235,7 @@ static func slots() -> Array:
 		 "variants": [{"gen": "pow1", "count": 6}]},
 
 		{"id": "same", "chapter": 1, "type": "forge", "title": "化同底",
-		 "story": "兩邊的底數不一樣，先把它們熔成同一個底數，再讓指數相等。",
+		 "story": "兩邊化成同一個底數，再讓指數相等。",
 		 "insight": "化同底：① 找共同底數 ② 兩邊寫成次方 ③ 指數相等。",
 		 "variants": [
 			{"eq": "4^{x+1} = 8^{x−1}",
@@ -277,7 +277,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "speed2", "chapter": 1, "type": "speed", "title": "速算爐 II", "time": 210.0,
-		 "story": "火力加大！這次兩邊都要化成同底數。可以輸入分數或負數。",
+		 "story": "兩邊都要化成同底數。可以輸入分數或負數。",
 		 "insight": "兩邊化同底\n指數相乘別忘括號：(2^{2})^{x+1} = 2^{2x+2}。",
 		 "variants": [{"gen": "pow2", "count": 6}]},
 
@@ -375,7 +375,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "recip", "chapter": 1, "type": "forge", "title": "倒數換元",
-		 "story": "負指數和 a^{3−x} 也能換元：它們和 a^{x} 互為倒數（差一個常數倍）！",
+		 "story": "負指數和 a^{3−x} 也能換元：它們是 a^{x} 的倒數（差一個常數倍）！",
 		 "insight": "a^{−x} = 1/t、a^{3−x} = a^{3}/t：同乘 t 又是二次方程式。",
 		 "variants": [
 			{"eq": "2·4^{−x} − 33·2^{−x−2} + 1 = 0",
@@ -502,7 +502,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "factor", "chapter": 2, "type": "forge", "title": "分組分解",
-		 "story": "四項的方程式，換元換不動？試試看兩兩分組、提出公因式！",
+		 "story": "四項的方程式：兩兩分組、提出公因式！",
 		 "insight": "像 12^{x} = 4^{x}·3^{x} 這種：兩兩分組、提出公因式，化成兩個因式相乘 = 0。",
 		 "variants": [
 			{"eq": "12^{x} − 4^{x} − 4·3^{x} + 4 = 0",
@@ -701,7 +701,7 @@ static func slots() -> Array:
 		 ]},
 
 		{"id": "tune", "chapter": 2, "type": "tune", "title": "參數調頻",
-		 "story": "熔爐的溫度旋鈕可以調！轉動參數，看 t 的拋物線落在哪裡。",
+		 "story": "轉動參數，看 t 的拋物線落在哪裡。",
 		 "insight": "x > 0 ⇔ t > 1\nx 為實數 ⇔ t > 0。用判別式、端點值、對稱軸限制參數。",
 		 "variants": [
 			{"eq": "4^{x} − 3·2^{x+2} + a = 0",

@@ -74,8 +74,8 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．波的形狀 =======================
 		{"id": "wave", "chapter": 1, "type": "forge", "title": "捲出波浪",
-		 "story": "圓上的點轉呀轉，把它的高度一路記到右邊——海浪就這樣捲出來了！",
-		 "insight": "單位圓上的點轉了 x 弧度：高度是 sin x、左右是 cos x。把它們畫成圖，就是 y = sin x、y = cos x 的波浪，每 2π 重複一次。",
+		 "story": "把圓上點的高度一路記到右邊——就是正弦波！",
+		 "insight": "單位圓上的點轉了 x 弧度：高度是 sin x、左右是 cos x，每 2π 重複一次。",
 		 "variants": [
 			{"eq": "拖動圓上的點，畫出 y = sin x",
 			 "steps": [
@@ -102,7 +102,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "trio", "chapter": 1, "type": "forge", "title": "三兄弟",
-		 "story": "sin、cos、tan 三兄弟的圖形各有個性：兩個是波浪，一個會一直往上衝。",
+		 "story": "sin、cos 是波浪，tan 會一直往上衝。",
 		 "insight": "sin、cos：值域 −1 ～ 1、週期 2π。tan：值域所有實數、週期 π，在 x = π/2 + kπ 沒有定義（漸近線）。",
 		 "variants": [
 			{"eq": "認識 sin、cos、tan 的圖形",
@@ -137,7 +137,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "period", "chapter": 1, "type": "forge", "title": "週期",
-		 "story": "圖形往右平移 p 之後和原來完全重合，p 就是週期。最小的那個正的 p，叫做（最小）週期。",
+		 "story": "往右平移 p 後和原圖重合，p 就是週期。最小的正 p 叫（最小）週期。",
 		 "insight": "y = a sin(bx) + d、y = a cos(bx) + d 的週期是 \\frac{2π}{|b|}\ny = a tan(bx) + d 的週期是 \\frac{π}{|b|}。a 和 d 不影響週期。",
 		 "variants": [
 			{"eq": "求週期：\ny = sin 3x、y = cos(x/2)、y = tan 2x",
@@ -186,8 +186,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "combo", "chapter": 1, "type": "forge", "title": "週期組合",
-		 "story": "加上絕對值、平方，或是兩個函數相加，週期會變嗎？畫出圖來看最清楚。",
-		 "insight": "|sin x|、sin^{2} x：負的部分翻上來，週期減半變 π。但 |sin x + k|（k ≠ 0）先平移再取絕對值，翻上來的形狀不一樣，週期不減半。|sin x| + |cos x| 是特例：週期再減半，變 π/2。兩個函數相加：週期取最小公倍數。",
+		 "story": "加絕對值、平方或相加，週期會變嗎？看圖最清楚。",
+		 "insight": "|sin x|、sin^{2} x：週期減半變 π。|sin x + k|（k ≠ 0）不減半。|sin x| + |cos x|：週期 π/2。兩函數相加：週期取最小公倍數。",
 		 "variants": [
 			{"eq": "求週期：y = |sin x|、y = sin^{2} x、y = tan x + |tan x|",
 			 "steps": [
@@ -310,7 +310,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "sym", "chapter": 2, "type": "forge", "title": "對稱軸與對稱中心",
-		 "story": "每一個波峰、波谷都是對稱軸，每一個穿過中線的地方都是對稱中心。",
+		 "story": "波峰、波谷是對稱軸，穿過中線的點是對稱中心。",
 		 "insight": "sin x：對稱軸 x = π/2 + kπ（波峰、波谷），對稱中心 (kπ, 0)。cos x：對稱軸 x = kπ，對稱中心 (π/2 + kπ, 0)。",
 		 "variants": [
 			{"eq": "y = sin x 的對稱軸與對稱中心",
@@ -333,7 +333,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "mono", "chapter": 2, "type": "forge", "title": "遞增與遞減",
-		 "story": "沿著波浪往右走：哪一段在爬坡、哪一段在下坡？",
+		 "story": "哪一段遞增、哪一段遞減？",
 		 "insight": "0 ～ 2π：sin x 在 [0, π/2]、[3π/2, 2π] 遞增，在 [π/2, 3π/2] 遞減\ncos x 在 [0, π] 遞減，在 [π, 2π] 遞增。",
 		 "variants": [
 			{"eq": "0 ≤ x ≤ 2π 時，y = sin x 和 y = cos x 的遞增遞減",
@@ -362,7 +362,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "真假判斷",
-		 "story": "段考最愛的「下列何者為真」：一個一個選項對照圖形判斷。",
+		 "story": "「下列何者為真」：每個選項對照圖形判斷。",
 		 "insight": "先算出值域、週期、最大值的位置，再一項一項檢查\n對稱軸、對稱中心可以代 x = 中心 ± t 驗證。",
 		 "variants": [
 			{"eq": "f(x) = 3(1 − cos 2x)，下列敘述對還是錯？",

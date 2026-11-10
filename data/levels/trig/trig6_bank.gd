@@ -98,8 +98,8 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．鏡面倍角 =======================
 		{"id": "mirror", "chapter": 1, "type": "forge", "title": "鏡面與二倍角",
-		 "story": "鏡池的水面像一面鏡子：把橫軸那條線對著鏡面（角 φ）反射，反射出來的線剛好在 2φ。",
-		 "insight": "鏡面在 φ，反射線在 2φ：這就是二倍角。sin 2φ = 2 sin φ cos φ\ncos 2φ = cos²φ − sin²φ\ntan 2φ = \\frac{2 tan φ}{1 − tan²φ}。這些都是和角公式 α = β = φ 的特例。",
+		 "story": "把橫軸對鏡面（角 φ）反射，反射線剛好在 2φ。",
+		 "insight": "sin 2φ = 2 sin φ cos φ\ncos 2φ = cos²φ − sin²φ\ntan 2φ = \\frac{2 tan φ}{1 − tan²φ}（和角公式 α = β 的特例）。",
 		 "variants": [
 			{"eq": "鏡面轉到 φ，反射線在 2φ。\n要讓反射線落在 120°，並求 sin 120°",
 			 "steps": [
@@ -135,8 +135,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "cos2", "chapter": 1, "type": "forge", "title": "cos 2θ 的三種樣子",
-		 "story": "cos 2θ 有三種寫法：cos²θ − sin²θ、2cos²θ − 1、1 − 2sin²θ。只知道 cos θ 或只知道 sin θ，各挑最順手的一種。",
-		 "insight": "cos 2θ = cos²θ − sin²θ = 2cos²θ − 1 = 1 − 2sin²θ（用 sin²θ + cos²θ = 1 互相換）。只知道 cos θ：用 2cos²θ − 1\n只知道 sin θ：用 1 − 2sin²θ。",
+		 "story": "cos 2θ 有三種寫法：cos²θ − sin²θ、2cos²θ − 1、1 − 2sin²θ。",
+		 "insight": "cos 2θ = cos²θ − sin²θ = 2cos²θ − 1 = 1 − 2sin²θ\n只知道 cos θ 用 2cos²θ − 1，只知道 sin θ 用 1 − 2sin²θ。",
 		 "variants": [
 			{"eq": "cos θ = 3/5、sin θ = 4/5，求 cos 2θ",
 			 "steps": [
@@ -174,8 +174,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "values", "chapter": 1, "type": "forge", "title": "求二倍角的值",
-		 "story": "只知道一個三角函數值和角在哪個象限，就能算出 sin 2θ、cos 2θ、tan 2θ：先定正負，再代公式。",
-		 "insight": "步驟：① 象限定另一個函數的正負 ② 直角三角形（或 sin² + cos² = 1）求它的值 ③ sin 2θ = 2 sin θ cos θ、cos 2θ = cos²θ − sin²θ、tan 2θ = \\frac{sin 2θ}{cos 2θ}。只知道 tan θ：sin 2θ = \\frac{2t}{1 + t²}、cos 2θ = \\frac{1 − t²}{1 + t²}（以切表弦）。",
+		 "story": "已知一個函數值和象限，求 sin 2θ、cos 2θ、tan 2θ：先定正負，再代公式。",
+		 "insight": "① 象限定正負 ② 求另一個函數值 ③ sin 2θ = 2 sin θ cos θ、cos 2θ = cos²θ − sin²θ\n只知道 tan θ = t：sin 2θ = \\frac{2t}{1 + t²}、cos 2θ = \\frac{1 − t²}{1 + t²}。",
 		 "variants": [
 			{"eq": "cos θ = −4/5（180° < θ < 270°），\n求 sin 2θ、cos 2θ、tan 2θ",
 			 "steps": [
@@ -219,8 +219,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "merge2", "chapter": 1, "type": "forge", "title": "倍角公式合併",
-		 "story": "倍角公式也能倒著用：看到 2 sin θ cos θ 就合併成 sin 2θ，看到 cos²θ − sin²θ 就合併成 cos 2θ。",
-		 "insight": "2 sin θ cos θ = sin 2θ\ncos²θ − sin²θ = 2cos²θ − 1 = 1 − 2sin²θ = cos 2θ\n\\frac{2 tan θ}{1 − tan²θ} = tan 2θ。先看形狀，再決定角是原來的幾倍。",
+		 "story": "倒著用：2 sin θ cos θ 合併成 sin 2θ，cos²θ − sin²θ 合併成 cos 2θ。",
+		 "insight": "2 sin θ cos θ = sin 2θ\ncos²θ − sin²θ = 2cos²θ − 1 = 1 − 2sin²θ = cos 2θ\n\\frac{2 tan θ}{1 − tan²θ} = tan 2θ",
 		 "variants": [
 			{"eq": "求 sin 15° cos 15° 的值",
 			 "steps": [
@@ -280,8 +280,8 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．半角與化簡 =======================
 		{"id": "half", "chapter": 2, "type": "forge", "title": "半角公式",
-		 "story": "鏡子倒著看就是半角：已知反射線在 θ，鏡面一定在 θ/2。半角公式就是把 cos 2φ = 1 − 2sin²φ 倒過來解。",
-		 "insight": "sin²\\frac{θ}{2} = \\frac{1 − cos θ}{2}\ncos²\\frac{θ}{2} = \\frac{1 + cos θ}{2}\nsin \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{2}}\ncos \\frac{θ}{2} = ±√{\\frac{1 + cos θ}{2}}\ntan \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{1 + cos θ}}。± 號看 θ/2 的象限決定。",
+		 "story": "反射線在 θ，鏡面就在 θ/2。半角公式是 cos 2φ = 1 − 2sin²φ 倒過來解。",
+		 "insight": "sin \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{2}}\ncos \\frac{θ}{2} = ±√{\\frac{1 + cos θ}{2}}\ntan \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{1 + cos θ}}\n± 看 θ/2 的象限。",
 		 "variants": [
 			{"eq": "反射線在 θ = 45°，求鏡面 θ/2 的\nsin²、cos²、tan",
 			 "steps": [
@@ -333,8 +333,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "halfq", "chapter": 2, "type": "forge", "title": "半角的象限",
-		 "story": "半角公式開根號要選正負。θ 在哪個範圍，θ/2 就在哪個範圍的一半——拖動 θ 看看 θ/2 掉在哪裡。",
-		 "insight": "先把 θ 的範圍除以 2，得到 θ/2 的範圍（在哪個象限），再決定 sin(θ/2)、cos(θ/2)、tan(θ/2) 的正負\n再代入 sin \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{2}}、cos \\frac{θ}{2} = ±√{\\frac{1 + cos θ}{2}}、tan \\frac{θ}{2} = ±√{\\frac{1 − cos θ}{1 + cos θ}}。同樣的 cos θ，θ 的象限不同，θ/2 的正負也會不同。",
+		 "story": "半角開根號要選正負。拖動 θ，看 θ/2 落在哪裡。",
+		 "insight": "θ 的範圍除以 2 得到 θ/2 的象限，決定正負，再代半角公式。同樣的 cos θ，θ 的象限不同，θ/2 的正負也不同。",
 		 "variants": [
 			{"eq": "cos θ = −7/25（180° < θ < 270°），\n求 sin(θ/2)、cos(θ/2)、tan(θ/2)",
 			 "steps": [
@@ -372,8 +372,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "deg", "chapter": 2, "type": "forge", "title": "四大天王",
-		 "story": "四大天王：1 + sin、1 − sin、1 + cos、1 − cos 都能化成完全平方！開根號時，要看絕對值裡面是正還是負。",
-		 "insight": "四大天王公式：1 ± sin 2θ = (sin θ ± cos θ)²、1 + cos θ = 2cos² \\frac{θ}{2}、1 − cos θ = 2sin² \\frac{θ}{2}。開根號變絕對值：√{1 ± sin 2θ} = |sin θ ± cos θ|、√{1 + cos θ} = √{2} |cos \\frac{θ}{2}|、√{1 − cos θ} = √{2} |sin \\frac{θ}{2}|。去絕對值要判斷範圍內的正負。",
+		 "story": "1 ± sin、1 ± cos 都能化成完全平方！開根號要看絕對值裡的正負。",
+		 "insight": "1 ± sin 2θ = (sin θ ± cos θ)²\n1 + cos θ = 2cos² \\frac{θ}{2}、1 − cos θ = 2sin² \\frac{θ}{2}\n開根號變絕對值，再看範圍內的正負。",
 		 "variants": [
 			{"eq": "90° < θ < 135°，化簡\n√(1 + sin 2θ) + √(1 − sin 2θ)",
 			 "steps": [
@@ -423,8 +423,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "ratio", "chapter": 2, "type": "forge", "title": "以切表弦",
-		 "story": "式子裡只有 sin、cos 的二次齊次式，或只知道 tan 的時候，把所有東西都換成 tan！",
-		 "insight": "令 t = tan θ：sin 2θ = \\frac{2t}{1 + t²}、cos 2θ = \\frac{1 − t²}{1 + t²}、tan 2θ = \\frac{2t}{1 − t²}。二次齊次式（每項都是 sin²、sin cos、cos²）同除以 cos²θ，就變成 t 的二次方程式。",
+		 "story": "sin、cos 的二次齊次式，或只知道 tan 時，全部換成 tan！",
+		 "insight": "t = tan θ：sin 2θ = \\frac{2t}{1 + t²}、cos 2θ = \\frac{1 − t²}{1 + t²}、tan 2θ = \\frac{2t}{1 − t²}\n二次齊次式同除以 cos²θ，變成 t 的式子。",
 		 "variants": [
 			{"eq": "2sin²θ + 3sin θ cos θ − 2cos²θ = 0（90° < θ < 180°），\n求 sin 2θ、cos 2θ",
 			 "steps": [
@@ -482,8 +482,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "prod", "chapter": 2, "type": "forge", "title": "連乘積",
-		 "story": "cos 20° cos 40° cos 80° 怎麼算？乘上一個 sin 20°，就能一路用二倍角公式合併下去。",
-		 "insight": "連乘積的招式：乘上最小那個角的 sin，反覆用 sin θ cos θ = \\frac{1}{2} sin 2θ，最後出現 sin 20° 就能和開頭消掉。最後別忘了把乘上的 sin 除回去。",
+		 "story": "cos 20° cos 40° cos 80°：乘上 sin 20°，一路用二倍角合併。",
+		 "insight": "連乘積：乘上最小角的 sin，反覆用 sin θ cos θ = \\frac{1}{2} sin 2θ，最後再除回去。",
 		 "variants": [
 			{"eq": "求 cos 36° cos 72°",
 			 "steps": [
@@ -523,8 +523,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "ext", "chapter": 2, "type": "forge", "title": "最大與最小",
-		 "story": "含有 cos 2θ 的式子，把它換成只含 sin θ（或 cos θ）的二次式，就變成「二次函數的最大最小值」。",
-		 "insight": "cos 2θ = 1 − 2sin²θ 或 2cos²θ − 1：令 t = sin θ（或 cos θ），−1 ≤ t ≤ 1，變成 t 的二次函數，配方找頂點，再比較端點。",
+		 "story": "cos 2θ 換成 sin θ（或 cos θ）的二次式，就變成二次函數的極值。",
+		 "insight": "cos 2θ = 1 − 2sin²θ：令 t = sin θ（−1 ≤ t ≤ 1），變成 t 的二次函數，比較頂點和端點。",
 		 "variants": [
 			{"eq": "g(θ) = cos 2θ + 4 sin θ 的最大值 M、最小值 m",
 			 "steps": [
@@ -556,7 +556,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "真假判斷",
-		 "story": "段考最愛的「下列何者為真」：倍角、半角公式，一個一個選項代入檢查。",
+		 "story": "「下列何者為真」：倍角、半角公式，逐一代入檢查。",
 		 "insight": "二倍角不是「兩倍」：sin 2θ ≠ 2 sin θ。半角公式的正負號要看 θ/2 所在的象限。檢查選項時，代一個特殊角最快。",
 		 "variants": [
 			{"eq": "下列關於倍角公式的敘述，對還是錯？",

@@ -137,7 +137,7 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．旋鈕調音 =======================
 		{"id": "amp", "chapter": 1, "type": "forge", "title": "高低與水位",
-		 "story": "調音盤上有四顆旋鈕。先轉最左邊的兩顆：a 管波浪的高低，d 管整片海水的水位。",
+		 "story": "a 管波的高低，d 管中線的位置。",
 		 "insight": "y = a sin x + d：|a| 是振幅（波峰到中線的高度），a < 0 時波上下顛倒\nd 把整條波往上或往下平移，中線是 y = d。最大值 d + |a|、最小值 d − |a|，週期不變。",
 		 "variants": [
 			{"eq": "先做出 y = 3 sin x，\n再做出 y = −2 sin x",
@@ -178,7 +178,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "freq", "chapter": 1, "type": "forge", "title": "快慢旋鈕",
-		 "story": "第三顆旋鈕 b 管波浪的快慢。b 越大，一樣的距離裡塞進越多個浪頭。",
+		 "story": "b 管波的快慢。b 越大，波越密。",
 		 "insight": "y = sin bx、cos bx 的週期是 \\frac{2π}{|b|}，tan bx 的週期是 \\frac{π}{|b|}。b > 1：水平壓縮（波變密）\n0 < b < 1：水平拉長（波變疏）。",
 		 "variants": [
 			{"eq": "做出 y = sin 2x 和 y = cos(x/2)",
@@ -217,8 +217,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "shift", "chapter": 1, "type": "forge", "title": "左右旋鈕",
-		 "story": "最後一顆旋鈕 c 管左右。可是要小心：旋鈕 c 加在括號裡面，波實際移動的距離不一定等於 c。",
-		 "insight": "y = sin(bx + c) = sin b(x + \\frac{c}{b})：圖形向左平移 \\frac{c}{b}（c/b 是負的就是向右）。要把 x 的係數 b 提出來，才看得出平移了多少。",
+		 "story": "c 管左右。c 在括號裡，波實際移動的距離不一定等於 c。",
+		 "insight": "y = sin(bx + c) = sin b(x + \\frac{c}{b})：向左平移 \\frac{c}{b}（負的就是向右）。先把 b 提出來才看得出平移量。",
 		 "variants": [
 			{"eq": "做出 y = sin(x − π/3) 和 y = cos(x + π/4)",
 			 "steps": [
@@ -260,8 +260,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "order", "chapter": 1, "type": "forge", "title": "先伸縮，再平移",
-		 "story": "調音盤的零件：把波拉高、壓扁、往右推、往上抬。零件的順序不同，最後的波也不一樣！",
-		 "insight": "y = a sin(bx + c) + d 的做法：y = sin x → 鉛直伸縮 a 倍 → 水平伸縮 \\frac{1}{b} 倍 → 左右平移 \\frac{−c}{b} → 上下平移 d。先伸縮、再平移：平移量要在伸縮「之後」才量，才不會被一起壓縮或拉伸。",
+		 "story": "伸縮、平移的順序不同，最後的波也不一樣！",
+		 "insight": "y = sin x → 鉛直伸縮 a 倍 → 水平伸縮 \\frac{1}{b} 倍 → 平移 \\frac{−c}{b} → 上下平移 d\n先伸縮、再平移，平移量才不會被一起伸縮。",
 		 "variants": [
 			{"eq": "把 y = sin x 變成\ny = 2 sin(3x − π/2) + 1",
 			 "steps": [
@@ -299,7 +299,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "tune", "chapter": 1, "type": "forge", "title": "四旋鈕齊調",
-		 "story": "四顆旋鈕一起轉：先調高低和水位，再調快慢，最後調左右。",
+		 "story": "先調高低和中線，再調快慢，最後調左右。",
 		 "insight": "y = a sin(bx + c) + d：|a| 振幅、\\frac{2π}{|b|} 週期、向右平移 \\frac{−c}{b}、中線 y = d。調音的順序：高低 a → 水位 d → 快慢 b → 左右 c。",
 		 "variants": [
 			{"eq": "做出 y = 2 sin(2x − π/3) + 1",
@@ -343,7 +343,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "speed", "chapter": 1, "type": "speed", "title": "速算調音", "time": 160.0,
-		 "story": "看到 y = a sin(bx + c) + d，立刻說出週期、平移量、最大值、最小值！",
+		 "story": "看到 y = a sin(bx + c) + d，說出週期、平移量、最大值、最小值！",
 		 "insight": "週期 \\frac{2π}{|b|}\n向右平移 \\frac{−c}{b}\n最大 d + |a|、最小 d − |a|。a 只管高低、b 管快慢、c 管左右、d 管水位。",
 		 "variants": [{"gen": "tide", "count": 8}]},
 
@@ -376,8 +376,8 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．潮汐與摩天輪 =======================
 		{"id": "read", "chapter": 2, "type": "forge", "title": "看圖求式",
-		 "story": "海面上浮出一張波形圖，只標了幾個點。怎麼反推出 y = a sin(bx + c) + d？",
-		 "insight": "最高 M、最低 m：a = \\frac{M − m}{2}、d = \\frac{M + m}{2}。相鄰兩個波峰的距離是週期 T，b = \\frac{2π}{T}。再用一個波峰（sin = 1 或 cos = 1）代入，求出 c。",
+		 "story": "從波形圖上的幾個點，反推 y = a sin(bx + c) + d。",
+		 "insight": "最高 M、最低 m：a = \\frac{M − m}{2}、d = \\frac{M + m}{2}。相鄰波峰距離是週期 T，b = \\frac{2π}{T}。再代一個波峰求 c。",
 		 "variants": [
 			{"eq": "y = a sin(bx + c) + d（a、b > 0，−π < c ≤ π）\n的圖形如下，求 a、b、c、d",
 			 "steps": [
@@ -434,8 +434,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "tide", "chapter": 2, "type": "forge", "title": "港口的潮汐",
-		 "story": "港口貼出一張潮汐表：每隔一段時間量一次水深。把這些資料點穿成一條波，就能預測什麼時候水夠深、船可以進港。",
-		 "insight": "把資料點穿成 y = a sin(bt + c) + d：a = \\frac{最高 − 最低}{2}、d = \\frac{最高 + 最低}{2}、b = 2π 除以 週期\n再用最高點求 c。水深不小於某個值的時段，就是曲線在水平線上方的那一段。",
+		 "story": "把潮汐表的資料點穿成一條波，預測什麼時候水夠深能進港。",
+		 "insight": "a = \\frac{最高 − 最低}{2}、d = \\frac{最高 + 最低}{2}、b = 2π 除以 週期，再用最高點求 c\n水深不小於某值的時段：曲線在水平線上方的那一段。",
 		 "variants": [
 			{"eq": "潮汐表（t：時，水深：公尺）\n表|t（時）|2|3|5|7|8|9|11\n表|水深|8|9.5|11|9.5|8|6.5|5",
 			 "steps": [
@@ -503,8 +503,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "ferris", "chapter": 2, "type": "forge", "title": "摩天輪",
-		 "story": "港口旁的摩天輪轉呀轉。車廂的離地高度，也是一條 y = a sin(bt + c) + d 的波！",
-		 "insight": "圓周運動的高度：a 是半徑、d 是中心離地的高度、b = \\frac{2π}{轉一圈的時間}，c 由出發的位置決定（最低點：sin c = −1\n最高點：sin c = 1\n和中心等高往上轉：c = 0）。",
+		 "story": "摩天輪車廂的離地高度，也是 y = a sin(bt + c) + d！",
+		 "insight": "圓周運動的高度：a 是半徑、d 是中心高度、b = \\frac{2π}{轉一圈的時間}，c 由出發位置決定（最低點 sin c = −1、最高點 sin c = 1）。",
 		 "variants": [
 			{"eq": "摩天輪直徑 40 公尺，中心離地 25 公尺，\n逆時針轉一圈 12 分鐘，從最低點出發",
 			 "steps": [
@@ -551,8 +551,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "solve", "chapter": 2, "type": "forge", "title": "作圖求解",
-		 "story": "方程式解不出來？畫出兩邊的圖形，看它們交在幾個地方！",
-		 "insight": "f(x) = g(x) 的實數解，就是 y = f(x) 和 y = g(x) 兩條圖形交點的 x 坐標，交點的個數就是解的個數。不等式 f(x) < g(x)：曲線 f 在曲線 g 下方的那一段。",
+		 "story": "方程式解不出來？畫出兩邊的圖形，數交點！",
+		 "insight": "f(x) = g(x) 的解 = 兩圖形交點的 x 坐標。f(x) < g(x)：f 在 g 下方的那一段。",
 		 "variants": [
 			{"eq": "sin 2x = x/π 在 −π ≤ x ≤ π\n有幾個實數解？",
 			 "steps": [
@@ -612,7 +612,7 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "真假判斷",
-		 "story": "段考最愛的「下列何者為真」：週期、最大值、平移、對稱，一個一個選項檢查。",
+		 "story": "「下列何者為真」：週期、最大值、平移、對稱，逐一檢查。",
 		 "insight": "先把式子化成 a sin b(x − h) + d 的樣子：週期 \\frac{2π}{|b|}、向右平移 h、中線 d。對稱軸在波峰、波谷（bx + c = \\frac{π}{2} + kπ），對稱中心在中線上。",
 		 "variants": [
 			{"eq": "f(x) = 2 sin(3x − π/2) + 1，\n下列敘述對還是錯？",

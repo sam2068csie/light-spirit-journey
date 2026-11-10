@@ -134,7 +134,7 @@ static func slots() -> Array:
 
 		{"id": "fall", "chapter": 1, "type": "fit", "title": "倒影之谷", "form": "exp",
 		 "params": ["a"], "live": true,
-		 "story": "這次寶石在左邊高處。想想曲線要往哪個方向走？",
+		 "story": "寶石在左邊高處。曲線要往哪個方向走？",
 		 "predicts": [DIR_DOWN],
 		 "insight": "0 < a < 1 往右下降\na^{x} 與 (1/a)^{x} 對稱於 y 軸。",
 		 "variants": [
@@ -149,7 +149,7 @@ static func slots() -> Array:
 
 		{"id": "rank", "chapter": 1, "type": "rank", "title": "底數辨識",
 		 "params": [], "live": true,
-		 "story": "幾座光橋的名牌被風吹走了！幫每條曲線找回它的底數。",
+		 "story": "幫每條曲線找回它的底數。",
 		 "predicts": [
 			{"q": "在直線 x = 1 上，y = a^{x} 的高度是多少？",
 			 "options": ["1", "a", "0", "1/a"], "correct": 1,

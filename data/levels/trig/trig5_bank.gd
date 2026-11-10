@@ -92,8 +92,8 @@ static func _slots() -> Array:
 	return [
 		# ======================= 第一章．雙層轉盤 =======================
 		{"id": "sumf", "chapter": 1, "type": "forge", "title": "和角公式",
-		 "story": "羅盤的兩層轉盤可以把兩個角「加起來」。先學 sin、cos 的和角公式，再把羅盤轉到 75°、15°、105° 這些新的特殊角。",
-		 "insight": "cos(α + β) = cos α cos β − sin α sin β\nsin(α + β) = sin α cos β + cos α sin β\nsin(α − β) = sin α cos β − cos α sin β。把 75° = 45° + 30°、15° = 45° − 30°、105° = 60° + 45° 拆成特殊角，就能求值。",
+		 "story": "先學 sin、cos 的和角公式，再算 75°、15°、105° 這些角。",
+		 "insight": "cos(α ± β) = cos α cos β ∓ sin α sin β\nsin(α ± β) = sin α cos β ± cos α sin β\n75° = 45° + 30°、15° = 45° − 30°、105° = 60° + 45°。",
 		 "variants": [
 			{"eq": "認識和角公式，\n再求 sin 75°、cos 75°",
 			 "steps": [
@@ -136,8 +136,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "cosd", "chapter": 1, "type": "forge", "title": "差角公式",
-		 "story": "學會和角之後，換成兩個角「相減」。羅盤上有兩根指針 A、B，長度都是 1，它們之間的距離藏著 cos(α − β) 的祕密。",
-		 "insight": "差角公式也可以把和角公式的 β 換成 −β 得到（cos(−β) = cos β、sin(−β) = −sin β）。另一種證法：A(cos α, sin α)、B(cos β, sin β)：\\ol{AB}² = (cos α − cos β)² + (sin α − sin β)² = 2 − 2(cos α cos β + sin α sin β)。餘弦定理又說 \\ol{AB}² = 2 − 2 cos(α − β)。所以 cos(α − β) = cos α cos β + sin α sin β。",
+		 "story": "差角公式：單位圓上兩點的距離，藏著 cos(α − β) 的祕密。",
+		 "insight": "差角公式：把 β 換成 −β。\n證法：A(cos α, sin α)、B(cos β, sin β)，\\ol{AB}² 用坐標算是 2 − 2(cos α cos β + sin α sin β)，用餘弦定理是 2 − 2 cos(α − β)。",
 		 "variants": [
 			{"eq": "單位圓上 A(cos α, sin α)、B(cos β, sin β)，\n∠AOB = 60°，求 \\ol{AB} 與 cos 15°",
 			 "steps": [
@@ -175,8 +175,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "tanf", "chapter": 1, "type": "forge", "title": "tan 的和角",
-		 "story": "sin 除以 cos 就是 tan：把和角公式上下同除以 cos α cos β，就得到 tan 的和角公式。",
-		 "insight": "tan(α + β) = \\frac{tan α + tan β}{1 − tan α tan β}\ntan(α − β) = \\frac{tan α − tan β}{1 + tan α tan β}。分母是「1 ∓ tan α tan β」，符號和分子的相反。tan α 或 tan β 不存在（90°）時不能用。",
+		 "story": "和角公式上下同除以 cos α cos β，就得到 tan 的和角公式。",
+		 "insight": "tan(α ± β) = \\frac{tan α ± tan β}{1 ∓ tan α tan β}（分母的符號和分子相反）。tan 不存在（90°）時不能用。",
 		 "variants": [
 			{"eq": "求 tan 75°、tan 15°",
 			 "steps": [
@@ -212,8 +212,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "eval", "chapter": 1, "type": "forge", "title": "公式合併",
-		 "story": "公式也可以倒著用：看到 sin A cos B + cos A sin B，就把它合併成 sin(A + B)。",
-		 "insight": "合併的四個樣子：sin A cos B + cos A sin B = sin(A + B)\nsin A cos B − cos A sin B = sin(A − B)\ncos A cos B − sin A sin B = cos(A + B)\ncos A cos B + sin A sin B = cos(A − B)。先看是 sin 還是 cos，再看符號，最後看角的順序。",
+		 "story": "倒著用：sin A cos B + cos A sin B 合併成 sin(A + B)。",
+		 "insight": "sin A cos B ± cos A sin B = sin(A ± B)\ncos A cos B ∓ sin A sin B = cos(A ± B)\n先看 sin 還是 cos，再看符號和角的順序。",
 		 "variants": [
 			{"eq": "求 sin 20° cos 25° + cos 20° sin 25° 的值",
 			 "steps": [
@@ -267,8 +267,8 @@ static func _slots() -> Array:
 
 		# ======================= 第二章．羅盤的應用 =======================
 		{"id": "quad", "chapter": 2, "type": "forge", "title": "象限與正負號",
-		 "story": "只知道 sin α，cos α 是正是負？先看角在哪個象限，再用 sin²α + cos²α = 1 找出另一個值。",
-		 "insight": "步驟：① 象限定正負 ② 畫直角三角形（或用 sin² + cos² = 1）求另一個值 ③ 代進和差角公式。sin 在第一、二象限為正\ncos 在第一、四象限為正\ntan 在第一、三象限為正。",
+		 "story": "已知 sin α，先看象限決定 cos α 的正負，再用 sin²α + cos²α = 1。",
+		 "insight": "① 象限定正負 ② sin² + cos² = 1 求另一個值 ③ 代和差角公式\nsin：一、二象限正　cos：一、四象限正　tan：一、三象限正。",
 		 "variants": [
 			{"eq": "sin α = 5/13（α 在第二象限）、\ntan β = 3/4（β 在第三象限），求 cos(α − β)",
 			 "steps": [
@@ -311,7 +311,7 @@ static func _slots() -> Array:
 
 		{"id": "angle", "chapter": 2, "type": "forge", "title": "由 tan 求角",
 		 "story": "知道兩個角的 tan，這兩個角加起來（或相減）是幾度？",
-		 "insight": "先用 tan 的和差角公式算出 tan(α ± β)，再根據角的範圍決定是哪個角：兩個銳角相加在 0° ～ 180°，tan > 0 是銳角、tan < 0 是鈍角\n兩個銳角相減在 −90° ～ 90°。",
+		 "insight": "先算 tan(α ± β)，再看角的範圍：兩銳角相加在 0° ～ 180°（tan > 0 銳角、< 0 鈍角），相減在 −90° ～ 90°。",
 		 "variants": [
 			{"eq": "α、β 都是銳角，tan α = 1/2、tan β = 1/3，求 α + β",
 			 "steps": [
@@ -342,8 +342,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "tri", "chapter": 2, "type": "forge", "title": "三角形與根與係數",
-		 "story": "三角形的內角和是 180°，所以 C = 180° − (A + B)。tan 的兩個值如果是方程式的根，用根與係數就不用解出來。",
-		 "insight": "△ABC：tan C = −tan(A + B)（sin C = sin(A + B)、cos C = −cos(A + B)）。若 tan α、tan β 是 x² + px + q = 0 的兩根：tan α + tan β = −p、tan α tan β = q，再代入 tan(α + β)。",
+		 "story": "C = 180° − (A + B)。tan A、tan B 是方程式的根時，用根與係數。",
+		 "insight": "△ABC：tan C = −tan(A + B)。tan α、tan β 是 x² + px + q = 0 的兩根：和 = −p、積 = q，代入 tan(α + β)。",
 		 "variants": [
 			{"eq": "△ABC 中，tan A = 3/4、tan B = 2，求 tan C",
 			 "steps": [
@@ -378,8 +378,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "lines", "chapter": 2, "type": "forge", "title": "兩直線的夾角",
-		 "story": "兩條直線的夾角，其實就是 tan 的差角公式：直線的斜率 = tan（傾斜角）。",
-		 "insight": "斜率 m₁、m₂ 的兩直線，夾角 θ（0° < θ ≤ 90°）：tan θ = \\frac{|m₂ − m₁|}{|1 + m₁m₂|}。已知夾角求直線：把 \\frac{|m − m₁|}{|1 + m₁m|} = tan θ 兩邊平方去掉絕對值，整理成 m 的二次方程式再因式分解，通常有兩條。如果平方後 m² 被消去、只剩一次方程式，少掉的那一條就是斜率不存在的鉛直線。",
+		 "story": "兩直線的夾角用 tan 的差角公式：斜率 = tan（傾斜角）。",
+		 "insight": "夾角 θ（0° < θ ≤ 90°）：tan θ = \\frac{|m₂ − m₁|}{|1 + m₁m₂|}\n已知夾角求直線：兩邊平方解 m，通常兩條。m² 被消去時，少的那條是鉛直線。",
 		 "variants": [
 			{"eq": "過 P(2, 1) 作直線 L₂，和斜率 2 的直線 L₁\n夾角 θ 滿足 tan θ = 1/3，求 L₂",
 			 "steps": [
@@ -426,8 +426,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "geo", "chapter": 2, "type": "forge", "title": "圖形上的和角",
-		 "story": "把圖形裡的大角拆成兩個直角三角形的角，每個小角的 sin、cos 都能直接讀出來，再用和角公式合起來。",
-		 "insight": "解題的樣子：① 把要求的角拆成兩個角（α + β）② 在直角三角形裡讀出 sin α、cos α、sin β、cos β ③ 代入和角公式。座標平面上，用斜率 = tan（傾斜角），再用 tan 的差角公式。",
+		 "story": "把大角拆成兩個直角三角形的角，再用和角公式合起來。",
+		 "insight": "① 把角拆成 α + β ② 在直角三角形讀出 sin、cos ③ 代和角公式。坐標平面上：斜率 = tan（傾斜角）。",
 		 "variants": [
 			{"eq": "扇形 AOB 的半徑為 25，P 在弧 AB 上，\nP 到 \\ol{OA}、\\ol{OB} 的距離分別是 7、15，求 sin∠AOB",
 			 "steps": [
@@ -476,8 +476,8 @@ static func _slots() -> Array:
 		 ]},
 
 		{"id": "judge", "chapter": 2, "type": "forge", "title": "真假判斷",
-		 "story": "段考最愛的「下列何者為真」：和角公式、三角形的內角和，一個一個選項檢查。",
-		 "insight": "和差角公式不是「分配律」：sin(α + β) ≠ sin α + sin β。△ABC 中：sin(A + B) = sin C、cos(A + B) = −cos C、tan(A + B) = −tan C。cos A cos B − sin A sin B = cos(A + B)，若 > 0 則 A + B < 90°，C 是鈍角。",
+		 "story": "「下列何者為真」：和角公式、內角和，逐一檢查。",
+		 "insight": "sin(α + β) ≠ sin α + sin β。△ABC：sin(A + B) = sin C、cos(A + B) = −cos C、tan(A + B) = −tan C。",
 		 "variants": [
 			{"eq": "△ABC 中，下列敘述對還是錯？",
 			 "steps": [
