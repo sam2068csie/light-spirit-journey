@@ -77,7 +77,7 @@ static func _answer_all(t, lv, label: String) -> bool:
 static func _verify(t, lv) -> void:
 	await t.frames(3)
 	await t._check(lv, "過關")
-	if lv.revealing or not lv.next_btn.visible or int(lv.round_stars) <= 0:
+	if lv.demoed or not lv.next_btn.visible or int(lv.round_stars) <= 0:
 		t._issue("全部照正確答案作答，卻沒有過關（%s）" % _hint_of(lv))
 	elif int(lv.round_stars) < 3:
 		t._issue("全部一次答對，卻只拿到 %d 星（%s）" % [int(lv.round_stars), _hint_of(lv)])
@@ -378,7 +378,7 @@ static func _sketch(t, lv, f: Callable, nm: String) -> bool:
 	if int(lv.tries) == tries0:
 		t._issue("%s：按了「確認送出」卻沒有評分" % nm)
 		return false
-	if lv.revealing or (int(lv.sketch_fails) > 0):
+	if lv.demoed or (int(lv.sketch_fails) > 0):
 		t._issue("%s：沿著正確的曲線畫（%d 筆），卻被判錯（%s）" % [nm, pieces.size(), _hint_of(lv)])
 		return false
 	return true
