@@ -387,7 +387,7 @@ func _first_time_tutorial() -> void:
 	Tut.run(self, [
 		{"text": "歡迎來到終焉之塔！一層一題，越往上越難。", "face": "happy"},
 		{"rect": hud, "text": "只有三顆心，答錯或超時扣一顆。", "face": "normal"},
-		{"rect": pen_rect, "text": "按這支筆，可以直接在畫面上寫算式！", "face": "happy"}])
+		{"rect": pen_rect, "text": "右上角的筆是手寫計算，可以直接在畫面上寫算式！", "face": "happy"}])
 
 
 ## 這一步開始前先寫上推導板的「已知」（例如「令 t = 2^{x}（t > 0）」），不是這一步的答案
