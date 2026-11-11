@@ -43,6 +43,18 @@ func _initialize() -> void:
 	ok(typeof(g.mistakes.a) == TYPE_INT, "舊存檔：錯題次數轉成 int")
 	ok(int(_read().get("version", 0)) == g.SAVE_VERSION, "舊存檔讀完之後升級成新版本")
 	ok(FileAccess.file_exists(g.REVIEW_PATH + ".v1.bak"), "升級前留了備份")
+	# ---- 學生的「一鍵開放全部關卡」：沒打開開發者功能就重設成關閉 ----
+	g.dev_mode = false
+	g.dev_unlock_all = true
+	g._dev_policy(false)
+	ok(not g.dev_unlock_all, "沒打開開發者功能：一鍵開放全部關卡重設成關閉")
+	g.dev_mode = true
+	g.dev_unlock_all = true
+	g._dev_policy(false)
+	ok(g.dev_unlock_all, "打開了開發者功能：一鍵開放保留")
+	g.dev_mode = false
+	g.dev_unlock_all = false
+	g.save_settings()
 	# ---- 刪除所有紀錄 ----
 	g.wipe_progress()
 	ok(int(g.inv.dust) == 0 and g.house.is_empty() and g.grade_pick == "" and g.story_seen.is_empty(), "刪除紀錄：全部回到預設值")

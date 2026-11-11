@@ -330,6 +330,17 @@ func _load_settings() -> void:
 	notify_on = bool(cf.get_value("notify", "on", true))
 	notify_time = String(cf.get_value("notify", "time", "19:30"))
 	notify_asked = bool(cf.get_value("notify", "asked", false))
+	_dev_policy()
+
+
+## 沒有打開開發者功能的玩家（學生），「一鍵開放全部關卡」一律關掉
+##   以前開發者功能誰都看得到，有些學生可能已經打開了：這次更新之後讀設定時就重設
+##   在 Godot 編輯器裡執行不受影響（開發時要用）
+func _dev_policy(in_editor := OS.has_feature("editor")) -> void:
+	if dev_mode or in_editor or not dev_unlock_all:
+		return
+	dev_unlock_all = false
+	save_settings()
 
 
 # ================= 星數紀錄 =================

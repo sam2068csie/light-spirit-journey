@@ -241,10 +241,11 @@ func _build_dev() -> void:
 	box.add_child(del)
 
 	# 收起來：設定裡不再顯示開發者功能（要用再去主畫面連點版本號）
-	var hide := UITheme.ghost_button("隱藏開發者功能", 15)
+	var hide := UITheme.ghost_button("隱藏開發者功能（一鍵開放也會關掉）", 15)
 	hide.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	hide.pressed.connect(func():
 		g.dev_mode = false
+		g.dev_unlock_all = false      # 藏起來就一起關掉，免得忘了關
 		g.save_settings()
 		_dev_open = false
 		_refresh_dev())
