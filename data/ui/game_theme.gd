@@ -148,6 +148,18 @@ static func fs(n: float) -> int:
 	return int(round(n + 26.0 * (TEXT_SCALE - 1.0)))
 
 
+## 倒數計時的寫法：一分鐘以上寫 15:00，一分鐘以內寫 45 秒（全遊戲都用這個）
+static func clock(sec: float) -> String:
+	var n := ceili(maxf(0.0, sec))
+	if n >= 60:
+		return "%d:%02d" % [n / 60, n % 60]
+	return "%d 秒" % n
+
+
+## 剩 10 秒以內：倒數變紅色
+const CLOCK_WARN := 10.0
+
+
 static func num(v: float, decimals: int = 2) -> String:
 	var t := String.num(snappedf(v, pow(10.0, -decimals)), decimals)
 	if "." in t:

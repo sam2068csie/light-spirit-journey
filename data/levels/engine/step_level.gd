@@ -219,7 +219,8 @@ func _update_hud() -> void:
 	if r.is_empty():
 		return
 	if r.type == "speed":
-		energy_label.text = "◷ %d 秒　　連對 ×%d" % [ceili(time_left), streak]
+		energy_label.text = "◷ %s　　連對 ×%d" % [UITheme.clock(time_left), streak]
+		energy_label.add_theme_color_override("font_color", UITheme.BAD if time_left <= UITheme.CLOCK_WARN else UITheme.PINK)
 	elif _hearts_in_step():
 		# 鍛造步驟：能量放到步驟列右邊，把空間留給鍵盤和提示
 		energy_label.visible = false
@@ -301,8 +302,11 @@ func _hearts_text() -> String:
 	if not _hearts_in_step():
 		return ""
 	var hs := "♥".repeat(clampi(energy, 0, MAX_ENERGY)) + "♡".repeat(clampi(MAX_ENERGY - energy, 0, MAX_ENERGY))
-	var tt := ("　◷ %d" % ceili(time_left)) if r.has("time") else ""
-	return "　[color=#%s]%s%s[/color]" % [UITheme.PINK.to_html(false), hs, tt]
+	var tt := ""
+	if r.has("time"):
+		var tc: Color = UITheme.BAD if time_left <= UITheme.CLOCK_WARN else UITheme.PINK
+		tt = "[color=#%s]　◷ %s[/color]" % [tc.to_html(false), UITheme.clock(time_left)]
+	return "　[color=#%s]%s[/color]%s" % [UITheme.PINK.to_html(false), hs, tt]
 
 
 func _custom_answered() -> void:

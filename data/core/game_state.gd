@@ -160,6 +160,7 @@ var tower_from := "levels"             # 從哪一頁進終焉之塔（"title" �
 
 
 # 開發者功能（存在 settings.cfg）
+var dev_mode := false                  # 設定裡看得到「開發者功能」：主畫面連點版本號 7 次才打開（學生看不到）
 var dev_unlock_all := false            # 一鍵開放全部關卡：每一章的旅程都不用照順序解鎖
 
 
@@ -303,6 +304,7 @@ func save_settings() -> void:
 	cf.set_value("audio", "master", master_vol)
 	cf.set_value("audio", "music", music_vol)
 	cf.set_value("audio", "sfx", sfx_vol)
+	cf.set_value("dev", "mode", dev_mode)
 	cf.set_value("dev", "unlock_all", dev_unlock_all)
 	cf.set_value("dev", "resolution", res_index)
 	cf.set_value("dev", "show_fps", show_fps)
@@ -320,6 +322,7 @@ func _load_settings() -> void:
 	master_vol = float(cf.get_value("audio", "master", master_vol))
 	music_vol = float(cf.get_value("audio", "music", music_vol))
 	sfx_vol = float(cf.get_value("audio", "sfx", sfx_vol))
+	dev_mode = bool(cf.get_value("dev", "mode", false))
 	dev_unlock_all = bool(cf.get_value("dev", "unlock_all", false))
 	res_index = clampi(int(cf.get_value("dev", "resolution", res_index)), 0, RESOLUTIONS.size() - 1)
 	show_fps = bool(cf.get_value("dev", "show_fps", false))

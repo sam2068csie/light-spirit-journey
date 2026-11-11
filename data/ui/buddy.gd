@@ -3,6 +3,9 @@ extends Control
 ##   ・Face：圓滾滾的光靈臉，有表情（普通、開心、擔心、想睡、驚訝），會眨眼、會跳
 ##   ・這個節點本身：從舞台左下角冒出來，用對話泡泡說一句話，幾秒後自己飛走
 ## 台詞寫在 LINES，可以直接修改。
+##   ・dock_after：關卡頂端列的標籤。設了的話，光靈改在頂端列這個標籤的字後面冒出來（不蓋住題目）；
+##     頂端列放不下這句話時，才回到舞台左下角
+##   ・畫面上已經有別的光靈（新手教學、提示框上的臉 blocked() 為 true）時不說話，正在說的也先飛走
 
 const UITheme := preload("res://data/ui/game_theme.gd")
 
@@ -25,6 +28,13 @@ var _label: Label
 var _tw: Tween
 var _hide_at := 0.0
 var t := 0.0
+var dock_after: Label             # 頂端列：跟在這個標籤的字後面
+var blocked := Callable()         # 回傳 true：畫面上已經有別的光靈，先不說話
+var _home := SPOT                 # 這一次冒出來的位置
+var _docked := false
+var _frames := 0                  # 出現在畫面上幾個畫面了（頂端列排版好了沒）
+var _sb_stage: StyleBoxFlat
+var _sb_dock: StyleBoxFlat
 
 
 static func line(kind: String, arg = null) -> String:
@@ -37,6 +47,7 @@ static func line(kind: String, arg = null) -> String:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	process_mode = Node.PROCESS_MODE_ALWAYS     # 新手教學會暫停遊戲：要能自己飛走
 	position = SPOT
 	face = Face.new()
 	face.size = Vector2(60, 60)
@@ -46,10 +57,15 @@ func _ready() -> void:
 	_bubble = PanelContainer.new()
 	_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bubble.position = Vector2(62, 2)
-	var sb := UITheme.box(Color(1, 0.97, 0.88, 0.96), 14, Color(1, 0.85, 0.45), 2, 10)
-	sb.content_margin_left = 14
-	sb.content_margin_right = 14
-	_bubble.add_theme_stylebox_override("panel", sb)
+	_sb_stage = UITheme.box(Color(1, 0.97, 0.88, 0.96), 14, Color(1, 0.85, 0.45), 2, 10)
+	_sb_stage.content_margin_left = 14
+	_sb_stage.content_margin_right = 14
+	_sb_dock = _sb_stage.duplicate()
+	_sb_dock.content_margin_top = 4
+	_sb_dock.content_margin_bottom = 4
+	_sb_dock.content_margin_left = 12
+	_sb_dock.content_margin_right = 12
+	_bubble.add_theme_stylebox_override("panel", _sb_stage)
 	add_child(_bubble)
 	_label = Label.new()
 	_label.add_theme_font_size_override("font_size", UITheme.fs(15))
@@ -59,23 +75,77 @@ func _ready() -> void:
 	visible = false
 
 
+func is_blocked() -> bool:
+	if not get_tree().get_nodes_in_group("tutorial").filter(func(n): return not n.is_queued_for_deletion()).is_empty():
+		return true
+	return blocked.is_valid() and bool(blocked.call())
+
+
+## 頂端列放得下這句話的話，回傳冒出來的位置（全域座標）；放不下回傳 null
+func _dock_spot(text: String) -> Variant:
+	if dock_after == null or not is_instance_valid(dock_after) or not dock_after.is_visible_in_tree():
+		return null
+	var bar := dock_after.get_parent() as Control
+	if bar == null:
+		return null
+	var font := dock_after.get_theme_font("font")
+	var x0 := dock_after.global_position.x + font.get_string_size(dock_after.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		dock_after.get_theme_font_size("font_size")).x + 20.0
+	var x1 := INF
+	for c in bar.get_children():
+		if c is Control and c.get_index() > dock_after.get_index() and c.is_visible_in_tree():
+			x1 = minf(x1, (c as Control).global_position.x)
+	if x1 == INF:
+		x1 = bar.global_position.x + bar.size.x
+	var lf := _label.get_theme_font("font")
+	var need := 50.0 + lf.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x + 26.0
+	if x1 - 12.0 - x0 < need:
+		return null
+	return Vector2(x0, dock_after.global_position.y + dock_after.size.y / 2.0 - 22.0)
+
+
+## 換成頂端列（小一號）或舞台左下角的樣子
+func _layout(docked: bool) -> void:
+	_docked = docked
+	if docked:
+		face.size = Vector2(44, 44)
+		face.radius = 13.0
+		_bubble.position = Vector2(50, 5)
+		_bubble.add_theme_stylebox_override("panel", _sb_dock)
+		_label.add_theme_font_size_override("font_size", UITheme.fs(14))
+	else:
+		face.size = Vector2(60, 60)
+		face.radius = 17.0
+		_bubble.position = Vector2(62, 2)
+		_bubble.add_theme_stylebox_override("panel", _sb_stage)
+		_label.add_theme_font_size_override("font_size", UITheme.fs(15))
+	_bubble.reset_size()
+
+
 ## 冒出來說一句話（dur 秒後飛走）
 func say(text: String, mood := "happy", dur := 2.4) -> void:
-	if text == "":
+	if text == "" or is_blocked():
 		return
+	# 剛建好的畫面，頂端列還沒排版（量不到位置）：第一句話等兩個畫面再說
+	if dock_after != null and _frames < 2 and is_inside_tree():
+		get_tree().process_frame.connect(say.bind(text, mood, dur), CONNECT_ONE_SHOT)
+		return
+	var spot = _dock_spot(text)
+	_layout(spot != null)
+	_home = (spot - get_parent().global_position) if spot != null else SPOT
 	_label.text = text
 	face.mood = mood
 	face.jump()
 	_hide_at = t + dur
-	if not visible:
+	if not visible or position.distance_to(_home) > 1.0:
 		visible = true
 		modulate.a = 0.0
-		position = SPOT + Vector2(-30, 30)
+		position = _home + (Vector2(0, -14) if _docked else Vector2(-30, 30))
 		if _tw:
 			_tw.kill()
 		_tw = create_tween().set_parallel(true)
 		_tw.tween_property(self, "modulate:a", 1.0, 0.2)
-		_tw.tween_property(self, "position", SPOT, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_tw.tween_property(self, "position", _home, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_bubble.scale = Vector2(0.85, 0.85)
 	_bubble.pivot_offset = Vector2(0, 20)
 	create_tween().tween_property(_bubble, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -87,10 +157,16 @@ func hide_now() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
+	_frames += 1
+	# 教學或提示框的光靈出現了：這邊先飛走，畫面上只留一隻
+	if visible and t < _hide_at and is_blocked():
+		_hide_at = t
+		if _tw:
+			_tw.kill()
 	if visible and t >= _hide_at and (_tw == null or not _tw.is_running()):
 		_tw = create_tween().set_parallel(true)
 		_tw.tween_property(self, "modulate:a", 0.0, 0.25)
-		_tw.tween_property(self, "position", SPOT + Vector2(-20, -30), 0.3)
+		_tw.tween_property(self, "position", _home + (Vector2(0, -12) if _docked else Vector2(-20, -30)), 0.3)
 		_tw.chain().tween_callback(func(): visible = false)
 
 

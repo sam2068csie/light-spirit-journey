@@ -294,6 +294,8 @@ func _ready() -> void:
 	for key in stage_style():
 		stage.set(key, stage_style()[key])
 	buddy = Buddy.new()
+	buddy.dock_after = journey_label          # 在頂端列的旅程名稱後面冒出來，不蓋住舞台
+	buddy.blocked = _hint_face_shown          # 提示框上已經有光靈的臉：小助手不再冒出來
 	add_child(buddy)
 	hint_face = Buddy.Face.new()
 	hint_face.size = Vector2(44, 44)
@@ -2472,11 +2474,16 @@ func _input(e: InputEvent) -> void:
 		idle_t = 0.0
 
 
+## 提示框（和上面那張光靈的臉）現在在畫面上
+func _hint_face_shown() -> bool:
+	return is_instance_valid(hint_panel) and hint_panel.is_visible_in_tree() and side_card.modulate.a > 0.5
+
+
 func _buddy_process(delta: float) -> void:
 	if hint_face == null:
 		return
 	# 臉跟著提示框
-	var show: bool = hint_panel.is_visible_in_tree() and side_card.modulate.a > 0.5
+	var show: bool = _hint_face_shown()
 	hint_face.visible = show
 	if show:
 		hint_face.position = hint_panel.global_position + Vector2(-20, -22)
@@ -2533,8 +2540,10 @@ func _update_hud() -> void:
 		score_label.text = str(int(Game.of(self).inv.dust))
 	var t := "能量  " + "♥".repeat(clampi(energy, 0, MAX_ENERGY)) + "♡".repeat(clampi(MAX_ENERGY - energy, 0, MAX_ENERGY))
 	if r.has("time"):
-		t += "　　◷ %d 秒" % ceili(time_left)
+		t += "　　◷ " + UITheme.clock(time_left)
 	energy_label.text = t
+	var warn: bool = r.has("time") and time_left <= UITheme.CLOCK_WARN
+	energy_label.add_theme_color_override("font_color", UITheme.BAD if warn else UITheme.PINK)
 
 
 func _on_next() -> void:

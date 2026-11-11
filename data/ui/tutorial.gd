@@ -35,6 +35,7 @@ static func run(h: Node, st: Array) -> Node:
 
 
 func _ready() -> void:
+	add_to_group("tutorial")      # 關卡的小助手看到教學在跑就不說話（buddy.gd）
 	layer = 60
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_was_paused = get_tree().paused

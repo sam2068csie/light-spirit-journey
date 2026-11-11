@@ -1,5 +1,6 @@
 extends Control
 ## 設定視窗：主音量、音樂、音效，以及折疊起來的「開發者功能」（解析度、一鍵開放全部關卡、刪除紀錄）。
+##   開發者功能平常藏起來（學生看不到）：主畫面右下角的版本號連點 7 次才會出現，裡面可以再關掉。
 ## 改動會立刻生效，關閉時存檔。
 ## 用法：var p := SettingsPanel.new(); add_child(p); p.closed.connect(...)
 
@@ -239,6 +240,16 @@ func _build_dev() -> void:
 	del.pressed.connect(_confirm_wipe)
 	box.add_child(del)
 
+	# 收起來：設定裡不再顯示開發者功能（要用再去主畫面連點版本號）
+	var hide := UITheme.ghost_button("隱藏開發者功能", 15)
+	hide.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hide.pressed.connect(func():
+		g.dev_mode = false
+		g.save_settings()
+		_dev_open = false
+		_refresh_dev())
+	box.add_child(hide)
+
 
 ## 省電模式：畫面沒在操作時降到 30 幀
 func _power_row() -> Control:
@@ -357,10 +368,17 @@ func _step_res(d: int) -> void:
 	_refresh_dev()
 
 
+## 看得到「開發者功能」嗎：在編輯器裡一定看得到；匯出的遊戲要先在主畫面連點版本號 7 次
+static func dev_visible(g) -> bool:
+	return bool(g.dev_mode) or OS.has_feature("editor")
+
+
 func _refresh_dev() -> void:
 	var g = Game.of(self)
+	var show := dev_visible(g)
+	_dev_btn.visible = show
 	_dev_btn.text = ("▾  開發者功能" if _dev_open else "▸  開發者功能")
-	_dev_box.visible = _dev_open
+	_dev_box.visible = _dev_open and show
 	_res_label.text = g.RESOLUTIONS[g.res_index].name
 	_unlock_btn.icon = UITheme.switch_icon(g.dev_unlock_all)
 	_fps_btn.icon = UITheme.switch_icon(g.show_fps)

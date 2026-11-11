@@ -599,7 +599,7 @@ func _update_status() -> void:
 	if phase == "rounds":
 		t = "第 %d / %d 題" % [round_index + 1, rounds.size()]
 		if rounds[round_index].layer == "boss":
-			t += "　◷ %d 秒" % ceili(maxf(time_left, 0.0))
+			t += "　◷ " + UITheme.clock(time_left)
 	elif phase == "exam":
 		t = "段考練習 %d / %d" % [exam_index + 1, exam_questions.size()]
 	status_label.text = t

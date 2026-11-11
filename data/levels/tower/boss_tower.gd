@@ -107,6 +107,7 @@ func _ready() -> void:
 	time_left = time_total
 	_build_ui()
 	buddy = Buddy.new()
+	buddy.dock_after = floor_label            # 在頂端列的「第 N 層」後面冒出來，不蓋住題目
 	add_child(buddy)
 	pause_menu = PauseMenu.new()
 	pause_menu.list_label = "放棄攀登"
@@ -334,8 +335,8 @@ func _clear(box: Node) -> void:
 func _update_hud() -> void:
 	floor_label.text = "第 %d 層" % floor_n if not test_mode else "測試模式"
 	heart_label.text = "♥".repeat(clampi(hearts, 0, MAX_HEARTS)) + "♡".repeat(clampi(MAX_HEARTS - hearts, 0, MAX_HEARTS))
-	timer_label.text = "◷ %d" % ceili(maxf(0.0, time_left))
-	timer_label.add_theme_color_override("font_color", UITheme.BAD if time_left < 10.0 and not done else UITheme.TEXT)
+	timer_label.text = "◷ " + UITheme.clock(time_left)
+	timer_label.add_theme_color_override("font_color", UITheme.BAD if time_left <= UITheme.CLOCK_WARN and not done else UITheme.TEXT)
 
 
 func _step_bar() -> String:

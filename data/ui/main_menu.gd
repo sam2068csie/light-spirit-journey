@@ -194,9 +194,10 @@ func _build_title_page() -> void:
 	ver.add_theme_font_size_override("font_size", UITheme.fs(12))
 	ver.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	ver.position = Vector2(852, 620)
-	ver.size = Vector2(280, 20)
-	ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ver.position = Vector2(852, 616)
+	ver.size = Vector2(280, 28)
+	ver.mouse_filter = Control.MOUSE_FILTER_STOP
+	ver.gui_input.connect(_on_version_tap.bind(ver))
 	_title_page.add_child(ver)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)
@@ -252,6 +253,34 @@ func _build_title_page() -> void:
 	# 光靈最後加入：整頁大小的透明層，只有點在光靈身上才會接住（其他地方照常點得到按鈕）
 	_title_spirit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_title_page.add_child(_title_spirit)
+
+
+## 版本號連點 7 次：打開設定裡的「開發者功能」（和手機的開發人員選項一樣，學生平常看不到）
+const DEV_TAPS := 7
+var _ver_taps := 0
+var _ver_last := 0
+
+
+func _on_version_tap(e: InputEvent, ver: Label) -> void:
+	if not (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var g = Game.of(self)
+	var now := Time.get_ticks_msec()
+	_ver_taps = _ver_taps + 1 if now - _ver_last < 1500 else 1
+	_ver_last = now
+	if g.dev_mode:
+		if _ver_taps == 1:
+			ver.text = "版本 %s　（開發者功能已開啟）" % Game.BUILD
+		return
+	var left := DEV_TAPS - _ver_taps
+	if left <= 0:
+		g.dev_mode = true
+		g.save_settings()
+		g.sfx("success")
+		ver.text = "版本 %s　已開啟開發者功能（在設定裡）" % Game.BUILD
+		_ver_taps = 0
+	elif left <= 3:
+		ver.text = "版本 %s　再點 %d 下" % [Game.BUILD, left]
 
 
 func _menu_button(text: String, h: int) -> Button:
@@ -659,6 +688,8 @@ func _refresh_review() -> void:
 		ok.add_theme_font_size_override("font_size", UITheme.fs(15))
 		ok.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		ok.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# 先給寬度：自動換行的字一開始量不到寬度，會被當成一個字一行，把面板撐出畫面
+		ok.custom_minimum_size.x = 586 - 36
 		wcol.add_child(ok)
 		return
 	# 清單放在捲動區裡：面板高度固定，放不下的往下捲
