@@ -18,6 +18,7 @@ const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
 const JUDGE_BTN := Vector2(58, 44)      # 真假審判的 ○／✕：手機上至少 44 高才好按
 const JUDGE_GAP := 18                    # ○ 和 ✕ 之間的距離
+const JUDGE_BTN_MIN_H := 34.0            # 卡片太多放不下時，最矮可以縮到這樣
 
 var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd、直線與圓 line_tower_bank.gd）
 
@@ -851,6 +852,31 @@ func _build_judge(s: Dictionary) -> void:
 	action_btn.text = "送出審判"
 	action_btn.visible = true
 	_refresh_judge_btn()
+	_fit_judge()
+
+
+## 卡片多的時候：○／✕ 改矮一點，讓所有卡片不用捲動就看得到（規則：要操作的東西一開始就要看得到）
+func _fit_judge() -> void:
+	var gen := step_gen.now()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if step_gen.stale(gen) or judge_rows.is_empty() or not is_instance_valid(widget_box):
+		return
+	var over := widget_box.get_global_rect().end.y - board_scroll.get_global_rect().end.y
+	if over <= 0.0:
+		return
+	var h := JUDGE_BTN.y
+	var short := 0
+	for jr in judge_rows:
+		if (jr.panel as Control).size.y <= JUDGE_BTN.y + 10.0:      # 這一列的高度是按鈕撐出來的
+			short += 1
+	if short == 0:
+		return
+	h = maxf(JUDGE_BTN_MIN_H, JUDGE_BTN.y - ceilf(over / short) - 1.0)
+	for jr in judge_rows:
+		for b in jr.btns:
+			(b as Button).custom_minimum_size.y = h
+			(b as Button).add_theme_font_size_override("font_size", UITheme.fs(17))     # 字也縮回原本的大小，按鈕才矮得下來
 
 
 func _on_judge_pick(jr: Dictionary, bi: int) -> void:
