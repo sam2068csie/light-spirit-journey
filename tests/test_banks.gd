@@ -26,7 +26,46 @@ func _initialize() -> void:
 			var problems: Array = SB.check(bank.slots())
 			ok(problems.is_empty(), "題庫格式 %s：%s" % [l.bank, str(problems)])
 			await _tour_level(String(l.id), String(l.file), bank)
+	_check_yes_no()
 	finish("BANKS")
+
+
+## 是非題（對／錯、成立／不成立……）的選項位置固定：肯定在左、否定在右，正解跟著選項走
+func _check_yes_no() -> void:
+	var CO := load("res://data/levels/engine/choice_order.gd")
+	var LC := load("res://data/levels/engine/level_core.gd")
+	var found := []
+	var walk := func(self_ref: Callable, v, where: String) -> void:
+		if v is Dictionary:
+			if v.has("options") and v.options is Array and v.has("correct"):
+				found.append([v, where])
+			for k in v:
+				self_ref.call(self_ref, v[k], where)
+		elif v is Array:
+			for x in v:
+				self_ref.call(self_ref, x, where)
+	for u in Units.UNITS:
+		for l in u.levels:
+			if String(l.get("bank", "")) == "":
+				continue
+			var bank = load(preload("res://data/core/paths.gd").of(String(l.bank)))
+			if bank != null:
+				walk.call(walk, bank.slots(), String(l.id))
+	var n := 0
+	for f in found:
+		var q: Dictionary = f[0]
+		var yn: Array = CO.yes_no(q.options)
+		if yn.is_empty():
+			continue
+		n += 1
+		var yes_s := String(q.options[yn[0]])
+		var right := String(q.options[int(q.correct)])
+		for t in 6:
+			var sq: Dictionary = LC.shuffle_q(q)
+			ok(String(sq.options[0]) == yes_s and String(sq.options[int(sq.correct)]) == right,
+				"%s 是非題「%s／%s」：肯定要在左邊、正解不能跑掉" % [f[1], q.options[0], q.options[1]])
+	ok(n >= 30, "找得到是非題（%d 題）" % n)
+	print("  是非題：%d 題，選項位置固定" % n)
 
 
 func _tour_level(lid: String, file: String, bank) -> void:

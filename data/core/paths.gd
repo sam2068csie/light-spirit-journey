@@ -10,6 +10,7 @@ const MAP := {
 	"buddy.gd": "res://data/ui/buddy.gd",
 	"canvas_batch.gd": "res://data/maps/canvas_batch.gd",
 	"chest_fx.gd": "res://data/levels/engine/chest_fx.gd",
+	"choice_order.gd": "res://data/levels/engine/choice_order.gd",
 	"concept_cards.gd": "res://data/ui/concept_cards.gd",
 	"concept_deck.gd": "res://data/ui/concept_deck.gd",
 	"concept_icon.gd": "res://data/ui/concept_icon.gd",

@@ -11,6 +11,7 @@ const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
 const Gen := preload("res://data/core/gen_token.gd")
+const ChoiceOrder := preload("res://data/levels/engine/choice_order.gd")
 const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
@@ -730,8 +731,7 @@ func _wait_continue() -> void:
 # ================= 選擇題 =================
 
 func _build_choice(s: Dictionary) -> void:
-	var order := range(s.opts.size())
-	order.shuffle()
+	var order: Array = ChoiceOrder.order(s.opts)      # 是非題肯定在左，其他打亂
 	for k in order:
 		var b := MathLabel.make_button(String(s.opts[k]), 19, Vector2(0, 50))
 		b.focus_mode = Control.FOCUS_NONE

@@ -16,6 +16,7 @@ const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Game := preload("res://data/core/game.gd")
 const Gen := preload("res://data/core/gen_token.gd")
+const ChoiceOrder := preload("res://data/levels/engine/choice_order.gd")
 const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Concepts := preload("res://data/ui/concept_cards.gd")
@@ -426,12 +427,14 @@ static func make_round(slot: Dictionary, v: Dictionary) -> Dictionary:
 
 
 ## 打亂選擇題的選項順序（keep_order 的題目保持原順序）
+##   是非題（對／錯、成立／不成立……）一律肯定在左、否定在右（choice_order.gd）
 static func shuffle_q(q0: Dictionary) -> Dictionary:
 	var q: Dictionary = q0.duplicate(true)
-	if q.get("keep_order", false):
-		return q
-	var idx := range(q.options.size())
-	idx.shuffle()
+	var idx: Array = ChoiceOrder.yes_no(q.options)
+	if idx.is_empty():
+		if q.get("keep_order", false):
+			return q
+		idx = ChoiceOrder.order(q.options)
 	var opts := []
 	for n in idx.size():
 		opts.append(q0.options[idx[n]])
