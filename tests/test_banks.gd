@@ -64,6 +64,27 @@ func _check_yes_no() -> void:
 			var sq: Dictionary = LC.shuffle_q(q)
 			ok(String(sq.options[0]) == yes_s and String(sq.options[int(sq.correct)]) == right,
 				"%s 是非題「%s／%s」：肯定要在左邊、正解不能跑掉" % [f[1], q.options[0], q.options[1]])
+	# 終焉之塔的選擇題（opts）：用 ChoiceOrder.order 排
+	var tw := []
+	var walk_t := func(self_ref: Callable, v, where: String) -> void:
+		if v is Dictionary:
+			if v.has("opts") and v.opts is Array:
+				tw.append([v.opts, where])
+			for k in v:
+				self_ref.call(self_ref, v[k], where)
+		elif v is Array:
+			for x in v:
+				self_ref.call(self_ref, x, where)
+	for f in DirAccess.get_files_at("res://data/levels/tower"):
+		if f.ends_with("_data.gd"):
+			walk_t.call(walk_t, load("res://data/levels/tower/" + f).data(), f)
+	for f in tw:
+		var yn: Array = CO.yes_no(f[0])
+		if yn.is_empty():
+			continue
+		n += 1
+		for t in 6:
+			ok(int(CO.order(f[0])[0]) == int(yn[0]), "%s「%s／%s」：固定的那一邊要在左" % [f[1], f[0][0], f[0][1]])
 	ok(n >= 30, "找得到是非題（%d 題）" % n)
 	print("  是非題：%d 題，選項位置固定" % n)
 
