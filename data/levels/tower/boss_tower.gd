@@ -16,7 +16,7 @@ const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
-const JUDGE_BTN := Vector2(58, 46)      # 真假審判的 ○／✕：手機上至少 44 高才好按
+const JUDGE_BTN := Vector2(58, 44)      # 真假審判的 ○／✕：手機上至少 44 高才好按
 const JUDGE_GAP := 18                    # ○ 和 ✕ 之間的距離
 
 var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd、直線與圓 line_tower_bank.gd）
