@@ -7,6 +7,7 @@ extends Control
 ##   ・小屋等級：點亮 10／25／50 座聖地升級（目前先做 Lv.1 的房間，等級和下一階段先顯示出來）
 ## 存檔：Game.house {owned: [家具 id], placed: {"格位編號": 家具 id}}
 const UITheme := preload("res://data/ui/game_theme.gd")
+const QP := preload("res://data/ui/quest_panel.gd")
 const Game := preload("res://data/core/game.gd")
 const Units := preload("res://data/core/units.gd")
 const Center := preload("res://data/core/review_center.gd")
@@ -179,10 +180,15 @@ func _build_ui() -> void:
 	hb.add_theme_constant_override("separation", 8)
 	hb.position = Vector2(W - 18 - 470, 8)
 	add_child(hb)
+	var dust_ic := QP.ItemIcon.new()          # 星塵：和主畫面、扭蛋機同一個圖示
+	dust_ic.kind = "dust"
+	dust_ic.custom_minimum_size = Vector2(26, 26)
+	dust_ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(dust_ic)
 	_top_dust = Label.new()
-	_top_dust.custom_minimum_size = Vector2(110, 44)
+	_top_dust.custom_minimum_size = Vector2(80, 44)
 	_top_dust.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_top_dust.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_top_dust.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_top_dust.add_theme_font_override("font", UITheme.bold_font())
 	_top_dust.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_top_dust.add_theme_color_override("font_color", Color("ffe7a3"))
@@ -224,7 +230,7 @@ func _refresh() -> void:
 		_bar.max_value = float(nxt.need)
 		_bar.value = lit
 		_bar_lab.text = "升級：點亮 %d／%d 座聖地" % [lit, nxt.need]
-	_top_dust.text = "✦ %d" % int(Game.of(self).inv.get("dust", 0))
+	_top_dust.text = str(int(Game.of(self).inv.get("dust", 0)))
 	_deco_btn.text = "完成擺設" if deco else "擺設模式"
 	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點紀念品櫃，或點布告欄看每日任務"
 	queue_redraw()
@@ -414,7 +420,7 @@ func _pick_slot(i: int) -> void:
 		var own := owns(it.id)
 		var where := ""
 		if not own:
-			where = ("✦ %d（去商店買）" % it.price) if it.has("price") else String(it.get("how", ""))
+			where = ("%d 星塵（去商店買）" % it.price) if it.has("price") else String(it.get("how", ""))
 		row.add_child(_drawer_card(it, own, where))
 		any = true
 	if not any:
@@ -484,11 +490,13 @@ func _open_shop() -> void:
 		return
 	Game.of(self).sfx("click")
 	var vb := _modal(UITheme.ACCENT, 900, "家具商店")
-	var dl := Label.new()
-	dl.text = "持有星塵 ✦ %d" % int(Game.of(self).inv.get("dust", 0))
-	dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dl.add_theme_font_size_override("font_size", UITheme.fs(14))
-	dl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	var dl := QP.amount_row([["dust", int(Game.of(self).inv.get("dust", 0))]], 14, UITheme.TEXT_DIM)
+	var dl_t := Label.new()
+	dl_t.text = "持有星塵"
+	dl_t.add_theme_font_size_override("font_size", UITheme.fs(14))
+	dl_t.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	dl.add_child(dl_t)
+	dl.move_child(dl_t, 0)
 	vb.add_child(dl)
 	var grid := GridContainer.new()
 	grid.columns = 6
@@ -516,7 +524,9 @@ func _open_shop() -> void:
 		b.custom_minimum_size = Vector2(130, 34)
 		var price: int = it.price
 		var big: bool = price >= 1000
-		b.text = "已擁有" if own else "✦ %d" % price
+		b.text = "已擁有" if own else "%d" % price
+		if not own:
+			b.icon = UITheme.money_icon("dust", 18)
 		b.disabled = own or int(Game.of(self).inv.get("dust", 0)) < price
 		UITheme.button_3d(b, Color("8a5ab8") if big else Color("2a6f9e"), Color("4a2a78") if big else Color("17405e"), Color("f0f4ff"), 14, 3, 10, 2)
 		var iid: String = it.id

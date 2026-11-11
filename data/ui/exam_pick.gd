@@ -132,6 +132,11 @@ static func open(host: Node, grade: String, on_done: Callable = Callable()) -> C
 				self_ref.call(self_ref))
 			cards.add_child(b)
 		okb.disabled = (st.sel as Array).is_empty()
+		# 選了單元之後：「確定」是最醒目的那顆，「還不確定」退成淡淡的次要按鈕
+		if okb.disabled:
+			UITheme.button_3d(unsure, UITheme.BTN, UITheme.BTN_LIP, UITheme.TEXT, 19, 6)
+		else:
+			UITheme.button_3d(unsure, Color(1, 1, 1, 0.05), Color(1, 1, 1, 0.08), UITheme.TEXT_DIM, 17, 6)
 	st.sel = WS.exam_units(g, st.grade).duplicate()
 	rebuild.call(rebuild)
 

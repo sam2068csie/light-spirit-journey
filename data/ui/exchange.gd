@@ -230,14 +230,19 @@ func _tile(it: Dictionary, g) -> Control:
 	nl.add_theme_color_override("font_color", rc if r > 0 else UITheme.TEXT)
 	nl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(nl)
-	var sub := Label.new()
-	sub.text = "✓ 已擁有" if own else "◆ %d" % int(Cos.EXCHANGE[r])
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.position = Vector2(0, 108)
-	sub.size = Vector2(150, 20)
-	sub.add_theme_font_size_override("font_size", UITheme.fs(13))
-	sub.add_theme_color_override("font_color", UITheme.GOOD if own else UITheme.CYAN_LIGHT)
-	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sub: Control
+	if own:
+		var sl := Label.new()
+		sl.text = "✓ 已擁有"
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sl.add_theme_font_size_override("font_size", UITheme.fs(13))
+		sl.add_theme_color_override("font_color", UITheme.GOOD)
+		sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sub = sl
+	else:
+		sub = QP.amount_row([["shard", int(Cos.EXCHANGE[r])]], 13, UITheme.CYAN_LIGHT)      # 光之碎片的圖示
+	sub.position = Vector2(0, 106)
+	sub.size = Vector2(150, 22)
 	b.add_child(sub)
 	if own:
 		pv.modulate = Color(1, 1, 1, 0.55)

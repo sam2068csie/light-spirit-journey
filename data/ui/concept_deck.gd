@@ -274,11 +274,16 @@ func _complete(i: int) -> void:
 	g.save_review()
 	g.sfx("success")
 	if _feedback != null:
-		_feedback.text += "　[color=#ffd36e]✦ 星塵 +%d[/color]" % REWARD
+		_feedback.text += "　[color=#ffd36e]星塵 +%d[/color]" % REWARD
 	_burst(_primary.get_global_rect().get_center(), 22)
 	# 卡片中間飄出「+5 星塵」
 	var pop := Label.new()
-	pop.text = "✦ 星塵 +%d" % REWARD
+	pop.text = "+%d" % REWARD
+	var pop_ic := preload("res://data/ui/quest_panel.gd").ItemIcon.new()     # 星塵的圖示（全遊戲同一個）
+	pop_ic.kind = "dust"
+	pop_ic.size = Vector2(40, 40)
+	pop_ic.position = Vector2(-44, 2)
+	pop.add_child(pop_ic)
 	pop.add_theme_font_size_override("font_size", UITheme.fs(30))
 	pop.add_theme_color_override("font_color", Color("ffd36e"))
 	pop.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.12))
@@ -288,7 +293,7 @@ func _complete(i: int) -> void:
 	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pop)
 	var c := _body.get_global_rect().get_center()
-	pop.global_position = c - Vector2(90, 20)
+	pop.global_position = c - Vector2(30, 20)
 	var tw := pop.create_tween().set_parallel(true)
 	tw.tween_property(pop, "global_position:y", c.y - 90.0, 1.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(pop, "modulate:a", 0.0, 0.5).set_delay(0.8)
@@ -720,6 +725,32 @@ func _line(m: String, fs: int, centered: bool, max_w: float, base: Color) -> Con
 		t = t.strip_edges()
 		if t == "":
 			continue
+		# 空格後面緊接著標點（，。、）：標點黏在空格後面一起換行，不會跑到下一行的開頭
+		var head := ""
+		while t != "" and NO_LINE_START.contains(t.substr(0, 1)):
+			head += t.substr(0, 1)
+			t = t.substr(1).strip_edges()
+		if head != "":
+			var last: Control = flow.get_child(flow.get_child_count() - 1) if flow.get_child_count() > 0 else null
+			var pl := MathLabel.new()
+			pl.font_size = fs
+			pl.color = base
+			pl.text = head
+			pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			if last != null:
+				var glue := HBoxContainer.new()
+				glue.add_theme_constant_override("separation", 2)
+				glue.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				glue.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				flow.remove_child(last)
+				glue.add_child(last)
+				glue.add_child(pl)
+				flow.add_child(glue)
+			else:
+				flow.add_child(pl)
+			if t == "":
+				continue
 		var l := MathLabel.new()
 		l.font_size = fs
 		l.color = base
@@ -730,6 +761,11 @@ func _line(m: String, fs: int, centered: bool, max_w: float, base: Color) -> Con
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		flow.add_child(l)
 	return flow
+
+
+## 不能放在一行開頭的標點（中文排版：避頭點）
+##   （不用放全形分號：題目文字本來就不准出現它）
+const NO_LINE_START := "，。、：！？）」』》〉,.:!?)"
 
 
 func _filled_all() -> bool:

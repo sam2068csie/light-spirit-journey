@@ -196,6 +196,35 @@ func _pull_button(parent: Control, face: Color, lip: Color, ink: Color) -> Butto
 	return b
 
 
+## 抽蛋按鈕的字：第一行「單抽」，第二行「貨幣圖示＋價錢」（和右上角持有數量同一個圖示）
+func _pull_label(b: Button, title: String, kind: String, amt: int, ink: Color) -> void:
+	b.text = ""
+	if b.has_meta("content") and is_instance_valid(b.get_meta("content")):
+		b.get_meta("content").queue_free()
+	var v := VBoxContainer.new()
+	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	v.offset_bottom = -6          # 按鈕下緣有 3D 的厚度
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 0)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var t := Label.new()
+	t.text = title
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.add_theme_font_override("font", UITheme.bold_font())
+	t.add_theme_font_size_override("font_size", UITheme.fs(17))
+	t.add_theme_color_override("font_color", ink)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(t)
+	var row := QP.amount_row([[kind, amt]], 17, ink)
+	for c in row.get_children():
+		if c is Label:
+			c.add_theme_font_override("font", UITheme.bold_font())
+	v.add_child(row)
+	v.modulate.a = 0.5 if b.disabled else 1.0
+	b.add_child(v)
+	b.set_meta("content", v)
+
+
 func _refresh() -> void:
 	var g = Game.of(self)
 	for c in _hold.get_children():
@@ -212,12 +241,12 @@ func _refresh() -> void:
 		n.custom_minimum_size = Vector2(40, 0)
 		_hold.add_child(n)
 	var c1: Dictionary = g.gacha_cost("one")
-	_btn_one.text = ("單抽（今日首抽半價）\n✦ %d" if g.gacha_half_ready() else "單抽\n✦ %d") % int(c1.amt)
-	_btn_ten.text = "十連\n✦ %d" % Cos.COST_TEN
-	_btn_shine.text = "閃光抽\n◇ 光之結晶 %d" % Cos.COST_SHINE
 	_btn_one.disabled = not g.gacha_can("one")
 	_btn_ten.disabled = not g.gacha_can("ten")
 	_btn_shine.disabled = not g.gacha_can("shine")
+	_pull_label(_btn_one, "單抽（今日首抽半價）" if g.gacha_half_ready() else "單抽", "dust", int(c1.amt), UITheme.GOLD_INK)
+	_pull_label(_btn_ten, "十連", "dust", Cos.COST_TEN, Color.WHITE)
+	_pull_label(_btn_shine, "閃光抽", "crystal", Cos.COST_SHINE, Color("082436"))
 	var left: int = Cos.PITY_SR - int(g.gacha.pity_sr)
 	_pity_label.text = "再 %d 抽，必得史詩以上" % left
 	_pity_bar.value = int(g.gacha.pity_sr)

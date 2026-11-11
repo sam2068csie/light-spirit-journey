@@ -396,16 +396,18 @@ func _refresh_units() -> void:
 		g.set_unit(uid)
 		_ensure_map()
 		_show_page("levels"))
-	# 年級分頁（右上角）
+	# 地圖分頁（右上角）：寫地圖的名字，不寫「高一／高二」——這裡只是去看另一張地圖，不會改身分
+	#   身分（我是幾年級）只在第一次打開和主線橫幅的「這次段考考什麼？」裡改
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
-	tabs.position = Vector2(1152 - 18 - 2 * 96 - 8, 14)
+	tabs.position = Vector2(1152 - 18 - 2 * 108 - 8, 14)
 	_units_body.add_child(tabs)
 	for gr in ["高一", "高二"]:
 		var tb := Button.new()
-		tb.text = gr
+		tb.text = WS.world_name(gr)
+		tb.tooltip_text = "去看%s（%s的單元）" % [WS.world_name(gr), gr]
 		tb.focus_mode = Control.FOCUS_NONE
-		tb.custom_minimum_size = Vector2(96, 44)
+		tb.custom_minimum_size = Vector2(108, 44)
 		var on: bool = gr == _grade
 		tb.add_theme_stylebox_override("normal", UITheme.box(Color(0.1, 0.12, 0.26, 0.9) if on else Color(0.05, 0.06, 0.14, 0.8), 22, UITheme.ACCENT if on else Color(1, 1, 1, 0.16), 2 if on else 1, 8))
 		tb.add_theme_stylebox_override("hover", UITheme.box(Color(0.12, 0.14, 0.3, 0.95), 22, UITheme.ACCENT, 2, 8))

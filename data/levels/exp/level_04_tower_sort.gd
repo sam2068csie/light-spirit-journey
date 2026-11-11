@@ -604,7 +604,7 @@ func _update_status() -> void:
 		t = "段考練習 %d / %d" % [exam_index + 1, exam_questions.size()]
 	status_label.text = t
 	combo_label.text = "連擊 ×%d" % combo if combo >= 2 else ""
-	score_label.text = "✦ %d" % score
+	score_label.text = "得分 %d" % score
 
 
 # ================= 段考層（選擇題） =================

@@ -16,6 +16,9 @@ const PauseMenu := preload("res://data/ui/pause_menu.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
 const Tut := preload("res://data/ui/tutorial.gd")
 const Center := preload("res://data/core/review_center.gd")
+const JUDGE_BTN := Vector2(58, 46)      # 真假審判的 ○／✕：手機上至少 44 高才好按
+const JUDGE_GAP := 18                    # ○ 和 ✕ 之間的距離
+
 var Bank: Script           # 這個單元的題庫（units.gd 的 "tower"：指對數 tower_bank.gd、多項式 poly_tower_bank.gd、三角函數 trig_tower_bank.gd、直線與圓 line_tower_bank.gd）
 
 const STAGE_W := 700.0
@@ -805,7 +808,7 @@ func _build_judge(s: Dictionary) -> void:
 		row.add_child(mid)
 		var st := MathLabel.new()
 		st.font_size = UITheme.fs(17)
-		st.max_width = INNER_W - 18 - 2 * 58 - 50
+		st.max_width = INNER_W - 18 - 2 * JUDGE_BTN.x - JUDGE_GAP - 60
 		st.text = c.s
 		st.mouse_filter = Control.MOUSE_FILTER_PASS
 		mid.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -819,13 +822,18 @@ func _build_judge(s: Dictionary) -> void:
 		mid.add_child(why)
 		var btns := []
 		for v in [true, false]:
+			if not v:
+				var gap := Control.new()            # ○ 和 ✕ 中間多留一點空，手機上才不會按錯
+				gap.custom_minimum_size = Vector2(JUDGE_GAP - 10, 0)
+				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				row.add_child(gap)
 			var b := Button.new()
 			b.text = "○" if v else "✕"          # 和八大關一樣用 ○／✕（對／錯），不用讀字
 			b.toggle_mode = true
 			b.focus_mode = Control.FOCUS_NONE
-			b.custom_minimum_size = Vector2(52, 34)
+			b.custom_minimum_size = JUDGE_BTN
 			b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			b.add_theme_font_size_override("font_size", UITheme.fs(17))
+			b.add_theme_font_size_override("font_size", UITheme.fs(20))
 			UITheme.tight(b, 2)
 			var on := UITheme.GOOD if v else UITheme.BAD
 			b.add_theme_stylebox_override("pressed", UITheme.box(Color(on.r, on.g, on.b, 0.3), 10, on, 2, 6))

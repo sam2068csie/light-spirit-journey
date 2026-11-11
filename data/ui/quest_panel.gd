@@ -418,6 +418,33 @@ class TierStrip extends Control:
 
 # ================= 物品圖示（用程式畫，畫一次就好） =================
 
+## 一排「圖示＋數量」：pairs = [["dust", 30], ["crystal", 1]]，給標籤用（標籤裡不能放圖，不要再寫 ✦ 30）
+static func amount_row(pairs: Array, font_size := 14, color := Color.WHITE, icon_px := 0) -> HBoxContainer:
+	var UI := preload("res://data/ui/game_theme.gd")
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 3)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var px: int = icon_px if icon_px > 0 else int(UI.fs(font_size) * 1.35)
+	for i in pairs.size():
+		var ii := ItemIcon.new()
+		ii.kind = String(pairs[i][0])
+		ii.custom_minimum_size = Vector2(px, px)
+		ii.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(ii)
+		var l := Label.new()
+		l.text = str(pairs[i][1])
+		l.add_theme_font_size_override("font_size", UI.fs(font_size))
+		l.add_theme_color_override("font_color", color)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(l)
+		if i < pairs.size() - 1:
+			var gap := Control.new()
+			gap.custom_minimum_size = Vector2(6, 0)
+			row.add_child(gap)
+	return row
+
+
 class ItemIcon extends Control:
 	const UITheme := preload("res://data/ui/game_theme.gd")
 	var kind := "dust"

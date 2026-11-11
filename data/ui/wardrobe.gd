@@ -10,6 +10,7 @@ const Cos := preload("res://data/core/cosmetics.gd")
 const SL := preload("res://data/ui/spirit_look.gd")
 
 var _cat := "hat"
+static var _last_cat := ""        # 這次開遊戲期間最後看的分類（再打開衣櫃時停在那裡）
 var _preview
 var _tabs: HBoxContainer
 var _grid: GridContainer
@@ -19,9 +20,28 @@ var _sel := ""
 var _count: Label
 
 
+## 一打開停在哪個分類：上次看的 → 有穿戴東西的 → 收集最多的 → 第一個
+##   （不要一打開就是一整頁問號）
+static func start_cat(g) -> String:
+	if _last_cat != "":
+		return _last_cat
+	for cat in Cos.CATS:
+		if String(g.equipped.get(cat.id, "")) != "":
+			return cat.id
+	var best: String = Cos.CATS[0].id
+	var best_n := 0
+	for cat in Cos.CATS:
+		var n := Cos.items_of(cat.id).filter(func(it): return g.owned.has(it.id)).size()
+		if n > best_n:
+			best_n = n
+			best = cat.id
+	return best
+
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_cat = start_cat(Game.of(self))
 	var bg := ColorRect.new()
 	bg.color = Color("0f0d27")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -142,6 +162,7 @@ func _refresh() -> void:
 		var cid: String = cat.id
 		b.pressed.connect(func():
 			_cat = cid
+			_last_cat = cid
 			_refresh())
 		_tabs.add_child(b)
 	# 格子

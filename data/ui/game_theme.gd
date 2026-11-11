@@ -354,6 +354,68 @@ static func step_bar(names: Array, current: int) -> String:
 
 
 ## 用程式畫圖示（不依賴字型裡有沒有該符號）："pause"、"back"、"lock"
+## 貨幣圖示（貼圖版，給 Button.icon 用）：和 quest_panel.gd 的 ItemIcon 畫的一模一樣
+##   dust 星塵（金幣＋星）、crystal 光之結晶（紫色六角）、shard 光之碎片（藍色菱形）
+##   全遊戲的貨幣都用這個圖示，不再用 ✦ ◇ ◆ 這些符號
+static var _money_cache := {}
+
+
+static func money_icon(kind: String, d: int = 20) -> ImageTexture:
+	var key := "%s/%d" % [kind, d]
+	if _money_cache.has(key):
+		return _money_cache[key]
+	var layers := _money_layers(kind)
+	var ss := 4
+	var img := Image.create(d, d, false, Image.FORMAT_RGBA8)
+	for y in d:
+		for x in d:
+			var acc := Color(0, 0, 0, 0)
+			for sy in ss:
+				for sx in ss:
+					var p := Vector2((x * ss + sx + 0.5) / (d * ss), (y * ss + sy + 0.5) / (d * ss))
+					var col := Color(0, 0, 0, 0)
+					for L in layers:
+						var hit: bool = (p.distance_to(L[1]) <= float(L[2])) if L[0] == "c" \
+							else Geometry2D.is_point_in_polygon(p, L[1])
+						if hit:
+							col = col.blend(L[3])
+					acc += Color(col.r * col.a, col.g * col.a, col.b * col.a, col.a)
+			var n := float(ss * ss)
+			var a := acc.a / n
+			img.set_pixel(x, y, Color(acc.r / acc.a, acc.g / acc.a, acc.b / acc.a, a) if acc.a > 0.0 else Color(0, 0, 0, 0))
+	var tex := ImageTexture.create_from_image(img)
+	_money_cache[key] = tex
+	return tex
+
+
+## 每一層：["c", 圓心, 半徑, 顏色] 或 ["p", 多邊形, 0, 顏色]（座標 0～1）
+static func _money_layers(kind: String) -> Array:
+	var c := Vector2(0.5, 0.5)
+	match kind:
+		"dust":
+			var r := 0.36 * 1.25
+			var star := PackedVector2Array()
+			for k in 10:
+				var a := -PI / 2.0 + k * PI / 5.0
+				star.append(c + Vector2(cos(a), sin(a)) * (r * 0.55 if k % 2 == 0 else r * 0.55 * 0.45))
+			return [["c", c + Vector2(0, r * 0.12), r, Color("a86a12")], ["c", c, r, GOLD], ["c", c, r * 0.78, GOLD_DEEP],
+				["p", star, 0, GOLD_PALE], ["c", c + Vector2(-r * 0.45, -r * 0.45), r * 0.14, Color(1, 1, 1, 0.7)]]
+		"crystal", "shard":
+			var sides := 6 if kind == "crystal" else 4
+			var r := (0.38 if kind == "crystal" else 0.30) * 1.25
+			var col: Color = VIOLET_DEEP if kind == "crystal" else CYAN_LIGHT
+			var pts := PackedVector2Array()
+			for k in sides:
+				var a := -PI / 2.0 + k * TAU / sides
+				pts.append(c + Vector2(cos(a) * r * (0.82 if sides == 4 else 1.0), sin(a) * r * (1.15 if sides == 4 else 1.0)))
+			var inner := PackedVector2Array()
+			for q in pts:
+				inner.append(c + (q - c) * 0.6)
+			return [["p", pts, 0, col.darkened(0.25)], ["p", inner, 0, col],
+				["p", PackedVector2Array([pts[0], inner[0], inner[sides - 1], pts[sides - 1]]), 0, col.lightened(0.35)]]
+	return []
+
+
 static func icon(kind: String, d: int = 20, c: Color = Color.WHITE) -> ImageTexture:
 	var ss := 4                     # 超取樣抗鋸齒
 	var big := d * ss

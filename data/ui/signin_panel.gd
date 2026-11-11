@@ -216,36 +216,49 @@ func _cell(g, k: int, state: String) -> Control:
 		pvw.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		icon_box.add_child(pvw)
 	else:
-		var kind := "crystal" if rw.has("crystal") else "dust"
+		var ik := "crystal" if rw.has("crystal") else "dust"
 		var ii := QP.ItemIcon.new()
-		ii.kind = kind
+		ii.kind = ik
 		ii.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		icon_box.add_child(ii)
-	var parts := PackedStringArray()
+	# 獎勵：貨幣用和其他畫面同一個圖示（不用 ✦ ◇ 符號）
 	if rw.has("item"):
-		parts.append("簽到圍巾")
-	if rw.has("crystal"):
-		parts.append("◇ %d" % int(rw.crystal))
-	if rw.has("dust"):
-		parts.append("✦ %d" % int(rw.dust))
-	if rw.has("shard"):
-		parts.append("◆ %d" % int(rw.shard))
-	var al := Label.new()
-	al.text = "  ".join(parts)
-	al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	al.add_theme_font_size_override("font_size", UITheme.fs(12))
-	v.add_child(al)
+		var al := Label.new()
+		al.text = "簽到圍巾"
+		al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		al.add_theme_font_size_override("font_size", UITheme.fs(12))
+		v.add_child(al)
+	var pairs := []
+	for kind in ["crystal", "dust", "shard"]:
+		if rw.has(kind):
+			pairs.append([kind, int(rw[kind])])
+	if not pairs.is_empty():
+		v.add_child(QP.amount_row(pairs, 12, UITheme.TEXT))
 	if state == "done":
-		p.modulate = Color(1, 1, 1, 0.45)
+		# 簽過的：內容變淡，右上角蓋一個綠色勾勾章（不疊在圖示正中間）
+		for c in v.get_children():
+			if c != icon_box:
+				c.modulate.a = 0.45
+		for c in icon_box.get_children():
+			c.modulate.a = 0.45
+		var badge := PanelContainer.new()
+		badge.add_theme_stylebox_override("panel", UITheme.box(UITheme.GOOD, 13, Color(1, 1, 1, 0.85), 2, 0))
+		badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		badge.offset_left = -26
+		badge.offset_right = 0
+		badge.offset_top = -2
+		badge.offset_bottom = 24
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var ck := Label.new()
 		ck.text = "✓"
 		ck.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ck.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		ck.add_theme_font_size_override("font_size", UITheme.fs(40))
-		ck.add_theme_color_override("font_color", UITheme.GOOD)
-		ck.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		ck.add_theme_font_override("font", UITheme.bold_font())
+		ck.add_theme_font_size_override("font_size", UITheme.fs(15))
+		ck.add_theme_color_override("font_color", Color("0e2a1c"))
 		ck.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		p.add_child(ck)
+		badge.add_child(ck)
+		icon_box.add_child(badge)
 	elif state == "today":
 		var tw := p.create_tween().set_loops()
 		tw.tween_property(p, "modulate", Color(1.15, 1.12, 0.95), 0.6).set_trans(Tween.TRANS_SINE)

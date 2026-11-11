@@ -2340,7 +2340,8 @@ func _finish_round(perfect: bool, attempts: int) -> void:
 			buddy.say(Buddy.line("perfect" if stars == 3 else "pass"), "happy", 2.6)
 	Game.of(self).sfx("success")
 	Game.of(self).quest_event("correct", {"stars": stars, "review": review_mode, "timed": r.has("time")})
-	_hint("過關！%s  +%d\n\n%s" % [_star_text(stars, 3), gain, r.insight], "good")
+	# 「+200 分」是這段旅程的總分（不是星塵；星塵在「看結果」時才發，右上角的數字會跳上去）
+	_hint("過關！%s  +%d 分\n\n%s" % [_star_text(stars, 3), gain, r.insight], "good")
 	_end_round()
 
 
