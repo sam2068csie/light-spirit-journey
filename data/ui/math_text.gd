@@ -10,6 +10,8 @@ extends Control
 ##   log_{2^{2}} 3^{2}     可以巢狀
 ##   √{a + 1}             根號（上面有一槓蓋住整個 a + 1，可以巢狀）
 ##   ∛{4}、∜{2}           三次、四次方根（橫線一樣蓋住裡面，左上角有小小的 3、4）
+##   \ol{AB}、1.2\ol{36}   上橫線：線段 \ol{AB}、循環小數的循環節 1.2\ol{36}（橫線緊貼著字，前面不留空）
+##   ℚ ℝ ℤ ℕ ∈ ∉ ⊂ ∪ ∩ ∅ ∞ ⇒ ⇔  直接打字就好（字型沒有的會自動用 DejaVu 的符號字型）
 ##   [color=#5ad8ff]2[/color]   上色（可放在上標裡）
 ##   \n                    換行
 ##   a/b、(x + 1)/2、a ÷ b 自動畫成上下的分數（上下標裡也會，例如 3^{1/2}、log_{1/2} x）
@@ -781,8 +783,8 @@ static func char_w(font: Font, ch: Dictionary, fs: float) -> float:
 	if mf == 2:
 		w += sz * IT_EXTRA
 	w += sz * SIDE_PAD.get(ch.ch, 0.0) * 2.0
-	if ch.get("idx", "") != "":
-		w += sz * IDX_PAD          # 三次、四次方根：左邊多留位置給根指數
+	if ch.get("idx", "") == "3" or ch.get("idx", "") == "4":
+		w += sz * IDX_PAD          # 三次、四次方根：左邊多留位置給根指數（\ol 的上橫線不用）
 	return w
 
 
@@ -1215,7 +1217,7 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 				top = minf(top, g.pos.y + off.y - fe.x - g.size * 0.1)
 				low = maxf(low, fe.y)
 			if g.rad >= 0 and bar_y.has(g.rad):
-				top = minf(top, bar_y[g.rad] - maxf(4.0, sz * 0.18))
+				top = minf(top, bar_y[g.rad] - maxf(5.0, sz * 0.26))   # 巢狀根號：外層的槓要明顯高過內層
 		bar_y[rid] = top
 		if o.get("idx", "") == "ol":
 			# 線段符號：字的上方一條橫線

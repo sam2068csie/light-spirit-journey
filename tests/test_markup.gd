@@ -52,7 +52,18 @@ func _initialize() -> void:
 	if jf != null:
 		_punct_all(JSON.parse_string(jf.get_as_text()), "questions_exp_log.json")
 	ok(problems == 0, "排版有 %d 個問題（見上面的 MARKUP 行）" % problems)
+	_check_overline()
 	finish("MARKUP")
+
+
+## 循環小數、線段的上橫線（\ol{…}）不能在前面多佔位置：1.2\ol{36} 要和 1.236 一樣寬
+## （以前 \ol 被當成三次方根，左邊多留了根指數的空隙，畫出來變成「1.2 ‾36」）
+func _check_overline() -> void:
+	var f := ThemeDB.fallback_font
+	for pair in [["1.2\\ol{36}", "1.236"], ["0.\\ol{142857}", "0.142857"], ["\\ol{AB}", "AB"]]:
+		var w1 := MathLabel.text_width(f, pair[0], 20)
+		var w2 := MathLabel.text_width(f, pair[1], 20)
+		ok(absf(w1 - w2) < 0.5, "上橫線前面多了空隙：%s 寬 %.1f，%s 寬 %.1f" % [pair[0], w1, pair[1], w2])
 
 
 ## 速算：題目是程式產生的，多產生幾批來檢查
