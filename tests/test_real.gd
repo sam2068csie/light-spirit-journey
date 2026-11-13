@@ -406,7 +406,7 @@ func _round_active() -> bool:
 		return false
 	var on := false
 	if String(lv.r.type) == "speed":
-		on = lv.keypad_on
+		on = lv.keypad_on or _speed_choice()
 	elif String(lv.r.type) == "forge":
 		on = lv.si < lv.steps.size()
 	if not on or not lv.side_card.is_visible_in_tree():
@@ -525,15 +525,46 @@ func _hint() -> String:
 	return String(lv.hint_label.text).left(80) if lv.hint_panel.visible else ""
 
 
+## 速算這一題是按鈕（choices）：有限／循環、比大小、○／✕……（R1、P7）
+func _speed_choice() -> bool:
+	if lv.get("problems") == null or lv.sp_i >= lv.problems.size() or lv.keypad_on:
+		return false
+	return (lv.problems[lv.sp_i] as Dictionary).has("choices") and lv.rank_box.visible
+
+
+func _speed_buttons() -> Array:
+	var out := []
+	for n in lv.rank_box.find_children("*", "Button", true, false):
+		if n.is_visible_in_tree():
+			out.append(n)
+	return out
+
+
 func _play_speed() -> void:
 	var guard := 0
 	var first := true
-	while String(lv.r.type) == "speed" and lv.keypad_on and guard < 30:
+	while String(lv.r.type) == "speed" and (lv.keypad_on or _speed_choice()) and guard < 30:
 		guard += 1
 		while await _tutorial():
 			pass
 		var pb: Dictionary = lv.problems[lv.sp_i]
 		var i0: int = lv.sp_i
+		if pb.has("choices"):
+			var bs := _speed_buttons()
+			var ci := int(pb.correct)
+			if bs.size() != (pb.choices as Array).size():
+				_issue("%s：速算的按鈕有 %d 個，選項卻有 %d 個" % [_where(), bs.size(), pb.choices.size()])
+				return
+			if first:
+				await click(bs[(ci + 1) % bs.size()], "錯的選項")
+				await snap(String(lv.r.id) + "_答錯")
+				first = false
+			await click(_speed_buttons()[ci], "對的選項")
+			await wait(0.5)
+			if lv.sp_i == i0 and lv.r.type == "speed" and not lv.busy:
+				_issue("%s：速算按了對的選項沒有換題（%s）" % [_where(), pb.eq])
+				return
+			continue
 		var ans: Array = Array(pb.get("answers", [pb.get("ans", "")]))
 		if first:
 			var bad := ans.duplicate()

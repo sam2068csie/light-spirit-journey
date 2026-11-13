@@ -148,6 +148,15 @@ const MISTAKE_INFO := {
 	"poly_ineqfrac":   {"name": "分式不等式", "level": 3},
 	"poly_ineqapp":    {"name": "不等式的應用題", "level": 3},
 	"poly_ineqsame":   {"name": "相同解", "level": 3},
+	# 數與式（R1～）
+	"num_dense":       {"name": "有理數的稠密性（兩數之間有無窮多個有理數）", "level": 1},
+	"num_repeat":      {"name": "循環小數和分數互換", "level": 1},
+	"num_finite":      {"name": "有限小數的判斷（約分後分母只有 2、5）", "level": 1},
+	"num_digit":       {"name": "循環小數的第 n 位（看餘數）", "level": 1},
+	"num_construct":   {"name": "尺規作圖（平行線截比例、半圓作 √ab）", "level": 2},
+	"num_compare":     {"name": "比大小（分數、根號：平方或有理化）", "level": 2},
+	"num_ineq":        {"name": "不等式的性質與反例", "level": 2},
+	"num_round":       {"name": "四捨五入的範圍", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

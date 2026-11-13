@@ -8,7 +8,7 @@ extends RefCounted
 ##   2. 大關 id 和觀念標籤（tag）不能和別的單元重複：
 ##        指數與對數用 "L1"～"L8"、tag 用 exp_／log_／digits_… 開頭
 ##        平面向量建議用 "V1"～、tag 用 "vec_" 開頭；空間向量用 "S1"～、tag 用 "svec_" 開頭
-##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、高一直線與圓 "C1"～／"line_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
+##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、高一直線與圓 "C1"～／"line_"、高一數與式 "R1"～／"num_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
 ##      （check() 會檢查重複；這樣存檔裡的星星、錯題本、熟練度不會互相打架，舊存檔也不用轉換）
 ##   3. map：這個單元的世界地圖腳本；tower：終焉之塔的題庫（沒有就先留空）
 ##      concepts：觀念卡片檔（例如 "concepts_vec2.gd"，寫法照 concepts_exp.gd）
@@ -18,8 +18,19 @@ const UITheme := preload("res://data/ui/game_theme.gd")
 const UNITS := [
 	# ======================= 高一 =======================
 	# 高一的單元：在「曦光大陸」（g10_world.gd）上，一個地區一個單元。題目還沒放，先 open = false（進去會顯示準備中）
-	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": false,
-	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# 數與式：R1 做好了，其他七關建造中。先用 preview（開發者的「一鍵開放全部關卡」才進得去），八關做完再 open = true
+	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": false, "preview": true,
+	 "world": "光靈的旅程：數之原野", "map": "num_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_num.gd",
+	 "levels": [
+		{"id": "R1", "name": "風車小數", "topic": "數線、循環小數與比大小", "file": "level_num1_mill.gd", "bank": "num1_bank.gd", "color": UITheme.GOLD},
+		{"id": "R2", "name": "繩上珠子", "topic": "分點公式", "file": "", "bank": "", "color": UITheme.CYAN},
+		{"id": "R3", "name": "天秤市集", "topic": "次序不等式", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "R4", "name": "圍籬牧場", "topic": "算幾不等式", "file": "", "bank": "", "color": UITheme.GOOD},
+		{"id": "R5", "name": "篩種倉庫", "topic": "有理數與無理數", "file": "", "bank": "", "color": UITheme.ORANGE},
+		{"id": "R6", "name": "剝殼磨坊", "topic": "雙重根號", "file": "", "bank": "", "color": UITheme.VIOLET},
+		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "", "bank": "", "color": UITheme.PINK},
+		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "", "bank": "", "color": UITheme.BLUE},
+	 ]},
 	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# 直線與圓：八大關＋終焉之塔都做好了，2026/11/08 正式開放

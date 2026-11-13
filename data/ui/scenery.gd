@@ -62,6 +62,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_lampring(ci, sz, t)
 		"startrail":
 			_startrail(ci, sz, t)
+		"meadow":
+			_meadow(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -1200,3 +1202,40 @@ static func _startrail(ci: CanvasItem, sz: Vector2, t: float) -> void:
 	var sp := sc + Vector2(cos(t * 0.5), sin(t * 0.5)) * sr
 	UITheme.dot(ci, sp, 7.0, Color(1.0, 0.9, 0.55, 0.25))
 	UITheme.dot(ci, sp, 2.6, Color(1.0, 0.97, 0.8, 1.0))
+
+
+## R1 風車小數：黎明的麥田，遠處的山丘上有幾座小風車慢慢轉，近處的麥穗隨風搖（淡淡的，不搶題目）
+static func _meadow(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var hz := hh * 0.46
+	_grad(ci, sz, Color("1d1a33"), Color("0c0b18"))
+	_glow(ci, sz, hz, Color(1.0, 0.7, 0.4), 0.10)
+	_stars(ci, Vector2(w, hz * 0.8), t, 12, 0.8, Color(1.0, 0.95, 0.85), 301)
+	_ridge(ci, Vector2(w, hz + 2.0), hz - 20.0, 14.0, 0.012, 1.1, Color(0.14, 0.12, 0.22, 0.95))
+	_ridge(ci, Vector2(w, hz + 2.0), hz - 6.0, 8.0, 0.02, 0.3, Color(0.11, 0.1, 0.18, 0.98))
+	# 遠處的小風車（剪影）
+	for i in 3:
+		var bx := w * (0.18 + 0.32 * i) + 20.0 * h(i, 302)
+		var by := hz - 8.0 - 6.0 * h(i, 303)
+		var top := Vector2(bx, by - 34.0)
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(bx - 5, by), Vector2(bx + 5, by), top + Vector2(2, 0), top + Vector2(-2, 0)]), Color(0.2, 0.17, 0.3, 0.45))
+		var ang := t * (0.4 + 0.15 * i) + i
+		for k in 4:
+			var a := ang + k * PI / 2.0
+			ci.draw_line(top, top + Vector2(cos(a), sin(a)) * 16.0, Color(0.32, 0.28, 0.42, 0.4), 3.0)
+	# 麥田：地面＋一條一條的田埂
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(0, hz), Vector2(w, hz), Vector2(w, hh), Vector2(0, hh)]), Color(0.1, 0.08, 0.1, 0.95))
+	for j in 5:
+		var v := (j + 1) / 6.0
+		var y := hz + (hh - hz) * v * v
+		ci.draw_line(Vector2(0, y), Vector2(w, y), Color(0.95, 0.75, 0.45, 0.07), 1.2)
+	# 麥穗：短短的金色線，隨風搖
+	for i in 70:
+		var u := h(i, 304)
+		var v := 0.15 + 0.85 * h(i, 305)
+		var p := Vector2(u * w, hz + (hh - hz) * v * v)
+		var ht := 5.0 + 12.0 * v
+		var sway := 2.5 * sin(t * 1.6 + u * 6.0) * v
+		ci.draw_line(p, p + Vector2(sway, -ht), Color(0.95, 0.78, 0.42, 0.22 + 0.1 * v), 1.3)
+		UITheme.dot(ci, p + Vector2(sway, -ht), 1.4 + v, Color(1.0, 0.85, 0.5, 0.25))
