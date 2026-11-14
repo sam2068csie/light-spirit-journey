@@ -102,7 +102,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 			else:
 				expr = "\\frac{%s + %s}{%d}" % [_term(m, "a"), _term(k, "b"), m + k]
 				ans = 0 if m > k else 1
-			pb = {"eq": "a < b\n%s 在哪裡？" % expr, "q": "看權重：係數大的那一端比較近，有負的就在外面。",
+			pb = {"eq": "a < b\n%s 在哪裡？" % expr, "q": "權重大的那端比較近",
 				"choices": ["靠近 a", "靠近 b", "在外面"], "correct": ans, "tag": BankR2.T_DCMP,
 				"nudge": "\\frac{ma + nb}{m + n}：m > n 靠近 a、m < n 靠近 b。係數有負的，就在 a、b 外面。"}
 		var key := String(pb.eq)

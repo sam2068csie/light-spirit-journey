@@ -86,7 +86,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 				var den := 99 if two else 9
 				var g := _gcd(dg, den)
 				var s := ("%02d" % dg) if two else str(dg)
-				pb = {"eq": "0.\\ol{%s} = ？" % s, "q": "寫成分數（不用約分也可以）。", "template": "0.\\ol{%s} = [0]" % s,
+				pb = {"eq": "0.\\ol{%s} = ？" % s, "q": "寫成分數", "template": "0.\\ol{%s} = [0]" % s,
 					"answers": ["%d/%d" % [dg / g, den / g]], "tag": BankR1.T_REP,
 					"nudge": "循環節 %d 位：0.\\ol{%s} = \\frac{%d}{%d}。" % [s.length(), s, dg, den]}
 				if s.begins_with("0"):
@@ -103,7 +103,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 				if num >= den:
 					continue
 				var ok := _finite(num, den)
-				pb = {"eq": "%s\n化成小數是？" % _fr(num, den), "q": "先約分，再看分母的質因數。", "choices": ["有限小數", "循環小數"],
+				pb = {"eq": "%s\n化成小數是？" % _fr(num, den), "q": "先約分再看分母", "choices": ["有限小數", "循環小數"],
 					"correct": 0 if ok else 1, "tag": BankR1.T_FIN,
 					"nudge": "約分後的分母只有 2、5 ⇒ 有限小數，有別的質因數 ⇒ 循環小數。"}
 		else:

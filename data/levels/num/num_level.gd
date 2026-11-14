@@ -9,7 +9,9 @@ extends "res://data/levels/line/line_level.gd"
 ##         在數線上點出每一區各一次（區間不含端點）。點錯的地方出現紅點，標 wrong（{rel} 換成離 a、離 b 的比較 <、=、>）
 ##       {"kind": "ldrag", …, "a", "b", "beads": [["p", "p"], …], "goal": {"p": 1/3, …}, "snaps": [[比例, "標籤"], …], "why": {"p": 放錯的提示}}
 ##         把托盤裡的珠子拖到繩上，吸附到「a 往 b 走幾分之幾」，按「確定」。放錯的退回托盤
+##         點錯的區間有自己的說明就寫 "wrongs": [[lo, hi, "1 個負數"], …]（先找 wrongs，沒有才用 wrong）
 ##       {"kind": "btap", …, "item": 0}   點一塊分子積木、再點一樣的分母積木就約掉，約到沒有一樣的為止
+##       {"kind": "mtap", …, "item": 0, "k": 3}   點風車的第 k 片扇葉（0 = 循環節的第一個數字），風車先停下來
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
 const NumField := preload("res://data/levels/num/num_field.gd")
@@ -61,7 +63,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap":
+		"ltap", "ldrag", "btap", "mtap":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -82,6 +84,8 @@ func _forge_step() -> void:
 			go_btn.text = "確定"
 		"btap":
 			_nf().begin("blocks", {"item": int(st.get("item", 0))}, _btap_event)
+		"mtap":
+			_nf().begin("sail", {"item": int(st.get("item", 0))}, _mtap_event)
 
 
 func _pic_kind() -> String:
@@ -138,7 +142,11 @@ func _ltap_event(ev: Dictionary) -> void:
 		rel = "<"
 	elif da > db + 1e-6:
 		rel = ">"
-	_nf().mark(v, false, String(st.get("wrong", "")).replace("{rel}", rel))
+	var txt := String(st.get("wrong", "")).replace("{rel}", rel)
+	for w in st.get("wrongs", []):
+		if v > float(w[0]) + 1e-6 and v < float(w[1]) - 1e-6:
+			txt = String(w[2])
+	_nf().mark(v, false, txt)
 	_pic_wrong(st, String(st.nudge))
 
 
@@ -177,8 +185,26 @@ func _btap_event(ev: Dictionary) -> void:
 	_pic_wrong(st, "%s 和 %s 不一樣，不能約。%s" % [pr[0], pr[1], String(st.nudge)])
 
 
+func _mtap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "mtap":
+		return
+	var st: Dictionary = steps[si]
+	if int(ev.k) == int(st.k):
+		_pic_finish.call_deferred(si)
+		return
+	_pic_wrong(st, "這一片是第 %d 個數字。%s" % [int(ev.k) + 1, String(st.nudge)])
+
+
+var mtap_ok := false
+
+
 func _custom_go() -> void:
 	match _pic_kind():
+		"mtap":
+			if mtap_ok:
+				mtap_ok = false
+				_pic_finish(si)
+			return
 		"ldrag":
 			_ldrag_submit()
 			return
@@ -209,6 +235,9 @@ func test_answer(st: Dictionary) -> bool:
 		"ldrag":
 			for b in st.beads:
 				_nf().drag_pos[String(b[0])] = float(st.goal[String(b[0])])
+			return true
+		"mtap":
+			mtap_ok = true
 			return true
 		"btap":
 			var f := _nf()

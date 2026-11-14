@@ -23,6 +23,7 @@ extends Control
 ##   tap     點數線：回呼 {"v": 點到的值（吸附到 snap）}，關卡判斷對錯後呼叫 mark(v, 對不對, 錯的時候顯示的字)
 ##   drag    把珠子從右上角的托盤拖到繩上，吸附到 snaps（a 到 b 的幾分之幾）；drag_result() 讀位置、drag_reject(名字們) 退回托盤
 ##   blocks  點一塊分子積木、再點一塊一樣的分母積木就約掉；回呼 {"cut": 有沒有約掉, "left": 還剩幾對可以約}
+##   sail    點風車的一片扇葉（風車先停下來）；回呼 {"k": 第幾片（0 = 循環節的第一個數字）}
 ## 圖上不寫中文：只有數字、字母。
 
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -38,7 +39,7 @@ var view: Object = null          # 推導台（ForgeView）：讀 step、done、
 var _st := {}                    # 每個元件的動畫狀態（開始轉的時間、目前的角度、數線的範圍…）
 
 # ---- 在圖上作答 ----
-var mode := ""                   # ""、"tap"、"drag"、"blocks"
+var mode := ""                   # ""、"tap"、"drag"、"blocks"、"sail"
 var spec := {}
 var on_event := Callable()
 var marks: Array = []            # tap：[{v, ok, text, t}]
@@ -140,7 +141,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 		var goal := a0 + fposmod(target - a0, TAU) + TAU
 		var u := clampf((t - float(s.hl_t)) / 1.4, 0.0, 1.0)
 		ang = lerpf(a0, goal, 1.0 - pow(1.0 - u, 3.0))
-	elif spin:
+	elif spin and not (mode == "sail" and int(spec.get("item", 0)) == i):
 		ang += dt * 2.6
 	s.ang = ang
 	_st[i] = s
@@ -168,6 +169,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 		sail = sail.lerp(Color(1, 0.45, 0.45, 0.9), _miss())
 	var arm := Color("8a7058") if lit else Color("5a5070")
 	var sw := 17.0
+	var sails := []
 	for k in n:
 		var a := -PI / 2.0 + TAU * k / n + ang + wob
 		var d := Vector2(cos(a), sin(a))
@@ -187,10 +189,12 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 		var dfs := UITheme.fs(16)
 		var cw := font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs)
 		var cp := hub + d * L * 0.64 + nm * sw * 0.45
+		sails.append(cp)
 		var tp := cp + Vector2(-cw.x / 2.0, cw.y * 0.32)
 		draw_string_outline(font, tp, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, 4, Color(0.1, 0.07, 0.1, 0.9))
 		draw_string(font, tp, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, Color(1, 1, 1) if lit or hi else Color(1, 1, 1, 0.8))
 	UITheme.dot(self, hub, 5.5, Color(0.9, 0.85, 0.75))
+	_geo[i] = {"sails": sails}
 	# 右邊：轉起來之後，小數一位一位流出來，下面寫出循環小數的記號
 	var sx := hub.x + L + 26.0
 	if sx > r.end.x - 50.0:
@@ -418,6 +422,18 @@ func _gui_input(e: InputEvent) -> void:
 		"blocks":
 			if press:
 				_block_click(pos)
+		"sail":
+			if press:
+				var sl: Array = _geo.get(int(spec.get("item", 0)), {}).get("sails", [])
+				var best := -1
+				var bd := 28.0
+				for k in sl.size():
+					var d := pos.distance_to(sl[k])
+					if d < bd:
+						bd = d
+						best = k
+				if best >= 0:
+					on_event.call({"k": best})
 
 
 ## 點的位置 → 數線上的值（吸附到 snap）。不在數線附近回傳 null
@@ -624,6 +640,12 @@ func _block_click(pos: Vector2) -> void:
 			else:
 				on_event.call({"cut": false, "left": blocks_left(i), "pair": [String(num[kn]), String(den[kd])]})
 			return
+
+
+## 測試用：風車第 k 片扇葉在螢幕上的位置
+func global_of_sail(k: int) -> Vector2:
+	var sl: Array = _geo.get(int(spec.get("item", 0)), {}).get("sails", [])
+	return get_global_transform() * (sl[k] as Vector2)
 
 
 ## 測試用：分子第 k 塊、分母第 k 塊在螢幕上的位置

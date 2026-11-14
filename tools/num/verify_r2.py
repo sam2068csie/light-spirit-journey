@@ -35,6 +35,7 @@ assert inner(2, 7, 4, 1) == 6 and F(2 + 3 * F(26, 3), 4) == 7
 # 4 追趕：甲 −3、乙 9、甲 4 倍；甲 −4、乙 6、甲 3 倍
 for a, b, k, ans in [(-3, 9, 4, 13), (-4, 6, 3, 11)]:
     d = F(b - a, k - 1); assert a + k * d == b + d == ans and outer(a, b, k, 1) == ans and ans > b
+    assert ans > b                                            # 點的區間：B 的右邊
 
 # ---- 第二章 ----
 # 5 比例的判斷：2|x − a| = 3|x − b|（a = 0、b = 5）、3|x − a| = |x − b|（a = 0、b = 8）
@@ -48,6 +49,19 @@ for _ in range(2000):
         assert 3 * abs(x - a) == abs(x - b) and x < F(a + b, 2)          # ○：PA:PB = 1:3、x < (a + b)/2
     assert outer(a, b, 1, 3) < a                                          # ✕：x > a 不一定
 assert inner(0, 5, 3, 2) == 3 and outer(0, 5, 3, 2) == 15 and inner(0, 8, 1, 3) == 2 and outer(0, 8, 1, 3) == -4
+for a_, b_ in [(0, 8), (-3, 5), (2, 30)]:                                     # ✕：4|x − a| = |a − b| 只有內分點對
+    assert 4 * abs(inner(a_, b_, 1, 3) - a_) == abs(a_ - b_) and 4 * abs(outer(a_, b_, 1, 3) - a_) != abs(a_ - b_)
+# 在圖上點 P 的區間（ltap）：兩個解各在一個區間，區間裡的點都滿足「離 B（或 A）比較近」
+for a_, b_, m, n, regs in [(0, 5, 3, 2, [(2.5, 5), (5, 1e9)]), (0, 8, 1, 3, [(-1e9, 0), (0, 4)])]:
+    sols = [inner(a_, b_, m, n), outer(a_, b_, m, n)]
+    assert sorted(sum(lo < x < hi for x in sols) for lo, hi in regs) == [1, 1]
+    for lo, hi in regs:
+        mid = F(a_ + b_, 2)
+        assert (lo >= mid) if m > n else (hi <= mid)
+# 拖珠子的吸附點：答案都在吸附點上，其他吸附點是權重放反的位置（絕對錯）
+for goal, snaps in [({F(5, 8), F(1, 2), F(3, 16)}, {F(3, 16), F(3, 8), F(1, 2), F(5, 8), F(13, 16)}),
+                    ({F(3, 5), F(2, 9), F(2, 3)}, {F(2, 9), F(2, 5), F(3, 5), F(2, 3), F(7, 9)})]:
+    assert goal <= snaps and all(1 - g in snaps or g == F(1, 2) or 1 - g == F(1, 3) for g in goal)
 # 6 加權平均的位置（以 a 到 c 的比例表示位置：\frac{ma + nc}{m + n} 在 n/(m + n)）
 pos = lambda wa, wc: F(wc, wa + wc)
 # 第 1 組：|c − a| = 4|b − a| ⇒ b = (3a + c)/4；r = (a + 3b)/4 = (13a + 3c)/16

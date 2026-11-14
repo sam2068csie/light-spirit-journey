@@ -138,3 +138,16 @@ assert not (1 ** 2 > (-2) ** 2)
 a, b, c = -2, -1.5, 3; assert a < b < c and a * b * c > 0 and a + b + c < 0 and not abs(a) > abs(c)
 a, b, c = -5, 1, 6; assert a < b < c and a * b * c < 0 and a + b + c > 0 and not a + b > 0
 print("R1 verify OK")
+
+# 圖上作答（2026/11/14）
+# nth：點第 k 片扇葉（0 起算）
+for rep, n, k in [("142857", 100, 3), ("384615", 50, 1)]:
+    assert (n - 1) % len(rep) == k and rep[k] == "8"
+# signs：0 所在的區間，和點錯的區間各有幾個負數
+for (a, b, c), reg, wrongs, prod_pos, sum_pos in [((-2, -1.5, 3), (-1.5, 3), [(-1e9, -2, 0), (-2, -1.5, 1), (3, 1e9, 3)], True, False),
+                                                   ((-5, 1, 6), (-5, 1), [(-1e9, -5, 0), (1, 6, 2), (6, 1e9, 3)], False, True)]:
+    assert (a * b * c > 0) == prod_pos and (a + b + c > 0) == sum_pos and reg[0] < 0 < reg[1]
+    for lo, hi, negs in wrongs:
+        z = (max(lo, -100) + min(hi, 100)) / 2      # 0 在這個區間的話，有幾個數在 0 的左邊
+        assert sum(v < z for v in (a, b, c)) == negs
+print("R1 picture OK")

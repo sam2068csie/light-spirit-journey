@@ -344,6 +344,15 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
 			await snap(String(lv.r.id) + "_拖好")
 			await go()
+		"mtap":
+			# 點風車的扇葉（數與式）：答錯時點下一片
+			var f = lv._nf()
+			var k := int(st.k)
+			if wrong:
+				k = (k + 1) % f._geo[int(st.get("item", 0))].sails.size()
+			await click_at(f.global_of_sail(k))
+			await frames(3)
+			await snap(String(lv.r.id) + ("_點錯扇葉" if wrong else "_點扇葉"))
 		"btap":
 			# 點積木約分（數與式）：答錯時點一對不一樣的積木
 			var f = lv._nf()
