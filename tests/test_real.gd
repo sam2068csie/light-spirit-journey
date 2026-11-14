@@ -578,7 +578,8 @@ func _play_round() -> void:
 			var si0: int = lv.si
 			var st: Dictionary = lv.steps[si0]
 			await snap("%s_%d_%s" % [rid, si0, st.name])
-			if first:
+			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
+			if first or String(st.kind) in ["ltap", "ldrag", "btap", "mtap"]:
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false
