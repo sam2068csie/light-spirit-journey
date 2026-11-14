@@ -96,7 +96,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 			if outside:
 				var big := maxi(m, k)
 				var small := mini(m, k)
-				var top := ("%s − %s" % [_term(big, "b"), _term(small, "a"))) if randf() < 0.5 else ("%s − %s" % [_term(big, "a"), _term(small, "b")])
+				var top := ("%s − %s" % [_term(big, "b"), _term(small, "a")]) if randf() < 0.5 else ("%s − %s" % [_term(big, "a"), _term(small, "b")])
 				expr = top if big - small == 1 else "\\frac{%s}{%d}" % [top, big - small]
 				ans = 2
 			else:
