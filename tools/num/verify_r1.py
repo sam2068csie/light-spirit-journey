@@ -78,8 +78,15 @@ A, Q = 3, -6; P = A + F(2, 5) * (Q - A); assert P == F(-3, 5) and A - Q == 9 and
 for B, D, Qp, Px in [((1.5, 1.2), (0.5, 3.6), (-6, 0), -2 / 3), ((2.2, 1.6), (1, 4), (-6, 0), -0.6)]:
     # \ol{BP} ∥ \ol{DQ}：斜率一樣（P 不是整數，從方格上讀不出來）
     m1 = B[1] / (B[0] - Px); m2 = D[1] / (D[0] - Qp[0]); assert abs(m1 - m2) < 1e-9
-# semi
-assert abs(sqrt(2 * 3) - sqrt(6)) < 1e-12 and 1 * 6 == 6 and 1 * 10 == 10
+# dense：審判卡的反例
+assert F(1) < 2 and not any(F(1) < k < 2 for k in range(-5, 5))      # 1 和 2 之間沒有整數
+assert F(3, 10) < F("0.3025") < F(31, 100) and len("3025") == 4          # 0.3 和 0.31 之間有四位小數
+# semi：a + b = 直徑、ab = n，(a, b) 只有一組（不計順序）
+for d, n, pair in [(5, 6, {2, 3}), (7, 10, {2, 5})]:
+    sols = [(a, d - a) for a in range(1, d) if a * (d - a) == n]
+    assert {sols[0][0], sols[0][1]} == pair and all(set(x) == pair for x in sols)
+    assert abs(sqrt(min(pair) * max(pair)) - sqrt(n)) < 1e-12
+assert abs(sqrt(6) - 2.449) < 1e-3 and abs(sqrt(10) - 3.162) < 1e-3
 for _ in range(10000):
     a, b = random.uniform(0.01, 20), random.uniform(0.01, 20)
     assert (a + b) / 2 >= sqrt(a * b) - 1e-12
