@@ -857,7 +857,7 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 	var area := Rect2(r.position, Vector2(r.size.x * 0.7, r.size.y))
 	var cy := area.position.y + area.size.y * 0.5
 	var bs := minf(40.0, area.size.y * 0.24)
-	var gap := 8.0
+	var gap := 24.0          # 積木之間放乘號
 	var widest := maxf(num.size(), den.size()) * (bs + gap) + gap
 	var bx := area.position.x + (area.size.x - widest) / 2.0
 	draw_line(Vector2(bx, cy), Vector2(bx + widest, cy), Color(1, 0.95, 0.85, 0.7), 2.5)
@@ -866,6 +866,7 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 		var gone: Dictionary = gone_n if row == 0 else gone_d
 		var x := bx + gap + (widest - gap - arr.size() * (bs + gap)) / 2.0
 		var y := cy - bs - 8.0 if row == 0 else cy + 8.0
+		var shown := []      # [左邊的 x, 透明度]：相鄰兩塊（還看得到的）中間畫 ×
 		for k in arr.size():
 			var lab := String(arr[k])
 			var c: Color = PRIME_C.get(lab, Color(0.75, 0.75, 0.85))
@@ -893,6 +894,15 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 					draw_line(rc.position + Vector2(4, bs - 4), rc.position + Vector2(bs - 4, 4), Color(1, 0.4, 0.4, al), 3.0)
 				if mode == "blocks" and not bsel.is_empty() and int(bsel[0]) == row and int(bsel[1]) == k:
 					draw_rect(rc.grow(4), Color(1, 0.85, 0.4, 0.9 + 0.1 * sin(t * 8.0)), false, 3.0)
+				if al > 0.01 and not shown.is_empty():
+					var prev: Array = shown.back()
+					var mx: float = (float(prev[0]) + bs + x) / 2.0 + shake
+					var xa := minf(float(prev[1]), al)
+					var xfs := UITheme.fs(18)
+					var xw := font.get_string_size("×", HORIZONTAL_ALIGNMENT_LEFT, -1, xfs).x
+					draw_string(font, Vector2(mx - xw / 2.0, y + bs * 0.66), "×", HORIZONTAL_ALIGNMENT_LEFT, -1, xfs, Color(1, 0.95, 0.85, 0.8 * xa))
+				if al > 0.01:
+					shown.append([x, al])
 			x += bs + gap
 	_geo[i] = {"n": rects_n, "d": rects_d}
 	# 小風車：判斷之前慢慢晃，有限小數 → 停下來、燈亮，循環小數 → 一直轉
