@@ -18,6 +18,11 @@ extends Control
 ##                        "cancel": [第幾步, [[分子第幾塊, 分母第幾塊], …]], "judge": [第幾步, 有限小數？]}
 ##           約掉的積木掉下去。判斷那一步做完：有限小數 → 旁邊的小風車停下、燈亮，循環小數 → 小風車一直轉。
 ## 「第幾步」都是「做完第幾步之後」（0 = 一開始就有）。答錯時（view.miss_t）元件會晃一下、閃紅。
+##
+## 在圖上作答（2026/11/14 試作，關卡端在 num_level.gd）：begin(模式, 設定, 回呼) 開始、end() 結束
+##   tap     點數線：回呼 {"v": 點到的值（吸附到 snap）}，關卡判斷對錯後呼叫 mark(v, 對不對, 錯的時候顯示的字)
+##   drag    把珠子從右上角的托盤拖到繩上，吸附到 snaps（a 到 b 的幾分之幾）；drag_result() 讀位置、drag_reject(名字們) 退回托盤
+##   blocks  點一塊分子積木、再點一塊一樣的分母積木就約掉；回呼 {"cut": 有沒有約掉, "left": 還剩幾對可以約}
 ## 圖上不寫中文：只有數字、字母。
 
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -32,11 +37,26 @@ var items: Array = []
 var view: Object = null          # 推導台（ForgeView）：讀 step、done、miss_t、t
 var _st := {}                    # 每個元件的動畫狀態（開始轉的時間、目前的角度、數線的範圍…）
 
+# ---- 在圖上作答 ----
+var mode := ""                   # ""、"tap"、"drag"、"blocks"
+var spec := {}
+var on_event := Callable()
+var marks: Array = []            # tap：[{v, ok, text, t}]
+var drag_pos := {}               # drag：名字 → 吸附到的比例（null = 還在托盤）
+var dragging := ""
+var drag_pt := Vector2.ZERO
+var reject_t := {}               # drag：退回托盤的時間（閃紅）
+var bcut: Array = []             # blocks：[[分子第幾塊, 分母第幾塊], …]
+var bsel: Array = []             # blocks：選了哪一塊 [列（0 分子、1 分母）, 第幾塊]，[] = 沒選
+var _geo := {}                   # 每個元件畫的位置（點擊、測試要換算）：nline → {x0, x1, lo, hi, y, ry}、blocks → {n: [Rect2], d: [Rect2]}
+
 
 func reset(list: Array, v: Object) -> void:
 	items = list
 	view = v
 	_st = {}
+	end()
+	bcut = []
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
@@ -227,6 +247,7 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	var x1 := r.end.x - 22.0
 	var sx := func(v: float) -> float:
 		return x0 + (v - lo) / (hi - lo) * (x1 - x0)
+	_geo[i] = {"x0": x0, "x1": x1, "lo": lo, "hi": hi, "y": y, "ry": y - 26.0}
 	var shake := 4.0 * sin(t * 40.0) * _miss()
 	# 亮起來的區段
 	for sg in it.get("segs", []):
@@ -326,6 +347,290 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		shown += 1
 	s.lit_t = lit_t
 	s.mv_t = mv_t
+	if int(spec.get("item", 0)) == i:
+		if mode == "tap":
+			_draw_marks(sx, y - 26.0, font)
+		elif mode == "drag":
+			_draw_drag(sx, y, y - 26.0, r, font)
+
+
+# ================= 在圖上作答 =================
+
+func begin(m: String, sp: Dictionary, cb: Callable) -> void:
+	mode = m
+	spec = sp
+	on_event = cb
+	marks = []
+	drag_pos = {}
+	reject_t = {}
+	dragging = ""
+	bsel = []
+	if m == "drag":
+		for b in sp.get("beads", []):
+			drag_pos[String(b[0])] = null
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	queue_redraw()
+
+
+func end() -> void:
+	mode = ""
+	dragging = ""
+	marks = []
+	drag_pos = {}
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func mark(v: float, ok: bool, text := "") -> void:
+	marks.append({"v": v, "ok": ok, "text": text, "t": _t()})
+
+
+func _gui_input(e: InputEvent) -> void:
+	if mode == "":
+		return
+	var pos := Vector2.ZERO
+	var press := false
+	var release := false
+	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		pos = (e as InputEventMouseButton).position
+		press = e.pressed
+		release = not e.pressed
+	elif e is InputEventMouseMotion:
+		if dragging != "":
+			drag_pt = (e as InputEventMouseMotion).position
+			accept_event()
+		return
+	else:
+		return
+	accept_event()
+	match mode:
+		"tap":
+			if press:
+				var v = value_at(pos)
+				if v != null:
+					on_event.call({"v": v})
+		"drag":
+			if press:
+				dragging = _bead_at(pos)
+				drag_pt = pos
+			elif release and dragging != "":
+				drag_pos[dragging] = _snap_at(pos)
+				dragging = ""
+		"blocks":
+			if press:
+				_block_click(pos)
+
+
+## 點的位置 → 數線上的值（吸附到 snap）。不在數線附近回傳 null
+func value_at(pos: Vector2):
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty() or absf(pos.y - float(g.y)) > 46.0 or pos.x < float(g.x0) - 6.0 or pos.x > float(g.x1) + 6.0:
+		return null
+	var v: float = float(g.lo) + (pos.x - float(g.x0)) / (float(g.x1) - float(g.x0)) * (float(g.hi) - float(g.lo))
+	var sn := float(spec.get("snap", 1.0))
+	return snappedf(v, sn)
+
+
+## 數線上的值 → 螢幕上的位置（測試用）
+func global_of_value(v: float) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	var x: float = float(g.x0) + (v - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	return get_global_transform() * Vector2(x, float(g.y))
+
+
+func _draw_marks(sx: Callable, ry: float, font: Font) -> void:
+	var t := _t()
+	for mk in marks:
+		var age := t - float(mk.t)
+		var px: float = sx.call(float(mk.v))
+		if bool(mk.ok):
+			UITheme.dot(self, Vector2(px, ry), 14.0, Color(1, 0.85, 0.4, 0.3))
+			UITheme.dot(self, Vector2(px, ry), 6.0, COLS.gold)
+			continue
+		var al := clampf(2.5 - age, 0.0, 1.0)
+		if al <= 0.0:
+			continue
+		UITheme.dot(self, Vector2(px, ry), 7.0, Color(1, 0.4, 0.4, al))
+		if String(mk.text) != "":
+			MathLabel.draw_on(self, font, clampf(px, 90.0, size.x - 90.0), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
+
+
+# ---- 拖珠子：snaps 是 a 到 b 的幾分之幾，標在數線下面 ----
+
+func _snap_v(f: float) -> float:
+	return float(spec.a) + f * (float(spec.b) - float(spec.a))
+
+
+func _tray_pos(k: int) -> Vector2:
+	var n: int = spec.get("beads", []).size()
+	return Vector2(size.x - 34.0 - 40.0 * (n - 1 - k), 40.0)
+
+
+func _bead_pos(name: String, sx: Callable, ry: float) -> Vector2:
+	var beads: Array = spec.get("beads", [])
+	for k in beads.size():
+		if String(beads[k][0]) == name:
+			if dragging == name:
+				return drag_pt
+			if drag_pos.get(name) == null:
+				return _tray_pos(k)
+			return Vector2(sx.call(_snap_v(float(drag_pos[name]))), ry)
+	return Vector2.ZERO
+
+
+func _bead_at(pos: Vector2) -> String:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty():
+		return ""
+	var sx := func(v: float) -> float:
+		return float(g.x0) + (v - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	var best := ""
+	var bd := 30.0
+	for b in spec.get("beads", []):
+		var d := pos.distance_to(_bead_pos(String(b[0]), sx, float(g.ry)))
+		if d < bd:
+			bd = d
+			best = String(b[0])
+	return best
+
+
+## 放開的位置 → 最近的吸附點（比例）。離繩子太遠就回托盤（null）
+func _snap_at(pos: Vector2):
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty() or absf(pos.y - float(g.ry)) > 50.0:
+		return null
+	var v: float = float(g.lo) + (pos.x - float(g.x0)) / (float(g.x1) - float(g.x0)) * (float(g.hi) - float(g.lo))
+	var best = null
+	var bd := INF
+	for sn in spec.get("snaps", []):
+		var d := absf(_snap_v(float(sn[0])) - v)
+		if d < bd:
+			bd = d
+			best = float(sn[0])
+	return best
+
+
+func drag_result() -> Dictionary:
+	return drag_pos.duplicate()
+
+
+func drag_reject(names: Array) -> void:
+	for n in names:
+		drag_pos[String(n)] = null
+		reject_t[String(n)] = _t()
+
+
+## 測試用：珠子、吸附點在螢幕上的位置
+func global_of_bead(name: String) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	var sx := func(v: float) -> float:
+		return float(g.x0) + (v - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	return get_global_transform() * _bead_pos(name, sx, float(g.ry))
+
+
+func global_of_snap(f: float) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	var x: float = float(g.x0) + (_snap_v(f) - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	return get_global_transform() * Vector2(x, float(g.ry))
+
+
+func _draw_drag(sx: Callable, y: float, ry: float, r: Rect2, font: Font) -> void:
+	var t := _t()
+	# 吸附點：數線下面標「a 往 b 走幾分之幾」
+	var last_r := -INF
+	var low := false
+	var lfs := UITheme.fs(13)
+	for sn in spec.get("snaps", []):
+		var px: float = sx.call(_snap_v(float(sn[0])))
+		draw_line(Vector2(px, ry - 5), Vector2(px, ry + 5), Color(1, 0.95, 0.8, 0.45), 1.5)
+		draw_line(Vector2(px, y - 4), Vector2(px, y + 4), Color(1, 0.95, 0.8, 0.45), 1.5)
+		if sn.size() > 1 and String(sn[1]) != "":
+			# 標籤太擠就上下錯開
+			var w := MathLabel.text_width(font, String(sn[1]), lfs)
+			low = (px - w / 2.0 < last_r + 4.0) and not low
+			if not low:
+				last_r = px + w / 2.0
+			var ly := y + (58.0 if low else 30.0)
+			if low:
+				draw_line(Vector2(px, y + 6), Vector2(px, ly - 22.0), Color(1, 0.95, 0.8, 0.25), 1.0)
+			MathLabel.draw_on(self, font, px, ly, String(sn[1]), lfs, Color(1, 0.95, 0.8, 0.6))
+	# 托盤
+	var beads: Array = spec.get("beads", [])
+	var tray := Rect2(_tray_pos(0) - Vector2(20, 34), Vector2(40.0 * beads.size(), 50))
+	draw_rect(tray, Color(1, 1, 1, 0.05))
+	draw_rect(tray, Color(1, 0.9, 0.6, 0.25), false, 1.0)
+	for k in beads.size():
+		var name := String(beads[k][0])
+		var p := _bead_pos(name, sx, ry)
+		var c: Color = COLS.gold
+		if reject_t.has(name) and t - float(reject_t[name]) < 1.2:
+			c = COLS.bad
+		_draw_bead(p, c, 0.6 if dragging == name else 0.0, String(beads[k][1]) if beads[k].size() > 1 else name, font)
+
+
+# ---- 點積木約分 ----
+
+## 剩下的分子、分母裡，還有幾對一樣的
+func blocks_left(i: int) -> int:
+	var it: Dictionary = items[i]
+	var num := _rows(it.num, _step())
+	var den := _rows(it.den, _step())
+	var used_n := {}
+	var used_d := {}
+	for pr in bcut:
+		used_n[int(pr[0])] = true
+		used_d[int(pr[1])] = true
+	var left := 0
+	var taken := {}
+	for a in num.size():
+		if used_n.has(a):
+			continue
+		for b in den.size():
+			if used_d.has(b) or taken.has(b):
+				continue
+			if String(num[a]) == String(den[b]):
+				taken[b] = true
+				left += 1
+				break
+	return left
+
+
+func _block_click(pos: Vector2) -> void:
+	var i := int(spec.get("item", 0))
+	var g: Dictionary = _geo.get(i, {})
+	if g.is_empty():
+		return
+	var used := [{}, {}]
+	for pr in bcut:
+		used[0][int(pr[0])] = true
+		used[1][int(pr[1])] = true
+	for row in 2:
+		var rects: Array = g.n if row == 0 else g.d
+		for k in rects.size():
+			if not (rects[k] as Rect2).grow(4).has_point(pos) or used[row].has(k):
+				continue
+			if bsel.is_empty() or int(bsel[0]) == row:
+				bsel = [row, k]          # 同一列再點一次 = 換一塊
+				return
+			var kn: int = k if row == 0 else int(bsel[1])
+			var kd: int = k if row == 1 else int(bsel[1])
+			bsel = []
+			var it: Dictionary = items[i]
+			var num := _rows(it.num, _step())
+			var den := _rows(it.den, _step())
+			if String(num[kn]) == String(den[kd]):
+				bcut.append([kn, kd])
+				_st[i]["ucut_t"] = _t()
+				on_event.call({"cut": true, "left": blocks_left(i)})
+			else:
+				on_event.call({"cut": false, "left": blocks_left(i), "pair": [String(num[kn]), String(den[kd])]})
+			return
+
+
+## 測試用：分子第 k 塊、分母第 k 塊在螢幕上的位置
+func global_of_block(row: int, k: int) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	var arr: Array = g.n if row == 0 else g.d
+	return get_global_transform() * (arr[k] as Rect2).get_center()
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）
@@ -534,11 +839,19 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 		s.judge_t = t
 	var gone_n := {}
 	var gone_d := {}
-	if cut:
-		for pr in cancel[1]:
-			gone_n[int(pr[0])] = true
-			gone_d[int(pr[1])] = true
+	var pairs: Array = bcut if not bcut.is_empty() else (cancel[1] if cut else [])
+	for pr in pairs:
+		gone_n[int(pr[0])] = true
+		gone_d[int(pr[1])] = true
+	if not bcut.is_empty():
+		cut = true
+		if float(s.cut_t) < 0.0:
+			s.cut_t = t
+		if not s.has("ucut_t"):
+			s["ucut_t"] = t
 	var u := clampf((t - float(s.cut_t)) / 0.9, 0.0, 1.0) if cut else 0.0
+	var rects_n := []
+	var rects_d := []
 	var shake := 4.0 * sin(t * 40.0) * _miss()
 	# 積木排在左邊 70%，右邊是小風車
 	var area := Rect2(r.position, Vector2(r.size.x * 0.7, r.size.y))
@@ -559,8 +872,16 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 			var al := 1.0
 			var dy := 0.0
 			if gone.has(k):
-				al = 1.0 - u
-				dy = 60.0 * u * u
+				# 學生剛約掉的那一對才播掉下去的動畫，之前約掉的直接不畫
+				var uu := u
+				if not bcut.is_empty():
+					uu = clampf((t - float(s.get("ucut_t", t))) / 0.9, 0.0, 1.0)
+					var last: Array = bcut.back()
+					if not ((row == 0 and int(last[0]) == k) or (row == 1 and int(last[1]) == k)):
+						uu = 1.0
+				al = 1.0 - uu
+				dy = 60.0 * uu * uu
+			(rects_n if row == 0 else rects_d).append(Rect2(x, y, bs, bs))
 			if al > 0.01:
 				var rc := Rect2(x + shake, y + dy, bs, bs)
 				draw_rect(rc, Color(c.r, c.g, c.b, 0.35 * al))
@@ -568,9 +889,12 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 				var fs := UITheme.fs(18 if lab.length() <= 2 else 14)
 				var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 				draw_string(font, Vector2(rc.position.x + (bs - w) / 2.0, rc.position.y + bs * 0.68), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, al))
-				if gone.has(k) and u > 0.0:
+				if gone.has(k) and al < 1.0:
 					draw_line(rc.position + Vector2(4, bs - 4), rc.position + Vector2(bs - 4, 4), Color(1, 0.4, 0.4, al), 3.0)
+				if mode == "blocks" and not bsel.is_empty() and int(bsel[0]) == row and int(bsel[1]) == k:
+					draw_rect(rc.grow(4), Color(1, 0.85, 0.4, 0.9 + 0.1 * sin(t * 8.0)), false, 3.0)
 			x += bs + gap
+	_geo[i] = {"n": rects_n, "d": rects_d}
 	# 小風車：判斷之前慢慢晃，有限小數 → 停下來、燈亮，循環小數 → 一直轉
 	var mc := Vector2(r.position.x + r.size.x * 0.86, r.position.y + r.size.y * 0.42)
 	var fin := judged and bool(judge[1])

@@ -302,6 +302,72 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 				if not st.keep[i] and not wrong:
 					await click(lv.filter_btns[i], "篩選 %d" % i)
 			await go()
+		"ltap":
+			# 點數線（數與式）：答錯時先點一個錯的地方，答對時每一區點一次
+			var f = lv._nf()
+			if wrong:
+				await click_at(f.global_of_value(float(st.miss)))
+				await snap(String(lv.r.id) + "_點錯")
+			else:
+				for k in st.hits.size():
+					var s0: int = lv.si
+					await click_at(f.global_of_value(float(st.hits[k])))
+					if lv.si == s0 and not lv.lt_found.has(k):
+						_issue("%s：點數線 %s 沒有亮" % [_where(), st.hits[k]])
+				await frames(3)
+				await snap(String(lv.r.id) + "_點完")
+		"ldrag":
+			# 拖珠子（數與式）：答錯時把第一顆和第二顆的位置對調
+			var f = lv._nf()
+			var names := []
+			for b in st.beads:
+				names.append(String(b[0]))
+			for k in names.size():
+				var nm: String = names[k]
+				var to := float(st.goal[nm])
+				if wrong and names.size() > 1 and k < 2:
+					to = float(st.goal[names[1 - k]])
+				if f.drag_pos.get(nm) != null and is_equal_approx(float(f.drag_pos[nm]), to):
+					continue
+				var p0: Vector2 = f.global_of_bead(nm)
+				var p1: Vector2 = f.global_of_snap(to)
+				_move(p0)
+				await frames(1)
+				_send_mouse(p0, true)
+				await frames(1)
+				for j in 6:
+					_move(p0.lerp(p1, (j + 1) / 6.0), true)
+					await frames(1)
+				_send_mouse(p1, false)
+				await frames(2)
+				if f.drag_pos.get(nm) == null or not is_equal_approx(float(f.drag_pos[nm]), to):
+					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
+			await snap(String(lv.r.id) + "_拖好")
+			await go()
+		"btap":
+			# 點積木約分（數與式）：答錯時點一對不一樣的積木
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var num: Array = f._rows(it.num, f._step())
+			var den: Array = f._rows(it.den, f._step())
+			var pairs := []
+			var used := {}
+			for a in num.size():
+				for b in den.size():
+					if wrong and String(num[a]) != String(den[b]):
+						pairs = [[a, b]]
+						break
+					if not wrong and not used.has(b) and String(num[a]) == String(den[b]):
+						used[b] = true
+						pairs.append([a, b])
+						break
+				if wrong and not pairs.is_empty():
+					break
+			for pr in pairs:
+				await click_at(f.global_of_block(0, int(pr[0])))
+				await click_at(f.global_of_block(1, int(pr[1])))
+			await frames(3)
+			await snap(String(lv.r.id) + ("_約錯" if wrong else "_約好"))
 		_:
 			_issue("%s：不認得的步驟 %s" % [_where(), st.kind])
 
