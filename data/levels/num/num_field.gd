@@ -7,6 +7,13 @@ extends Control
 ##   nline   數線：{"k": "nline", "x": [左, 右], "pts": [{v, s, at, lit, c, to, to_at, below}], "zoom": [[左, 右, 第幾步], …],
 ##                  "segs": [[從, 到, 第幾步, 顏色], …], "noticks": true（不寫刻度，免得洩漏答案）, "zero": true（只標 0）}
 ##           點在第 at 步出現，第 lit 步亮起燈柱（照大小由左到右一根一根亮），to：第 to_at 步滑到 to。
+##           R2 起：
+##             rope    {"a": 左柱, "b": 右柱, "ext": [[延伸到, 第幾步], …]}：兩根柱子之間的繩子，外分點在外面時繩子拉長過去
+##             點加 "bead": true → 畫成穿在繩上的珠子，"slide": "t" → 位置跟著滑桿 t 走，"wrong": [第幾步, 錯的位置] → 那一步答錯時閃一顆紅珠子
+##             weights {"at": 第幾步, "a": [位置, 個數], "b": [位置, 個數]}：柱子上疊砝碼（權重）
+##             run     {"a": 起點, "b": 起點, "meet": 會合點, "at": 第幾步, "s": ["A", "B"]}：兩個光點往會合點跑（同時到）
+##             road    {"pin": {"A": 1, "C": 5}, "cases": [{"at": 第幾步, "km": {"A": 0, "B": 6, "C": 8}, "show": {"B": 第幾步}}, …]}
+##                     數線上方畫真的路（風車和公里數），風車對齊它在數線上的位置，虛線連下來
 ##   blocks  質因數積木：{"k": "blocks", "num": ["3", "7"]（或 [[第幾步, [...]], …] 換分子）, "den": [...],
 ##                        "cancel": [第幾步, [[分子第幾塊, 分母第幾塊], …]], "judge": [第幾步, 有限小數？]}
 ##           約掉的積木掉下去。判斷那一步做完：有限小數 → 旁邊的小風車停下、燈亮，循環小數 → 小風車一直轉。
@@ -215,7 +222,7 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	_st[i] = s
 	var lo: float = s.lo
 	var hi: float = s.hi
-	var y := r.position.y + r.size.y * 0.64
+	var y := r.position.y + r.size.y * (0.84 if it.has("road") else 0.64)
 	var x0 := r.position.x + 18.0
 	var x1 := r.end.x - 22.0
 	var sx := func(v: float) -> float:
@@ -252,6 +259,17 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		var pz: float = sx.call(0.0)
 		draw_line(Vector2(pz, y - 9), Vector2(pz, y + 9), Color(1, 1, 1, 0.8), 2.0)
 		draw_string(font, Vector2(pz - 4, y + 24), "0", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.8))
+	if it.has("road"):
+		_draw_road(it.road, sx, y, r, st)
+	var rope_y := y - 26.0
+	if it.has("rope"):
+		_draw_rope(i, it.rope, sx, y, rope_y, st, t)
+	if it.has("weights") and st >= int(it.weights.get("at", 0)):
+		_draw_weights(it.weights, sx, rope_y, t - float(s.get("w_t", t)))
+		if not s.has("w_t"):
+			s["w_t"] = t
+	if it.has("run"):
+		_draw_runners(i, it.run, sx, y, st, t)
 	# 點：照大小排名（燈柱由左到右一根一根亮）
 	var pts: Array = it.get("pts", [])
 	var order := []
@@ -269,6 +287,12 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		if st < int(p.get("at", 0)):
 			continue
 		var v: float = float(p.v)
+		if p.has("slide"):
+			v = _slide_val(String(p.slide), v)
+		if p.has("wrong") and st == int(p.wrong[0]) and _miss() > 0.0:
+			var wx: float = sx.call(float(p.wrong[1]))
+			UITheme.dot(self, Vector2(wx, rope_y), 16.0, Color(1, 0.3, 0.3, 0.25 * _miss()))
+			UITheme.dot(self, Vector2(wx, rope_y), 7.0, Color(1, 0.4, 0.4, _miss()))
 		if p.has("to") and st >= int(p.get("to_at", 99)):
 			if not mv_t.has(k):
 				mv_t[k] = t
@@ -284,6 +308,9 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 			if not lit_t.has(k):
 				lit_t[k] = t + 0.28 * int(rank[k])
 			glow = clampf((t - float(lit_t[k])) / 0.5, 0.0, 1.0)
+		if bool(p.get("bead", false)):
+			_draw_bead(Vector2(px, rope_y), c, glow, String(p.get("s", "")), font)
+			continue
 		# 燈柱：亮起來時從數線上長出來
 		var hpost := 26.0 * glow
 		if glow > 0.0:
@@ -299,6 +326,165 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		shown += 1
 	s.lit_t = lit_t
 	s.mv_t = mv_t
+
+
+## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）
+func _slide_val(name: String, dflt: float) -> float:
+	if view == null:
+		return dflt
+	var pl = view.get("plane")
+	if pl == null:
+		return dflt
+	var dv = pl.get("dyn_vals")
+	if dv is Dictionary and dv.has(name):
+		return float(dv[name])
+	return dflt
+
+
+func _draw_bead(p: Vector2, c: Color, glow: float, lab: String, font: Font) -> void:
+	if glow > 0.0:
+		UITheme.dot(self, p, 18.0 * glow, Color(c.r, c.g, c.b, 0.25 * glow))
+	UITheme.dot(self, p, 8.0, c.darkened(0.25))
+	UITheme.dot(self, p, 6.0, c)
+	UITheme.dot(self, p + Vector2(-2, -2), 2.2, Color(1, 1, 1, 0.8))
+	if lab != "":
+		MathLabel.draw_on(self, font, p.x, p.y - 18.0, lab, UITheme.fs(16), c.lightened(0.25))
+
+
+## 繩子：兩根柱子＋中間微微下垂的繩，答對外分點後往外拉長（0.8 秒長出去）
+func _draw_rope(i: int, rp: Dictionary, sx: Callable, y: float, ry: float, st: int, t: float) -> void:
+	var s: Dictionary = _st[i]
+	var ext_t: Dictionary = s.get("ext_t", {})
+	var lo_v := minf(float(rp.a), float(rp.b))
+	var hi_v := maxf(float(rp.a), float(rp.b))
+	var ex := [lo_v, hi_v]
+	for k in rp.get("ext", []).size():
+		var e: Array = rp.ext[k]
+		if st < int(e[1]):
+			continue
+		if not ext_t.has(k):
+			ext_t[k] = t
+		var u := clampf((t - float(ext_t[k])) / 0.8, 0.0, 1.0)
+		var to := float(e[0])
+		if to > hi_v:
+			ex[1] = maxf(ex[1], lerpf(hi_v, to, u))
+		elif to < lo_v:
+			ex[0] = minf(ex[0], lerpf(lo_v, to, u))
+	s["ext_t"] = ext_t
+	var rope_c := Color(0.95, 0.8, 0.55, 0.85)
+	var pts := PackedVector2Array()
+	var xa: float = sx.call(ex[0])
+	var xb: float = sx.call(ex[1])
+	for k in 25:
+		var u := k / 24.0
+		pts.append(Vector2(lerpf(xa, xb, u), ry + 3.0 * sin(PI * u)))
+	draw_polyline(pts, rope_c, 2.0, true)
+	var names: Array = rp.get("s", [])
+	var ends := [float(rp.a), float(rp.b)]
+	for k in 2:
+		var px: float = sx.call(ends[k])
+		draw_line(Vector2(px, y), Vector2(px, ry - 10.0), Color("8a6a48"), 4.0)
+		UITheme.dot(self, Vector2(px, ry - 10.0), 3.0, Color("b08a60"))
+		if k < names.size():
+			# 柱子的名字寫在柱子頂端的外側（左邊那根寫左邊、右邊那根寫右邊），不擋繩上的珠子
+			var side := -1.0 if ends[k] <= ends[1 - k] else 1.0
+			MathLabel.draw_on(self, get_theme_default_font(), px + side * 13.0, ry - 14.0, String(names[k]), UITheme.fs(16), Color(1, 0.92, 0.75))
+
+
+## 砝碼：疊在柱子頂端，個數 = 權重（靠近誰，誰的權重大）
+func _draw_weights(w: Dictionary, sx: Callable, ry: float, age: float) -> void:
+	var font := get_theme_default_font()
+	var g := clampf(age / 0.6, 0.0, 1.0)
+	for key in ["a", "b"]:
+		if not w.has(key):
+			continue
+		var px: float = sx.call(float(w[key][0]))
+		var n := int(w[key][1])
+		for k in n:
+			var rc := Rect2(px - 9, ry - 22.0 - 13.0 * k - 8.0 * (1.0 - g), 18, 11)
+			draw_rect(rc, Color(0.75, 0.7, 0.9, 0.85 * g))
+			draw_rect(rc, Color(1, 1, 1, 0.6 * g), false, 1.0)
+		# 個數寫在內側（朝另一根柱子），外側留給柱子的名字
+		var other: float = sx.call(float(w["b" if key == "a" else "a"][0])) if w.has("b" if key == "a" else "a") else px + 1.0
+		var lab := str(n)
+		var lw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+		var lx := px + 12.0 if other > px else px - 12.0 - lw
+		draw_string(font, Vector2(lx, ry - 14.0 - 13.0 * (n - 1)), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, g))
+
+
+## 兩個光點往右跑：第 at 步之前停在起點，之後 2.4 秒內同時跑到會合點
+func _draw_runners(i: int, rn: Dictionary, sx: Callable, y: float, st: int, t: float) -> void:
+	var font := get_theme_default_font()
+	var s: Dictionary = _st[i]
+	var u := 0.0
+	if st >= int(rn.get("at", 99)):
+		if not s.has("run_t"):
+			s["run_t"] = t
+		u = clampf((t - float(s.run_t)) / 2.4, 0.0, 1.0)
+	var meet := float(rn.meet)
+	var names: Array = rn.get("s", ["A", "B"])
+	var cols := [COLS.cyan, COLS.gold]
+	for k in 2:
+		var v0 := float(rn.a) if k == 0 else float(rn.b)
+		var v := lerpf(v0, meet, u)
+		var p := Vector2(sx.call(v), y - 12.0 - 14.0 * k)
+		if u > 0.0:
+			draw_line(Vector2(sx.call(v0), p.y), p, Color(cols[k].r, cols[k].g, cols[k].b, 0.35), 3.0)
+		UITheme.dot(self, p, 12.0, Color(cols[k].r, cols[k].g, cols[k].b, 0.25))
+		UITheme.dot(self, p, 5.5, cols[k])
+		MathLabel.draw_on(self, font, p.x - 12.0, p.y - 4.0, String(names[k]), UITheme.fs(14), cols[k])
+	if u >= 1.0:
+		var age := t - float(s.run_t) - 2.4
+		var pm := Vector2(sx.call(meet), y - 19.0)
+		UITheme.dot(self, pm, 16.0 + 10.0 * clampf(age, 0.0, 1.0), Color(1, 0.9, 0.5, 0.3 * clampf(1.5 - age, 0.3, 1.0)))
+
+
+## 縮小地圖：每一種排法一條路（風車＋公里數），風車對齊它在數線上的位置
+func _draw_road(rd: Dictionary, sx: Callable, y: float, r: Rect2, st: int) -> void:
+	var font := get_theme_default_font()
+	var pin: Dictionary = rd.pin
+	var keys := pin.keys()
+	var row := 0
+	for cs in rd.get("cases", []):
+		if st < int(cs.get("at", 0)):
+			continue
+		var km: Dictionary = cs.km
+		var k0 = keys[0]
+		var k1 = keys[1]
+		var scale := (float(pin[k1]) - float(pin[k0])) / (float(km[k1]) - float(km[k0]))
+		var ry := r.position.y + 24.0 + 48.0 * row
+		row += 1
+		var pos := {}
+		for name in km.keys():
+			pos[name] = float(pin[k0]) + (float(km[name]) - float(km[k0])) * scale
+		var xs := []
+		for name in pos.keys():
+			xs.append(sx.call(pos[name]))
+		draw_line(Vector2(xs.min() - 10, ry), Vector2(xs.max() + 10, ry), Color(0.75, 0.68, 0.55, 0.7), 5.0)
+		# 公里數：相鄰兩座風車之間
+		var names := pos.keys()
+		names.sort_custom(func(a, b): return pos[a] < pos[b])
+		for j in names.size() - 1:
+			var d := absf(float(km[names[j + 1]]) - float(km[names[j]]))
+			var mx := (float(sx.call(pos[names[j]])) + float(sx.call(pos[names[j + 1]]))) / 2.0
+			var lab := ("%d" % d if is_equal_approx(d, roundf(d)) else "%.1f" % d) + " km"
+			var lw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12)).x
+			draw_string(font, Vector2(mx - lw / 2.0, ry + 16.0), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(1, 0.92, 0.75, 0.75))
+		var show: Dictionary = cs.get("show", {})
+		for name in names:
+			var px: float = sx.call(pos[name])
+			var vis := not show.has(name) or st >= int(show[name])
+			# 小風車
+			var hub := Vector2(px, ry - 12.0)
+			draw_line(Vector2(px, ry), hub, Color("8a7058"), 2.0)
+			for b in 4:
+				var a := _t() * 1.2 + b * PI / 2.0
+				var d := Vector2(cos(a), sin(a))
+				draw_colored_polygon(PackedVector2Array([hub, hub + d * 8.0 + Vector2(-d.y, d.x) * 3.0, hub + d * 8.0]), Color(1, 0.9, 0.62, 0.9))
+			UITheme.dot(self, hub, 1.8, Color(0.9, 0.85, 0.75))
+			MathLabel.draw_on(self, font, px + 12.0, ry - 12.0, String(name), UITheme.fs(14), Color(1, 1, 1, 0.9))
+			if vis:
+				draw_dashed_line(Vector2(px, ry + 4.0), Vector2(px, y - 4.0), Color(1, 0.9, 0.6, 0.35), 1.0, 4.0)
 
 
 static func _nice_step(raw: float) -> float:

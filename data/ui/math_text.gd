@@ -178,12 +178,22 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				i = _parse_into(s, i + 1, scale if nested else fs, dy if nested else 0.0, colors, den, glue, true, rads if nested else [])
 			_frac_depth -= 1
 			if nested:
-				# 寫成一行：分子 / 分母
+				# 寫成一行：分子 / 分母。分子或分母不只一項（2a + c）就加括號，不然 \frac{2a + c}{3} 會讀成 2a + c/3
+				var pn := _multi_term(num)
+				var pd := _multi_term(den)
+				if pn:
+					out.append({"ch": "(", "scale": scale, "dy": dy, "color": colors.back(), "glue": glue, "rads": rads})
 				out.append_array(num)
+				if pn:
+					out.append({"ch": ")", "scale": scale, "dy": dy, "color": colors.back(), "glue": true, "rads": rads})
 				out.append({"ch": "/", "scale": scale, "dy": dy, "color": colors.back(), "glue": true, "rads": rads})
+				if pd:
+					out.append({"ch": "(", "scale": scale, "dy": dy, "color": colors.back(), "glue": true, "rads": rads})
 				for d in den:
 					d.glue = true
 				out.append_array(den)
+				if pd:
+					out.append({"ch": ")", "scale": scale, "dy": dy, "color": colors.back(), "glue": true, "rads": rads})
 			else:
 				out.append({"ch": "", "frac": {"num": num, "den": den}, "scale": scale, "dy": dy,
 					"color": colors.back(), "glue": glue, "rads": rads})
@@ -1272,3 +1282,14 @@ static func make_button(markup: String, fs: int = 20, min_size: Vector2 = Vector
 		m.offset_left = 14
 	b.add_child(m)
 	return b
+
+
+## 寫成一行的分數，分子或分母是不是不只一項（有 + − × 或空白）：要加括號
+static func _multi_term(arr: Array) -> bool:
+	if arr.size() <= 1:
+		return false
+	for g in arr:
+		var ch := String(g.get("ch", ""))
+		if ch in ["+", "−", "-", "×", "·", " "] and arr.find(g) > 0:
+			return true
+	return false

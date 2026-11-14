@@ -41,4 +41,32 @@ static func cards(level: String) -> Array:
 				 "check": {"q": "a > b，下面哪一個一定成立？", "opts": ["a − 3 > b − 3", "a^{2} > b^{2}", "\\frac{1}{a} < \\frac{1}{b}"], "a": 0,
 					"why": "兩邊同減 3，不等號不變。a^{2} > b^{2}、\\frac{1}{a} < \\frac{1}{b} 都可以用負數推翻。", "hint": "試試 a = 1、b = −2。"}},
 			]
+		"R2":
+			return [
+				{"title": "內分點公式", "decoys": ["小", "a + b"], "tag": "公式", "glyph": "m : n",
+				 "formulas": ["\\ol{AP} : \\ol{PB} = m : n ⇒ P = \\frac{?{n}a + ?{m}b}{m + n}"],
+				 "notes": ["交叉乘：靠近誰，誰的權重 ?{大}", "中點是 m = n 的時候：\\frac{a + b}{2}"],
+				 "example": "A(−3)、B(9)，\\ol{AP} : \\ol{PB} = 1 : 2 ⇒ P = \\frac{2 × (−3) + 1 × 9}{3} = 1",
+				 "trap": "權重放反（\\frac{ma + nb}{m + n}）會得到另一個點，代一個例子檢查！",
+				 "check": {"q": "A(1)、B(7)，\\ol{AP} : \\ol{PB} = 1 : 2，P = ？", "opts": ["3", "5", "4"], "a": 0,
+					"why": "P = \\frac{2 × 1 + 1 × 7}{3} = 3。5 是權重放反，4 是中點。", "hint": "靠近 A，A 的權重大。"}},
+				{"title": "外分點", "decoys": ["長", "一"], "tag": "公式", "glyph": "P",
+				 "formulas": ["外分點 P = \\frac{?{mb − na}}{m − n}"],
+				 "notes": ["外分點在比較 ?{短} 的那一端外面", "\\ol{AC} : \\ol{BC} = m : n（m ≠ n）的 C 有 ?{兩} 個：內分點和外分點"],
+				 "example": "A(−2)、B(8)，\\ol{AC} : \\ol{BC} = 3 : 2 ⇒ C = 4 或 28",
+				 "check": {"q": "A(0)、B(6)，\\ol{AC} : \\ol{BC} = 2 : 1，C 在 \\ol{AB} 外面，C = ？", "opts": ["12", "−6", "4"], "a": 0,
+					"why": "C = \\frac{2 × 6 − 1 × 0}{2 − 1} = 12，在 B（比較短的那一端）外面。4 是內分點。", "hint": "C 靠近 B。"}},
+				{"title": "分點比大小", "decoys": ["中間", "\\frac{m}{m + n}"], "tag": "技巧", "glyph": "a·c",
+				 "formulas": ["\\frac{ma + nc}{m + n} 在 a 往 c 走 ?{\\frac{n}{m + n}} 的地方"],
+				 "notes": ["係數有負的，就在 ?{外面}", "p|x − a| = q|x − b| ⇒ \\ol{PA} : \\ol{PB} = ?{q : p}（比要反過來）"],
+				 "example": "\\frac{3a + 5c}{8} 在 \\frac{5}{8} 處，\\frac{a + c}{2} 在 \\frac{1}{2} 處 ⇒ \\frac{a + c}{2} < \\frac{3a + 5c}{8}（a < c）",
+				 "check": {"q": "a < b，\\frac{a + 3b}{4} 在哪裡？", "opts": ["靠近 b", "靠近 a", "在外面"], "a": 0,
+					"why": "b 的權重 3 比較大，在 a 往 b 走 \\frac{3}{4} 的地方。", "hint": "哪一端的權重大？"}},
+				{"title": "追趕問題", "decoys": ["時間比", "內分點"], "tag": "技巧", "glyph": "⇢",
+				 "formulas": ["同時出發、同時到：走的距離比 = ?{速度比}"],
+				 "notes": ["往同一個方向追，追上的地方是 ?{外分點}"],
+				 "example": "A 在 −3、B 在 9，A 的速度是 B 的 4 倍 ⇒ \\ol{PA} : \\ol{PB} = 4 : 1，P = 13",
+				 "check": {"q": "A 在 0、B 在 6 都往右走，A 的速度是 B 的 3 倍，在哪裡追上？", "opts": ["9", "8", "4.5"], "a": 0,
+					"why": "\\ol{PA} : \\ol{PB} = 3 : 1，外分點 P = \\frac{3 × 6 − 1 × 0}{2} = 9。4.5 是內分點。", "hint": "追上的地方在 B 的右邊。"}},
+			]
 	return []

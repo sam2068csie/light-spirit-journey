@@ -157,6 +157,10 @@ const MISTAKE_INFO := {
 	"num_compare":     {"name": "比大小（分數、根號：平方或有理化）", "level": 2},
 	"num_ineq":        {"name": "不等式的性質與反例", "level": 2},
 	"num_round":       {"name": "四捨五入的範圍", "level": 2},
+	"num_divide":      {"name": "內分點公式（交叉乘權重）", "level": 1},
+	"num_external":    {"name": "外分點（所有可能的位置）", "level": 1},
+	"num_divapp":      {"name": "分點的應用（縮小比例、追趕）", "level": 2},
+	"num_divcmp":      {"name": "分點比大小（看權重、看位置）", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
