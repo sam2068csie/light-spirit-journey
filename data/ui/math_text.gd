@@ -198,13 +198,15 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				out.append({"ch": "", "frac": {"num": num, "den": den}, "scale": scale, "dy": dy,
 					"color": colors.back(), "glue": glue, "rads": rads})
 			continue
-		# 線段的上橫線：\ol{AB}（用根號的機制，只畫上面那條槓、不畫勾）
-		if c == "\\" and s.substr(i, 4) == "\\ol{":
+		# 線段的上橫線：\ol{AB}、弧：\arc{AB}（用根號的機制，只畫上面那條槓或弧線、不畫勾）
+		if c == "\\" and (s.substr(i, 4) == "\\ol{" or s.substr(i, 5) == "\\arc{"):
+			var is_arc := s.substr(i, 5) == "\\arc{"
 			var oid := out.size()
-			out.append({"ch": "", "scale": scale, "dy": dy, "color": colors.back(), "glue": glue, "rad": oid, "rads": rads, "idx": "ol"})
+			out.append({"ch": "", "scale": scale, "dy": dy, "color": colors.back(), "glue": glue, "rad": oid, "rads": rads,
+				"idx": "arc" if is_arc else "ol"})
 			var inner_o := rads.duplicate()
 			inner_o.append(oid)
-			i = _parse_into(s, i + 4, scale, dy, colors, out, true, true, inner_o)
+			i = _parse_into(s, i + (5 if is_arc else 4), scale, dy, colors, out, true, true, inner_o)
 			continue
 		# 根號：√{…}，裡面的字都記得自己在哪個根號底下
 		if (c == "√" or c == "∛" or c == "∜") and i + 1 < s.length() and s[i + 1] == "{":
@@ -1244,6 +1246,19 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			var olw := maxf(1.0, sz * 0.06)
 			var oy := top - sz * 0.02
 			ci.draw_line(Vector2(o.pos.x + off.x + sz * 0.04, oy), Vector2(x_end - sz * 0.02, oy), o.color, olw, true)
+			continue
+		if o.get("idx", "") == "arc":
+			# 弧的符號：字的上方一條向上拱的弧線（兩端稍微低一點）
+			var aw := maxf(1.0, sz * 0.06)
+			var ax0: float = o.pos.x + off.x + sz * 0.02
+			var ax1: float = x_end - sz * 0.02
+			var ay := top - sz * 0.02
+			var rise := minf(sz * 0.2, (ax1 - ax0) * 0.18)
+			var pts_a := PackedVector2Array()
+			for k in 13:
+				var u := k / 12.0
+				pts_a.append(Vector2(lerpf(ax0, ax1, u), ay + rise * 0.35 - rise * sin(u * PI)))
+			ci.draw_polyline(pts_a, o.color, aw, true)
 			continue
 		var x0: float = o.pos.x + off.x
 		var w: float = o.w

@@ -883,45 +883,60 @@ func _draw_bars(i: int, bars: Array, sx: Callable, x0: float, x1: float, y: floa
 
 # ---- 種子和兩個籃子（R5）----
 
-const SEED_H := 32.0
+const SEED_FS := 14
+const SEED_PAD := 6.0            # 種子上下的留白
 const SEED_GAP := 6.0
 
 
-## 分數比較高，字小一點才放得進種子
-func _seed_fs(name: String) -> int:
-	return UITheme.fs(12) if name.contains("\\frac") else UITheme.fs(15)
+## 種子的大小：寬照字的寬度，高照字的上下範圍（分數比較高，種子也跟著高，字不會超出框）
+func _seed_size(font: Font, name: String) -> Vector2:
+	var ext := MathLabel.line_extent(name, UITheme.fs(SEED_FS))
+	return Vector2(MathLabel.text_width(font, name, UITheme.fs(SEED_FS)) + 16.0, maxf(28.0, ext.x + ext.y + 2.0 * SEED_PAD))
 
 
-func _seed_w(font: Font, name: String) -> float:
-	return MathLabel.text_width(font, name, _seed_fs(name)) + 16.0
+## 一排一排放：左邊從 x0 開始、寬度到 x1，回傳 {名字: Rect2} 和用掉的高度
+func _flow(font: Font, names: Array, x0: float, x1: float, y0: float) -> Array:
+	var out := {}
+	var x := x0
+	var y := y0
+	var row_h := 0.0
+	for name in names:
+		var sz := _seed_size(font, String(name))
+		if x + sz.x > x1 and x > x0:
+			x = x0
+			y += row_h + SEED_GAP
+			row_h = 0.0
+		out[name] = Rect2(Vector2(x, y), sz)
+		x += sz.x + SEED_GAP
+		row_h = maxf(row_h, sz.y)
+	return [out, y + row_h - y0]
 
 
-## 兩個籃子的位置（下半部，左右各一個）
-func _bins(r: Rect2) -> Array:
-	var bh := minf(r.size.y * 0.56, 2.0 * SEED_H + 3.0 * SEED_GAP + 20.0)
+## 兩個籃子的位置：種子袋（全部種子都在袋子裡時）占上面，籃子占剩下的下半部
+func _bins(r: Rect2, it: Dictionary) -> Array:
+	var names := []
+	for sd in it.get("seeds", []):
+		names.append(String(sd[0]))
+	var tray_h: float = _flow(get_theme_default_font(), names, r.position.x, r.end.x, r.position.y)[1]
+	var y := r.position.y + tray_h + 8.0
 	var bw := (r.size.x - 16.0) / 2.0
-	var y := r.end.y - bh
+	var bh := maxf(60.0, r.end.y - y)
 	return [Rect2(r.position.x, y, bw, bh), Rect2(r.position.x + bw + 16.0, y, bw, bh)]
 
 
 ## 每顆種子的位置：pos 是 {名字: null / 0 / 1}
 func _seed_layout(it: Dictionary, r: Rect2, pos: Dictionary) -> Dictionary:
 	var font := get_theme_default_font()
-	var out := {}
-	var bins := _bins(r)
-	var cur := [Vector2(r.position.x, r.position.y), Vector2(bins[0].position.x + 8, bins[0].position.y + 20),
-		Vector2(bins[1].position.x + 8, bins[1].position.y + 20)]
-	var right := [r.end.x, bins[0].end.x - 8, bins[1].end.x - 8]
-	var left := [r.position.x, bins[0].position.x + 8, bins[1].position.x + 8]
+	var bins := _bins(r, it)
+	var groups := [[], [], []]
 	for sd in it.get("seeds", []):
-		var name := String(sd[0])
-		var where = pos.get(name)
-		var k := 0 if where == null else int(where) + 1
-		var w := _seed_w(font, name)
-		if cur[k].x + w > right[k] and cur[k].x > left[k]:
-			cur[k] = Vector2(left[k], cur[k].y + SEED_H + SEED_GAP)
-		out[name] = Rect2(cur[k], Vector2(w, SEED_H))
-		cur[k].x += w + SEED_GAP
+		var where = pos.get(String(sd[0]))
+		groups[0 if where == null else int(where) + 1].append(String(sd[0]))
+	var out := {}
+	out.merge(_flow(font, groups[0], r.position.x, r.end.x, r.position.y)[0])
+	for k in 2:
+		var b: Rect2 = bins[k]
+		out.merge(_flow(font, groups[k + 1], b.position.x + 6.0, b.end.x - 6.0, b.position.y + 24.0)[0])
 	return out
 
 
@@ -940,7 +955,7 @@ func _seed_at(pos: Vector2) -> String:
 
 
 func _bin_at(pos: Vector2):
-	var bins := _bins(_sort_rect())
+	var bins := _bins(_sort_rect(), items[int(spec.get("item", 0))])
 	for k in 2:
 		if (bins[k] as Rect2).grow(10).has_point(pos):
 			return k
@@ -955,7 +970,7 @@ func global_of_seed(name: String) -> Vector2:
 
 
 func global_of_bin(k: int) -> Vector2:
-	var b: Rect2 = _bins(_sort_rect())[k]
+	var b: Rect2 = _bins(_sort_rect(), items[int(spec.get("item", 0))])[k]
 	return get_global_transform() * Vector2(b.get_center().x, b.position.y + b.size.y * 0.7)
 
 
@@ -969,7 +984,7 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 	var pos := {}
 	for sd in it.get("seeds", []):
 		pos[String(sd[0])] = (drag_pos.get(String(sd[0])) if live else (int(sd[1]) if done else null))
-	var bins := _bins(r)
+	var bins := _bins(r, it)
 	var cols := [Color(0.55, 0.95, 0.55), Color(0.75, 0.7, 1.0)]
 	for k in 2:
 		var b: Rect2 = bins[k]
@@ -981,7 +996,7 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 		for yy in range(int(b.position.y) + 26, int(b.end.y), 14):
 			draw_line(Vector2(b.position.x + 4, yy), Vector2(b.end.x - 4, yy), Color(c.r, c.g, c.b, 0.07), 1.0)
 		var lab := String(it.bins[k]) if it.has("bins") else ""
-		MathLabel.draw_on(self, font, b.get_center().x, b.position.y + 15.0, lab, UITheme.fs(14), c)
+		MathLabel.draw_on(self, font, b.get_center().x, b.position.y + 18.0, lab, UITheme.fs(14), c)
 	var lay := _seed_layout(it, r, pos)
 	var hl := {}
 	for h in it.get("hl", []):
@@ -1004,8 +1019,8 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 			bgc = Color(0.15, 0.3, 0.15, 0.9)
 		draw_rect(rc, bgc)
 		draw_rect(rc, Color(c.r, c.g, c.b, 0.85), false, 1.5)
-		var frac := name.contains("\\frac")
-		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + SEED_H * (0.58 if frac else 0.68), name, _seed_fs(name), c)
+		var ext := MathLabel.line_extent(name, UITheme.fs(SEED_FS))
+		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + (rc.size.y - ext.x - ext.y) / 2.0 + ext.x, name, UITheme.fs(SEED_FS), c)
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）

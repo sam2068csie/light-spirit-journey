@@ -326,7 +326,7 @@ static func _semi_variant(p: int, L: int) -> Dictionary:
 			_f("BD、CD", "\\ol{BC} 是半徑 %s" % _n(bc), "\\ol{BD} = [0]、\\ol{CD} = [1]", [_frac(pb2, bc), _frac(pc * pc, bc)],
 				"\\ol{BD} = \\frac{\\ol{PB}^{2}}{\\ol{BC}} = %s、\\ol{CD} = \\frac{\\ol{PC}^{2}}{\\ol{BC}} = %s" % [_frac_tex(pb2, bc), _frac_tex(pc * pc, bc)],
 				"\\ol{BD} = \\frac{\\ol{PB}^{2}}{\\ol{BC}}、\\ol{CD} = \\frac{\\ol{PC}^{2}}{\\ol{BC}}。", T_CLO),
-			B1._flt("哪些有理", "點出有理數長度", ["弧 OBA", "\\ol{PB}", "\\ol{BD}", "\\ol{CD}", "\\ol{PD}"], [false, false, true, true, false],
+			B1._flt("哪些有理", "點出有理數長度", ["\\arc{OBA}", "\\ol{PB}", "\\ol{BD}", "\\ol{CD}", "\\ol{PD}"], [false, false, true, true, false],
 				"有理數", "無理數", "弧長有 π，\\ol{PB} = √%d，\\ol{PD} = \\frac{\\ol{PB} × \\ol{PC}}{\\ol{BC}} 也有 √%d" % [pb2, pb2],
 				"弧長 = π × 半徑。\\ol{PD} = \\frac{\\ol{PB} × \\ol{PC}}{\\ol{BC}}。", T_CLO),
 		]}
