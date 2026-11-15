@@ -347,6 +347,32 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
 			await snap(String(lv.r.id) + "_拖好")
 			await go()
+		"lsort":
+			# 篩種子（數與式 R5）：答錯時第一顆放到另一個籃子，答對時每一顆放進該放的籃子
+			var f = lv._nf()
+			var seeds: Array = f.items[int(st.get("item", 0))].seeds
+			for k in seeds.size():
+				var nm := String(seeds[k][0])
+				var want := int(seeds[k][1])
+				if wrong and k == 0:
+					want = 1 - want
+				if f.drag_pos.get(nm) != null and int(f.drag_pos[nm]) == want:
+					continue
+				var p0: Vector2 = f.global_of_seed(nm)
+				var p1: Vector2 = f.global_of_bin(want)
+				_move(p0)
+				await frames(1)
+				_send_mouse(p0, true)
+				await frames(1)
+				for j in 6:
+					_move(p0.lerp(p1, (j + 1) / 6.0), true)
+					await frames(1)
+				_send_mouse(p1, false)
+				await frames(2)
+				if f.drag_pos.get(nm) == null or int(f.drag_pos[nm]) != want:
+					_issue("%s：種子 %s 沒有放進籃子 %d（%s）" % [_where(), nm, want, f.drag_pos.get(nm)])
+			await snap(String(lv.r.id) + ("_放錯" if wrong else "_放好"))
+			await go()
 		"lrange":
 			# 拉範圍（數與式 R3）：答錯時右端多拉一格（有常見錯誤就拉成常見錯誤），答對時兩端都拉到答案
 			var f = lv._nf()
@@ -615,7 +641,7 @@ func _play_round() -> void:
 			await snap("%s_%d_%s" % [rid, si0, st.name])
 			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
 			# 能量只剩一格就不再故意答錯（每一步都在圖上作答的題目，例如 R3 的拉範圍）
-			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange"] and int(lv.energy) > 1):
+			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort"] and int(lv.energy) > 1):
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false

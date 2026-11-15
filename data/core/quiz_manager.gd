@@ -170,6 +170,11 @@ const MISTAKE_INFO := {
 	"num_amgmfix":     {"name": "給和求積、給積求和", "level": 1},
 	"num_amgmform":    {"name": "湊出定值（乘開、拆項）", "level": 2},
 	"num_amgmsign":    {"name": "算幾只能用在正數", "level": 2},
+	"num_rat":         {"name": "分辨有理數、無理數", "level": 1},
+	"num_closure":     {"name": "有理數、無理數的封閉性", "level": 1},
+	"num_coef":        {"name": "比較係數（要先確定是有理數）", "level": 2},
+	"num_contra":      {"name": "反證法", "level": 2},
+	"num_ratz":        {"name": "分母有理化", "level": 1},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

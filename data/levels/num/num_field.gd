@@ -24,6 +24,8 @@ extends Control
 ##   drag    把珠子從右上角的托盤拖到繩上，吸附到 snaps（a 到 b 的幾分之幾）；drag_result() 讀位置、drag_reject(名字們) 退回托盤
 ##   blocks  點一塊分子積木、再點一塊一樣的分母積木就約掉；回呼 {"cut": 有沒有約掉, "left": 還剩幾對可以約}
 ##   sail    點風車的一片扇葉（風車先停下來）；回呼 {"k": 第幾片（0 = 循環節的第一個數字）}
+##   sort    篩種子（R5）：把種子袋裡的種子拖進左右兩個籃子；drag_result() 讀 {名字: 0 左 / 1 右 / null 還在袋子}、drag_reject(名字們) 退回
+##           spec：{"item"}（種子寫在 seeds 元件裡）
 ##   range   拉範圍（R3）：數線上第 row 排的燈條有兩個把手，拖到端點（吸附到 snap）；range_result() 讀 [左, 右]、range_flash(哪一端) 閃紅
 ##           spec：{"item", "row", "s": 標籤, "start": [左, 右], "snap", "demo": true（一隻手先示範怎麼拖，學生一碰就停）}
 ##
@@ -31,6 +33,9 @@ extends Control
 ##                              "from": [a0, b0, 排]（出現時從這一段變過來：a0 → lo、b0 → hi，翻過 0 就寫反過來的端點）,
 ##                              "src": [[排, 值, 0 或 1], …]（出現時從那一排的那個值連一條線到這條的左端 0、右端 1）}]
 ##   有燈條的數線，軸往下移，燈條一排一排疊在上面。
+##
+## 種子（R5）：{"k": "seeds", "bins": ["左邊籃子的標籤", "右邊"], "seeds": [["名字（算式）", 0 或 1（該放哪個籃子）], …],
+##             "at": 第幾步是篩種子（做完之前種子都在袋子裡，做完之後在對的籃子裡）, "hl": [[第幾步起, "名字"], …]（亮起來的種子）}
 ## 圖上不寫中文：只有數字、字母。
 
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -121,6 +126,8 @@ func _draw() -> void:
 				_draw_nline(i, it, r)
 			"blocks":
 				_draw_blocks(i, it, r)
+			"seeds":
+				_draw_seeds(i, it, r)
 		x += w
 
 
@@ -387,6 +394,9 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 	if m == "drag":
 		for b in sp.get("beads", []):
 			drag_pos[String(b[0])] = null
+	if m == "sort":
+		for sd in items[int(sp.get("item", 0))].get("seeds", []):
+			drag_pos[String(sd[0])] = null
 	if m == "range":
 		var st0: Array = sp.get("start", [0, 1])
 		rng = [float(st0[0]), float(st0[1])]
@@ -450,6 +460,13 @@ func _gui_input(e: InputEvent) -> void:
 		"blocks":
 			if press:
 				_block_click(pos)
+		"sort":
+			if press:
+				dragging = _seed_at(pos)
+				drag_pt = pos
+			elif release and dragging != "":
+				drag_pos[dragging] = _bin_at(pos)
+				dragging = ""
 		"range":
 			if press:
 				rng_drag = _handle_at(pos)
@@ -862,6 +879,127 @@ func _draw_bars(i: int, bars: Array, sx: Callable, x0: float, x1: float, y: floa
 				var to_x := a if int(sc[2]) == 0 else e
 				draw_dashed_line(Vector2(pv, py), Vector2(to_x, by), Color(1, 0.95, 0.75, 0.7 * la), 1.5, 5.0)
 	s.bar_t = bt
+
+
+# ---- 種子和兩個籃子（R5）----
+
+const SEED_H := 32.0
+const SEED_GAP := 6.0
+
+
+func _seed_w(font: Font, name: String) -> float:
+	return MathLabel.text_width(font, name, UITheme.fs(15)) + 16.0
+
+
+## 兩個籃子的位置（下半部，左右各一個）
+func _bins(r: Rect2) -> Array:
+	var bh := minf(r.size.y * 0.56, 2.0 * SEED_H + 3.0 * SEED_GAP + 20.0)
+	var bw := (r.size.x - 16.0) / 2.0
+	var y := r.end.y - bh
+	return [Rect2(r.position.x, y, bw, bh), Rect2(r.position.x + bw + 16.0, y, bw, bh)]
+
+
+## 每顆種子的位置：pos 是 {名字: null / 0 / 1}
+func _seed_layout(it: Dictionary, r: Rect2, pos: Dictionary) -> Dictionary:
+	var font := get_theme_default_font()
+	var out := {}
+	var bins := _bins(r)
+	var cur := [Vector2(r.position.x, r.position.y), Vector2(bins[0].position.x + 8, bins[0].position.y + 20),
+		Vector2(bins[1].position.x + 8, bins[1].position.y + 20)]
+	var right := [r.end.x, bins[0].end.x - 8, bins[1].end.x - 8]
+	var left := [r.position.x, bins[0].position.x + 8, bins[1].position.x + 8]
+	for sd in it.get("seeds", []):
+		var name := String(sd[0])
+		var where = pos.get(name)
+		var k := 0 if where == null else int(where) + 1
+		var w := _seed_w(font, name)
+		if cur[k].x + w > right[k] and cur[k].x > left[k]:
+			cur[k] = Vector2(left[k], cur[k].y + SEED_H + SEED_GAP)
+		out[name] = Rect2(cur[k], Vector2(w, SEED_H))
+		cur[k].x += w + SEED_GAP
+	return out
+
+
+func _sort_rect() -> Rect2:
+	var i := int(spec.get("item", 0))
+	return _geo.get(i, {}).get("r", Rect2())
+
+
+func _seed_at(pos: Vector2) -> String:
+	var i := int(spec.get("item", 0))
+	var lay := _seed_layout(items[i], _sort_rect(), drag_pos)
+	for name in lay:
+		if (lay[name] as Rect2).grow(4).has_point(pos):
+			return String(name)
+	return ""
+
+
+func _bin_at(pos: Vector2):
+	var bins := _bins(_sort_rect())
+	for k in 2:
+		if (bins[k] as Rect2).grow(10).has_point(pos):
+			return k
+	return null
+
+
+## 測試用：種子、籃子在螢幕上的位置
+func global_of_seed(name: String) -> Vector2:
+	var i := int(spec.get("item", 0))
+	var lay := _seed_layout(items[i], _sort_rect(), drag_pos)
+	return get_global_transform() * (lay[name] as Rect2).get_center()
+
+
+func global_of_bin(k: int) -> Vector2:
+	var b: Rect2 = _bins(_sort_rect())[k]
+	return get_global_transform() * Vector2(b.get_center().x, b.position.y + b.size.y * 0.7)
+
+
+func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var st := _step()
+	_geo[i] = {"r": r}
+	var live := mode == "sort" and int(spec.get("item", 0)) == i
+	var done := st > int(it.get("at", 0))
+	var pos := {}
+	for sd in it.get("seeds", []):
+		pos[String(sd[0])] = (drag_pos.get(String(sd[0])) if live else (int(sd[1]) if done else null))
+	var bins := _bins(r)
+	var cols := [Color(0.55, 0.95, 0.55), Color(0.75, 0.7, 1.0)]
+	for k in 2:
+		var b: Rect2 = bins[k]
+		var c: Color = cols[k]
+		var hot := live and dragging != "" and b.grow(10).has_point(drag_pt)
+		draw_rect(b, Color(c.r, c.g, c.b, 0.16 if hot else 0.08))
+		draw_rect(b, Color(c.r, c.g, c.b, 0.6), false, 2.0)
+		# 籃子的編織紋
+		for yy in range(int(b.position.y) + 26, int(b.end.y), 14):
+			draw_line(Vector2(b.position.x + 4, yy), Vector2(b.end.x - 4, yy), Color(c.r, c.g, c.b, 0.07), 1.0)
+		var lab := String(it.bins[k]) if it.has("bins") else ""
+		MathLabel.draw_on(self, font, b.get_center().x, b.position.y + 15.0, lab, UITheme.fs(14), c)
+	var lay := _seed_layout(it, r, pos)
+	var hl := {}
+	for h in it.get("hl", []):
+		if st >= int(h[0]):
+			hl[String(h[1])] = true
+	for sd in it.get("seeds", []):
+		var name := String(sd[0])
+		var rc: Rect2 = lay[name]
+		if live and dragging == name:
+			rc.position = drag_pt - rc.size / 2.0
+		var c := Color(1, 0.92, 0.7)
+		var bgc := Color(0.25, 0.2, 0.12, 0.9)
+		if reject_t.has(name) and t - float(reject_t[name]) < 1.2:
+			c = COLS.bad
+		if hl.has(name):
+			var g := 0.6 + 0.4 * sin(t * 4.0)
+			draw_rect(rc.grow(5), Color(1, 0.85, 0.3, 0.25 * g))
+			c = COLS.gold
+		if done and not live and int(sd[1]) == 0:
+			bgc = Color(0.15, 0.3, 0.15, 0.9)
+		draw_rect(rc, bgc)
+		draw_rect(rc, Color(c.r, c.g, c.b, 0.85), false, 1.5)
+		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + SEED_H * 0.68, name, UITheme.fs(15), c)
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）

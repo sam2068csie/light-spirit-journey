@@ -1248,14 +1248,16 @@ func _refresh_order() -> void:
 		parts.append("[color=#%s]%s[/color]" % [step_color().to_html(false), st.items[idx].k])
 	for k in st.items.size() - order_seq.size():
 		parts.append("[color=#%s]□[/color]" % UITheme.TEXT_DIM.to_html(false))
-	order_preview.text = "  <  ".join(parts)
+	# "sep"：項目之間的符號（預設「<」由小到大；排證明的句子用「→」）
+	var sep := "  %s  " % String(st.get("sep", "<"))
+	order_preview.text = sep.join(parts)
 	# 字太長會換行：用「全部排好」時的長度量，縮小字級讓它排成一行（排的過程字不會一下大一下小）
 	var full := PackedStringArray()
 	for it in st.items:
 		full.append(String(it.k))
 	var font := order_preview.get_theme_default_font()
 	var fs := 24
-	while fs > 14 and MathLabel.text_width(font, "  <  ".join(full), UITheme.fs(fs)) > order_preview.max_width - 8.0:
+	while fs > 14 and MathLabel.text_width(font, sep.join(full), UITheme.fs(fs)) > order_preview.max_width - 8.0:
 		fs -= 1
 	order_preview.font_size = UITheme.fs(fs)
 	for i in order_btns.size():

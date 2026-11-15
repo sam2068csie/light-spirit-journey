@@ -15,6 +15,8 @@ extends "res://data/levels/line/line_level.gd"
 ##       {"kind": "lrange", …, "item": 0, "row": 燈條第幾排, "s": "x − y", "ans": [左, 右], "start": [左, 右], "snap": 1,
 ##        "demo": true（一隻手先示範）, "wrongs": [[左, 右, "常見錯誤的提示"], …]}
 ##         拉範圍（R3）：拖兩個把手到端點，按「確定」。錯的那一端閃紅，提示說太大還是太小
+##       {"kind": "lsort", …, "item": 0, "why": {"種子": 放錯時的提示}}
+##         篩種子（R5）：把種子拖進兩個籃子（seeds 元件寫好每顆該放哪裡），按「確定」。放錯的退回種子袋
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
 const NumField := preload("res://data/levels/num/num_field.gd")
@@ -66,7 +68,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap", "mtap", "lrange":
+		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -89,6 +91,11 @@ func _forge_step() -> void:
 			_nf().begin("blocks", {"item": int(st.get("item", 0))}, _btap_event)
 		"mtap":
 			_nf().begin("sail", {"item": int(st.get("item", 0))}, _mtap_event)
+		"lsort":
+			_nf().begin("sort", {"item": int(st.get("item", 0))}, func(_e): pass)
+			go_btn.visible = true
+			go_btn.disabled = false
+			go_btn.text = "確定"
 		"lrange":
 			_nf().begin("range", {"item": int(st.get("item", 0)), "row": st.get("row", 0), "s": st.get("s", ""),
 				"start": st.start, "snap": float(st.get("snap", 1.0)), "demo": bool(st.get("demo", false))}, func(_e): pass)
@@ -216,6 +223,29 @@ func _mtap_event(ev: Dictionary) -> void:
 var mtap_ok := false
 
 
+func _lsort_submit() -> void:
+	var st: Dictionary = steps[si]
+	var f := _nf()
+	var res: Dictionary = f.drag_result()
+	var empty := 0
+	var bad := []
+	for sd in f.items[int(st.get("item", 0))].seeds:
+		var nm := String(sd[0])
+		if res.get(nm) == null:
+			empty += 1
+		elif int(res[nm]) != int(sd[1]):
+			bad.append(nm)
+	if empty > 0:
+		_hint("還有 %d 顆種子在袋子裡。" % empty, "info")
+		return
+	if bad.is_empty():
+		_pic_finish(si)
+		return
+	f.drag_reject(bad)
+	var why: Dictionary = st.get("why", {})
+	_pic_wrong(st, "%s 放錯了。%s" % [bad[0], String(why.get(bad[0], st.nudge))])
+
+
 func _lrange_submit() -> void:
 	var st: Dictionary = steps[si]
 	var res: Array = _nf().range_result()
@@ -244,6 +274,9 @@ func _custom_go() -> void:
 	match _pic_kind():
 		"lrange":
 			_lrange_submit()
+			return
+		"lsort":
+			_lsort_submit()
 			return
 		"mtap":
 			if mtap_ok:
@@ -286,6 +319,10 @@ func test_answer(st: Dictionary) -> bool:
 			return true
 		"lrange":
 			_nf().rng = [float(st.ans[0]), float(st.ans[1])]
+			return true
+		"lsort":
+			for sd in _nf().items[int(st.get("item", 0))].seeds:
+				_nf().drag_pos[String(sd[0])] = int(sd[1])
 			return true
 		"btap":
 			var f := _nf()
