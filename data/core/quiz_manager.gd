@@ -166,6 +166,10 @@ const MISTAKE_INFO := {
 	"num_corner":      {"name": "範圍的乘除（看四個角）", "level": 2},
 	"num_rsq":         {"name": "平方的範圍（跨過 0）", "level": 2},
 	"num_rcomp":       {"name": "複合式子的範圍（配方看距離、拆括號）", "level": 2},
+	"num_amgm":        {"name": "算幾不等式與等號成立", "level": 1},
+	"num_amgmfix":     {"name": "給和求積、給積求和", "level": 1},
+	"num_amgmform":    {"name": "湊出定值（乘開、拆項）", "level": 2},
+	"num_amgmsign":    {"name": "算幾只能用在正數", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
