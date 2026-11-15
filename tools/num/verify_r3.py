@@ -83,3 +83,12 @@ for xr, yr, f, h, k, c, prod, ans in [
         assert f(x, y) == (x - h) * (y - k) + c
     assert rng(lambda x, y: (x - h) * (y - k), xr, yr) == prod and rng(f, xr, yr) == ans
 print("R3 verify OK")
+
+# 8（使用者 2026/11/15 改成看距離）：方框裡離中心 C 最近、最遠的格子點都只有一個
+for xr, yr, h, k, c, near, far, m, M in [((-2, 3), (-4, 1), 1, -2, -2, (1, -2), (-2, 1), -2, 16),
+                                         ((-1, 3), (1, 4), -2, 1, -4, (-1, 1), (3, 4), -3, 30)]:
+    pts = [(x, y) for x in range(xr[0], xr[1] + 1) for y in range(yr[0], yr[1] + 1)]
+    d = {p: (p[0] - h) ** 2 + (p[1] - k) ** 2 for p in pts}
+    assert [p for p in pts if d[p] == min(d.values())] == [near] and [p for p in pts if d[p] == max(d.values())] == [far]
+    assert min(d.values()) + c == m and max(d.values()) + c == M
+print("R3 distance OK")

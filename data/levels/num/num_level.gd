@@ -12,6 +12,9 @@ extends "res://data/levels/line/line_level.gd"
 ##         點錯的區間有自己的說明就寫 "wrongs": [[lo, hi, "1 個負數"], …]（先找 wrongs，沒有才用 wrong）
 ##       {"kind": "btap", …, "item": 0}   點一塊分子積木、再點一樣的分母積木就約掉，約到沒有一樣的為止
 ##       {"kind": "mtap", …, "item": 0, "k": 3}   點風車的第 k 片扇葉（0 = 循環節的第一個數字），風車先停下來
+##       {"kind": "lrange", …, "item": 0, "row": 燈條第幾排, "s": "x − y", "ans": [左, 右], "start": [左, 右], "snap": 1,
+##        "demo": true（一隻手先示範）, "wrongs": [[左, 右, "常見錯誤的提示"], …]}
+##         拉範圍（R3）：拖兩個把手到端點，按「確定」。錯的那一端閃紅，提示說太大還是太小
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
 const NumField := preload("res://data/levels/num/num_field.gd")
@@ -63,7 +66,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap", "mtap":
+		"ltap", "ldrag", "btap", "mtap", "lrange":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -86,6 +89,21 @@ func _forge_step() -> void:
 			_nf().begin("blocks", {"item": int(st.get("item", 0))}, _btap_event)
 		"mtap":
 			_nf().begin("sail", {"item": int(st.get("item", 0))}, _mtap_event)
+		"lrange":
+			_nf().begin("range", {"item": int(st.get("item", 0)), "row": st.get("row", 0), "s": st.get("s", ""),
+				"start": st.start, "snap": float(st.get("snap", 1.0)), "demo": bool(st.get("demo", false))}, func(_e): pass)
+			go_btn.visible = true
+			go_btn.disabled = false
+			go_btn.text = "確定"
+
+
+## 坐標方格上點一個點（grid）：數與式少讀字，提示只寫一行（line_level 的版本有兩行說明）
+func _refresh_grid() -> void:
+	super()
+	if grid_tip == null or not is_instance_valid(grid_tip) or si >= steps.size():
+		return
+	var pl: CoordPlane = _pv().plane
+	grid_tip.text = "點好按「確定位置」" if not pl.has_pick() else "選了 %s" % CoordPlane.pt_text(pl.pick)
 
 
 func _pic_kind() -> String:
@@ -198,8 +216,35 @@ func _mtap_event(ev: Dictionary) -> void:
 var mtap_ok := false
 
 
+func _lrange_submit() -> void:
+	var st: Dictionary = steps[si]
+	var res: Array = _nf().range_result()
+	var lo := float(st.ans[0])
+	var hi := float(st.ans[1])
+	if is_equal_approx(res[0], lo) and is_equal_approx(res[1], hi):
+		_pic_finish(si)
+		return
+	var msg := ""
+	for w in st.get("wrongs", []):
+		if is_equal_approx(res[0], float(w[0])) and is_equal_approx(res[1], float(w[1])):
+			msg = String(w[2])
+	var parts := []
+	if not is_equal_approx(res[0], lo):
+		_nf().range_flash(0)
+		parts.append("左端太小" if res[0] < lo else "左端太大")
+	if not is_equal_approx(res[1], hi):
+		_nf().range_flash(1)
+		parts.append("右端太大" if res[1] > hi else "右端太小")
+	if msg == "":
+		msg = "、".join(parts) + "。" + String(st.nudge)
+	_pic_wrong(st, msg)
+
+
 func _custom_go() -> void:
 	match _pic_kind():
+		"lrange":
+			_lrange_submit()
+			return
 		"mtap":
 			if mtap_ok:
 				mtap_ok = false
@@ -238,6 +283,9 @@ func test_answer(st: Dictionary) -> bool:
 			return true
 		"mtap":
 			mtap_ok = true
+			return true
+		"lrange":
+			_nf().rng = [float(st.ans[0]), float(st.ans[1])]
 			return true
 		"btap":
 			var f := _nf()

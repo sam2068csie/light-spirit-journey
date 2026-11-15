@@ -24,6 +24,13 @@ extends Control
 ##   drag    把珠子從右上角的托盤拖到繩上，吸附到 snaps（a 到 b 的幾分之幾）；drag_result() 讀位置、drag_reject(名字們) 退回托盤
 ##   blocks  點一塊分子積木、再點一塊一樣的分母積木就約掉；回呼 {"cut": 有沒有約掉, "left": 還剩幾對可以約}
 ##   sail    點風車的一片扇葉（風車先停下來）；回呼 {"k": 第幾片（0 = 循環節的第一個數字）}
+##   range   拉範圍（R3）：數線上第 row 排的燈條有兩個把手，拖到端點（吸附到 snap）；range_result() 讀 [左, 右]、range_flash(哪一端) 閃紅
+##           spec：{"item", "row", "s": 標籤, "start": [左, 右], "snap", "demo": true（一隻手先示範怎麼拖，學生一碰就停）}
+##
+## 燈條（R3）：nline 加 "bars": [{"lo", "hi", "s": 標籤, "row": 第幾排（0 = 最靠近數線）, "at": 第幾步出現, "c": 顏色,
+##                              "from": [a0, b0, 排]（出現時從這一段變過來：a0 → lo、b0 → hi，翻過 0 就寫反過來的端點）,
+##                              "src": [[排, 值, 0 或 1], …]（出現時從那一排的那個值連一條線到這條的左端 0、右端 1）}]
+##   有燈條的數線，軸往下移，燈條一排一排疊在上面。
 ## 圖上不寫中文：只有數字、字母。
 
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -49,6 +56,10 @@ var drag_pt := Vector2.ZERO
 var reject_t := {}               # drag：退回托盤的時間（閃紅）
 var bcut: Array = []             # blocks：[[分子第幾塊, 分母第幾塊], …]
 var bsel: Array = []             # blocks：選了哪一塊 [列（0 分子、1 分母）, 第幾塊]，[] = 沒選
+var rng := [0.0, 0.0]            # range：兩個把手目前的值
+var rng_drag := -1               # range：拖哪一個把手（−1 = 沒拖）
+var rng_flash := {}              # range：哪一端剛閃紅 → 時間
+var demo_t := -1.0               # range：示範動畫開始的時間（−1 = 沒有示範）
 var _geo := {}                   # 每個元件畫的位置（點擊、測試要換算）：nline → {x0, x1, lo, hi, y, ry}、blocks → {n: [Rect2], d: [Rect2]}
 
 
@@ -246,7 +257,7 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	_st[i] = s
 	var lo: float = s.lo
 	var hi: float = s.hi
-	var y := r.position.y + r.size.y * (0.84 if it.has("road") else 0.64)
+	var y := r.position.y + r.size.y * (0.84 if it.has("road") or it.has("bars") else 0.64)
 	var x0 := r.position.x + 18.0
 	var x1 := r.end.x - 22.0
 	var sx := func(v: float) -> float:
@@ -286,6 +297,10 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		draw_string(font, Vector2(pz - 4, y + 24), "0", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.8))
 	if it.has("road"):
 		_draw_road(it.road, sx, y, r, st)
+	if it.has("bars"):
+		_draw_bars(i, it.bars, sx, x0, x1, y, st, t, font)
+	if mode == "range" and int(spec.get("item", 0)) == i:
+		_draw_range(sx, _geo[i], font)
 	var rope_y := y - 26.0
 	if it.has("rope"):
 		_draw_rope(i, it.rope, sx, y, rope_y, st, t)
@@ -372,6 +387,12 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 	if m == "drag":
 		for b in sp.get("beads", []):
 			drag_pos[String(b[0])] = null
+	if m == "range":
+		var st0: Array = sp.get("start", [0, 1])
+		rng = [float(st0[0]), float(st0[1])]
+		rng_drag = -1
+		rng_flash = {}
+		demo_t = _t() if bool(sp.get("demo", false)) else -1.0
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	queue_redraw()
 
@@ -379,6 +400,8 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 func end() -> void:
 	mode = ""
 	dragging = ""
+	demo_t = -1.0
+	rng_drag = -1
 	marks = []
 	drag_pos = {}
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -402,6 +425,11 @@ func _gui_input(e: InputEvent) -> void:
 		if dragging != "":
 			drag_pt = (e as InputEventMouseMotion).position
 			accept_event()
+		if mode == "range" and rng_drag >= 0:
+			var v = _line_value((e as InputEventMouseMotion).position)
+			if v != null:
+				rng[rng_drag] = v
+			accept_event()
 		return
 	else:
 		return
@@ -422,6 +450,16 @@ func _gui_input(e: InputEvent) -> void:
 		"blocks":
 			if press:
 				_block_click(pos)
+		"range":
+			if press:
+				rng_drag = _handle_at(pos)
+				if rng_drag >= 0 and demo_t >= 0.0:
+					var dp := _demo_pose()
+					if not dp.is_empty() and int(dp.k) == rng_drag:
+						rng[rng_drag] = _line_value(pos)
+				demo_t = -1.0
+			elif release:
+				rng_drag = -1
 		"sail":
 			if press:
 				var sl: Array = _geo.get(int(spec.get("item", 0)), {}).get("sails", [])
@@ -444,6 +482,124 @@ func value_at(pos: Vector2):
 	var v: float = float(g.lo) + (pos.x - float(g.x0)) / (float(g.x1) - float(g.x0)) * (float(g.hi) - float(g.lo))
 	var sn := float(spec.get("snap", 1.0))
 	return snappedf(v, sn)
+
+
+## 拉範圍：點的位置 → 值（只看 x，吸附到 snap，夾在數線範圍裡）
+func _line_value(pos: Vector2):
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty():
+		return null
+	var v: float = float(g.lo) + (pos.x - float(g.x0)) / (float(g.x1) - float(g.x0)) * (float(g.hi) - float(g.lo))
+	v = clampf(v, float(g.lo), float(g.hi))
+	return snappedf(v, float(spec.get("snap", 1.0)))
+
+
+func _bar_y(g: Dictionary, row: float) -> float:
+	return float(g.y) - 22.0 - 24.0 * row
+
+
+func _handle_pos(k: int) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty():
+		return Vector2(-999, -999)
+	var v: float = rng[k]
+	var dp := _demo_pose()
+	if not dp.is_empty() and int(dp.k) == k:
+		v = float(dp.v)
+	var x: float = float(g.x0) + (v - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	return Vector2(x, _bar_y(g, float(spec.get("row", 0))))
+
+
+func _handle_at(pos: Vector2) -> int:
+	var best := -1
+	var bd := 30.0
+	for k in 2:
+		var d := pos.distance_to(_handle_pos(k))
+		if d < bd:
+			bd = d
+			best = k
+	return best
+
+
+func range_result() -> Array:
+	return [minf(rng[0], rng[1]), maxf(rng[0], rng[1])]
+
+
+## 錯的那一端閃紅（0 = 左端、1 = 右端，照目前的大小）
+func range_flash(end_k: int) -> void:
+	var k := end_k if rng[0] <= rng[1] else 1 - end_k
+	rng_flash[k] = _t()
+
+
+## 示範動畫：一隻手把左邊的把手拖出去再拖回來，再換右邊（3.6 秒一輪）。回傳 {k: 哪一個把手, v: 現在的值, hand: 手的位置}
+func _demo_pose() -> Dictionary:
+	if demo_t < 0.0 or mode != "range":
+		return {}
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	if g.is_empty():
+		return {}
+	var u := fmod(_t() - demo_t, 3.6) / 1.8
+	var k := 0 if u < 1.0 else 1
+	var w := fmod(u, 1.0)
+	var span := (float(g.hi) - float(g.lo)) * 0.16
+	var base: float = rng[k]
+	var off := (-span if k == 0 else span) * sin(clampf((w - 0.15) / 0.7, 0.0, 1.0) * PI)
+	return {"k": k, "v": base + off, "w": w}
+
+
+## 測試用：把手、數線上的值在螢幕上的位置
+func global_of_handle(k: int) -> Vector2:
+	return get_global_transform() * _handle_pos(k)
+
+
+func global_of_line_value(v: float) -> Vector2:
+	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
+	var x: float = float(g.x0) + (v - float(g.lo)) / (float(g.hi) - float(g.lo)) * (float(g.x1) - float(g.x0))
+	return get_global_transform() * Vector2(x, _bar_y(g, float(spec.get("row", 0))))
+
+
+func _draw_range(sx: Callable, g: Dictionary, font: Font) -> void:
+	var t := _t()
+	var y := _bar_y(g, float(spec.get("row", 0)))
+	var p0 := _handle_pos(0)
+	var p1 := _handle_pos(1)
+	var a := minf(p0.x, p1.x)
+	var b := maxf(p0.x, p1.x)
+	var c := Color(0.75, 0.95, 0.5)
+	draw_rect(Rect2(a, y - 5, b - a, 10), Color(c.r, c.g, c.b, 0.35))
+	draw_rect(Rect2(a, y - 5, b - a, 10), Color(c.r, c.g, c.b, 0.8), false, 1.5)
+	var lab := String(spec.get("s", ""))
+	if lab != "":
+		var w := MathLabel.text_width(font, lab, UITheme.fs(15))
+		var lx := a - 14.0 - w / 2.0
+		if lx - w / 2.0 < float(g.x0) - 14.0:
+			lx = b + 14.0 + w / 2.0
+		MathLabel.draw_on(self, font, lx, y + 6.0, lab, UITheme.fs(15), Color(0.85, 1.0, 0.7))
+	for k in 2:
+		var p := _handle_pos(k)
+		var hc := Color(1, 0.95, 0.75)
+		if rng_flash.has(k) and t - float(rng_flash[k]) < 1.2:
+			hc = hc.lerp(COLS.bad, 0.5 + 0.5 * sin((t - float(rng_flash[k])) * 18.0))
+		if rng_drag == k:
+			UITheme.dot(self, p, 18.0, Color(1, 0.9, 0.5, 0.3))
+		UITheme.dot(self, p, 9.0, hc)
+		draw_arc(p, 9.0, 0, TAU, 20, Color(0.3, 0.4, 0.2), 2.0)
+		# 把手拉到哪裡，數線上就標出那個值
+		var vv: float = rng[k]
+		if rng_drag == k:
+			var vs := _fmt(vv, float(spec.get("snap", 1.0)))
+			var vw := font.get_string_size(vs, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+			draw_string(font, Vector2(p.x - vw / 2.0, p.y - 14.0), vs, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 0.95, 0.75))
+		draw_line(Vector2(p.x, p.y + 9.0), Vector2(p.x, float(g.y)), Color(1, 0.95, 0.75, 0.35), 1.0)
+	# 示範的手：半透明的圓＋手指
+	var dp := _demo_pose()
+	if not dp.is_empty():
+		var hp := _handle_pos(int(dp.k)) + Vector2(10, 14)
+		var press := float(dp.w) > 0.12 and float(dp.w) < 0.88
+		var al := 0.85
+		UITheme.dot(self, hp - Vector2(10, 14), 15.0 if press else 11.0, Color(1, 1, 1, 0.18))
+		draw_colored_polygon(PackedVector2Array([hp, hp + Vector2(6, 22), hp + Vector2(20, 26), hp + Vector2(24, 12), hp + Vector2(8, 2)]), Color(1, 1, 1, 0.55 * al))
+		draw_circle(hp + Vector2(1, 0), 4.5, Color(1, 1, 1, 0.8 * al))
 
 
 ## 數線上的值 → 螢幕上的位置（測試用）
@@ -653,6 +809,59 @@ func global_of_block(row: int, k: int) -> Vector2:
 	var g: Dictionary = _geo.get(int(spec.get("item", 0)), {})
 	var arr: Array = g.n if row == 0 else g.d
 	return get_global_transform() * (arr[k] as Rect2).get_center()
+
+
+# ---- 燈條（R3）----
+
+func _draw_bars(i: int, bars: Array, sx: Callable, x0: float, x1: float, y: float, st: int, t: float, font: Font) -> void:
+	var s: Dictionary = _st[i]
+	if not s.has("bar_t"):
+		s["bar_t"] = {}
+	var bt: Dictionary = s.bar_t
+	var g := {"y": y}
+	for k in bars.size():
+		var b: Dictionary = bars[k]
+		if st < int(b.get("at", 0)):
+			continue
+		if not bt.has(k):
+			bt[k] = t if int(b.get("at", 0)) > 0 else t - 10.0
+		var age := t - float(bt[k])
+		var u := 1.0 - pow(1.0 - clampf(age / 0.9, 0.0, 1.0), 3.0)
+		var lo := float(b.lo)
+		var hi := float(b.hi)
+		var row := float(b.get("row", 0))
+		if b.has("from"):
+			var f: Array = b.from
+			lo = lerpf(float(f[0]), lo, u)
+			hi = lerpf(float(f[1]), hi, u)
+			row = lerpf(float(f[2]), row, u)
+		var by := _bar_y(g, row)
+		var c: Color = COLS.get(String(b.get("c", "cyan")), COLS.cyan)
+		var a := clampf(sx.call(minf(lo, hi)), x0, x1)
+		var e := clampf(sx.call(maxf(lo, hi)), x0, x1)
+		var fresh := clampf(1.0 - age / 1.2, 0.0, 1.0) if int(b.get("at", 0)) > 0 else 0.0
+		if fresh > 0.0:
+			draw_rect(Rect2(a - 4, by - 9, e - a + 8, 18), Color(c.r, c.g, c.b, 0.25 * fresh))
+		draw_rect(Rect2(a, by - 5, e - a, 10), Color(c.r, c.g, c.b, 0.32))
+		draw_rect(Rect2(a, by - 5, e - a, 10), Color(c.r, c.g, c.b, 0.85), false, 1.5)
+		for xx in [a, e]:
+			draw_line(Vector2(xx, by + 5), Vector2(xx, y), Color(c.r, c.g, c.b, 0.22), 1.0)
+		var lab := String(b.get("s", ""))
+		if lab != "":
+			var w := MathLabel.text_width(font, lab, UITheme.fs(15))
+			var lx := a - 14.0 - w / 2.0
+			if lx - w / 2.0 < x0 - 14.0:
+				lx = e + 14.0 + w / 2.0
+			MathLabel.draw_on(self, font, lx, by + 6.0, lab, UITheme.fs(15), c.lightened(0.25))
+		# 從哪裡合出來：剛出現時，從來源的端點連線過來
+		if age < 2.4 and u >= 1.0:
+			var la := clampf(1.0 - (age - 0.9) / 1.5, 0.0, 1.0)
+			for sc in b.get("src", []):
+				var py := _bar_y(g, float(sc[0]))
+				var pv: float = sx.call(float(sc[1]))
+				var to_x := a if int(sc[2]) == 0 else e
+				draw_dashed_line(Vector2(pv, py), Vector2(to_x, by), Color(1, 0.95, 0.75, 0.7 * la), 1.5, 5.0)
+	s.bar_t = bt
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）

@@ -24,7 +24,7 @@ const UNITS := [
 	 "levels": [
 		{"id": "R1", "name": "風車小數", "topic": "數線、循環小數與比大小", "file": "level_num1_mill.gd", "bank": "num1_bank.gd", "color": UITheme.GOLD},
 		{"id": "R2", "name": "繩上珠子", "topic": "分點公式", "file": "level_num2_bead.gd", "bank": "num2_bank.gd", "color": UITheme.CYAN},
-		{"id": "R3", "name": "天秤市集", "topic": "次序不等式", "file": "", "bank": "", "color": UITheme.LIME},
+		{"id": "R3", "name": "天秤市集", "topic": "次序不等式", "file": "level_num3_market.gd", "bank": "num3_bank.gd", "color": UITheme.LIME},
 		{"id": "R4", "name": "圍籬牧場", "topic": "算幾不等式", "file": "", "bank": "", "color": UITheme.GOOD},
 		{"id": "R5", "name": "篩種倉庫", "topic": "有理數與無理數", "file": "", "bank": "", "color": UITheme.ORANGE},
 		{"id": "R6", "name": "剝殼磨坊", "topic": "雙重根號", "file": "", "bank": "", "color": UITheme.VIOLET},

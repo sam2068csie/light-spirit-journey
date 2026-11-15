@@ -199,6 +199,9 @@ func slide_to(name: String, v: float) -> void:
 	_issue("%s：找不到滑桿 %s" % [_where(), name])
 
 
+var last_hk := 0
+
+
 func answer_step(st: Dictionary, wrong: bool) -> void:
 	match String(st.kind):
 		"choice":
@@ -343,6 +346,38 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 				if f.drag_pos.get(nm) == null or not is_equal_approx(float(f.drag_pos[nm]), to):
 					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
 			await snap(String(lv.r.id) + "_拖好")
+			await go()
+		"lrange":
+			# 拉範圍（數與式 R3）：答錯時右端多拉一格（有常見錯誤就拉成常見錯誤），答對時兩端都拉到答案
+			var f = lv._nf()
+			var want := [float(st.ans[0]), float(st.ans[1])]
+			if wrong:
+				if not st.get("wrongs", []).is_empty():
+					want = [float(st.wrongs[0][0]), float(st.wrongs[0][1])]
+				else:
+					want[1] += float(st.get("snap", 1.0))
+			for k in 2:
+				# 先拉離得遠的那一端，免得兩個把手疊在一起
+				var cur: Array = f.rng
+				var hk: int = 0 if absf(float(cur[0]) - want[0]) <= absf(float(cur[1]) - want[0]) else 1
+				if k == 1:
+					hk = 1 - last_hk
+				last_hk = hk
+				var p0: Vector2 = f.global_of_handle(hk)
+				var p1: Vector2 = f.global_of_line_value(want[k])
+				_move(p0)
+				await frames(1)
+				_send_mouse(p0, true)
+				await frames(1)
+				for j in 6:
+					_move(p0.lerp(p1, (j + 1) / 6.0), true)
+					await frames(1)
+				_send_mouse(p1, false)
+				await frames(2)
+			var got: Array = f.range_result()
+			if not (is_equal_approx(got[0], want[0]) and is_equal_approx(got[1], want[1])):
+				_issue("%s：範圍沒有拉到 %s（%s）" % [_where(), want, got])
+			await snap(String(lv.r.id) + ("_拉錯" if wrong else "_拉好"))
 			await go()
 		"mtap":
 			# 點風車的扇葉（數與式）：答錯時點下一片
@@ -579,7 +614,8 @@ func _play_round() -> void:
 			var st: Dictionary = lv.steps[si0]
 			await snap("%s_%d_%s" % [rid, si0, st.name])
 			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
-			if first or String(st.kind) in ["ltap", "ldrag", "btap", "mtap"]:
+			# 能量只剩一格就不再故意答錯（每一步都在圖上作答的題目，例如 R3 的拉範圍）
+			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange"] and int(lv.energy) > 1):
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false
