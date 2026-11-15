@@ -890,7 +890,12 @@ static func _draw_row(ci: CanvasItem, font: Font, base: Vector2, row: Array, fs:
 
 # ================= 自動根號 =================
 
-## 沒寫大括號的根號自動補上：√2 → √{2}、√x → √{x}、√(x + 1) → √{x + 1}、√2x → √{2}x
+static func _is_latin(ch: String) -> bool:
+	var u := ch.unicode_at(0)
+	return (u >= 65 and u <= 90) or (u >= 97 and u <= 122)
+
+
+## 沒寫大括號的根號自動補上：√2 → √{2}、√x → √{x}、√ab → √{ab}、√(x + 1) → √{x + 1}、√2x → √{2}x
 ## （根號上面的橫線要靠 √{…} 才畫得出來；題目、卡片、劇情不管怎麼寫，畫出來都有橫線）
 static func root_auto(s: String) -> String:
 	var out := ""
@@ -922,8 +927,13 @@ static func root_auto(s: String) -> String:
 				i = k2
 				continue
 			elif _is_letter(s[j]) or s[j] in ["π", "θ", "α", "β"]:
-				out += c + "{" + s[j] + "}"
-				i = j + 1
+				# 連在一起的英文字母整串都在根號底下：√ab → √{ab}（√ab 是 a 乘 b 開根號）
+				var k3 := j + 1
+				if _is_latin(s[j]):
+					while k3 < s.length() and _is_latin(s[k3]):
+						k3 += 1
+				out += c + "{" + s.substr(j, k3 - j) + "}"
+				i = k3
 				continue
 		out += c
 		i += 1

@@ -53,7 +53,15 @@ func _initialize() -> void:
 		_punct_all(JSON.parse_string(jf.get_as_text()), "questions_exp_log.json")
 	ok(problems == 0, "排版有 %d 個問題（見上面的 MARKUP 行）" % problems)
 	_check_overline()
+	_check_root_auto()
 	finish("MARKUP")
+
+
+## 沒寫大括號的根號：連在一起的字母整串在根號底下（√ab 的橫線要蓋住 ab，2026/11/15）
+func _check_root_auto() -> void:
+	for pair in [["√ab", "√{ab}"], ["√x + 1", "√{x} + 1"], ["√2x", "√{2}x"], ["√(x + 1)", "√{x + 1}"], ["2√ab）", "2√{ab}）"], ["√θ", "√{θ}"]]:
+		var got := MathLabel.root_auto(String(pair[0]))
+		ok(got == String(pair[1]), "根號自動補大括號：%s → %s（應該是 %s）" % [pair[0], got, pair[1]])
 
 
 ## 循環小數、線段的上橫線（\ol{…}）不能在前面多佔位置：1.2\ol{36} 要和 1.236 一樣寬
