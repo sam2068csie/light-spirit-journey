@@ -887,8 +887,13 @@ const SEED_H := 32.0
 const SEED_GAP := 6.0
 
 
+## 分數比較高，字小一點才放得進種子
+func _seed_fs(name: String) -> int:
+	return UITheme.fs(12) if name.contains("\\frac") else UITheme.fs(15)
+
+
 func _seed_w(font: Font, name: String) -> float:
-	return MathLabel.text_width(font, name, UITheme.fs(15)) + 16.0
+	return MathLabel.text_width(font, name, _seed_fs(name)) + 16.0
 
 
 ## 兩個籃子的位置（下半部，左右各一個）
@@ -999,7 +1004,8 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 			bgc = Color(0.15, 0.3, 0.15, 0.9)
 		draw_rect(rc, bgc)
 		draw_rect(rc, Color(c.r, c.g, c.b, 0.85), false, 1.5)
-		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + SEED_H * 0.68, name, UITheme.fs(15), c)
+		var frac := name.contains("\\frac")
+		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + SEED_H * (0.58 if frac else 0.68), name, _seed_fs(name), c)
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）

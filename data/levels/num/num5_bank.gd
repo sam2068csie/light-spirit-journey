@@ -56,6 +56,12 @@ static func slots() -> Array:
 			for st in v.get("steps", []):
 				if String(st.get("kind", "")) == "fill":
 					st["paren"] = true
+				if String(st.get("kind", "")) == "lsort":
+					# 種子的名字經過 fix_roots 會變成 √{25}，提示的 key 也要一起換
+					var why := {}
+					for k in st.get("why", {}):
+						why[SB.root_markup(String(k))] = SB.root_markup(String(st.why[k]))
+					st["why"] = why
 				if String(st.get("kind", "")) == "filter":
 					st["bare"] = true          # 候選是線段，不寫「t = 」
 				if String(st.get("kind", "")) == "order":
