@@ -2152,6 +2152,30 @@ class Plot extends Control:
 				var v: Vector2 = (tr.call([sh.p[0] + sh.v[0], sh.p[1] + sh.v[1]]) - cp).normalized() * 9.0
 				_pl(PackedVector2Array([cp + u, cp + u + v, cp + v]), Color(1, 1, 1, 0.6), 1.4, false)
 
+	## 標籤的位置：照 off 放；會壓到這一幀已經畫好的字（design_rules 1.9）就往下、往上、往另一邊挪
+	##（例如兩個點很近時 M(2, 2) 和 H(4, 1)，直線的名字 L 和點的名字 C(5, 7)）
+	func _free_spot(font: Font, s: String, fs: int, sz: Vector2, tp0: Vector2, sp: Vector2) -> Vector2:
+		var h := fs * 1.05
+		var mirror := Vector2(2.0 * sp.x - tp0.x - sz.x, tp0.y)
+		var cands := [tp0, tp0 + Vector2(0, h), tp0 - Vector2(0, h), mirror, mirror + Vector2(0, h), mirror - Vector2(0, h),
+			tp0 + Vector2(0, 2.0 * h), tp0 - Vector2(0, 2.0 * h)]
+		var first := Vector2.INF
+		for c in cands:
+			var q: Vector2 = c
+			q.x = clampf(q.x, 2.0, size.x - sz.x - 2.0)
+			q.y = clampf(q.y, sz.y * 0.8, size.y - 3.0)
+			if first == Vector2.INF:
+				first = q
+			var box := InkR.plain_box(font, q, s, fs)
+			var hit := false
+			for e in ink:
+				if not e.shape and (e.r as Rect2).grow(-1.0).intersects(box.grow(-1.0)):
+					hit = true
+					break
+			if not hit:
+				return q
+		return first
+
 	## 文字（center：以那一點為中心）
 	func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) -> void:
 		var fs := UITheme.fs(15)
@@ -2159,8 +2183,7 @@ class Plot extends Control:
 		var tp := sp + Vector2(float(off[0]), float(off[1]))
 		if center:
 			tp += Vector2(-sz.x / 2.0, sz.y * 0.32)
-		tp.x = clampf(tp.x, 2.0, size.x - sz.x - 2.0)
-		tp.y = clampf(tp.y, sz.y * 0.8, size.y - 3.0)
+		tp = _free_spot(font, s, fs, sz, tp, sp)
 		draw_string_outline(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UITheme.fs(4), Color(0.04, 0.05, 0.12, 0.9))
 		draw_string(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
 		InkR.add_text(ink, InkR.plain_box(font, tp, s, fs), s, c)
