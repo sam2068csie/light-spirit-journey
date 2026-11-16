@@ -347,6 +347,16 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
 			await snap(String(lv.r.id) + "_拖好")
 			await go()
+		"rtap":
+			# 點長方形（數與式 R6）：答錯時點下一個
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var k := int(it.target)
+			if wrong:
+				k = (k + 1) % it.pairs.size()
+			await click_at(f.global_of_rect(k))
+			await frames(3)
+			await snap(String(lv.r.id) + ("_點錯長方形" if wrong else "_點長方形"))
 		"lsort":
 			# 篩種子（數與式 R5）：答錯時第一顆放到另一個籃子，答對時每一顆放進該放的籃子
 			var f = lv._nf()
@@ -641,7 +651,7 @@ func _play_round() -> void:
 			await snap("%s_%d_%s" % [rid, si0, st.name])
 			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
 			# 能量只剩一格就不再故意答錯（每一步都在圖上作答的題目，例如 R3 的拉範圍）
-			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort"] and int(lv.energy) > 1):
+			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap"] and int(lv.energy) > 1):
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false

@@ -5,7 +5,7 @@ extends Control
 ##           做完 lit 步扇葉亮起來，做完 spin 步開始轉，旁邊流出 1.2363636…，下面寫出 1.2\ol{36}。
 ##           hl：轉幾圈之後停下來，那一片扇葉亮起（第 n 位）。
 ##   nline   數線：{"k": "nline", "x": [左, 右], "pts": [{v, s, at, lit, c, to, to_at, below}], "zoom": [[左, 右, 第幾步], …],
-##                  "segs": [[從, 到, 第幾步, 顏色], …], "noticks": true（不寫刻度，免得洩漏答案）, "zero": true（只標 0）}
+##                  "segs": [[從, 到, 第幾步, 顏色], …], "noticks": true（不寫刻度，免得洩漏答案）, "tick": 刻度間隔（R6：每個整數都標）, "zero": true（只標 0）}
 ##           點在第 at 步出現，第 lit 步亮起燈柱（照大小由左到右一根一根亮），to：第 to_at 步滑到 to。
 ##           R2 起：
 ##             rope    {"a": 左柱, "b": 右柱, "ext": [[延伸到, 第幾步], …]}：兩根柱子之間的繩子，外分點在外面時繩子拉長過去
@@ -26,6 +26,7 @@ extends Control
 ##   sail    點風車的一片扇葉（風車先停下來）；回呼 {"k": 第幾片（0 = 循環節的第一個數字）}
 ##   sort    篩種子（R5）：把種子袋裡的種子拖進左右兩個籃子；drag_result() 讀 {名字: 0 左 / 1 右 / null 還在袋子}、drag_reject(名字們) 退回
 ##           spec：{"item"}（種子寫在 seeds 元件裡）
+##   rect    點長方形（R6）：點 rects 元件裡的一個長方形；回呼 {"k": 第幾個}，關卡判斷對錯後呼叫 rect_mark(k)
 ##   range   拉範圍（R3）：數線上第 row 排的燈條有兩個把手，拖到端點（吸附到 snap）；range_result() 讀 [左, 右]、range_flash(哪一端) 閃紅
 ##           spec：{"item", "row", "s": 標籤, "start": [左, 右], "snap", "demo": true（一隻手先示範怎麼拖，學生一碰就停）}
 ##
@@ -34,6 +35,8 @@ extends Control
 ##                              "src": [[排, 值, 0 或 1], …]（出現時從那一排的那個值連一條線到這條的左端 0、右端 1）}]
 ##   有燈條的數線，軸往下移，燈條一排一排疊在上面。
 ##
+## 長方形（R6）：{"k": "rects", "pairs": [[長, 寬], …], "target": 第幾個是答案, "at": 第幾步是點長方形（做完之後答案亮起來）}
+##   面積一樣的長方形一排，用小方格畫，下面標長、左邊標寬。
 ## 種子（R5）：{"k": "seeds", "bins": ["左邊籃子的標籤", "右邊"], "seeds": [["名字（算式）", 0 或 1（該放哪個籃子）], …],
 ##             "at": 第幾步是篩種子（做完之前種子都在袋子裡，做完之後在對的籃子裡）, "hl": [[第幾步起, "名字"], …]（亮起來的種子）}
 ## 圖上不寫中文：只有數字、字母。
@@ -65,6 +68,7 @@ var rng := [0.0, 0.0]            # range：兩個把手目前的值
 var rng_drag := -1               # range：拖哪一個把手（−1 = 沒拖）
 var rng_flash := {}              # range：哪一端剛閃紅 → 時間
 var demo_t := -1.0               # range：示範動畫開始的時間（−1 = 沒有示範）
+var rect_marks := {}             # rect：點錯的長方形 → 時間
 var _geo := {}                   # 每個元件畫的位置（點擊、測試要換算）：nline → {x0, x1, lo, hi, y, ry}、blocks → {n: [Rect2], d: [Rect2]}
 
 
@@ -74,6 +78,7 @@ func reset(list: Array, v: Object) -> void:
 	_st = {}
 	end()
 	bcut = []
+	rect_marks = {}
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
@@ -128,6 +133,8 @@ func _draw() -> void:
 				_draw_blocks(i, it, r)
 			"seeds":
 				_draw_seeds(i, it, r)
+			"rects":
+				_draw_rects(i, it, r)
 		x += w
 
 
@@ -286,7 +293,7 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(x1 + 14, y), Vector2(x1 + 4, y - 6), Vector2(x1 + 4, y + 6)]), Color(1, 0.95, 0.85, 0.75))
 	# 刻度
 	if not bool(it.get("noticks", false)):
-		var stp := _nice_step((hi - lo) / 6.0)
+		var stp := float(it.get("tick", _nice_step((hi - lo) / 6.0)))
 		var v := ceilf(lo / stp) * stp
 		var guard := 0
 		while v <= hi + 1e-9 and guard < 40:
@@ -460,6 +467,13 @@ func _gui_input(e: InputEvent) -> void:
 		"blocks":
 			if press:
 				_block_click(pos)
+		"rect":
+			if press:
+				var rs: Array = _geo.get(int(spec.get("item", 0)), {}).get("rects", [])
+				for k in rs.size():
+					if (rs[k] as Rect2).grow(6).has_point(pos):
+						on_event.call({"k": k})
+						return
 		"sort":
 			if press:
 				dragging = _seed_at(pos)
@@ -879,6 +893,109 @@ func _draw_bars(i: int, bars: Array, sx: Callable, x0: float, x1: float, y: floa
 				var to_x := a if int(sc[2]) == 0 else e
 				draw_dashed_line(Vector2(pv, py), Vector2(to_x, by), Color(1, 0.95, 0.75, 0.7 * la), 1.5, 5.0)
 	s.bar_t = bt
+
+
+# ---- 面積一樣的長方形（R6）----
+
+func rect_mark(k: int) -> void:
+	rect_marks[k] = _t()
+
+
+## 測試用：第 k 個長方形在螢幕上的位置
+func global_of_rect(k: int) -> Vector2:
+	var rs: Array = _geo.get(int(spec.get("item", 0)), {}).get("rects", [])
+	return get_global_transform() * (rs[k] as Rect2).get_center()
+
+
+func _draw_rects(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var pairs: Array = it.get("pairs", [])
+	var gap := 26.0
+	# 排成一排或兩排（哪一種方格比較大就用哪一種）；每個長方形的方格一樣大，面積看得出一樣
+	var best_u := 0.0
+	var rows := [pairs]
+	for cut in pairs.size():
+		var cand: Array = [pairs] if cut == 0 else [pairs.slice(0, cut), pairs.slice(cut)]
+		var u := 22.0
+		var sum_h := 0.0
+		for row in cand:
+			var tot := 0.0
+			var tall := 1.0
+			for pr in row:
+				tot += float(pr[0])
+				tall = maxf(tall, float(pr[1]))
+			u = minf(u, (r.size.x - 40.0 - gap * (row.size() - 1)) / tot)
+			sum_h += tall
+		u = minf(u, (r.size.y - 36.0 - 30.0 * cand.size()) / sum_h)
+		if u > best_u + 0.5:
+			best_u = u
+			rows = cand
+	var u := best_u
+	var used := 0.0
+	for row in rows:
+		var tall := 1.0
+		for pr in row:
+			tall = maxf(tall, float(pr[1]))
+		used += tall * u + 30.0
+	var y := r.position.y + maxf(24.0, (r.size.y - used) / 2.0 + 12.0)
+	var rects := []
+	var done := _step() > int(it.get("at", 0))
+	var fs := UITheme.fs(14)
+	var k := -1
+	for row in rows:
+		var tot := 0.0
+		var tall := 1.0
+		for pr in row:
+			tot += float(pr[0])
+			tall = maxf(tall, float(pr[1]))
+		var x: float = r.position.x + 24.0 + (r.size.x - 40.0 - gap * (row.size() - 1) - tot * u) / 2.0
+		var base := y + tall * u
+		y = base + 30.0
+		for pr in row:
+			k += 1
+			x = _draw_rect1(it, k, pr, x, base, u, done, font, fs, t, rects) + gap
+	_geo[i] = {"rects": rects}
+
+
+func _draw_rect1(it: Dictionary, k: int, pr: Array, x: float, base: float, u: float, done: bool, font: Font, fs: int, t: float, rects: Array) -> float:
+	var m := float(pr[0])
+	var n := float(pr[1])
+	var rc := Rect2(x, base - n * u, m * u, n * u)
+	rects.append(rc)
+	var c := Color(0.95, 0.85, 0.55)
+	var fill := Color(0.6, 0.45, 0.2, 0.25)
+	var win := done and k == int(it.get("target", -1))
+	if win:
+		c = Color(1.0, 0.9, 0.3)
+		fill = Color(1, 0.8, 0.3, 0.45 + 0.12 * sin(t * 3.0))
+	var miss := rect_marks.has(k) and t - float(rect_marks[k]) < 2.5
+	if miss:
+		c = COLS.bad
+	draw_rect(rc, fill)
+	# 小方格
+	for gx in range(1, int(m)):
+		draw_line(Vector2(rc.position.x + gx * u, rc.position.y), Vector2(rc.position.x + gx * u, rc.end.y), Color(c.r, c.g, c.b, 0.18), 1.0)
+	for gy in range(1, int(n)):
+		draw_line(Vector2(rc.position.x, rc.position.y + gy * u), Vector2(rc.end.x, rc.position.y + gy * u), Color(c.r, c.g, c.b, 0.18), 1.0)
+	draw_rect(rc, c, false, 3.5 if win else 2.0)
+	if win:
+		# 找到了：兩邊的長度變成 √m、√n（正方形的邊長）
+		MathLabel.draw_on(self, font, rc.get_center().x, base + 20.0, "√%d" % int(m), fs, c)
+		var nw2 := MathLabel.text_width(font, "√%d" % int(n), fs)
+		MathLabel.draw_on(self, font, rc.position.x - nw2 / 2.0 - 6.0, rc.get_center().y + 5.0, "√%d" % int(n), fs, c)
+		return x + m * u
+	# 下面標長、左邊標寬
+	var ms := str(int(m))
+	var mw := font.get_string_size(ms, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string(font, Vector2(rc.get_center().x - mw / 2.0, base + 18.0), ms, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+	var ns := str(int(n))
+	var nw := font.get_string_size(ns, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	draw_string(font, Vector2(rc.position.x - nw - 5.0, rc.get_center().y + 5.0), ns, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+	if miss:
+		var al := clampf(2.5 - (t - float(rect_marks[k])), 0.0, 1.0)
+		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y - 8.0, "%d + %d = %d" % [int(m), int(n), int(m + n)], fs, Color(1, 0.55, 0.55, al))
+	return x + m * u
 
 
 # ---- 種子和兩個籃子（R5）----

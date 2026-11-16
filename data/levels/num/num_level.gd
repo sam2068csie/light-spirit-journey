@@ -16,6 +16,7 @@ extends "res://data/levels/line/line_level.gd"
 ##        "demo": true（一隻手先示範）, "wrongs": [[左, 右, "常見錯誤的提示"], …]}
 ##         拉範圍（R3）：拖兩個把手到端點，按「確定」。錯的那一端閃紅，提示說太大還是太小
 ##       {"kind": "lsort", …, "item": 0, "why": {"種子": 放錯時的提示}}
+##       {"kind": "rtap", …, "item": 0}   點長方形（R6）：rects 元件寫好哪一個是答案，點錯的標出長 + 寬
 ##         篩種子（R5）：把種子拖進兩個籃子（seeds 元件寫好每顆該放哪裡），按「確定」。放錯的退回種子袋
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
@@ -68,7 +69,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort":
+		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -91,6 +92,8 @@ func _forge_step() -> void:
 			_nf().begin("blocks", {"item": int(st.get("item", 0))}, _btap_event)
 		"mtap":
 			_nf().begin("sail", {"item": int(st.get("item", 0))}, _mtap_event)
+		"rtap":
+			_nf().begin("rect", {"item": int(st.get("item", 0))}, _rtap_event)
 		"lsort":
 			_nf().begin("sort", {"item": int(st.get("item", 0))}, func(_e): pass)
 			go_btn.visible = true
@@ -223,6 +226,19 @@ func _mtap_event(ev: Dictionary) -> void:
 var mtap_ok := false
 
 
+func _rtap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "rtap":
+		return
+	var st: Dictionary = steps[si]
+	var it: Dictionary = _nf().items[int(st.get("item", 0))]
+	if int(ev.k) == int(it.target):
+		_pic_finish.call_deferred(si)
+		return
+	_nf().rect_mark(int(ev.k))
+	var pr: Array = it.pairs[int(ev.k)]
+	_pic_wrong(st, "%d + %d = %d。%s" % [int(pr[0]), int(pr[1]), int(pr[0]) + int(pr[1]), String(st.nudge)])
+
+
 func _lsort_submit() -> void:
 	var st: Dictionary = steps[si]
 	var f := _nf()
@@ -278,6 +294,11 @@ func _custom_go() -> void:
 		"lsort":
 			_lsort_submit()
 			return
+		"rtap":
+			if mtap_ok:
+				mtap_ok = false
+				_pic_finish(si)
+			return
 		"mtap":
 			if mtap_ok:
 				mtap_ok = false
@@ -314,7 +335,7 @@ func test_answer(st: Dictionary) -> bool:
 			for b in st.beads:
 				_nf().drag_pos[String(b[0])] = float(st.goal[String(b[0])])
 			return true
-		"mtap":
+		"mtap", "rtap":
 			mtap_ok = true
 			return true
 		"lrange":

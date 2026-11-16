@@ -27,7 +27,7 @@ const UNITS := [
 		{"id": "R3", "name": "天秤市集", "topic": "次序不等式", "file": "level_num3_market.gd", "bank": "num3_bank.gd", "color": UITheme.LIME},
 		{"id": "R4", "name": "圍籬牧場", "topic": "算幾不等式", "file": "level_num4_fence.gd", "bank": "num4_bank.gd", "color": UITheme.GOOD},
 		{"id": "R5", "name": "篩種倉庫", "topic": "有理數與無理數", "file": "level_num5_seed.gd", "bank": "num5_bank.gd", "color": UITheme.ORANGE},
-		{"id": "R6", "name": "剝殼磨坊", "topic": "雙重根號", "file": "", "bank": "", "color": UITheme.VIOLET},
+		{"id": "R6", "name": "剝殼磨坊", "topic": "雙重根號", "file": "level_num6_husk.gd", "bank": "num6_bank.gd", "color": UITheme.VIOLET},
 		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "", "bank": "", "color": UITheme.PINK},
 		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "", "bank": "", "color": UITheme.BLUE},
 	 ]},
