@@ -118,6 +118,8 @@ static func gen_problems(kind: String, n: int) -> Array:
 					var d1 := randi_range(7, 30)
 					var d2 := d1 + randi_range(3, 20)
 					var gap := randi_range(1, 4)
+					if _gcd(gap, d1) != 1 or _gcd(gap, d2) != 1:
+						continue      # 要是最簡分數（\frac{6}{8} 這種會先被約分）
 					a = float(d1 - gap) / d1
 					b = float(d2 - gap) / d2
 					sa = _fr(d1 - gap, d1)

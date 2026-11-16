@@ -581,7 +581,7 @@ func value_at(pos: Vector2):
 		return null
 	var v: float = float(g.lo) + (pos.x - float(g.x0)) / (float(g.x1) - float(g.x0)) * (float(g.hi) - float(g.lo))
 	var sn := float(spec.get("snap", 1.0))
-	return snappedf(v, sn)
+	return clampf(snappedf(v, sn), float(g.lo), float(g.hi))
 
 
 ## 拉範圍：點的位置 → 值（只看 x，吸附到 snap，夾在數線範圍裡）

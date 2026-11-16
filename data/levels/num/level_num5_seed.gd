@@ -55,6 +55,21 @@ const NON_SQ := [2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 15, 18, 20]
 const SQ_FREE := [2, 3, 5, 6, 7, 10, 11, 13, 14, 15, 17, 19]     # 有理化的題目：根號已經是最簡
 
 
+## √n 化成最簡：180 → 6√5、8 → 2√2、7 → √7
+static func _rt(n: int) -> String:
+	var k := 1
+	var m := n
+	var f := 2
+	while f * f <= m:
+		while m % (f * f) == 0:
+			m /= f * f
+			k *= f
+		f += 1
+	if m == 1:
+		return str(k)
+	return ("%d√%d" % [k, m]) if k > 1 else ("√%d" % m)
+
+
 ## 速算題：
 ##   rat   一顆種子，按鈕「有理數」「無理數」（位置固定）
 ##   ratz  \frac{k}{√a ∓ b}（k = a − b^{2}），按鈕三個：答案、符號沒變、分母沒約掉
@@ -96,7 +111,10 @@ static func gen_problems(kind: String, n: int) -> Array:
 					var root := int(roundf(sqrt(float(a * b))))
 					ok = root * root == a * b
 					s = "√%d × √%d" % [a, b]
-					why = "√%d × √%d = √%d%s。" % [a, b, a * b, (" = %d" % root) if ok else ""]
+					var tail := (" = %d" % root) if ok else ""
+					if not ok and _rt(a * b) != "√%d" % (a * b):
+						tail = " = " + _rt(a * b)
+					why = "√%d × √%d = √%d%s。" % [a, b, a * b, tail]
 				4:
 					var k := randi_range(1, 5)
 					s = "π + %d" % k if randf() < 0.5 else "%dπ" % (k + 1)
@@ -106,7 +124,10 @@ static func gen_problems(kind: String, n: int) -> Array:
 					var a: int = NON_SQ[randi() % NON_SQ.size()]
 					s = "√%d + √%d" % [a, a] if randf() < 0.5 else "√%d − √%d" % [a, a]
 					ok = s.contains("−")
-					why = "√%d − √%d = 0。" % [a, a] if ok else "√%d + √%d = 2√%d。" % [a, a, a]
+					var two := "2√%d" % a
+					if _rt(4 * a) != two:
+						two += " = " + _rt(4 * a)
+					why = "√%d − √%d = 0。" % [a, a] if ok else "√%d + √%d = %s。" % [a, a, two]
 				6:
 					var a: int = NON_SQ[randi() % NON_SQ.size()]
 					var m := randi_range(2, 4)

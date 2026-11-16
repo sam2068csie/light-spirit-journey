@@ -163,13 +163,28 @@ func _pic_finish(at_si: int) -> void:
 	_step_done(steps[si], "")
 
 
+## 區間碰到數線的兩端：當作一直延伸出去（點在數線最邊邊也算在裡面）
+func _lt_span(st: Dictionary, rg: Array) -> Array:
+	var lo := float(rg[0])
+	var hi := float(rg[1])
+	var items: Array = _nf().items
+	var k := int(st.get("item", 0))
+	if k < items.size() and (items[k] as Dictionary).has("x"):
+		var ax: Array = items[k].x
+		if absf(lo - float(ax[0])) < 1e-6:
+			lo = -1e9
+		if absf(hi - float(ax[1])) < 1e-6:
+			hi = 1e9
+	return [lo, hi]
+
+
 func _ltap_event(ev: Dictionary) -> void:
 	if _pic_kind() != "ltap":
 		return
 	var st: Dictionary = steps[si]
 	var v := float(ev.v)
 	for k in st.regions.size():
-		var rg: Array = st.regions[k]
+		var rg: Array = _lt_span(st, st.regions[k])
 		if v > float(rg[0]) + 1e-6 and v < float(rg[1]) - 1e-6:
 			if lt_found.has(k):
 				_hint("這一邊找過了，還有一個。", "info")
@@ -191,7 +206,8 @@ func _ltap_event(ev: Dictionary) -> void:
 		rel = ">"
 	var txt := String(st.get("wrong", "")).replace("{rel}", rel)
 	for w in st.get("wrongs", []):
-		if v > float(w[0]) + 1e-6 and v < float(w[1]) - 1e-6:
+		var wr := _lt_span(st, w)
+		if v > float(wr[0]) + 1e-6 and v < float(wr[1]) - 1e-6:
 			txt = String(w[2])
 	_nf().mark(v, false, txt)
 	_pic_wrong(st, String(st.nudge))

@@ -113,8 +113,9 @@ static func gen_problems(kind: String, n: int) -> Array:
 				var ks := str(k)
 				var k2 := k * k
 				if root:
-					k = randi_range(3, 11)
-					if k == 4 or k == 9:
+					# x + \frac{1}{x} 是實數時至少是 2：√k ≥ 2，k ≥ 4（4、9 開得出來，不用根號）
+					k = randi_range(5, 11)
+					if k == 9:
 						continue
 					ks = "√%d" % k
 					k2 = k
@@ -125,9 +126,11 @@ static func gen_problems(kind: String, n: int) -> Array:
 			else:
 				var s := randi_range(2, 7)
 				var p := randi_range(-3, 6)
-				if p == 0:
+				# a、b 要是實數：判別式 s^{2} − 4p ≥ 0
+				if p == 0 or s * s < 4 * p:
 					continue
-				pb = {"eq": "a + b = %d、ab = %s，a^{2} + b^{2} = ？" % [s, _sg(p)], "nudge": "%d^{2} − 2 × (%s)。" % [s, _sg(p)]}
+				var ps := ("(%s)" % _sg(p)) if p < 0 else str(p)
+				pb = {"eq": "a + b = %d、ab = %s，a^{2} + b^{2} = ？" % [s, _sg(p)], "nudge": "%d^{2} − 2 × %s。" % [s, ps]}
 				ans = _sg(s * s - 2 * p)
 				w1 = _sg(s * s + 2 * p)
 				w2 = _sg(s * s - p)
