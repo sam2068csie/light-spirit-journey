@@ -29,7 +29,7 @@ const UNITS := [
 		{"id": "R5", "name": "篩種倉庫", "topic": "有理數與無理數", "file": "level_num5_seed.gd", "bank": "num5_bank.gd", "color": UITheme.ORANGE},
 		{"id": "R6", "name": "剝殼磨坊", "topic": "雙重根號", "file": "level_num6_husk.gd", "bank": "num6_bank.gd", "color": UITheme.VIOLET},
 		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "level_num7_field.gd", "bank": "num7_bank.gd", "color": UITheme.PINK},
-		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "", "bank": "", "color": UITheme.BLUE},
+		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "level_num8_canal.gd", "bank": "num8_bank.gd", "color": UITheme.BLUE},
 	 ]},
 	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},

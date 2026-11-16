@@ -182,6 +182,10 @@ const MISTAKE_INFO := {
 	"num_block":       {"name": "看成一整塊、平方差", "level": 2},
 	"num_recip":       {"name": "倒數與對稱式互求", "level": 2},
 	"num_sq0":         {"name": "平方和為 0、根號裡的絕對值", "level": 2},
+	"num_absdist":     {"name": "絕對值就是距離", "level": 2},
+	"num_absrev":      {"name": "反寫成絕對值", "level": 2},
+	"num_abscase":     {"name": "絕對值的分段討論", "level": 2},
+	"num_median":      {"name": "中位數、解的個數、三角不等式", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

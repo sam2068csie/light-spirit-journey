@@ -28,6 +28,7 @@ extends "res://data/levels/engine/step_level.gd"
 ##   slide 也可以畫會動的圓：lines 裡放 {"k": "circle", "o": ["h", "k"], "r": "r"}（半徑算出來是 0 畫成一點，負的或不是數字就不畫）
 ##         "drag": ["h", "k"]：在坐標方格上點一下或拖動，就把這兩個參數（圓心）移到那裡，滑桿跟著動（和多項式的平移一樣）
 ##         圓也有看得到的後果：調對了圓規轉一圈把圓畫出來，調錯了圓晃一下就散掉
+##         "cross": "k"（R8）：水平線 y = k 和 shapes 裡標了 "cross": true 的線段（折線圖形）數交點，eq 的 {#cross} 換成「2 個」或「無限多個」
 ##   region 點選區域：直線把方格切成好幾塊，點一下塗色、再點一次取消，按「確定」
 ##         {"kind": "region", "name", "q", "line", "nudge", "tag",
 ##          "ineq": [[a, b, c, "<="], …]（要塗的地方：每一條 ax + by + c 和 0 的關係，"<" "<=" ">" ">="）,
@@ -520,6 +521,10 @@ func _refresh_slide() -> void:
 		var tpl := String(st.eq)
 		if tpl.contains("{#hits}"):
 			tpl = tpl.replace("{#hits}", str(_pv().plane.hit_points().size()))
+		if st.has("cross"):
+			# 水平線 y = k 和折線的交點個數（R8）
+			_pv().plane.cross_k = float(slide_vals.get(String(st.cross), 0.0))
+			tpl = tpl.replace("{#cross}", _pv().plane.cross_text(_pv().plane.cross_k))
 		slide_eq.text = CoordPlane.fill_eq(tpl, slide_vals)
 	_pv().plane.queue_redraw()
 
@@ -584,6 +589,7 @@ func _slide_done(st: Dictionary) -> void:
 		elif String(sh.k) == "dot" and not st.get("free", false):
 			pl.fx_burst(pl._v(sh.p))
 	pl.dyn = []
+	pl.cross_k = NAN
 	pl.pick_off()
 	go_btn.visible = false
 	_clear(rank_box)
@@ -1300,6 +1306,7 @@ class CoordPlane extends TowerPlot.Plot:
 			var sh := eval_line(ln, dyn_vals)
 			if not sh.is_empty():
 				_shape(sh, Vector2.ZERO, 0.0, font)
+		_draw_cross()
 		for d in dots:
 			_shape({"k": "dot", "p": [d.p.x, d.p.y], "s": "" if d.get("bare", false) else "%s%s" % [d.s, pt_text(d.p)], "c": d.c,
 				"off": d.get("off", [8, -8])}, Vector2.ZERO, 0.0, font)
@@ -1310,6 +1317,54 @@ class CoordPlane extends TowerPlot.Plot:
 		_draw_fx()
 		if picking:
 			_draw_zoom_ui(font)
+
+	# ---------- 水平線和折線的交點（R8 水渠：解的個數）----------
+
+	var cross_k := NAN   # 滑桿推的水平線 y = k（NAN = 沒有）
+
+	## 水平線 y = k 和標了 "cross": true 的線段：[交點的 x（由小到大）, 有沒有一段剛好躺在線上（無限多個）]
+	func cross_info(k: float) -> Array:
+		var xs := []
+		var flat := false
+		for sh in data.get("shapes", []):
+			if not sh.get("cross", false) or not _vis(sh) or String(sh.get("k", "")) != "seg":
+				continue
+			var a := _v(sh.a)
+			var b := _v(sh.b)
+			if absf(a.y - b.y) < 1e-9:
+				if absf(a.y - k) < 1e-9:
+					flat = true
+				continue
+			if k < minf(a.y, b.y) - 1e-9 or k > maxf(a.y, b.y) + 1e-9:
+				continue
+			var x := a.x + (b.x - a.x) * (k - a.y) / (b.y - a.y)
+			var dup := false
+			for q in xs:
+				if absf(float(q) - x) < 1e-6:
+					dup = true
+			if not dup:
+				xs.append(x)
+		xs.sort()
+		return [xs, flat]
+
+	## 讀數用：「2 個」「0 個」「無限多個」
+	func cross_text(k: float) -> String:
+		var info := cross_info(k)
+		return "無限多個" if info[1] else "%d 個" % (info[0] as Array).size()
+
+	func _draw_cross() -> void:
+		if not is_finite(cross_k):
+			return
+		var info := cross_info(cross_k)
+		if info[1]:
+			for sh in data.get("shapes", []):
+				if sh.get("cross", false) and _vis(sh) and String(sh.get("k", "")) == "seg" and absf(_v(sh.a).y - cross_k) < 1e-9 and absf(_v(sh.b).y - cross_k) < 1e-9:
+					draw_line(_to(_v(sh.a)), _to(_v(sh.b)), Color(1.0, 0.85, 0.4, 0.55 + 0.25 * sin(t * 4.0)), 8.0, true)
+		for x in info[0]:
+			var sp := _to(Vector2(float(x), cross_k))
+			var ph := fmod(t * 1.2, 1.0)
+			draw_arc(sp, 5.0 + 14.0 * ph, 0.0, TAU, 28, Color(0.6, 0.95, 1.0, 0.6 * (1.0 - ph)), 1.6, true)
+			UITheme.dot(self, sp, 5.0, Color(0.85, 1.0, 1.0, 0.95))
 
 	# ---------- 交點漣漪 ----------
 
