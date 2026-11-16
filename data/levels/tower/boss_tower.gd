@@ -1701,6 +1701,9 @@ class NumLine extends Control:
 ##   "groups": [{o: [x, y], shapes: [以 o 為原點的圖形], at, anim: {…}}]：會動的一組
 ##     anim {k: "roll", r, dist, dur}：輪子沿地面滾動（dist > 0 往右、順時針），"trace": [lx, ly] 畫出那一點的軌跡
 ##     anim {k: "spin", period, dir}：繞 o 轉（dir 1 逆時針、−1 順時針），例如摩天輪、風車
+const InkR := preload("res://data/ui/ink_audit.gd")
+
+
 class Plot extends Control:
 	var data: Dictionary = {}
 	var stage := 0:
@@ -1796,7 +1799,14 @@ class Plot extends Control:
 			"gold": UITheme.ACCENT, "violet": UITheme.VIOLET, "text": UITheme.TEXT,
 			"dim": Color(1, 1, 1, 0.55), "faint": Color(1, 1, 1, 0.22)}.get(nm, UITheme.CYAN)
 
+	## 排版檢查（design_rules 1.9）：每一幀畫上去的點名、標籤，測試檢查有沒有疊在一起
+	var ink: Array = []
+
+	func ink_issues() -> Array:
+		return InkR.issues(ink, Rect2(Vector2.ZERO, size))
+
 	func _draw() -> void:
+		ink.clear()
 		draw_style_box(UITheme.boxc(Color(0.04, 0.05, 0.12, 0.9), 14, Color(1, 1, 1, 0.08), 1, 0), Rect2(Vector2.ZERO, size))
 		var font := get_theme_default_font()
 		var xr: Array = data.x
@@ -2153,3 +2163,4 @@ class Plot extends Control:
 		tp.y = clampf(tp.y, sz.y * 0.8, size.y - 3.0)
 		draw_string_outline(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UITheme.fs(4), Color(0.04, 0.05, 0.12, 0.9))
 		draw_string(font, tp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+		InkR.add_text(ink, InkR.plain_box(font, tp, s, fs), s, c)

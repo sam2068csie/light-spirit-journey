@@ -58,3 +58,37 @@ func setup() -> void:
 func finish(label: String) -> void:
 	print("%s DONE checks=%d fails=%d" % [label, checks, fails])
 	quit(1 if fails > 0 else 0)
+
+
+## 排版檢查（design_rules 1.9）：畫面上所有會記錄 ink 的圖（數與式的原野、座標平面），
+## 根號、分數、標籤有沒有超出框、和別的字或圖形疊在一起。回傳問題的說明（同一個問題只回報一次）
+## 動畫進行中（燈條滑進來、數線縮放）一時疊到不算：有問題時等 1.5 秒再看一次，還在才算
+var _ink_seen := {}
+
+func ink_scan(root_n: Node) -> Array:
+	var first := _ink_collect(root_n)
+	if first.is_empty():
+		return []
+	await wait(1.5)
+	var out := []
+	for msg in _ink_collect(root_n):
+		if not _ink_seen.has(msg):
+			_ink_seen[msg] = true
+			out.append("排版：" + String(msg))
+	return out
+
+
+func _ink_collect(root_n: Node) -> Array:
+	var out := []
+	if root_n == null:
+		return out
+	var stack: Array = [root_n]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is CanvasItem and not (n as CanvasItem).is_visible_in_tree():
+			continue
+		if n.has_method("ink_issues"):
+			out.append_array(n.ink_issues())
+		for c in n.get_children():
+			stack.append(c)
+	return out

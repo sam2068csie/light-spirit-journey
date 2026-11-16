@@ -23,6 +23,8 @@ func _issue(msg: String) -> void:
 func snap(tag: String) -> void:
 	n_shot += 1
 	await shot("%03d_%s" % [n_shot, tag.replace("/", "_")])
+	for msg in await ink_scan(get_root()):
+		_issue("%s：%s" % [tag, msg])
 
 
 # ---------------- 滑鼠 ----------------

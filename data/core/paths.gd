@@ -40,6 +40,7 @@ const MAP := {
 	"gen_token.gd": "res://data/core/gen_token.gd",
 	"house.gd": "res://data/house/house.gd",
 	"house_items.gd": "res://data/house/house_items.gd",
+	"ink_audit.gd": "res://data/ui/ink_audit.gd",
 	"level01_bank.gd": "res://data/levels/exp/level01_bank.gd",
 	"level02_bank.gd": "res://data/levels/exp/level02_bank.gd",
 	"level03_bank.gd": "res://data/levels/exp/level03_bank.gd",

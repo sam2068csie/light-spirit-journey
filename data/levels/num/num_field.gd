@@ -43,6 +43,7 @@ extends Control
 
 const UITheme := preload("res://data/ui/game_theme.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
+const Ink := preload("res://data/ui/ink_audit.gd")
 
 const COLS := {"gold": Color(1.0, 0.82, 0.38), "cyan": Color(0.45, 0.85, 1.0), "bad": Color(1.0, 0.45, 0.45),
 	"dim": Color(0.7, 0.72, 0.85), "lime": Color(0.7, 0.95, 0.45)}
@@ -107,7 +108,34 @@ func _process(_d: float) -> void:
 		queue_redraw()
 
 
+## ---- 排版檢查（design_rules 1.9，data/ui/ink_audit.gd）----
+## 每一幀畫上去的字和實心圖形的外框；測試用 ink_issues() 檢查有沒有超出框、疊在一起
+var ink: Array = []
+
+
+func ink_issues() -> Array:
+	return Ink.issues(ink, Rect2(Vector2.ZERO, size))
+
+
+## 畫一行數學排版（中心、基線），順便記下外框。own：寫在哪一格裡面（那一格要用 _box 記下來）
+func _mt(font: Font, cx: float, base: float, markup: String, fs: int, col: Color, own := "") -> void:
+	MathLabel.draw_on(self, font, cx, base, markup, fs, col)
+	Ink.add_text(ink, Ink.math_box(font, cx, base, markup, fs), markup, col, own)
+
+
+## 畫一般文字（左邊的基線）
+func _pt(font: Font, pos: Vector2, s: String, fs: int, col: Color, own := "") -> void:
+	draw_string(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	Ink.add_text(ink, Ink.plain_box(font, pos, s, fs), s, col, own)
+
+
+## 記下一個實心圖形（字不能壓到它，除非是寫在它裡面的字）
+func _box(r: Rect2, own: String) -> void:
+	Ink.add_shape(ink, r, own)
+
+
 func _draw() -> void:
+	ink.clear()
 	if items.is_empty():
 		return
 	var bg := Rect2(Vector2.ZERO, size)
@@ -187,7 +215,8 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 	var plate := Rect2(hub.x - hw / 2.0 - 6, plate_top, hw + 12, 22)
 	draw_rect(plate, Color(0.12, 0.1, 0.16, 0.95))
 	draw_rect(plate, Color(1, 0.86, 0.5, 0.5), false, 1.0)
-	draw_string(font, Vector2(plate.position.x + 6, plate.end.y - 6), head, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 0.92, 0.75))
+	_box(plate, "plate%d" % i)
+	_pt(font, Vector2(plate.position.x + 6, plate.end.y - 6), head, fs, Color(1, 0.92, 0.75), "plate%d" % i)
 	# 扇葉：木頭的臂＋偏一邊的帆布，帆布上寫一個數字（字保持正的）
 	var sail := Color(0.5, 0.5, 0.62, 0.75).lerp(Color(1.0, 0.9, 0.62, 0.92), 1.0 if lit else 0.0)
 	if _miss() > 0.0:
@@ -217,7 +246,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 		sails.append(cp)
 		var tp := cp + Vector2(-cw.x / 2.0, cw.y * 0.32)
 		draw_string_outline(font, tp, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, 4, Color(0.1, 0.07, 0.1, 0.9))
-		draw_string(font, tp, ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs, Color(1, 1, 1) if lit or hi else Color(1, 1, 1, 0.8))
+		_pt(font, tp, ch, dfs, Color(1, 1, 1) if lit or hi else Color(1, 1, 1, 0.8))
 	UITheme.dot(self, hub, 5.5, Color(0.9, 0.85, 0.75))
 	_geo[i] = {"sails": sails}
 	# 右邊：轉起來之後，小數一位一位流出來，下面寫出循環小數的記號
@@ -237,7 +266,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 			tail += rep.substr(k2 % n, 1)
 			k2 += 1
 		var txt := head + tail + ("…" if tail.length() >= room else "")
-		draw_string(font, Vector2(sx, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, sfs, Color(1, 0.92, 0.7))
+		_pt(font, Vector2(sx, y), txt, sfs, Color(1, 0.92, 0.7))
 		if u2 > 1.4:
 			var al := clampf((u2 - 1.4) / 0.5, 0.0, 1.0)
 			var mark := "= " + head + "\\ol{" + rep + "}"
@@ -246,9 +275,9 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 			if mw > r.end.x - sx - 8.0:
 				mfs = int(maxf(14.0, mfs * (r.end.x - sx - 8.0) / mw))
 				mw = MathLabel.text_width(font, mark, mfs)
-			MathLabel.draw_on(self, font, sx + mw / 2.0, y + 46.0, mark, mfs, Color(1, 0.86, 0.45, al))
+			_mt(font, sx + mw / 2.0, y + 46.0, mark, mfs, Color(1, 0.86, 0.45, al))
 	else:
-		draw_string(font, Vector2(sx, y), head + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, sfs, Color(1, 1, 1, 0.3))
+		_pt(font, Vector2(sx, y), head + "…", sfs, Color(1, 1, 1, 0.3))
 
 
 # ================= 數線 =================
@@ -303,12 +332,12 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 				draw_line(Vector2(px, y - 6), Vector2(px, y + 6), Color(1, 0.95, 0.85, 0.5), 1.5)
 				var lab := _fmt(v, stp)
 				var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13)).x
-				draw_string(font, Vector2(px - w / 2.0, y + 22), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13), Color(1, 0.95, 0.85, 0.5))
+				_pt(font, Vector2(px - w / 2.0, y + 22), lab, UITheme.fs(13), Color(1, 0.95, 0.85, 0.5))
 			v += stp
 	if bool(it.get("zero", false)) and lo < 0.0 and hi > 0.0:
 		var pz: float = sx.call(0.0)
 		draw_line(Vector2(pz, y - 9), Vector2(pz, y + 9), Color(1, 1, 1, 0.8), 2.0)
-		draw_string(font, Vector2(pz - 4, y + 24), "0", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.8))
+		_pt(font, Vector2(pz - 4, y + 24), "0", UITheme.fs(14), Color(1, 1, 1, 0.8))
 	if it.has("road"):
 		_draw_road(it.road, sx, y, r, st)
 	if it.has("bars"):
@@ -376,7 +405,7 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		if lab != "":
 			var below := bool(p.get("below", false))
 			var ly := y + 30.0 if below else y - hpost - 14.0 - 16.0 * float(rank[k] % 2 if pts.size() > 2 and not bool(it.get("flat", false)) else 0)
-			MathLabel.draw_on(self, font, px, ly, lab, UITheme.fs(16), c.lightened(0.2) if glow > 0.0 else Color(1, 1, 1, 0.85))
+			_mt(font, px, ly, lab, UITheme.fs(16), c.lightened(0.2) if glow > 0.0 else Color(1, 1, 1, 0.85))
 		shown += 1
 	s.lit_t = lit_t
 	s.mv_t = mv_t
@@ -589,6 +618,20 @@ func global_of_line_value(v: float) -> Vector2:
 	return get_global_transform() * Vector2(x, _bar_y(g, float(spec.get("row", 0))))
 
 
+## 燈條的名字寫在左邊；左邊放不下寫右邊；兩邊都放不下就放在空間比較大的那一邊，不超出圖
+func _bar_lx(font: Font, lab: String, a: float, b: float) -> float:
+	var w := MathLabel.text_width(font, lab, UITheme.fs(15))
+	var lo := 4.0 + w / 2.0
+	var hi := size.x - 4.0 - w / 2.0
+	var left := a - 12.0 - w / 2.0
+	var right := b + 12.0 + w / 2.0
+	if left >= lo:
+		return left
+	if right <= hi:
+		return right
+	return clampf(left, lo, hi) if a > size.x - b else clampf(right, lo, hi)
+
+
 func _draw_range(sx: Callable, g: Dictionary, font: Font) -> void:
 	var t := _t()
 	var y := _bar_y(g, float(spec.get("row", 0)))
@@ -601,11 +644,7 @@ func _draw_range(sx: Callable, g: Dictionary, font: Font) -> void:
 	draw_rect(Rect2(a, y - 5, b - a, 10), Color(c.r, c.g, c.b, 0.8), false, 1.5)
 	var lab := String(spec.get("s", ""))
 	if lab != "":
-		var w := MathLabel.text_width(font, lab, UITheme.fs(15))
-		var lx := a - 14.0 - w / 2.0
-		if lx - w / 2.0 < float(g.x0) - 14.0:
-			lx = b + 14.0 + w / 2.0
-		MathLabel.draw_on(self, font, lx, y + 6.0, lab, UITheme.fs(15), Color(0.85, 1.0, 0.7))
+		_mt(font, _bar_lx(font, lab, a, b), y + 6.0, lab, UITheme.fs(15), Color(0.85, 1.0, 0.7))
 	for k in 2:
 		var p := _handle_pos(k)
 		var hc := Color(1, 0.95, 0.75)
@@ -620,7 +659,7 @@ func _draw_range(sx: Callable, g: Dictionary, font: Font) -> void:
 		if rng_drag == k:
 			var vs := _fmt(vv, float(spec.get("snap", 1.0)))
 			var vw := font.get_string_size(vs, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
-			draw_string(font, Vector2(p.x - vw / 2.0, p.y - 14.0), vs, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 0.95, 0.75))
+			_pt(font, Vector2(p.x - vw / 2.0, p.y - 14.0), vs, UITheme.fs(14), Color(1, 0.95, 0.75))
 		draw_line(Vector2(p.x, p.y + 9.0), Vector2(p.x, float(g.y)), Color(1, 0.95, 0.75, 0.35), 1.0)
 	# 示範的手：半透明的圓＋手指
 	var dp := _demo_pose()
@@ -654,7 +693,7 @@ func _draw_marks(sx: Callable, ry: float, font: Font) -> void:
 			continue
 		UITheme.dot(self, Vector2(px, ry), 7.0, Color(1, 0.4, 0.4, al))
 		if String(mk.text) != "":
-			MathLabel.draw_on(self, font, clampf(px, 90.0, size.x - 90.0), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
+			_mt(font, clampf(px, 90.0, size.x - 90.0), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
 
 
 # ---- 拖珠子：snaps 是 a 到 b 的幾分之幾，標在數線下面 ----
@@ -755,7 +794,7 @@ func _draw_drag(sx: Callable, y: float, ry: float, r: Rect2, font: Font) -> void
 			var ly := y + (58.0 if low else 30.0)
 			if low:
 				draw_line(Vector2(px, y + 6), Vector2(px, ly - 22.0), Color(1, 0.95, 0.8, 0.25), 1.0)
-			MathLabel.draw_on(self, font, px, ly, String(sn[1]), lfs, Color(1, 0.95, 0.8, 0.6))
+			_mt(font, px, ly, String(sn[1]), lfs, Color(1, 0.95, 0.8, 0.6))
 	# 托盤
 	var beads: Array = spec.get("beads", [])
 	var tray := Rect2(_tray_pos(0) - Vector2(20, 34), Vector2(40.0 * beads.size(), 50))
@@ -875,15 +914,12 @@ func _draw_bars(i: int, bars: Array, sx: Callable, x0: float, x1: float, y: floa
 			draw_rect(Rect2(a - 4, by - 9, e - a + 8, 18), Color(c.r, c.g, c.b, 0.25 * fresh))
 		draw_rect(Rect2(a, by - 5, e - a, 10), Color(c.r, c.g, c.b, 0.32))
 		draw_rect(Rect2(a, by - 5, e - a, 10), Color(c.r, c.g, c.b, 0.85), false, 1.5)
+		_box(Rect2(a, by - 5, e - a, 10), "bar")
 		for xx in [a, e]:
 			draw_line(Vector2(xx, by + 5), Vector2(xx, y), Color(c.r, c.g, c.b, 0.22), 1.0)
 		var lab := String(b.get("s", ""))
 		if lab != "":
-			var w := MathLabel.text_width(font, lab, UITheme.fs(15))
-			var lx := a - 14.0 - w / 2.0
-			if lx - w / 2.0 < x0 - 14.0:
-				lx = e + 14.0 + w / 2.0
-			MathLabel.draw_on(self, font, lx, by + 6.0, lab, UITheme.fs(15), c.lightened(0.25))
+			_mt(font, _bar_lx(font, lab, a, e), by + 6.0, lab, UITheme.fs(15), c.lightened(0.25))
 		# 從哪裡合出來：剛出現時，從來源的端點連線過來
 		if age < 2.4 and u >= 1.0:
 			var la := clampf(1.0 - (age - 0.9) / 1.5, 0.0, 1.0)
@@ -911,7 +947,11 @@ func _draw_rects(i: int, it: Dictionary, r: Rect2) -> void:
 	var font := get_theme_default_font()
 	var t := _t()
 	var pairs: Array = it.get("pairs", [])
+	var fs := UITheme.fs(14)
+	# 左邊寫寬（答對後寫 √n），間隔要放得下，不能壓到左邊那一個長方形
 	var gap := 26.0
+	for pr in pairs:
+		gap = maxf(gap, MathLabel.text_width(font, "√%d" % int(pr[1]), fs) + 18.0)
 	# 排成一排或兩排（哪一種方格比較大就用哪一種）；每個長方形的方格一樣大，面積看得出一樣
 	var best_u := 0.0
 	var rows := [pairs]
@@ -925,9 +965,9 @@ func _draw_rects(i: int, it: Dictionary, r: Rect2) -> void:
 			for pr in row:
 				tot += float(pr[0])
 				tall = maxf(tall, float(pr[1]))
-			u = minf(u, (r.size.x - 40.0 - gap * (row.size() - 1)) / tot)
+			u = minf(u, (r.size.x - 16.0 - gap * row.size()) / tot)
 			sum_h += tall
-		u = minf(u, (r.size.y - 36.0 - 30.0 * cand.size()) / sum_h)
+		u = minf(u, (r.size.y - 34.0 - 30.0 * cand.size()) / sum_h)
 		if u > best_u + 0.5:
 			best_u = u
 			rows = cand
@@ -938,10 +978,10 @@ func _draw_rects(i: int, it: Dictionary, r: Rect2) -> void:
 		for pr in row:
 			tall = maxf(tall, float(pr[1]))
 		used += tall * u + 30.0
-	var y := r.position.y + maxf(24.0, (r.size.y - used) / 2.0 + 12.0)
+	# 最上面留一行給點錯時的「m + n = s」
+	var y := r.position.y + maxf(30.0, (r.size.y - used) / 2.0 + 15.0)
 	var rects := []
 	var done := _step() > int(it.get("at", 0))
-	var fs := UITheme.fs(14)
 	var k := -1
 	for row in rows:
 		var tot := 0.0
@@ -949,13 +989,25 @@ func _draw_rects(i: int, it: Dictionary, r: Rect2) -> void:
 		for pr in row:
 			tot += float(pr[0])
 			tall = maxf(tall, float(pr[1]))
-		var x: float = r.position.x + 24.0 + (r.size.x - 40.0 - gap * (row.size() - 1) - tot * u) / 2.0
+		var x: float = r.position.x + gap + (r.size.x - 16.0 - gap * row.size() - tot * u) / 2.0
 		var base := y + tall * u
 		y = base + 30.0
 		for pr in row:
 			k += 1
 			x = _draw_rect1(it, k, pr, x, base, u, done, font, fs, t, rects) + gap
 	_geo[i] = {"rects": rects}
+	# 點錯的那一個：最上面寫出它的長 + 寬（長方形本身變紅）
+	var last := -1
+	for kk in rect_marks.keys():
+		if t - float(rect_marks[kk]) < 2.5 and (last < 0 or float(rect_marks[kk]) > float(rect_marks[last])):
+			last = int(kk)
+	if last >= 0 and last < pairs.size():
+		var al := clampf((2.5 - (t - float(rect_marks[last]))) / 0.6, 0.0, 1.0)
+		var pr: Array = pairs[last]
+		var txt := "%d + %d = %d" % [int(pr[0]), int(pr[1]), int(pr[0]) + int(pr[1])]
+		var tw := MathLabel.text_width(font, txt, UITheme.fs(15))
+		var cx := clampf((rects[last] as Rect2).get_center().x, r.position.x + tw / 2.0 + 4.0, r.end.x - tw / 2.0 - 4.0)
+		_mt(font, cx, r.position.y + 18.0, txt, UITheme.fs(15), Color(1, 0.55, 0.55, al))
 
 
 func _draw_rect1(it: Dictionary, k: int, pr: Array, x: float, base: float, u: float, done: bool, font: Font, fs: int, t: float, rects: Array) -> float:
@@ -979,22 +1031,20 @@ func _draw_rect1(it: Dictionary, k: int, pr: Array, x: float, base: float, u: fl
 	for gy in range(1, int(n)):
 		draw_line(Vector2(rc.position.x, rc.position.y + gy * u), Vector2(rc.end.x, rc.position.y + gy * u), Color(c.r, c.g, c.b, 0.18), 1.0)
 	draw_rect(rc, c, false, 3.5 if win else 2.0)
+	_box(rc, "rect%d" % k)
 	if win:
 		# 找到了：兩邊的長度變成 √m、√n（正方形的邊長）
-		MathLabel.draw_on(self, font, rc.get_center().x, base + 20.0, "√%d" % int(m), fs, c)
+		_mt(font, rc.get_center().x, base + 20.0, "√%d" % int(m), fs, c)
 		var nw2 := MathLabel.text_width(font, "√%d" % int(n), fs)
-		MathLabel.draw_on(self, font, rc.position.x - nw2 / 2.0 - 6.0, rc.get_center().y + 5.0, "√%d" % int(n), fs, c)
+		_mt(font, rc.position.x - nw2 / 2.0 - 6.0, rc.get_center().y + 5.0, "√%d" % int(n), fs, c)
 		return x + m * u
 	# 下面標長、左邊標寬
 	var ms := str(int(m))
 	var mw := font.get_string_size(ms, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	draw_string(font, Vector2(rc.get_center().x - mw / 2.0, base + 18.0), ms, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+	_pt(font, Vector2(rc.get_center().x - mw / 2.0, base + 18.0), ms, fs, c)
 	var ns := str(int(n))
 	var nw := font.get_string_size(ns, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	draw_string(font, Vector2(rc.position.x - nw - 5.0, rc.get_center().y + 5.0), ns, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
-	if miss:
-		var al := clampf(2.5 - (t - float(rect_marks[k])), 0.0, 1.0)
-		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y - 8.0, "%d + %d = %d" % [int(m), int(n), int(m + n)], fs, Color(1, 0.55, 0.55, al))
+	_pt(font, Vector2(rc.position.x - nw - 5.0, rc.get_center().y + 5.0), ns, fs, c)
 	return x + m * u
 
 
@@ -1029,13 +1079,15 @@ func _flow(font: Font, names: Array, x0: float, x1: float, y0: float) -> Array:
 	return [out, y + row_h - y0]
 
 
-## 兩個籃子的位置：種子袋（全部種子都在袋子裡時）占上面，籃子占剩下的下半部
-func _bins(r: Rect2, it: Dictionary) -> Array:
+## 兩個籃子的位置：種子袋（還沒放的種子）占上面，籃子占剩下的下半部
+## 種子放進籃子之後袋子變矮、籃子跟著變高（2026/11/16：全部放好時分數種子超出籃子）
+func _bins(r: Rect2, it: Dictionary, pos: Dictionary) -> Array:
 	var names := []
 	for sd in it.get("seeds", []):
-		names.append(String(sd[0]))
-	var tray_h: float = _flow(get_theme_default_font(), names, r.position.x, r.end.x, r.position.y)[1]
-	var y := r.position.y + tray_h + 8.0
+		if pos.get(String(sd[0])) == null:
+			names.append(String(sd[0]))
+	var tray_h: float = _flow(get_theme_default_font(), names, r.position.x, r.end.x, r.position.y)[1] if not names.is_empty() else 0.0
+	var y := r.position.y + tray_h + (8.0 if not names.is_empty() else 0.0)
 	var bw := (r.size.x - 16.0) / 2.0
 	var bh := maxf(60.0, r.end.y - y)
 	return [Rect2(r.position.x, y, bw, bh), Rect2(r.position.x + bw + 16.0, y, bw, bh)]
@@ -1044,7 +1096,7 @@ func _bins(r: Rect2, it: Dictionary) -> Array:
 ## 每顆種子的位置：pos 是 {名字: null / 0 / 1}
 func _seed_layout(it: Dictionary, r: Rect2, pos: Dictionary) -> Dictionary:
 	var font := get_theme_default_font()
-	var bins := _bins(r, it)
+	var bins := _bins(r, it, pos)
 	var groups := [[], [], []]
 	for sd in it.get("seeds", []):
 		var where = pos.get(String(sd[0]))
@@ -1072,7 +1124,7 @@ func _seed_at(pos: Vector2) -> String:
 
 
 func _bin_at(pos: Vector2):
-	var bins := _bins(_sort_rect(), items[int(spec.get("item", 0))])
+	var bins := _bins(_sort_rect(), items[int(spec.get("item", 0))], drag_pos)
 	for k in 2:
 		if (bins[k] as Rect2).grow(10).has_point(pos):
 			return k
@@ -1087,7 +1139,7 @@ func global_of_seed(name: String) -> Vector2:
 
 
 func global_of_bin(k: int) -> Vector2:
-	var b: Rect2 = _bins(_sort_rect(), items[int(spec.get("item", 0))])[k]
+	var b: Rect2 = _bins(_sort_rect(), items[int(spec.get("item", 0))], drag_pos)[k]
 	return get_global_transform() * Vector2(b.get_center().x, b.position.y + b.size.y * 0.7)
 
 
@@ -1101,7 +1153,7 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 	var pos := {}
 	for sd in it.get("seeds", []):
 		pos[String(sd[0])] = (drag_pos.get(String(sd[0])) if live else (int(sd[1]) if done else null))
-	var bins := _bins(r, it)
+	var bins := _bins(r, it, pos)
 	var cols := [Color(0.55, 0.95, 0.55), Color(0.75, 0.7, 1.0)]
 	for k in 2:
 		var b: Rect2 = bins[k]
@@ -1113,7 +1165,7 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 		for yy in range(int(b.position.y) + 26, int(b.end.y), 14):
 			draw_line(Vector2(b.position.x + 4, yy), Vector2(b.end.x - 4, yy), Color(c.r, c.g, c.b, 0.07), 1.0)
 		var lab := String(it.bins[k]) if it.has("bins") else ""
-		MathLabel.draw_on(self, font, b.get_center().x, b.position.y + 18.0, lab, UITheme.fs(14), c)
+		_mt(font, b.get_center().x, b.position.y + 18.0, lab, UITheme.fs(14), c)
 	var lay := _seed_layout(it, r, pos)
 	var hl := {}
 	for h in it.get("hl", []):
@@ -1136,8 +1188,9 @@ func _draw_seeds(i: int, it: Dictionary, r: Rect2) -> void:
 			bgc = Color(0.15, 0.3, 0.15, 0.9)
 		draw_rect(rc, bgc)
 		draw_rect(rc, Color(c.r, c.g, c.b, 0.85), false, 1.5)
+		_box(rc, "seed:" + name)
 		var ext := MathLabel.line_extent(name, UITheme.fs(SEED_FS))
-		MathLabel.draw_on(self, font, rc.get_center().x, rc.position.y + (rc.size.y - ext.x - ext.y) / 2.0 + ext.x, name, UITheme.fs(SEED_FS), c)
+		_mt(font, rc.get_center().x, rc.position.y + (rc.size.y - ext.x - ext.y) / 2.0 + ext.x, name, UITheme.fs(SEED_FS), c, "seed:" + name)
 
 
 ## 滑桿的值（line_level 的 slide 步驟寫在 plane.dyn_vals）
@@ -1160,7 +1213,7 @@ func _draw_bead(p: Vector2, c: Color, glow: float, lab: String, font: Font) -> v
 	UITheme.dot(self, p, 6.0, c)
 	UITheme.dot(self, p + Vector2(-2, -2), 2.2, Color(1, 1, 1, 0.8))
 	if lab != "":
-		MathLabel.draw_on(self, font, p.x, p.y - 18.0, lab, UITheme.fs(16), c.lightened(0.25))
+		_mt(font, p.x, p.y - 18.0, lab, UITheme.fs(16), c.lightened(0.25))
 
 
 ## 繩子：兩根柱子＋中間微微下垂的繩，答對外分點後往外拉長（0.8 秒長出去）
@@ -1200,7 +1253,7 @@ func _draw_rope(i: int, rp: Dictionary, sx: Callable, y: float, ry: float, st: i
 		if k < names.size():
 			# 柱子的名字寫在柱子頂端的外側（左邊那根寫左邊、右邊那根寫右邊），不擋繩上的珠子
 			var side := -1.0 if ends[k] <= ends[1 - k] else 1.0
-			MathLabel.draw_on(self, get_theme_default_font(), px + side * 13.0, ry - 14.0, String(names[k]), UITheme.fs(16), Color(1, 0.92, 0.75))
+			_mt(get_theme_default_font(), px + side * 13.0, ry - 14.0, String(names[k]), UITheme.fs(16), Color(1, 0.92, 0.75))
 
 
 ## 砝碼：疊在柱子頂端，個數 = 權重（靠近誰，誰的權重大）
@@ -1216,12 +1269,13 @@ func _draw_weights(w: Dictionary, sx: Callable, ry: float, age: float) -> void:
 			var rc := Rect2(px - 9, ry - 22.0 - 13.0 * k - 8.0 * (1.0 - g), 18, 11)
 			draw_rect(rc, Color(0.75, 0.7, 0.9, 0.85 * g))
 			draw_rect(rc, Color(1, 1, 1, 0.6 * g), false, 1.0)
+			_box(rc, "weight")
 		# 個數寫在內側（朝另一根柱子），外側留給柱子的名字
 		var other: float = sx.call(float(w["b" if key == "a" else "a"][0])) if w.has("b" if key == "a" else "a") else px + 1.0
 		var lab := str(n)
 		var lw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
 		var lx := px + 12.0 if other > px else px - 12.0 - lw
-		draw_string(font, Vector2(lx, ry - 14.0 - 13.0 * (n - 1)), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, g))
+		_pt(font, Vector2(lx, ry - 14.0 - 13.0 * (n - 1)), lab, UITheme.fs(14), Color(1, 1, 1, g))
 
 
 ## 兩個光點往右跑：第 at 步之前停在起點，之後 2.4 秒內同時跑到會合點
@@ -1244,7 +1298,7 @@ func _draw_runners(i: int, rn: Dictionary, sx: Callable, y: float, st: int, t: f
 			draw_line(Vector2(sx.call(v0), p.y), p, Color(cols[k].r, cols[k].g, cols[k].b, 0.35), 3.0)
 		UITheme.dot(self, p, 12.0, Color(cols[k].r, cols[k].g, cols[k].b, 0.25))
 		UITheme.dot(self, p, 5.5, cols[k])
-		MathLabel.draw_on(self, font, p.x - 12.0, p.y - 4.0, String(names[k]), UITheme.fs(14), cols[k])
+		_mt(font, p.x - 12.0, p.y - 4.0, String(names[k]), UITheme.fs(14), cols[k])
 	if u >= 1.0:
 		var age := t - float(s.run_t) - 2.4
 		var pm := Vector2(sx.call(meet), y - 19.0)
@@ -1281,7 +1335,7 @@ func _draw_road(rd: Dictionary, sx: Callable, y: float, r: Rect2, st: int) -> vo
 			var mx := (float(sx.call(pos[names[j]])) + float(sx.call(pos[names[j + 1]]))) / 2.0
 			var lab := ("%d" % d if is_equal_approx(d, roundf(d)) else "%.1f" % d) + " km"
 			var lw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12)).x
-			draw_string(font, Vector2(mx - lw / 2.0, ry + 16.0), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(12), Color(1, 0.92, 0.75, 0.75))
+			_pt(font, Vector2(mx - lw / 2.0, ry + 16.0), lab, UITheme.fs(12), Color(1, 0.92, 0.75, 0.75))
 		var show: Dictionary = cs.get("show", {})
 		for name in names:
 			var px: float = sx.call(pos[name])
@@ -1294,7 +1348,7 @@ func _draw_road(rd: Dictionary, sx: Callable, y: float, r: Rect2, st: int) -> vo
 				var d := Vector2(cos(a), sin(a))
 				draw_colored_polygon(PackedVector2Array([hub, hub + d * 8.0 + Vector2(-d.y, d.x) * 3.0, hub + d * 8.0]), Color(1, 0.9, 0.62, 0.9))
 			UITheme.dot(self, hub, 1.8, Color(0.9, 0.85, 0.75))
-			MathLabel.draw_on(self, font, px + 12.0, ry - 12.0, String(name), UITheme.fs(14), Color(1, 1, 1, 0.9))
+			_mt(font, px + 12.0, ry - 12.0, String(name), UITheme.fs(14), Color(1, 1, 1, 0.9))
 			if vis:
 				draw_dashed_line(Vector2(px, ry + 4.0), Vector2(px, y - 4.0), Color(1, 0.9, 0.6, 0.35), 1.0, 4.0)
 
@@ -1394,9 +1448,12 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 				var rc := Rect2(x + shake, y + dy, bs, bs)
 				draw_rect(rc, Color(c.r, c.g, c.b, 0.35 * al))
 				draw_rect(rc, Color(c.r, c.g, c.b, 0.9 * al), false, 2.0)
+				var own := "blk%d_%d" % [row, k]
+				if al > 0.9:
+					_box(rc, own)
 				var fs := UITheme.fs(18 if lab.length() <= 2 else 14)
 				var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-				draw_string(font, Vector2(rc.position.x + (bs - w) / 2.0, rc.position.y + bs * 0.68), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, al))
+				_pt(font, Vector2(rc.position.x + (bs - w) / 2.0, rc.position.y + bs * 0.68), lab, fs, Color(1, 1, 1, al), own)
 				if gone.has(k) and al < 1.0:
 					draw_line(rc.position + Vector2(4, bs - 4), rc.position + Vector2(bs - 4, 4), Color(1, 0.4, 0.4, al), 3.0)
 				if mode == "blocks" and not bsel.is_empty() and int(bsel[0]) == row and int(bsel[1]) == k:
@@ -1407,7 +1464,7 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 					var xa := minf(float(prev[1]), al)
 					var xfs := UITheme.fs(18)
 					var xw := font.get_string_size("×", HORIZONTAL_ALIGNMENT_LEFT, -1, xfs).x
-					draw_string(font, Vector2(mx - xw / 2.0, y + bs * 0.66), "×", HORIZONTAL_ALIGNMENT_LEFT, -1, xfs, Color(1, 0.95, 0.85, 0.8 * xa))
+					_pt(font, Vector2(mx - xw / 2.0, y + bs * 0.66), "×", xfs, Color(1, 0.95, 0.85, 0.8 * xa))
 				if al > 0.01:
 					shown.append([x, al])
 			x += bs + gap

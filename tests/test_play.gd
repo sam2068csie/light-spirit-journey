@@ -82,6 +82,10 @@ func _check(lv, when: String) -> void:
 		_shot_n += 1
 		await wait(0.35)
 		await shot("%03d_%s_%s" % [_shot_n, cur_tag.replace("/", "_").replace("#", "_"), when])
+	for msg in await ink_scan(lv):
+		_issue("%s：%s" % [when, msg])
+		if _all_shots or OS.get_environment("SHOTS") != "":
+			await shot("ink_%s_%s" % [cur_tag.replace("/", "_").replace("#", "_"), when])
 	var vp := (lv as Control).get_viewport_rect().size
 	var card: Control = lv.side_card
 	var cr := card.get_global_rect()
