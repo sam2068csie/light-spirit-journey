@@ -18,6 +18,12 @@ extends "res://data/levels/line/line_level.gd"
 ##       {"kind": "lsort", …, "item": 0, "why": {"種子": 放錯時的提示}}
 ##       {"kind": "rtap", …, "item": 0}   點長方形（R6）：rects 元件寫好哪一個是答案，點錯的標出長 + 寬
 ##         篩種子（R5）：把種子拖進兩個籃子（seeds 元件寫好每顆該放哪裡），按「確定」。放錯的退回種子袋
+##       R7：
+##       {"kind": "ctap", …, "item": 0}   點項的卡片（chips 元件）：點出每一對正負號相反的項，點錯的卡片搖一下
+##       {"kind": "sqtap", …, "item": 0}  點兩塊麥田（sqs 元件）裡「拿掉的剛好是正方形」那一塊
+##       {"kind": "gtap", …, "item": 0, "alts": [[要踩的階, …], …], "why": {"階": 點錯的提示}}
+##         梯子點要踩的階：alts 裡任何一組都點到了就過（可以點的是 alts 裡出現的階，其他的算點錯）
+##       天秤（scale 元件）：審判步驟時自動可以點數字卡（不扣分）
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
 const NumField := preload("res://data/levels/num/num_field.gd")
@@ -69,7 +75,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap":
+		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -94,6 +100,19 @@ func _forge_step() -> void:
 			_nf().begin("sail", {"item": int(st.get("item", 0))}, _mtap_event)
 		"rtap":
 			_nf().begin("rect", {"item": int(st.get("item", 0))}, _rtap_event)
+		"ctap":
+			_nf().begin("chip", {"item": int(st.get("item", 0))}, _ctap_event)
+		"sqtap":
+			_nf().begin("sq", {"item": int(st.get("item", 0))}, _sqtap_event)
+		"gtap":
+			_nf().begin("rung", {"item": int(st.get("item", 0))}, _gtap_event)
+		"choice":
+			# 天秤（R7）：審判的時候數字卡可以隨便點
+			var f := _nf()
+			if f != null and f.visible:
+				for k in f.items.size():
+					if String(f.items[k].k) == "scale":
+						f.begin("scale", {"item": k}, func(_e): pass)
 		"lsort":
 			_nf().begin("sort", {"item": int(st.get("item", 0))}, func(_e): pass)
 			go_btn.visible = true
@@ -226,6 +245,81 @@ func _mtap_event(ev: Dictionary) -> void:
 var mtap_ok := false
 
 
+func _ctap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "ctap":
+		return
+	var st: Dictionary = steps[si]
+	var f := _nf()
+	var it: Dictionary = f.items[int(st.get("item", 0))]
+	var key: Array = f._geo[int(st.get("item", 0))].keys[int(ev.k)]
+	var pairs: Array = it.pairs
+	for pk in pairs.size():
+		var pr: Array = pairs[pk]
+		for e in [pr[0], pr[1]]:
+			if int(e[0]) == int(key[0]) and int(e[1]) == int(key[1]):
+				if bool(pr[2]):
+					f.chip_found[pk] = true
+					var left := 0
+					for q in pairs:
+						if bool(q[2]):
+							left += 1
+					if f.chip_found.size() >= left:
+						_pic_finish.call_deferred(si)
+					return
+				f.chip_bad["%d_%d" % [int(key[0]), int(key[1])]] = f._t()
+				_pic_wrong(st, String(pr[3]))
+				return
+
+
+func _sqtap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "sqtap":
+		return
+	var st: Dictionary = steps[si]
+	var f := _nf()
+	var it: Dictionary = f.items[int(st.get("item", 0))]
+	if int(ev.k) == int(it.target):
+		_pic_finish.call_deferred(si)
+		return
+	f.sq_bad[int(ev.k)] = f._t()
+	var o: Dictionary = it.opts[int(ev.k)]
+	_pic_wrong(st, "%d 格排不成正方形。%s" % [int(o.n), String(st.nudge)])
+
+
+func _gtap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "gtap":
+		return
+	var st: Dictionary = steps[si]
+	var f := _nf()
+	var k := int(ev.k)
+	var allowed := {}
+	for alt in st.alts:
+		for q in alt:
+			allowed[int(q)] = true
+	if allowed.has(k):
+		f.rung_sel[k] = true
+		if _gtap_done(st):
+			_pic_finish.call_deferred(si)
+		return
+	f.rung_bad[k] = f._t()
+	var it: Dictionary = f.items[int(st.get("item", 0))]
+	var rg: Dictionary = it.rungs[k]
+	if f._step() < int(rg.get("at", 0)):
+		_pic_wrong(st, "這一階還沒爬到。" + String(st.nudge))
+	else:
+		_pic_wrong(st, String(st.get("why", {}).get(str(k), st.nudge)))
+
+
+func _gtap_done(st: Dictionary) -> bool:
+	for alt in st.alts:
+		var all_in := true
+		for q in alt:
+			if not _nf().rung_sel.has(int(q)):
+				all_in = false
+		if all_in:
+			return true
+	return false
+
+
 func _rtap_event(ev: Dictionary) -> void:
 	if _pic_kind() != "rtap":
 		return
@@ -294,9 +388,22 @@ func _custom_go() -> void:
 		"lsort":
 			_lsort_submit()
 			return
-		"rtap":
+		"rtap", "sqtap":
 			if mtap_ok:
 				mtap_ok = false
+				_pic_finish(si)
+			return
+		"ctap":
+			var it: Dictionary = _nf().items[int(steps[si].get("item", 0))]
+			var need := 0
+			for q in it.pairs:
+				if bool(q[2]):
+					need += 1
+			if _nf().chip_found.size() >= need:
+				_pic_finish(si)
+			return
+		"gtap":
+			if _gtap_done(steps[si]):
 				_pic_finish(si)
 			return
 		"mtap":
@@ -335,8 +442,18 @@ func test_answer(st: Dictionary) -> bool:
 			for b in st.beads:
 				_nf().drag_pos[String(b[0])] = float(st.goal[String(b[0])])
 			return true
-		"mtap", "rtap":
+		"mtap", "rtap", "sqtap":
 			mtap_ok = true
+			return true
+		"ctap":
+			var it: Dictionary = _nf().items[int(st.get("item", 0))]
+			for pk in it.pairs.size():
+				if bool(it.pairs[pk][2]):
+					_nf().chip_found[pk] = true
+			return true
+		"gtap":
+			for q in st.alts[0]:
+				_nf().rung_sel[int(q)] = true
 			return true
 		"lrange":
 			_nf().rng = [float(st.ans[0]), float(st.ans[1])]

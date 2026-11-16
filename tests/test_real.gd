@@ -349,6 +349,43 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					_issue("%s：珠子 %s 沒有拖到 %s（%s）" % [_where(), nm, to, f.drag_pos.get(nm)])
 			await snap(String(lv.r.id) + "_拖好")
 			await go()
+		"ctap":
+			# 點項的卡片（數與式 R7）：答錯時先點一張正負號沒變的，答對時點每一對正負號相反的
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var keys: Array = f._geo[int(st.get("item", 0))].keys
+			for pr in it.pairs:
+				if bool(pr[2]) == wrong:
+					continue
+				for kk in keys.size():
+					if int(keys[kk][0]) == int(pr[0][0]) and int(keys[kk][1]) == int(pr[0][1]):
+						await click_at(f.global_of_hit("chips", kk))
+						await frames(3)
+				if wrong:
+					break
+			await snap(String(lv.r.id) + ("_點錯卡片" if wrong else "_點卡片"))
+		"sqtap":
+			# 點兩塊麥田（數與式 R7）：答錯時點另一塊
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var k := int(it.target)
+			if wrong:
+				k = 1 - k
+			await click_at(f.global_of_hit("sqs", k))
+			await frames(3)
+			await snap(String(lv.r.id) + ("_點錯麥田" if wrong else "_點麥田"))
+		"gtap":
+			# 梯子點要踩的階（數與式 R7）：答錯時點最上面那一階（還沒爬到），答對時點第一組
+			var f = lv._nf()
+			if wrong:
+				var n: int = f.items[int(st.get("item", 0))].rungs.size()
+				await click_at(f.global_of_hit("rungs", n - 1))
+				await frames(3)
+			else:
+				for q in st.alts[0]:
+					await click_at(f.global_of_hit("rungs", int(q)))
+					await frames(3)
+			await snap(String(lv.r.id) + ("_點錯階" if wrong else "_點階"))
 		"rtap":
 			# 點長方形（數與式 R6）：答錯時點下一個
 			var f = lv._nf()
@@ -653,7 +690,7 @@ func _play_round() -> void:
 			await snap("%s_%d_%s" % [rid, si0, st.name])
 			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
 			# 能量只剩一格就不再故意答錯（每一步都在圖上作答的題目，例如 R3 的拉範圍）
-			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap"] and int(lv.energy) > 1):
+			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap"] and int(lv.energy) > 1):
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false

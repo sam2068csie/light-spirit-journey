@@ -39,6 +39,15 @@ extends Control
 ##   面積一樣的長方形一排，用小方格畫，下面標長、左邊標寬。
 ## 種子（R5）：{"k": "seeds", "bins": ["左邊籃子的標籤", "右邊"], "seeds": [["名字（算式）", 0 或 1（該放哪個籃子）], …],
 ##             "at": 第幾步是篩種子（做完之前種子都在袋子裡，做完之後在對的籃子裡）, "hl": [[第幾步起, "名字"], …]（亮起來的種子）}
+## 天秤（R7）：{"k": "scale", "cards": [[a, b, c], …], "eqs": [{"L": 左邊（排版）, "R": 右邊, "fl": 左邊的算式（a、b、c）, "fr": 右邊,
+##              "steps": [哪幾步顯示這一條], "bad": 會歪的數字卡（判 ✕ 之後的那一步自動選它）, "bad_at": 從第幾步起自動選}]}
+##   審判步驟時數字卡可以隨便點（num_level 自動 begin("scale")），兩盤寫上代進去的值，不一樣重就歪。
+## 項的卡片（R7）：{"k": "chips", "groups": [["x", "+3y", "−2"], …], "pairs": [[[組, 第幾項], [組, 第幾項], 正負號相反?, 點錯的提示], …],
+##              "labels": ["A", "−A"], "at": 第幾步是點卡片}  點出正負號相反的項，做完框成一整塊
+## 兩塊麥田（R7）：{"k": "sqs", "opts": [{"s": "(x^{2} + y^{2})^{2}", "n": 9, "cap": "− 9x^{2}y^{2}", "lab": "(3xy)^{2}"}, …], "target": 0, "at": 第幾步}
+##   每一塊畫出要拿掉的 n 個小方格：n 是平方數就排成正方形，不是就排不成
+## 梯子（R7）：{"k": "ladder", "rungs": [{"s": "x + \\frac{1}{x}", "v": "2√10", "at": 第幾步之後知道值}, …]}（由下往上）
+##   gtap 步驟點要踩的階，點對的亮起來
 ## 圖上不寫中文：只有數字、字母。
 
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -70,6 +79,12 @@ var rng_drag := -1               # range：拖哪一個把手（−1 = 沒拖）
 var rng_flash := {}              # range：哪一端剛閃紅 → 時間
 var demo_t := -1.0               # range：示範動畫開始的時間（−1 = 沒有示範）
 var rect_marks := {}             # rect：點錯的長方形 → 時間
+var scale_sel := -1              # scale：點了哪一張數字卡（−1 = 還沒點）
+var chip_found := {}             # chip：找到的那一對 → true
+var chip_bad := {}               # chip：點錯的卡片 "組_第幾項" → 時間
+var sq_bad := {}                 # sq：點錯的那一塊 → 時間
+var rung_sel := {}               # rung：這一步點了哪幾階 → true
+var rung_bad := {}               # rung：點錯的階 → 時間
 var _geo := {}                   # 每個元件畫的位置（點擊、測試要換算）：nline → {x0, x1, lo, hi, y, ry}、blocks → {n: [Rect2], d: [Rect2]}
 
 
@@ -80,6 +95,12 @@ func reset(list: Array, v: Object) -> void:
 	end()
 	bcut = []
 	rect_marks = {}
+	scale_sel = -1
+	chip_found = {}
+	chip_bad = {}
+	sq_bad = {}
+	rung_sel = {}
+	rung_bad = {}
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
@@ -163,6 +184,14 @@ func _draw() -> void:
 				_draw_seeds(i, it, r)
 			"rects":
 				_draw_rects(i, it, r)
+			"scale":
+				_draw_scale(i, it, r)
+			"chips":
+				_draw_chips(i, it, r)
+			"sqs":
+				_draw_sqs(i, it, r)
+			"ladder":
+				_draw_ladder(i, it, r)
 		x += w
 
 
@@ -427,6 +456,7 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 	reject_t = {}
 	dragging = ""
 	bsel = []
+	rung_sel = {}
 	if m == "drag":
 		for b in sp.get("beads", []):
 			drag_pos[String(b[0])] = null
@@ -496,6 +526,16 @@ func _gui_input(e: InputEvent) -> void:
 		"blocks":
 			if press:
 				_block_click(pos)
+		"scale", "chip", "sq", "rung":
+			if press:
+				var key: String = {"scale": "cards", "chip": "chips", "sq": "sqs", "rung": "rungs"}[mode]
+				var hs: Array = _geo.get(int(spec.get("item", 0)), {}).get(key, [])
+				for k in hs.size():
+					if (hs[k] as Rect2).grow(4).has_point(pos):
+						if mode == "scale":
+							scale_sel = k
+						on_event.call({"k": k})
+						return
 		"rect":
 			if press:
 				var rs: Array = _geo.get(int(spec.get("item", 0)), {}).get("rects", [])
@@ -1491,3 +1531,295 @@ func _draw_blocks(i: int, it: Dictionary, r: Rect2) -> void:
 		var lp := mc + Vector2(0, -bl - 14.0)
 		UITheme.dot(self, lp, 22.0 * g, Color(0.6, 1.0, 0.5, 0.25 * g))
 		UITheme.dot(self, lp, 6.0, Color(0.75, 1.0, 0.6, g))
+
+
+# ================= R7：天秤、項的卡片、兩塊麥田、梯子 =================
+
+## 測試用：第 k 個可以點的東西（數字卡、卡片、麥田、梯子的階）在螢幕上的位置
+func global_of_hit(key: String, k: int) -> Vector2:
+	var hs: Array = _geo.get(int(spec.get("item", 0)), {}).get(key, [])
+	return get_global_transform() * (hs[k] as Rect2).get_center()
+
+
+func _scale_eq(it: Dictionary) -> int:
+	var st := _step()
+	var eqs: Array = it.get("eqs", [])
+	var best := 0
+	for k in eqs.size():
+		var ss: Array = eqs[k].get("steps", [])
+		if st in ss:
+			return k
+		if not ss.is_empty() and int(ss[0]) <= st:
+			best = k
+	return best
+
+
+func _scale_val(i: int, eq: Dictionary, which: String, card: Array) -> float:
+	var s: Dictionary = _st[i]
+	if not s.has("expr"):
+		s["expr"] = {}
+	var src := String(eq[which])
+	if not s.expr.has(src):
+		var ex := Expression.new()
+		ex.parse(src, PackedStringArray(["a", "b", "c"]))
+		s.expr[src] = ex
+	var c3 := card.duplicate()
+	while c3.size() < 3:
+		c3.append(0)
+	var v = (s.expr[src] as Expression).execute([float(c3[0]), float(c3[1]), float(c3[2])])
+	return float(v) if v != null else 0.0
+
+
+func _draw_scale(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	if not _st.has(i):
+		_st[i] = {}
+	var s: Dictionary = _st[i]
+	var ei := _scale_eq(it)
+	if int(s.get("eq", -1)) != ei:
+		s["eq"] = ei
+		scale_sel = -1
+		s["tilt"] = 0.0
+	var eq: Dictionary = it.eqs[ei]
+	var cards: Array = eq.get("cards", it.get("cards", []))
+	var sel := scale_sel
+	if sel < 0 and eq.has("bad") and _step() >= int(eq.get("bad_at", 99)):
+		sel = int(eq.bad)
+	var lv := 0.0
+	var rv := 0.0
+	var want := 0.0
+	if sel >= 0:
+		lv = _scale_val(i, eq, "fl", cards[sel])
+		rv = _scale_val(i, eq, "fr", cards[sel])
+		if absf(lv - rv) > 1e-6:
+			want = clampf((lv - rv) / maxf(maxf(absf(lv), absf(rv)), 1.0) * 0.6, -0.22, 0.22)
+	s["tilt"] = lerpf(float(s.get("tilt", 0.0)), want, 0.12)
+	var a := float(s.tilt)
+	var even := sel >= 0 and absf(lv - rv) <= 1e-6
+	# 天秤：柱子、橫桿、兩個盤子
+	var cx := r.get_center().x
+	var piv := Vector2(cx, r.position.y + 34.0)
+	var bw := minf(r.size.x * 0.3, 190.0)
+	var wood := Color(0.75, 0.6, 0.4)
+	var base_y := r.end.y - 44.0
+	draw_line(piv, Vector2(cx, base_y), wood, 4.0)
+	draw_colored_polygon(PackedVector2Array([Vector2(cx - 30, base_y + 6), Vector2(cx + 30, base_y + 6), Vector2(cx, base_y - 10)]), wood.darkened(0.2))
+	var lp := piv + Vector2(-bw * cos(a), bw * sin(a))
+	var rp := piv + Vector2(bw * cos(a), -bw * sin(a))
+	var beam := COLS.gold if not even else Color(0.6, 1.0, 0.6)
+	draw_line(lp, rp, beam, 4.0)
+	draw_circle(piv, 6.0, beam)
+	var fs := UITheme.fs(15)
+	for side in 2:
+		var p: Vector2 = lp if side == 0 else rp
+		var dish := p + Vector2(0, 40)
+		draw_line(p, dish + Vector2(-46, 0), Color(1, 1, 1, 0.35), 1.0)
+		draw_line(p, dish + Vector2(46, 0), Color(1, 1, 1, 0.35), 1.0)
+		draw_colored_polygon(PackedVector2Array([dish + Vector2(-56, 0), dish + Vector2(56, 0), dish + Vector2(40, 10), dish + Vector2(-40, 10)]), wood)
+		var txt := String(eq.L if side == 0 else eq.R)
+		# 式子太長就縮小一點，也不超出圖（design_rules 4：根號、分數不能超出框）
+		var tfs := fs
+		var tw := MathLabel.text_width(font, txt, tfs)
+		if tw > 2.0 * bw - 16.0:
+			tfs = UITheme.fs(13)
+			tw = MathLabel.text_width(font, txt, tfs)
+		var tx := clampf(p.x, r.position.x + tw / 2.0 + 2.0, r.end.x - tw / 2.0 - 2.0)
+		_mt(font, tx, dish.y + 34.0, txt, tfs, Color(1, 0.95, 0.85))
+		if sel >= 0:
+			var v := lv if side == 0 else rv
+			var vc := Color(0.6, 1.0, 0.6) if even else Color(1, 0.6, 0.5)
+			_mt(font, p.x, dish.y - 8.0, UITheme.num(v, 2), UITheme.fs(18), vc)
+	# 數字卡
+	var vars := "(a, b)" if (cards.is_empty() or (cards[0] as Array).size() < 3) else "(a, b, c)"
+	var cw := 0.0
+	var labs := []
+	for cd in cards:
+		var ss := []
+		for v in cd:
+			ss.append(UITheme.num(float(v), 2).replace("-", "−"))
+		var lab := "(" + ", ".join(ss) + ")"
+		labs.append(lab)
+		cw = maxf(cw, font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x + 16.0)
+	var hw := font.get_string_size(vars + " =", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+	var gap := 8.0
+	var tot := hw + 10.0 + cards.size() * (cw + gap) - gap
+	var x := cx - tot / 2.0
+	var y := r.end.y - 32.0
+	_pt(font, Vector2(x, y + 19.0), vars + " =", UITheme.fs(14), Color(1, 1, 1, 0.75))
+	x += hw + 10.0
+	var hits := []
+	for k in cards.size():
+		var rc := Rect2(x, y, cw, 28)
+		hits.append(rc)
+		var on := k == sel
+		var live := mode == "scale"
+		draw_rect(rc, Color(1, 0.85, 0.4, 0.3) if on else Color(1, 1, 1, 0.06 if live else 0.03))
+		draw_rect(rc, Color(1, 0.85, 0.4, 0.9) if on else Color(1, 1, 1, 0.35 if live else 0.15), false, 1.5)
+		_box(rc, "card%d" % k)
+		var lw := font.get_string_size(String(labs[k]), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+		_pt(font, Vector2(rc.get_center().x - lw / 2.0, y + 19.0), String(labs[k]), UITheme.fs(14), Color(1, 0.95, 0.85), "card%d" % k)
+		x += cw + gap
+	_geo[i] = {"cards": hits}
+
+
+func _draw_chips(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var fs := UITheme.fs(18)
+	var groups: Array = it.get("groups", [])
+	var done := _step() > int(it.get("at", 0))
+	# 每一張卡片屬於哪一對、那一對是不是正負號相反
+	var flip := {}
+	var pair_of := {}
+	var pairs: Array = it.get("pairs", [])
+	for pk in pairs.size():
+		var pr: Array = pairs[pk]
+		for e in [pr[0], pr[1]]:
+			pair_of["%d_%d" % [int(e[0]), int(e[1])]] = pk
+		flip[pk] = bool(pr[2])
+	var pw := font.get_string_size("(", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(28)).x
+	var sizes := []
+	var tot := 0.0
+	for g in groups:
+		var row := []
+		for term in g:
+			var w := MathLabel.text_width(font, String(term), fs) + 18.0
+			row.append(w)
+			tot += w + 6.0
+		tot += 2.0 * pw + 14.0
+		sizes.append(row)
+	var x := r.get_center().x - tot / 2.0
+	var y := r.get_center().y - 30.0
+	var h := 40.0
+	var hits := []
+	var keys := []
+	for gi in groups.size():
+		_pt(font, Vector2(x, y + 30.0), "(", UITheme.fs(28), Color(1, 1, 1, 0.8))
+		x += pw + 4.0
+		var lo := INF
+		var hi := -INF
+		for k in (groups[gi] as Array).size():
+			var w: float = sizes[gi][k]
+			var rc := Rect2(x, y, w, h)
+			var key := "%d_%d" % [gi, k]
+			var pk := int(pair_of.get(key, -1))
+			var found: bool = chip_found.has(pk) or (done and bool(flip.get(pk, false)))
+			var c := Color(1, 0.95, 0.85)
+			var bg := Color(1, 1, 1, 0.07)
+			if found:
+				c = COLS.gold
+				bg = Color(1, 0.8, 0.3, 0.25)
+				lo = minf(lo, rc.position.x)
+				hi = maxf(hi, rc.end.x)
+			if chip_bad.has(key) and t - float(chip_bad[key]) < 1.0:
+				c = COLS.bad
+				rc.position.x += sin((t - float(chip_bad[key])) * 40.0) * 3.0
+			draw_rect(rc, bg)
+			draw_rect(rc, Color(c.r, c.g, c.b, 0.8), false, 1.5)
+			_box(rc, "chip" + key)
+			_mt(font, rc.get_center().x, y + 27.0, String(groups[gi][k]), fs, c, "chip" + key)
+			hits.append(rc)
+			keys.append([gi, k])
+			x += w + 6.0
+		_pt(font, Vector2(x - 2.0, y + 30.0), ")", UITheme.fs(28), Color(1, 1, 1, 0.8))
+		x += pw + 14.0
+		# 做完：正負號相反的那幾項框成一整塊
+		var all_found := true
+		for pk in flip.keys():
+			if flip[pk] and not chip_found.has(pk) and not done:
+				all_found = false
+		if all_found and lo < hi:
+			var by := y + h + 8.0
+			draw_polyline(PackedVector2Array([Vector2(lo, by - 4), Vector2(lo, by), Vector2(hi, by), Vector2(hi, by - 4)]), COLS.gold, 2.0)
+			var labs: Array = it.get("labels", [])
+			if gi < labs.size():
+				_mt(font, (lo + hi) / 2.0, by + 22.0, String(labs[gi]), UITheme.fs(17), COLS.gold)
+	_geo[i] = {"chips": hits, "keys": keys}
+
+
+func _draw_sqs(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var opts: Array = it.get("opts", [])
+	var done := _step() > int(it.get("at", 0))
+	var pw := (r.size.x - 16.0 * (opts.size() - 1)) / opts.size()
+	var hits := []
+	for k in opts.size():
+		var o: Dictionary = opts[k]
+		var pr := Rect2(r.position.x + k * (pw + 16.0), r.position.y, pw, r.size.y)
+		var win := done and k == int(it.get("target", -1))
+		var bad := sq_bad.has(k) and t - float(sq_bad[k]) < 1.5
+		var c := Color(1, 0.95, 0.85)
+		if win:
+			c = COLS.gold
+		elif bad:
+			c = COLS.bad
+		draw_rect(pr, Color(c.r, c.g, c.b, 0.06))
+		draw_rect(pr, Color(c.r, c.g, c.b, 0.5 if not win else 0.9), false, 2.0 if not win else 3.0)
+		_mt(font, pr.get_center().x, pr.position.y + 26.0, String(o.s), UITheme.fs(16), c)
+		# 要拿掉的 n 個小方格：平方數排成正方形，不是就一排一排排（最後一排排不滿）
+		var n := int(o.n)
+		var side := int(round(sqrt(float(n))))
+		var cols := side if side * side == n else int(ceil(sqrt(float(n))))
+		var rows := int(ceil(float(n) / cols))
+		var u := minf(18.0, minf((pw - 40.0) / cols, (r.size.y - 92.0) / rows))
+		var gx := pr.get_center().x - cols * u / 2.0
+		var gy := pr.position.y + 44.0 + (r.size.y - 92.0 - rows * u) / 2.0
+		var tc := Color(0.45, 0.85, 1.0) if not win else COLS.gold
+		for q in n:
+			var tile := Rect2(gx + (q % cols) * u, gy + (q / cols) * u, u, u).grow(-1.5)
+			draw_rect(tile, Color(tc.r, tc.g, tc.b, 0.4))
+			draw_rect(tile, Color(tc.r, tc.g, tc.b, 0.85), false, 1.0)
+		var cap := String(o.get("lab", "")) if win and o.has("lab") else String(o.get("cap", ""))
+		_mt(font, pr.get_center().x, pr.end.y - 14.0, cap, UITheme.fs(16), c)
+		hits.append(pr)
+	_geo[i] = {"sqs": hits}
+
+
+## 梯子在中間，每一階的式子左右交錯寫（分數比較高，同一邊隔一階才不會疊在一起）
+func _draw_ladder(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var st := _step()
+	var rungs: Array = it.get("rungs", [])
+	var n := rungs.size()
+	var sp := minf(44.0, (r.size.y - 12.0) / n)
+	var cx := r.get_center().x
+	var x0 := cx - 28.0
+	var x1 := cx + 28.0
+	var bottom := r.end.y - 6.0
+	var wood := Color(0.75, 0.6, 0.4)
+	draw_line(Vector2(x0, bottom), Vector2(x0, bottom - n * sp), wood, 4.0)
+	draw_line(Vector2(x1, bottom), Vector2(x1, bottom - n * sp), wood, 4.0)
+	var fs := UITheme.fs(15)
+	var top_lit := -1
+	var hits := []
+	for k in n:
+		var rg: Dictionary = rungs[k]
+		var y := bottom - (k + 0.5) * sp
+		var lit := st >= int(rg.get("at", 0))
+		if lit:
+			top_lit = k
+		var c := Color(1, 0.95, 0.85) if lit else Color(1, 1, 1, 0.45)
+		var right := k % 2 == 0
+		var txt := String(rg.s) + " = " + (String(rg.v) if lit else "?")
+		var tw := MathLabel.text_width(font, txt, fs)
+		var ext := MathLabel.line_extent(txt, fs)
+		var hit := Rect2(x1 - 70.0 if right else x0 - tw - 26.0, y - sp / 2.0 + 2, tw + 96.0, sp - 4)
+		if rung_sel.has(k):
+			c = COLS.gold
+			draw_rect(hit, Color(1, 0.8, 0.3, 0.16 + 0.06 * sin(t * 4.0)))
+		if rung_bad.has(k) and t - float(rung_bad[k]) < 1.2:
+			c = COLS.bad
+		draw_line(Vector2(x0, y), Vector2(x1, y), c if lit else wood, 4.0)
+		var lx := x1 + 16.0 + tw / 2.0 if right else x0 - 16.0 - tw / 2.0
+		_mt(font, lx, y + (ext.x - ext.y) / 2.0, txt, fs, c)
+		hits.append(hit)
+	# 光靈：爬到最高的那一階
+	if top_lit >= 0:
+		var y := bottom - (top_lit + 0.5) * sp - 10.0
+		var p := Vector2(cx, y)
+		draw_circle(p, 12.0, Color(1, 0.95, 0.7, 0.18 + 0.08 * sin(t * 3.0)))
+		draw_circle(p, 6.0, Color(1, 0.97, 0.85))
+	_geo[i] = {"rungs": hits}

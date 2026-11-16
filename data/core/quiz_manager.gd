@@ -178,6 +178,10 @@ const MISTAKE_INFO := {
 	"num_husk":        {"name": "雙重根號化簡", "level": 2},
 	"num_layer":       {"name": "兩層的雙重根號", "level": 2},
 	"num_intpart":     {"name": "整數部分與小數部分", "level": 2},
+	"num_cube":        {"name": "立方公式與立方根有理化", "level": 2},
+	"num_block":       {"name": "看成一整塊、平方差", "level": 2},
+	"num_recip":       {"name": "倒數與對稱式互求", "level": 2},
+	"num_sq0":         {"name": "平方和為 0、根號裡的絕對值", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
