@@ -8,7 +8,7 @@ extends RefCounted
 ##   2. 大關 id 和觀念標籤（tag）不能和別的單元重複：
 ##        指數與對數用 "L1"～"L8"、tag 用 exp_／log_／digits_… 開頭
 ##        平面向量建議用 "V1"～、tag 用 "vec_" 開頭；空間向量用 "S1"～、tag 用 "svec_" 開頭
-##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、高一直線與圓 "C1"～／"line_"、高一數與式 "R1"～／"num_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
+##        三角函數 "G1"～／"trig_"、高一多項式 "P1"～／"poly_"、高一直線與圓 "C1"～／"line_"、高一數與式 "R1"～／"num_"、高一指數與常用對數 "E1"～／"elog_"、平面與直線 "N1"～／"pl_"、條件機率 "B1"～／"prob_"、矩陣 "M1"～／"mat_"
 ##      （check() 會檢查重複；這樣存檔裡的星星、錯題本、熟練度不會互相打架，舊存檔也不用轉換）
 ##   3. map：這個單元的世界地圖腳本；tower：終焉之塔的題庫（沒有就先留空）
 ##      concepts：觀念卡片檔（例如 "concepts_vec2.gd"，寫法照 concepts_exp.gd）
@@ -31,8 +31,12 @@ const UNITS := [
 		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "level_num7_field.gd", "bank": "num7_bank.gd", "color": UITheme.PINK},
 		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "level_num8_canal.gd", "bank": "num8_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false,
-	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
+	# 指數與常用對數：E1 做好了，E2、E3 建造中（preview：開發者的「一鍵開放全部關卡」才進得去）。規劃見 docs/exp_plan.md
+	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false, "preview": true,
+	 "world": "光靈的旅程：倍增峽谷", "map": "h1exp_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_h1exp.gd",
+	 "levels": [
+		{"id": "E1", "name": "倍增岩壁", "topic": "指數律", "file": "level_exp1_cliff.gd", "bank": "exp1_bank.gd", "color": UITheme.ORANGE},
+	 ]},
 	# 直線與圓：八大關＋終焉之塔都做好了，2026/11/08 正式開放
 	{"id": "h1line", "term": "高一上", "title": "直線與圓", "exam": "", "color": UITheme.CYAN, "open": true,
 	 "world": "光靈的旅程：圓規湖", "map": "line_map.gd", "tower": "line_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_line.gd",

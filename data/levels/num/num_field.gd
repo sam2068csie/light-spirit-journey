@@ -101,6 +101,12 @@ func reset(list: Array, v: Object) -> void:
 	sq_bad = {}
 	rung_sel = {}
 	rung_bad = {}
+	pil_placed = {}
+	pil_bad = {}
+	stk = {}
+	gem_ok = {}
+	gem_bad = {}
+	pil_drag = -1
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
@@ -192,6 +198,16 @@ func _draw() -> void:
 				_draw_sqs(i, it, r)
 			"ladder":
 				_draw_ladder(i, it, r)
+			"pillar":
+				_draw_pillar(i, it, r)
+			"gems":
+				_draw_gems(i, it, r)
+			"fold":
+				_draw_fold(i, it, r)
+			"glow":
+				_draw_glow(i, it, r)
+			"race":
+				_draw_race(i, it, r)
 		x += w
 
 
@@ -463,6 +479,8 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 	if m == "sort":
 		for sd in items[int(sp.get("item", 0))].get("seeds", []):
 			drag_pos[String(sd[0])] = null
+	if m == "stack":
+		stk = {}
 	if m == "range":
 		var st0: Array = sp.get("start", [0, 1])
 		rng = [float(st0[0]), float(st0[1])]
@@ -474,6 +492,7 @@ func begin(m: String, sp: Dictionary, cb: Callable) -> void:
 
 
 func end() -> void:
+	pil_drag = -1
 	mode = ""
 	dragging = ""
 	demo_t = -1.0
@@ -498,6 +517,9 @@ func _gui_input(e: InputEvent) -> void:
 		press = e.pressed
 		release = not e.pressed
 	elif e is InputEventMouseMotion:
+		if pil_drag >= 0:
+			drag_pt = (e as InputEventMouseMotion).position
+			accept_event()
 		if dragging != "":
 			drag_pt = (e as InputEventMouseMotion).position
 			accept_event()
@@ -511,6 +533,22 @@ func _gui_input(e: InputEvent) -> void:
 		return
 	accept_event()
 	match mode:
+		"pillar":
+			if press:
+				_pillar_press(pos)
+			elif release and pil_drag >= 0:
+				_pillar_drop(pos)
+				pil_drag = -1
+		"stack":
+			if press:
+				_stack_press(pos)
+		"gem":
+			if press:
+				var hs: Array = _geo.get(int(spec.get("item", 0)), {}).get("gems", [])
+				for k in hs.size():
+					if (hs[k] as Rect2).grow(6).has_point(pos):
+						on_event.call({"k": k})
+						return
 		"tap":
 			if press:
 				var v = value_at(pos)
@@ -1823,3 +1861,548 @@ func _draw_ladder(i: int, it: Dictionary, r: Rect2) -> void:
 		draw_circle(p, 12.0, Color(1, 0.95, 0.7, 0.18 + 0.08 * sin(t * 3.0)))
 		draw_circle(p, 6.0, Color(1, 0.97, 0.85))
 	_geo[i] = {"rungs": hits}
+
+
+# ================= 高一指數（E1）：光柱、等號寶石、折紙、礦石、賽跑 =================
+## 光柱積木：{"k": "pillar", "cols": ["3", "2"], "cards": [{"s": "9^{−\\frac{2}{3}}", "to": {"3": [−4/3, "−\\frac{4}{3}"]},
+##            "at": 第幾步之後自己放上去（省略 = 學生在 drag 那一步拖）, "key": 第幾步之後才知道指數（之前寫 ?）, "why": 放錯的提示}],
+##            "drag": 第幾步是拖卡片, "stack": {"col": "5", "blocks": [["a", 0.4], ["b", 0.15]], "goal": −0.1, "at": 第幾步, "max": 4, "sol": {"a": −1, "b": 2}},
+##            "tot": {"3": "1"}（柱頂寫的總高度，省略就自己算）}
+##   每個質數一根光柱，卡片放上去柱子長高（負的往下長），一段一段疊。to 有好幾根柱子的卡（6^{1 + √5}）放上去會裂成好幾塊。
+##   pillar 模式：把上面一排卡片拖到柱子上；放對了留著，放錯了彈回來（回呼 {"ok": false, "k", "col"}）；回呼 {"ok": true, "left": 還剩幾張}
+##   stack 模式：點 +a、−a 的按鈕湊積木；回呼 {"h": 目前的高度}
+## 等號寶石：{"k": "gems", "parts": ["2", "4^{\\frac{1}{2}}", …], "bad": 第幾顆等號是錯的, "why": [每一顆等號對的理由], "at": 第幾步是點寶石}
+##   gem 模式：點一顆等號；回呼 {"k": 第幾顆}，關卡判斷後 gem_ok[k] = 時間
+## 折紙：{"k": "fold", "n": "n"（滑桿）, "g": "g"（先猜的滑桿）, "gat": 第幾步是先猜, "t0": 1e−4（一張紙幾公尺）, "top": 最高到幾公尺,
+##        "marks": [[高度（公尺）, "tower"／"mount"／"peak"／"moon"／"sun", "標籤"], …]}
+## 發光礦石：{"k": "glow", "t": "t", "rocks": [{"m0": 4, "T": 10, "s": "a"}, …]}  質量 m0 × 2^{−t/T}，寫成 2 的幾次方
+## 賽跑：{"k": "race", "t": "t", "runners": [{"s": "2", "n": 2, "k": 2}, …]}  每 n 天變 k 倍，光條一段一段（每一段是一次結算，長度 ∝ log k）
+
+var pil_placed := {}             # pillar：學生放上去的卡片 → true
+var pil_bad := {}                # pillar：彈回來的卡片 → 時間
+var stk := {}                    # stack：積木名字 → 個數（負的 = 往下）
+var gem_ok := {}                 # gem：點過、確定沒問題的等號 → 時間
+var gem_bad := {}                # gem：點了沒問題的那一顆（閃一下）→ 時間
+var pil_drag := -1               # pillar：正在拖哪一張卡
+
+
+static func _expo(v: float) -> String:
+	if absf(v - round(v)) < 1e-6:
+		return str(int(round(v))).replace("-", "−")
+	for q in range(2, 13):
+		var p := v * q
+		if absf(p - round(p)) < 1e-6:
+			var pi := int(round(p))
+			return ("−" if pi < 0 else "") + "\\frac{%d}{%d}" % [absi(pi), q]
+	return ""
+
+
+## 卡片放好了沒（自己放上去的看 at，學生拖的看 drag 那一步做完沒）
+func _pcard_on(it: Dictionary, k: int) -> bool:
+	var c: Dictionary = it.cards[k]
+	var st := _step()
+	if c.has("at"):
+		return st >= int(c.at)
+	if st > int(it.get("drag", -1)):
+		return true
+	return pil_placed.has(k)
+
+
+func _pcol_color(name: String) -> Color:
+	return PRIME_C.get(name, COLS.gold)
+
+
+func _stack_counts(it: Dictionary) -> Dictionary:
+	var sk: Dictionary = it.get("stack", {})
+	if sk.is_empty():
+		return {}
+	if _step() > int(sk.get("at", -1)):
+		return sk.get("sol", {})
+	if mode == "stack":
+		return stk
+	return {}
+
+
+func stack_height(it: Dictionary) -> float:
+	var h := 0.0
+	var cnt := _stack_counts(it)
+	for b in it.get("stack", {}).get("blocks", []):
+		h += float(b[1]) * int(cnt.get(String(b[0]), 0))
+	return h
+
+
+func _draw_pillar(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var cols: Array = it.get("cols", [])
+	var cards: Array = it.get("cards", [])
+	var sk: Dictionary = it.get("stack", {})
+	# ---- 上面一排：還沒放的卡片（stack 模式時是積木按鈕）----
+	var fs := UITheme.fs(15)
+	var tray_hits := []
+	var tray_h := 0.0
+	for c in cards:
+		var ext := MathLabel.line_extent(String(c.s), fs)
+		tray_h = maxf(tray_h, ext.x + ext.y + 14.0)
+	tray_h = maxf(tray_h, 40.0)
+	var tx := r.position.x + 4.0
+	var ty := r.position.y + 2.0
+	var show_tray := int(it.get("drag", -1)) >= 0 and _step() == int(it.get("drag", -1))
+	for k in cards.size():
+		var c: Dictionary = cards[k]
+		var w := MathLabel.text_width(font, String(c.s), fs) + 18.0
+		var rc := Rect2(tx, ty, w, tray_h)
+		tray_hits.append(rc)
+		tx += w + 8.0
+		if not show_tray or c.has("at") or _pcard_on(it, k):
+			continue
+		if pil_drag == k:
+			rc.position = drag_pt - rc.size / 2.0
+		var cc := Color(1, 0.95, 0.85)
+		if pil_bad.has(k) and t - float(pil_bad[k]) < 1.0:
+			cc = COLS.bad
+			rc.position.x += sin((t - float(pil_bad[k])) * 40.0) * 3.0
+		draw_rect(rc, Color(1, 1, 1, 0.08))
+		draw_rect(rc, Color(cc.r, cc.g, cc.b, 0.8), false, 1.5)
+		_box(rc, "pc%d" % k)
+		var ext2 := MathLabel.line_extent(String(c.s), fs)
+		_mt(font, rc.get_center().x, rc.get_center().y + (ext2.x - ext2.y) / 2.0, String(c.s), fs, cc, "pc%d" % k)
+	var btn_hits := []
+	if not sk.is_empty() and mode == "stack":
+		var bx := r.position.x + 4.0
+		for b in sk.get("blocks", []):
+			for sg in [1, -1]:
+				var lab := ("+" if sg > 0 else "−") + String(b[0])
+				var rc := Rect2(bx, ty, 58.0, 40.0)
+				draw_rect(rc, Color(1, 1, 1, 0.08))
+				draw_rect(rc, Color(1, 0.85, 0.5, 0.8), false, 1.5)
+				_box(rc, "pb" + lab)
+				_mt(font, rc.get_center().x, rc.get_center().y + 7.0, lab, UITheme.fs(18), COLS.gold, "pb" + lab)
+				btn_hits.append(rc)
+				bx += 66.0
+		tray_h = 40.0
+	# ---- 柱子 ----
+	# 範圍：每根柱子所有卡片疊起來的最高、最低（不管放了沒，免得放上去時整張圖縮放跳動）
+	var lo := 0.0
+	var hi := 0.0
+	for cn in cols:
+		var cum := 0.0
+		for c in cards:
+			if (c.to as Dictionary).has(cn):
+				cum += float(c.to[cn][0])
+				lo = minf(lo, cum)
+				hi = maxf(hi, cum)
+		if not sk.is_empty() and String(sk.col) == String(cn):
+			var mx := 0.0
+			for b in sk.blocks:
+				mx += absf(float(b[1])) * int(sk.get("max", 4))
+			lo = minf(lo, -mx * 0.5)
+			hi = maxf(hi, mx * 0.5)
+			lo = minf(lo, float(sk.goal))
+			hi = maxf(hi, float(sk.goal))
+	var has_tray := show_tray or (not sk.is_empty() and mode == "stack")
+	var top := r.position.y + (tray_h + 34.0 if has_tray else 30.0)
+	var bot := r.end.y - 30.0
+	var u := minf(40.0, (bot - top) / maxf(hi - lo, 0.5))
+	var y0 := top + hi * u
+	var n := cols.size()
+	var cw := 46.0
+	var gap := minf(150.0, (r.size.x - 40.0) / n)
+	var cx0 := r.get_center().x - gap * (n - 1) / 2.0
+	# 0 的基準線
+	draw_line(Vector2(r.position.x + 6, y0), Vector2(r.end.x - 6, y0), Color(1, 1, 1, 0.25), 1.0)
+	var col_hits := []
+	for ci in n:
+		var cn := String(cols[ci])
+		var cx := cx0 + ci * gap
+		var col := _pcol_color(cn)
+		var ncard := 0
+		for c in cards:
+			if (c.to as Dictionary).has(cn):
+				ncard += 1
+		cw = maxf(46.0, 14.0 * ncard + 8.0)
+		var area := Rect2(cx - cw / 2.0 - 10.0, top - 10.0, cw + 20.0, bot - top + 20.0)
+		col_hits.append(area)
+		# 岩壁的槽
+		draw_rect(Rect2(cx - cw / 2.0, top, cw, bot - top), Color(col.r, col.g, col.b, 0.05))
+		draw_rect(Rect2(cx - cw / 2.0, top, cw, bot - top), Color(col.r, col.g, col.b, 0.18), false, 1.0)
+		if mode == "pillar" and pil_drag >= 0 and area.has_point(drag_pt):
+			draw_rect(Rect2(cx - cw / 2.0, top, cw, bot - top), Color(col.r, col.g, col.b, 0.15))
+		var cum := 0.0
+		var all_on := true
+		var any := false
+		var segs := []
+		for k in cards.size():
+			var c: Dictionary = cards[k]
+			if not (c.to as Dictionary).has(cn):
+				continue
+			any = true
+			if not _pcard_on(it, k):
+				all_on = false
+				continue
+			segs.append([cum, cum + float(c.to[cn][0]), k])
+			cum += float(c.to[cn][0])
+		if not sk.is_empty() and String(sk.col) == cn:
+			any = true
+			var cnt := _stack_counts(it)
+			for b in sk.blocks:
+				var nb := int(cnt.get(String(b[0]), 0))
+				for q in absi(nb):
+					var e := float(b[1]) * (1 if nb > 0 else -1)
+					segs.append([cum, cum + e, -1, String(b[0])])
+					cum += e
+			# 目標高度：虛線
+			var gy := y0 - float(sk.goal) * u
+			var hit_goal := absf(cum - float(sk.goal)) < 1e-6 and not cnt.is_empty()
+			var gc := COLS.gold if hit_goal else Color(1, 1, 1, 0.6)
+			draw_dashed_line(Vector2(cx - cw, gy), Vector2(cx + cw, gy), gc, 2.0, 6.0)
+			_mt(font, cx + cw + 24.0, gy + 5.0, ("%.2f" % float(sk.goal)).rstrip("0").replace("-", "−"), UITheme.fs(14), gc)
+			all_on = _step() > int(sk.get("at", -1)) or hit_goal
+		# 瀑布圖：每一段往右挪一格，接在上一段的尾巴（往上長、往下長都看得出來）
+		var nseg := maxi(segs.size(), 1)
+		var inner := maxf(cw - 8.0, 14.0 * nseg)
+		var sw := inner / nseg
+		var x_in := cx - inner / 2.0
+		var used := []      # 已經寫了標籤的高度範圍（避免疊在一起）
+		for q in segs.size():
+			var sg: Array = segs[q]
+			var ya := y0 - float(sg[0]) * u
+			var yb := y0 - float(sg[1]) * u
+			var rc := Rect2(x_in + q * sw + 1.0, minf(ya, yb), sw - 2.0, maxf(absf(yb - ya), 2.0))
+			var shade := 0.55 + 0.25 * float(q % 2)
+			draw_rect(rc, Color(col.r * shade, col.g * shade, col.b * shade, 0.9))
+			draw_rect(rc, Color(col.r, col.g, col.b, 1.0), false, 1.0)
+			_box(rc, "pseg%d_%d" % [ci, q])
+			if q > 0:
+				draw_line(Vector2(rc.position.x - 2.0, ya), Vector2(rc.position.x, ya), Color(col.r, col.g, col.b, 0.8), 1.0)
+			# 一段夠高、旁邊又沒有別的標籤，才寫它是幾次方（寫在柱子右邊）
+			if absf(yb - ya) < 20.0:
+				continue
+			var lab := ""
+			if int(sg[2]) >= 0:
+				var c: Dictionary = cards[int(sg[2])]
+				lab = String(c.to[cn][1])
+				if c.has("key") and _step() < int(c.key):
+					lab = "?"
+			else:
+				lab = String(sg[3])
+			if lab == "":
+				continue
+			var ext := MathLabel.line_extent(lab, UITheme.fs(13))
+			var ly := (ya + yb) / 2.0
+			var lo_y := ly - (ext.x + ext.y) / 2.0 - 2.0
+			var hi_y := ly + (ext.x + ext.y) / 2.0 + 2.0
+			var clash := false
+			for ur in used:
+				if lo_y < float(ur[1]) and hi_y > float(ur[0]):
+					clash = true
+			if clash:
+				continue
+			used.append([lo_y, hi_y])
+			_mt(font, x_in + inner + 6.0 + MathLabel.text_width(font, lab, UITheme.fs(13)) / 2.0,
+				ly + (ext.x - ext.y) / 2.0, lab, UITheme.fs(13), Color(col.r, col.g, col.b, 0.95))
+		# 柱子名字（質數）寫在最下面，總高度寫在柱頂
+		_mt(font, cx, bot + 22.0, cn, UITheme.fs(17), col)
+		if any and all_on:
+			var tot := String(it.get("tot", {}).get(cn, _expo(cum)))
+			if tot != "":
+				var ytop := y0 - maxf(cum, 0.0) * u
+				for sg in segs:
+					ytop = minf(ytop, y0 - maxf(float(sg[0]), float(sg[1])) * u)
+				var lab := cn + "^{" + tot + "}"
+				var glow := 0.5 + 0.3 * sin(t * 3.0)
+				UITheme.dot(self, Vector2(cx, ytop - 2.0), 10.0, Color(col.r, col.g, col.b, 0.25 * glow))
+				_mt(font, cx, ytop - 10.0, lab, UITheme.fs(15), Color(1, 0.95, 0.8))
+	_geo[i] = {"pcards": tray_hits, "pcols": col_hits, "pbtn": btn_hits}
+
+
+## pillar 模式：放開時在哪一根柱子上
+func _pillar_drop(pos: Vector2) -> void:
+	var i := int(spec.get("item", 0))
+	var it: Dictionary = items[i]
+	var k := pil_drag
+	pil_drag = -1
+	var hs: Array = _geo.get(i, {}).get("pcols", [])
+	for ci in hs.size():
+		if (hs[ci] as Rect2).has_point(pos):
+			var cn := String(it.cols[ci])
+			var c: Dictionary = it.cards[k]
+			if (c.to as Dictionary).has(cn):
+				pil_placed[k] = true
+				var left := 0
+				for q in it.cards.size():
+					if not (it.cards[q] as Dictionary).has("at") and not pil_placed.has(q):
+						left += 1
+				on_event.call({"ok": true, "left": left})
+			else:
+				pil_bad[k] = _t()
+				on_event.call({"ok": false, "k": k, "col": cn})
+			return
+
+
+func _pillar_press(pos: Vector2) -> void:
+	var i := int(spec.get("item", 0))
+	var it: Dictionary = items[i]
+	var hs: Array = _geo.get(i, {}).get("pcards", [])
+	for k in hs.size():
+		if (it.cards[k] as Dictionary).has("at") or pil_placed.has(k):
+			continue
+		if (hs[k] as Rect2).grow(4).has_point(pos):
+			pil_drag = k
+			drag_pt = pos
+			return
+
+
+func _stack_press(pos: Vector2) -> void:
+	var i := int(spec.get("item", 0))
+	var it: Dictionary = items[i]
+	var sk: Dictionary = it.stack
+	var hs: Array = _geo.get(i, {}).get("pbtn", [])
+	for j in hs.size():
+		if (hs[j] as Rect2).grow(3).has_point(pos):
+			var b: Array = sk.blocks[j / 2]
+			var nm := String(b[0])
+			var d := 1 if j % 2 == 0 else -1
+			stk[nm] = clampi(int(stk.get(nm, 0)) + d, -int(sk.get("max", 4)), int(sk.get("max", 4)))
+			on_event.call({"h": stack_height(it)})
+			return
+
+
+# ---- 等號寶石 ----
+
+func _draw_gems(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var parts: Array = it.get("parts", [])
+	var done := _step() > int(it.get("at", 0))
+	var fs := UITheme.fs(21)
+	var gw := 30.0
+	var sp := 6.0
+	# 一串：式子、寶石、式子、寶石…（寶石用 −1 − k 表示第 k 顆）
+	var toks := []
+	for k in parts.size():
+		toks.append(k)
+		if k < parts.size() - 1:
+			toks.append(-1 - k)
+	var tw := func(tk: int) -> float:
+		return gw if tk < 0 else MathLabel.text_width(font, String(parts[tk]), fs)
+	var total := 0.0
+	for tk in toks:
+		total += float(tw.call(tk)) + sp
+	# 放不下就分兩排，第二排從中間那一顆寶石開始
+	var rows := [toks]
+	if total > r.size.x - 20.0:
+		var mid := -1 - int((parts.size() - 1) / 2)
+		var cut := toks.find(mid)
+		rows = [toks.slice(0, cut), toks.slice(cut)]
+	var hits := []
+	for k in parts.size() - 1:
+		hits.append(Rect2())
+	var row_h := minf(64.0, (r.size.y - 36.0) / rows.size())
+	var y_top := r.get_center().y - row_h * rows.size() / 2.0 - 14.0
+	for ri in rows.size():
+		var row: Array = rows[ri]
+		var w := -sp
+		for tk in row:
+			w += float(tw.call(tk)) + sp
+		var x := r.get_center().x - w / 2.0
+		var y := y_top + (ri + 0.5) * row_h
+		for tk in row:
+			var ww: float = tw.call(tk)
+			if tk < 0:
+				_draw_gem(font, -1 - tk, Vector2(x + ww / 2.0, y), it, done, t, hits)
+			else:
+				var ext := MathLabel.line_extent(String(parts[tk]), fs)
+				_mt(font, x + ww / 2.0, y + (ext.x - ext.y) / 2.0, String(parts[tk]), fs, Color(1, 0.95, 0.85))
+			x += ww + sp
+	# 最後點過的、沒問題的那一顆：下面寫出為什麼
+	var last := -1
+	var lt := -1.0
+	for k in gem_ok.keys():
+		if float(gem_ok[k]) > lt:
+			lt = float(gem_ok[k])
+			last = int(k)
+	var why: Array = it.get("why", [])
+	if last >= 0 and last < why.size() and not done:
+		_mt(font, r.get_center().x, y_top + row_h * rows.size() + 34.0, String(why[last]), UITheme.fs(16), COLS.lime)
+	_geo[i] = {"gems": hits}
+
+
+func _draw_gem(font: Font, k: int, p: Vector2, it: Dictionary, done: bool, t: float, hits: Array) -> float:
+	var bad := done and k == int(it.get("bad", -1))
+	var c := Color(0.55, 0.85, 1.0)
+	if gem_ok.has(k):
+		c = COLS.lime
+	if bad:
+		c = COLS.bad
+	if gem_bad.has(k) and t - float(gem_bad[k]) < 0.8:
+		p.x += sin((t - float(gem_bad[k])) * 40.0) * 3.0
+	var s := 15.0
+	var dia := PackedVector2Array([p + Vector2(0, -s), p + Vector2(s, 0), p + Vector2(0, s), p + Vector2(-s, 0)])
+	draw_colored_polygon(dia, Color(c.r, c.g, c.b, 0.22))
+	dia.append(dia[0])
+	draw_polyline(dia, c, 2.0, true)
+	var lab := "≠" if bad else "="
+	var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(18)).x
+	_pt(font, Vector2(p.x - tw / 2.0, p.y + 7.0), lab, UITheme.fs(18), c, "gem%d" % k)
+	var rc := Rect2(p - Vector2(s, s), Vector2(2 * s, 2 * s))
+	_box(rc, "gem%d" % k)
+	if bad:
+		draw_line(p + Vector2(-s * 0.6, -s * 0.2), p + Vector2(s * 0.5, s * 0.3), COLS.bad, 2.0)
+	hits[k] = rc
+	return p.x + s
+
+
+# ---- 折紙 ----
+
+const FOLD_ICON := {"tower": "▮", "mount": "▲", "peak": "▲", "moon": "●", "sun": "✹"}
+
+
+func _fold_guess(i: int, it: Dictionary) -> float:
+	var stt: Dictionary = _st.get(i, {})
+	if _step() == int(it.get("gat", -1)):
+		stt["g"] = _slide_val(String(it.get("g", "g")), -1.0)
+		_st[i] = stt
+	return float(stt.get("g", -1.0))
+
+
+func _draw_fold(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var t0 := float(it.get("t0", 1e-4))
+	var top_m := float(it.get("top", 1e9))
+	var nfold := _slide_val(String(it.get("n", "n")), 0.0)
+	if _step() <= int(it.get("gat", -1)):
+		nfold = 0.0
+	var guess := _fold_guess(i, it)
+	var l0 := log(t0) / log(10.0) - 0.5
+	var l1 := log(top_m) / log(10.0) + 0.6
+	var ax := r.position.x + 70.0
+	var yb := r.end.y - 14.0
+	var yt := r.position.y + 14.0
+	var ly := func(m: float) -> float:
+		return yb - (log(maxf(m, 1e-12)) / log(10.0) - l0) / (l1 - l0) * (yb - yt)
+	# 刻度：1 mm、1 m、1 km、10^{3} km…（左邊）
+	draw_line(Vector2(ax, yb), Vector2(ax, yt), Color(1, 1, 1, 0.35), 1.5)
+	var ticks := [[1e-3, "1 mm"], [1.0, "1 m"], [1e3, "1 km"], [1e6, "10^{3} km"], [1e9, "10^{6} km"]]
+	for tk in ticks:
+		var m := float(tk[0])
+		if m > top_m * 3.0:
+			continue
+		var y: float = ly.call(m)
+		draw_line(Vector2(ax - 5, y), Vector2(ax + 5, y), Color(1, 1, 1, 0.45), 1.5)
+		_mt(font, ax - 8.0 - MathLabel.text_width(font, String(tk[1]), UITheme.fs(12)) / 2.0, y + 4.0, String(tk[1]), UITheme.fs(12), Color(1, 1, 1, 0.55))
+	# 紙疊：從最下面長到現在的厚度
+	var th := t0 * pow(2.0, nfold)
+	var bx := ax + 40.0
+	var bw := 46.0
+	var ytop: float = ly.call(th)
+	var paper := Color(0.95, 0.93, 0.85)
+	draw_rect(Rect2(bx, ytop, bw, yb - ytop), Color(paper.r, paper.g, paper.b, 0.75))
+	var yy := yb - 5.0
+	while yy > ytop + 2.0:
+		draw_line(Vector2(bx + 2, yy), Vector2(bx + bw - 2, yy), Color(0.6, 0.55, 0.45, 0.35), 1.0)
+		yy -= 6.0
+	draw_rect(Rect2(bx, ytop, bw, yb - ytop), paper, false, 1.5)
+	_box(Rect2(bx, ytop, bw, yb - ytop), "paper")
+	_mt(font, bx + bw / 2.0, ytop - 6.0, "n = %d" % int(nfold), UITheme.fs(14), COLS.gold)
+	# 先猜的線
+	if guess >= 0.0 and _step() > int(it.get("gat", -1)):
+		var gy: float = ly.call(t0 * pow(2.0, guess))
+		draw_dashed_line(Vector2(bx - 12.0, gy), Vector2(bx + bw + 12.0, gy), Color(0.8, 0.6, 1.0, 0.9), 2.0, 5.0)
+		_mt(font, bx - 30.0, gy + 5.0, "?" + str(int(guess)), UITheme.fs(13), Color(0.8, 0.6, 1.0))
+	# 地標（由低到高；太靠近的往上錯開，用虛線接回真正的高度）
+	var mx := bx + bw + 60.0
+	var last_y := INF
+	for mk in it.get("marks", []):
+		var hm := float(mk[0])
+		var y: float = ly.call(hm)
+		var yl := minf(y, last_y - 20.0)
+		last_y = yl
+		var passed := th >= hm
+		var c := COLS.gold if passed else Color(1, 1, 1, 0.5)
+		draw_line(Vector2(bx + bw + 4.0, y), Vector2(bx + bw + 20.0, y), Color(c.r, c.g, c.b, 0.5), 1.0)
+		draw_dashed_line(Vector2(bx + bw + 20.0, y), Vector2(mx - 14.0, yl), Color(c.r, c.g, c.b, 0.4), 1.0, 4.0)
+		var ic := String(FOLD_ICON.get(String(mk[1]), "●"))
+		if passed:
+			UITheme.dot(self, Vector2(mx, yl - 2.0), 11.0 + 2.0 * sin(t * 4.0), Color(1, 0.85, 0.4, 0.25))
+		_pt(font, Vector2(mx - 7.0, yl + 6.0), ic, UITheme.fs(16), c)
+		_mt(font, mx + 16.0 + MathLabel.text_width(font, String(mk[2]), UITheme.fs(13)) / 2.0, yl + 5.0, String(mk[2]), UITheme.fs(13), c)
+	_geo[i] = {}
+
+
+# ---- 發光礦石 ----
+
+func _draw_glow(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var tv := _slide_val(String(it.get("t", "t")), 0.0)
+	var rocks: Array = it.get("rocks", [])
+	var n := rocks.size()
+	var exps := []
+	for rk in rocks:
+		exps.append(log(float(rk.m0)) / log(2.0) - tv / float(rk.T))
+	var same := n == 2 and absf(float(exps[0]) - float(exps[1])) < 1e-6
+	var cy := r.get_center().y - 10.0
+	for k in n:
+		var rk: Dictionary = rocks[k]
+		var cx := r.position.x + r.size.x * (k + 0.5) / n
+		var e := float(exps[k])
+		var bright := clampf(1.0 + e / 8.0, 0.08, 1.0)
+		var col := Color(0.55, 1.0, 0.75) if k == 0 else Color(1.0, 0.7, 0.45)
+		UITheme.dot(self, Vector2(cx, cy), 46.0, Color(col.r, col.g, col.b, 0.22 * bright))
+		UITheme.dot(self, Vector2(cx, cy), 30.0, Color(col.r, col.g, col.b, 0.35 * bright))
+		var poly := PackedVector2Array()
+		for q in 7:
+			var a := TAU * q / 7.0 + 0.3 * k
+			var rr := 24.0 + 6.0 * sin(q * 2.3 + k)
+			poly.append(Vector2(cx, cy) + Vector2(cos(a), sin(a)) * rr)
+		draw_colored_polygon(poly, Color(0.25, 0.25, 0.32).lerp(col, 0.25 + 0.75 * bright))
+		_box(Rect2(cx - 30, cy - 30, 60, 60), "rock%d" % k)
+		_mt(font, cx, cy + 6.0, String(rk.s), UITheme.fs(18), Color(0.1, 0.1, 0.15), "rock%d" % k)
+		var es := _expo(e)
+		var lab := ("2^{%s}" % es) if es != "" else "%.3f" % pow(2.0, e)
+		_mt(font, cx, cy + 66.0, lab, UITheme.fs(17), Color(col.r, col.g, col.b))
+	if same:
+		var a := Vector2(r.position.x + r.size.x * 0.25 + 46.0, cy)
+		var b := Vector2(r.position.x + r.size.x * 0.75 - 46.0, cy)
+		for q in 3:
+			var ph := fposmod(t * 1.5 + q / 3.0, 1.0)
+			draw_line(a.lerp(b, ph * 0.5), b.lerp(a, ph * 0.5), Color(1, 0.95, 0.7, 0.5 * (1.0 - ph)), 2.0)
+	_geo[i] = {}
+
+
+# ---- 賽跑 ----
+
+func _draw_race(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var tv := _slide_val(String(it.get("t", "t")), 0.0)
+	var runs: Array = it.get("runners", [])
+	var n := runs.size()
+	var tmax := float(it.get("tmax", 24))
+	var maxlen := 0.0
+	for rn in runs:
+		maxlen = maxf(maxlen, floor(tmax / float(rn.n)) * log(float(rn.k)))
+	var x0 := r.position.x + 56.0
+	var x1 := r.end.x - 16.0
+	var sc := (x1 - x0) / maxf(maxlen, 0.1)
+	var lane := minf(42.0, (r.size.y - 16.0) / n)
+	var cols := [Color("5fc8ff"), Color("ffa65a"), Color("9be36a"), Color("ff8ac8")]
+	for k in n:
+		var rn: Dictionary = runs[k]
+		var y := r.position.y + 8.0 + (k + 0.5) * lane
+		var c: Color = cols[k % cols.size()]
+		draw_line(Vector2(x0, y), Vector2(x1, y), Color(1, 1, 1, 0.08), lane - 8.0)
+		UITheme.dot(self, Vector2(x0 - 34.0, y), 12.0, Color(c.r, c.g, c.b, 0.3))
+		_mt(font, x0 - 34.0, y + 6.0, String(rn.s), UITheme.fs(16), c)
+		var jumps := int(floor(tv / float(rn.n) + 1e-6))
+		var seg := log(float(rn.k)) * sc
+		for q in jumps:
+			var rc := Rect2(x0 + q * seg + 1.0, y - lane / 2.0 + 7.0, seg - 2.0, lane - 14.0)
+			draw_rect(rc, Color(c.r, c.g, c.b, 0.55 + 0.2 * float(q % 2)))
+		# 下一次結算前的進度（淡淡的）
+		var frac := fposmod(tv, float(rn.n)) / float(rn.n)
+		if frac > 0.0:
+			draw_rect(Rect2(x0 + jumps * seg + 1.0, y - lane / 2.0 + 7.0, (seg - 2.0) * frac, lane - 14.0), Color(c.r, c.g, c.b, 0.15))
+		UITheme.dot(self, Vector2(x0 + tv / float(rn.n) * seg, y), 5.0, Color(1, 1, 1, 0.9))
+	_geo[i] = {}

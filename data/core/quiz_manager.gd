@@ -186,6 +186,12 @@ const MISTAKE_INFO := {
 	"num_absrev":      {"name": "反寫成絕對值", "level": 2},
 	"num_abscase":     {"name": "絕對值的分段討論", "level": 2},
 	"num_median":      {"name": "中位數、解的個數、三角不等式", "level": 2},
+	# 指數與常用對數（E1～）
+	"elog_law":        {"name": "指數律、有意義、化成質數的次方", "level": 1},
+	"elog_sub":        {"name": "代換與找關係式", "level": 2},
+	"elog_echo":       {"name": "a + a^{−1} 的乘法公式", "level": 2},
+	"elog_grow":       {"name": "倍增與減半的應用", "level": 2},
+	"elog_cmp":        {"name": "指數比大小", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

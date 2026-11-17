@@ -9,7 +9,7 @@ const Units := preload("res://data/core/units.gd")
 const Paths := preload("res://data/core/paths.gd")
 
 ## 套用這條規則的單元
-const READ_UNITS := ["h1num"]
+const READ_UNITS := ["h1num", "h1exp"]
 const LIMITS := {
 	"story": 24,       # 故事一句話
 	"eq": 20,          # 題目：數學＋要回答的問題

@@ -24,6 +24,12 @@ extends "res://data/levels/line/line_level.gd"
 ##       {"kind": "gtap", …, "item": 0, "alts": [[要踩的階, …], …], "why": {"階": 點錯的提示}}
 ##         梯子點要踩的階：alts 裡任何一組都點到了就過（可以點的是 alts 裡出現的階，其他的算點錯）
 ##       天秤（scale 元件）：審判步驟時自動可以點數字卡（不扣分）
+##       高一指數 E1：
+##       {"kind": "pdrag", …, "item": 0, "nudge"}  光柱積木：把卡片拖到它的質數柱上（pillar 元件），全部放好就過；放錯的彈回來，提示寫卡片的 why
+##       {"kind": "stack", …, "item": 0}  湊積木：點 +a、−a 的按鈕，湊到目標高度就過（不扣分，可以一直試）
+##       {"kind": "etap", …, "item": 0}   點等號寶石（gems 元件）：點出第一顆錯的等號，點到沒問題的那顆寫出理由
+##       choice 加 "guess": true：先猜，點哪一個都算（不扣分），line 裡的 {guess} 換成猜的那一個
+##       slide 加 "line_vals": true：line 裡的 {…} 做完時換成滑桿的值（例如先猜的次數）
 ## 每一關只要寫 level_id、標題、章節、題庫、速算的題目產生器。
 
 const NumField := preload("res://data/levels/num/num_field.gd")
@@ -75,7 +81,7 @@ func _forge_step() -> void:
 		return
 	var st: Dictionary = steps[si]
 	match String(st.kind):
-		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap":
+		"ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap", "pdrag", "stack", "etap":
 			_clear(predict_box)
 			predicting = false
 			keypad_on = false
@@ -106,6 +112,12 @@ func _forge_step() -> void:
 			_nf().begin("sq", {"item": int(st.get("item", 0))}, _sqtap_event)
 		"gtap":
 			_nf().begin("rung", {"item": int(st.get("item", 0))}, _gtap_event)
+		"pdrag":
+			_nf().begin("pillar", {"item": int(st.get("item", 0))}, _pdrag_event)
+		"stack":
+			_nf().begin("stack", {"item": int(st.get("item", 0))}, _stack_event)
+		"etap":
+			_nf().begin("gem", {"item": int(st.get("item", 0))}, _etap_event)
 		"choice":
 			# 天秤（R7）：審判的時候數字卡可以隨便點
 			var f := _nf()
@@ -325,6 +337,65 @@ func _gtap_event(ev: Dictionary) -> void:
 		_pic_wrong(st, String(st.get("why", {}).get(str(k), st.nudge)))
 
 
+func _pdrag_event(ev: Dictionary) -> void:
+	if _pic_kind() != "pdrag":
+		return
+	var st: Dictionary = steps[si]
+	if bool(ev.ok):
+		Game.of(self).play("blip", 1.0 + 0.08 * (8 - int(ev.left)), -8.0)
+		if int(ev.left) == 0:
+			_pic_finish.call_deferred(si)
+		return
+	var c: Dictionary = _nf().items[int(st.get("item", 0))].cards[int(ev.k)]
+	_pic_wrong(st, String(c.get("why", st.nudge)))
+
+
+func _stack_event(ev: Dictionary) -> void:
+	if _pic_kind() != "stack":
+		return
+	var st: Dictionary = steps[si]
+	var it: Dictionary = _nf().items[int(st.get("item", 0))]
+	Game.of(self).play("blip", 1.0 + 0.3 * float(ev.h), -10.0)
+	if absf(float(ev.h) - float(it.stack.goal)) < 1e-6:
+		_pic_finish.call_deferred(si)
+
+
+func _etap_event(ev: Dictionary) -> void:
+	if _pic_kind() != "etap":
+		return
+	var st: Dictionary = steps[si]
+	var f := _nf()
+	var it: Dictionary = f.items[int(st.get("item", 0))]
+	var k := int(ev.k)
+	if k == int(it.bad):
+		_pic_finish.call_deferred(si)
+		return
+	f.gem_ok[k] = f._t()
+	f.gem_bad[k] = f._t()
+	var why: Array = it.get("why", [])
+	_pic_wrong(st, "這一顆沒問題：%s。%s" % [String(why[k]) if k < why.size() else "", String(st.nudge)])
+
+
+## 先猜（choice 的 "guess": true）：點哪一個都算對，line 寫出猜的那一個
+func _on_answer(idx: int) -> void:
+	if predicting and r.get("type", "") == "forge" and si < steps.size() and bool(steps[si].get("guess", false)):
+		cur_q["correct"] = idx
+		var st: Dictionary = steps[si]
+		if not st.has("line0"):
+			st["line0"] = st.line
+		st["line"] = String(st.line0).replace("{guess}", String(cur_q.options[idx]))
+	super(idx)
+
+
+## slide 做完：寫了 "line_vals": true 的，line 裡的 {…} 換成滑桿的值（例如「先猜：{g} 次」）
+func _slide_done(st: Dictionary) -> void:
+	if bool(st.get("line_vals", false)):
+		if not st.has("line0"):
+			st["line0"] = st.line
+		st["line"] = CoordPlane.fill_eq(String(st.line0), slide_vals)
+	super(st)
+
+
 func _gtap_done(st: Dictionary) -> bool:
 	for alt in st.alts:
 		var all_in := true
@@ -422,6 +493,25 @@ func _custom_go() -> void:
 			if _gtap_done(steps[si]):
 				_pic_finish(si)
 			return
+		"pdrag":
+			var it: Dictionary = _nf().items[int(steps[si].get("item", 0))]
+			var left := 0
+			for q in it.cards.size():
+				if not (it.cards[q] as Dictionary).has("at") and not _nf().pil_placed.has(q):
+					left += 1
+			if left == 0:
+				_pic_finish(si)
+			return
+		"stack":
+			var it: Dictionary = _nf().items[int(steps[si].get("item", 0))]
+			if absf(_nf().stack_height(it) - float(it.stack.goal)) < 1e-6:
+				_pic_finish(si)
+			return
+		"etap":
+			if mtap_ok:
+				mtap_ok = false
+				_pic_finish(si)
+			return
 		"mtap":
 			if mtap_ok:
 				mtap_ok = false
@@ -458,8 +548,18 @@ func test_answer(st: Dictionary) -> bool:
 			for b in st.beads:
 				_nf().drag_pos[String(b[0])] = float(st.goal[String(b[0])])
 			return true
-		"mtap", "rtap", "sqtap":
+		"mtap", "rtap", "sqtap", "etap":
 			mtap_ok = true
+			return true
+		"pdrag":
+			var it: Dictionary = _nf().items[int(st.get("item", 0))]
+			for q in it.cards.size():
+				if not (it.cards[q] as Dictionary).has("at"):
+					_nf().pil_placed[q] = true
+			return true
+		"stack":
+			var it: Dictionary = _nf().items[int(st.get("item", 0))]
+			_nf().stk = (it.stack.sol as Dictionary).duplicate()
 			return true
 		"ctap":
 			var it: Dictionary = _nf().items[int(st.get("item", 0))]
@@ -591,8 +691,29 @@ class NumView extends PlaneView:
 	func _plane_on() -> bool:
 		return super() or _field_on()
 
+	## 高一指數的圖上元件（拖卡片、湊積木、點寶石）要大張一點
+	func _want_big() -> bool:
+		var sts: Array = rd.get("steps", [])
+		if not done and step < sts.size() and String(sts[step].get("kind", "")) in ["pdrag", "stack", "etap"]:
+			return true
+		return super()
+
 	func _process(delta: float) -> void:
 		super(delta)
+		# 高一指數的圖上元件：拖、湊、點、滑桿的步驟原野大張一點（只有坐標方格時 PlaneView 自己會調）
+		if _field_on() and (plane == null or not plane.visible) and _big_field():
+			var want := PLANE_BIG if _want_big() else PLANE_SMALL
+			if absf(ph - want) > 0.5:
+				ph = lerpf(ph, want, 1.0 - exp(-10.0 * delta))
+				if absf(ph - want) <= 0.5:
+					ph = want
+				queue_redraw()
 		if _field_on() and (field.size != _plane_rect().size or field.position != _plane_rect().position):
 			_place_plane()
+
+	func _big_field() -> bool:
+		for it in rd.get("field", []):
+			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race"]:
+				return true
+		return false
 

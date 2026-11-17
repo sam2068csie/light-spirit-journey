@@ -209,6 +209,8 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 		"choice":
 			var grid: Node = lv.predict_box.get_child(1)
 			var idx: int = int(lv.cur_q.correct)
+			if wrong and st.get("guess", false):
+				return      # 先猜：點哪一個都算，沒有答錯
 			if wrong:
 				idx = (idx + 1) % grid.get_child_count()
 			await click(grid.get_child(idx), "選項")
@@ -386,6 +388,62 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 					await click_at(f.global_of_hit("rungs", int(q)))
 					await frames(3)
 			await snap(String(lv.r.id) + ("_點錯階" if wrong else "_點階"))
+		"pdrag":
+			# 光柱積木（高一指數 E1）：答錯時把第一張卡拖到不對的柱子，答對時每一張拖到它的柱子
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			for k in it.cards.size():
+				var c: Dictionary = it.cards[k]
+				if c.has("at") or f.pil_placed.has(k):
+					continue
+				var ci := -1
+				for q in it.cols.size():
+					var has: bool = (c.to as Dictionary).has(String(it.cols[q]))
+					if has != wrong:
+						ci = q
+						break
+				if ci < 0:
+					continue
+				var p0: Vector2 = f.global_of_hit("pcards", k)
+				var p1: Vector2 = f.global_of_hit("pcols", ci)
+				_move(p0)
+				await frames(1)
+				_send_mouse(p0, true)
+				await frames(1)
+				for j in 6:
+					_move(p0.lerp(p1, (j + 1) / 6.0), true)
+					await frames(1)
+				_send_mouse(p1, false)
+				await frames(3)
+				if wrong:
+					break
+			await snap(String(lv.r.id) + ("_拖錯" if wrong else "_拖好"))
+		"stack":
+			# 湊積木（高一指數 E1）：答錯時點一次 +第一塊，答對時點到解答的個數
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var blocks: Array = it.stack.blocks
+			if wrong:
+				await click_at(f.global_of_hit("pbtn", 0))
+				await frames(3)
+			else:
+				for bi in blocks.size():
+					var nm := String(blocks[bi][0])
+					var need := int(it.stack.sol.get(nm, 0)) - int(f.stk.get(nm, 0))
+					for q in absi(need):
+						await click_at(f.global_of_hit("pbtn", 2 * bi + (0 if need > 0 else 1)))
+						await frames(2)
+			await snap(String(lv.r.id) + ("_湊錯" if wrong else "_湊好"))
+		"etap":
+			# 點等號寶石（高一指數 E1）：答錯時點第一顆沒問題的，答對時點錯的那一顆
+			var f = lv._nf()
+			var it: Dictionary = f.items[int(st.get("item", 0))]
+			var k := int(it.bad)
+			if wrong:
+				k = 0 if k != 0 else 1
+			await click_at(f.global_of_hit("gems", k))
+			await frames(3)
+			await snap(String(lv.r.id) + ("_點錯寶石" if wrong else "_點寶石"))
 		"rtap":
 			# 點長方形（數與式 R6）：答錯時點下一個
 			var f = lv._nf()
@@ -690,7 +748,7 @@ func _play_round() -> void:
 			await snap("%s_%d_%s" % [rid, si0, st.name])
 			# 每題第一步先答錯一次；在圖上作答的步驟（數與式）也都先點錯一次，看紅點和提示
 			# 能量只剩一格就不再故意答錯（每一步都在圖上作答的題目，例如 R3 的拉範圍）
-			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap"] and int(lv.energy) > 1):
+			if first or (String(st.kind) in ["ltap", "ldrag", "btap", "mtap", "lrange", "lsort", "rtap", "ctap", "sqtap", "gtap", "pdrag", "etap"] and int(lv.energy) > 1):
 				await answer_step(st, true)
 				await snap("%s_%d_答錯" % [rid, si0])
 				first = false
