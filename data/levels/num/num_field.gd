@@ -2200,6 +2200,14 @@ func _draw_gems(i: int, it: Dictionary, r: Rect2) -> void:
 		hits.append(Rect2())
 	var row_h := minf(64.0, (r.size.y - 36.0) / rows.size())
 	var y_top := r.get_center().y - row_h * rows.size() / 2.0 - 14.0
+	# 所有式子共用一條基線（不然有分數指數的會比較低、忽高忽低）
+	var asc := 0.0
+	var desc := 0.0
+	for p in parts:
+		var e := MathLabel.line_extent(String(p), fs)
+		asc = maxf(asc, e.x)
+		desc = maxf(desc, e.y)
+	var base_off := (asc - desc) / 2.0
 	for ri in rows.size():
 		var row: Array = rows[ri]
 		var w := -sp
@@ -2212,8 +2220,7 @@ func _draw_gems(i: int, it: Dictionary, r: Rect2) -> void:
 			if tk < 0:
 				_draw_gem(font, -1 - tk, Vector2(x + ww / 2.0, y), it, done, t, hits)
 			else:
-				var ext := MathLabel.line_extent(String(parts[tk]), fs)
-				_mt(font, x + ww / 2.0, y + (ext.x - ext.y) / 2.0, String(parts[tk]), fs, Color(1, 0.95, 0.85))
+				_mt(font, x + ww / 2.0, y + base_off, String(parts[tk]), fs, Color(1, 0.95, 0.85))
 			x += ww + sp
 	# 最後點過的、沒問題的那一顆：下面寫出為什麼
 	var last := -1

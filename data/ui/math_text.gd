@@ -139,7 +139,7 @@ static var _parse_cache: Dictionary = {}
 
 static func _parse_uncached(markup: String, base_color: Color) -> Array:
 	var out := []
-	if markup.contains("√"):
+	if markup.contains("√") or markup.contains("∛") or markup.contains("∜"):
 		markup = root_auto(markup)
 	if auto_frac and (markup.contains("/") or markup.contains("÷")):
 		markup = frac_markup(markup)
