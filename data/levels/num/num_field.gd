@@ -208,6 +208,10 @@ func _draw() -> void:
 				_draw_glow(i, it, r)
 			"race":
 				_draw_race(i, it, r)
+			"rule":
+				_draw_rule(i, it, r)
+			"meter":
+				_draw_meter(i, it, r)
 		x += w
 
 
@@ -362,11 +366,28 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 		draw_rect(Rect2(a, y - 7, b - a, 14), Color(c.r, c.g, c.b, 0.22))
 		draw_line(Vector2(a, y - 12), Vector2(a, y + 12), c, 2.0)
 		draw_line(Vector2(b, y - 12), Vector2(b, y + 12), c, 2.0)
+	# 十倍石階（高一指數 E2）：每一個整數到下一個整數是一階，越往右越高
+	if bool(it.get("stair", false)):
+		_draw_stair(sx, lo, hi, x0, x1, y, r, it.get("pts", []), st)
 	# 數線本身＋箭頭
 	draw_line(Vector2(x0 - 8, y), Vector2(x1 + 6, y), Color(1, 0.95, 0.85, 0.75), 2.0, true)
 	draw_colored_polygon(PackedVector2Array([Vector2(x1 + 14, y), Vector2(x1 + 4, y - 6), Vector2(x1 + 4, y + 6)]), Color(1, 0.95, 0.85, 0.75))
 	# 刻度
-	if not bool(it.get("noticks", false)):
+	if bool(it.get("logticks", false)):
+		# 對數尺：位置是 log k，標的是 k（1、2、3…10）
+		for k in range(1, 11):
+			var px: float = sx.call(log(float(k)) / log(10.0))
+			draw_line(Vector2(px, y - 6), Vector2(px, y + 6), Color(1, 0.95, 0.85, 0.55), 1.5)
+			var lab := str(k)
+			var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+			_pt(font, Vector2(px - w / 2.0, y + 22), lab, UITheme.fs(14), Color(1, 0.95, 0.85, 0.6))
+	elif bool(it.get("stair", false)):
+		# 十倍石階：刻度寫真數（10 的 n 次方）
+		for n in range(int(ceil(lo - 1e-9)), int(floor(hi + 1e-9)) + 1):
+			var px: float = sx.call(float(n))
+			draw_line(Vector2(px, y - 6), Vector2(px, y + 6), Color(1, 0.95, 0.85, 0.55), 1.5)
+			_mt(font, px, y + 24.0, _pow10(n), UITheme.fs(13), Color(1, 0.95, 0.85, 0.6))
+	elif not bool(it.get("noticks", false)):
 		var stp := float(it.get("tick", _nice_step((hi - lo) / 6.0)))
 		var v := ceilf(lo / stp) * stp
 		var guard := 0
@@ -771,7 +792,8 @@ func _draw_marks(sx: Callable, ry: float, font: Font) -> void:
 			continue
 		UITheme.dot(self, Vector2(px, ry), 7.0, Color(1, 0.4, 0.4, al))
 		if String(mk.text) != "":
-			_mt(font, clampf(px, 90.0, size.x - 90.0), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
+			var hw := maxf(90.0, MathLabel.text_width(font, String(mk.text), UITheme.fs(16)) / 2.0 + 8.0)
+			_mt(font, clampf(px, hw, maxf(hw, size.x - hw)), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
 
 
 # ---- 拖珠子：snaps 是 a 到 b 的幾分之幾，標在數線下面 ----
@@ -2412,4 +2434,165 @@ func _draw_race(i: int, it: Dictionary, r: Rect2) -> void:
 		if frac > 0.0:
 			draw_rect(Rect2(x0 + jumps * seg + 1.0, y - lane / 2.0 + 7.0, (seg - 2.0) * frac, lane - 14.0), Color(c.r, c.g, c.b, 0.15))
 		UITheme.dot(self, Vector2(x0 + tv / float(rn.n) * seg, y), 5.0, Color(1, 1, 1, 0.9))
+	_geo[i] = {}
+
+
+
+# ---- 十倍石階、計算尺、分貝計（高一指數 E2） ----
+
+## 10 的 n 次方寫成真數：0.01、0.1、1、10、100、1000，太大太小寫 10^{n}
+static func _pow10(n: int) -> String:
+	if n >= 0 and n <= 3:
+		return str(int(pow(10, n)))
+	if n < 0 and n >= -3:
+		return "0." + "0".repeat(-n - 1) + "1"
+	return "10^{%s}" % str(n).replace("-", "−")
+
+
+func _draw_stair(sx: Callable, lo: float, hi: float, x0: float, x1: float, y: float, r: Rect2, pts := [], st := 0) -> void:
+	var n0 := int(floor(lo))
+	var n1 := int(ceil(hi))
+	var cnt := maxi(n1 - n0, 1)
+	var rise := minf(20.0, (y - r.position.y - 70.0) / cnt)
+	# 已經出現的點站在哪一階：那一階亮起來（點的顏色）
+	var lit := {}
+	for p in pts:
+		if st >= int(p.get("at", 0)) and not p.has("slide"):
+			lit[int(floor(float(p.v)))] = COLS.get(String(p.get("c", "gold")), COLS.gold)
+	for n in range(n0, n1):
+		var a: float = clampf(sx.call(float(n)), x0, x1)
+		var b: float = clampf(sx.call(float(n + 1)), x0, x1)
+		if b - a < 2.0:
+			continue
+		var h := 6.0 + rise * (n - n0 + 1)
+		var col := Color(0.45, 0.36, 0.32).lightened(0.04 * float((n - n0) % 2))
+		draw_rect(Rect2(a, y - h, b - a, h), Color(col.r, col.g, col.b, 0.55))
+		if lit.has(n):
+			var lc: Color = lit[n]
+			draw_rect(Rect2(a, y - h, b - a, h), Color(lc.r, lc.g, lc.b, 0.22))
+			draw_line(Vector2(a, y - h), Vector2(b, y - h), Color(lc.r, lc.g, lc.b, 0.9), 3.0)
+			continue
+		draw_line(Vector2(a, y - h), Vector2(b, y - h), Color(1, 0.85, 0.6, 0.35), 2.0)
+		draw_line(Vector2(a, y - h), Vector2(a, y - h + rise), Color(1, 0.85, 0.6, 0.2), 1.0)
+
+
+## 計算尺：{"k": "rule", "m": "m"（滑桿：上尺的 1 對齊下尺的 m）, "read": 上尺的哪一個數（對齊之後在它底下發光）, "at": 第幾步之後發光}
+func _draw_rule(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var m := _slide_val(String(it.get("m", "m")), float(it.get("m0", 1.0)))
+	var x0 := r.position.x + 30.0
+	var w := r.size.x - 70.0
+	var yb := r.get_center().y + 30.0
+	var yt := yb - 36.0
+	var off := log(maxf(m, 1.0)) / log(10.0) * w
+	var lx := func(v: float) -> float:
+		return x0 + log(v) / log(10.0) * w
+	# 下尺（固定）
+	draw_rect(Rect2(x0 - 8, yb, w + 16, 34), Color(0.55, 0.45, 0.3, 0.55))
+	draw_rect(Rect2(x0 - 8, yb, w + 16, 34), Color(1, 0.85, 0.55, 0.6), false, 1.5)
+	# 上尺（跟著滑桿移動）
+	# 往右拖出原野的部分不畫（右邊緣畫成虛的，表示尺還在延伸）
+	var uw := minf(w + 16, r.end.x - 4.0 - (x0 - 8 + off))
+	draw_rect(Rect2(x0 - 8 + off, yt - 34, uw, 34), Color(0.35, 0.45, 0.6, 0.55))
+	if uw >= w + 16:
+		draw_rect(Rect2(x0 - 8 + off, yt - 34, uw, 34), Color(0.6, 0.85, 1.0, 0.6), false, 1.5)
+	else:
+		var ux := x0 - 8 + off
+		draw_line(Vector2(ux, yt - 34), Vector2(ux + uw, yt - 34), Color(0.6, 0.85, 1.0, 0.6), 1.5)
+		draw_line(Vector2(ux, yt), Vector2(ux + uw, yt), Color(0.6, 0.85, 1.0, 0.6), 1.5)
+		draw_line(Vector2(ux, yt - 34), Vector2(ux, yt), Color(0.6, 0.85, 1.0, 0.6), 1.5)
+	for k in range(1, 11):
+		var px: float = lx.call(float(k))
+		draw_line(Vector2(px, yb), Vector2(px, yb + 10), Color(1, 0.9, 0.7, 0.8), 1.5)
+		var lab := str(k)
+		var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+		_pt(font, Vector2(px - tw / 2.0, yb + 28), lab, UITheme.fs(14), Color(1, 0.92, 0.75))
+		var qx: float = px + off
+		if qx <= r.end.x - 12.0:
+			draw_line(Vector2(qx, yt), Vector2(qx, yt - 10), Color(0.8, 0.92, 1.0, 0.8), 1.5)
+			_pt(font, Vector2(qx - tw / 2.0, yt - 16), lab, UITheme.fs(14), Color(0.8, 0.92, 1.0))
+	# 小刻度（下尺）
+	for k in range(1, 10):
+		for q in range(1, 10):
+			var v := k + q / 10.0
+			draw_line(Vector2(lx.call(v), yb), Vector2(lx.call(v), yb + 5), Color(1, 0.9, 0.7, 0.35), 1.0)
+	# 對齊的線：上尺的 1、上尺的 read
+	var a1 := x0 + off
+	draw_line(Vector2(a1, yt - 34), Vector2(a1, yb + 34), Color(0.8, 0.92, 1.0, 0.35), 1.0)
+	if it.has("read") and _step() >= int(it.get("at", 0)):
+		var b := float(it.read)
+		var bx: float = lx.call(b) + off
+		var gl := 0.6 + 0.4 * sin(t * 4.0)
+		draw_line(Vector2(bx, yt - 34), Vector2(bx, yb + 34), Color(1, 0.85, 0.4, 0.8 * gl), 2.0)
+		UITheme.dot(self, Vector2(bx, yb + 5), 9.0, Color(1, 0.85, 0.4, 0.35 * gl))
+	_geo[i] = {}
+
+
+## 分貝計的小圖示（圖上不寫中文，聲音來源用圖畫）：book 書（圖書館）、dryer 吹風機、ac 冷氣、vacuum 吸塵器
+func _meter_icon(kind: String, p: Vector2, c: Color) -> void:
+	match kind:
+		"book":
+			draw_colored_polygon(PackedVector2Array([p + Vector2(-10, -6), p + Vector2(0, -3), p + Vector2(0, 8), p + Vector2(-10, 5)]), c)
+			draw_colored_polygon(PackedVector2Array([p + Vector2(10, -6), p + Vector2(0, -3), p + Vector2(0, 8), p + Vector2(10, 5)]), c.darkened(0.25))
+		"dryer":
+			UITheme.dot(self, p + Vector2(-3, -3), 6.5, c)
+			draw_rect(Rect2(p + Vector2(2, -6), Vector2(9, 6)), c)
+			draw_line(p + Vector2(-4, 2), p + Vector2(-6, 11), c, 4.0)
+		"ac":
+			draw_rect(Rect2(p + Vector2(-11, -6), Vector2(22, 9)), c)
+			for q in 3:
+				draw_line(p + Vector2(-6 + q * 6, 5), p + Vector2(-8 + q * 6, 11), c, 1.5)
+		"vacuum":
+			draw_rect(Rect2(p + Vector2(-11, -1), Vector2(12, 9)), c)
+			UITheme.dot(self, p + Vector2(-8, 9), 2.5, c)
+			UITheme.dot(self, p + Vector2(-2, 9), 2.5, c)
+			draw_line(p + Vector2(1, 1), p + Vector2(8, -9), c, 2.0)
+			draw_line(p + Vector2(8, -9), p + Vector2(11, 7), c, 2.0)
+			draw_line(p + Vector2(8, 7), p + Vector2(13, 7), c, 3.0)
+		_:
+			UITheme.dot(self, p, 9.0, c)
+
+
+## 分貝計：{"k": "meter", "v": "d"（滑桿）, "ref": 30（參考的值）, "coef": 0.1（值加 1，log 加多少）, "unit": "dB"}
+##   左邊是參考，右邊是滑桿那一個；每一圈聲波 = 10 倍，中間寫「強度是幾倍」= 10^{coef × (v − ref)}
+func _draw_meter(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var ref := float(it.get("ref", 0.0))
+	var v := _slide_val(String(it.get("v", "d")), ref)
+	var coef := float(it.get("coef", 0.1))
+	var base := float(it.get("base", 0.0))
+	var unit := String(it.get("unit", "dB"))
+	var cy := r.get_center().y - 6.0
+	var pts := [Vector2(r.position.x + r.size.x * 0.24, cy), Vector2(r.position.x + r.size.x * 0.76, cy)]
+	var vals := [ref, v]
+	var cols := [Color(0.6, 0.85, 1.0), Color(1.0, 0.75, 0.45)]
+	var maxr := minf(r.size.y * 0.42, r.size.x * 0.2)
+	var top_rings := maxf(coef * (float(it.get("max", 120.0)) - base), 1.0)
+	for k in 2:
+		var p: Vector2 = pts[k]
+		var c: Color = cols[k]
+		var rings := coef * (float(vals[k]) - base)
+		var n := int(ceil(rings))
+		for q in n:
+			var rr := 10.0 + (q + 1) * (maxr - 10.0) / top_rings
+			var ph := fposmod(t * 0.8 - q * 0.12, 1.0)
+			var al := 0.25 + 0.35 * (1.0 - ph)
+			if q == n - 1 and rings < n:
+				rr = 10.0 + rings * (maxr - 10.0) / top_rings
+			draw_arc(p, rr, 0.0, TAU, 40, Color(c.r, c.g, c.b, al), 1.5, true)
+		var icons: Array = it.get("icons", [])
+		if k < icons.size():
+			UITheme.dot(self, p, 15.0, Color(0.08, 0.1, 0.2, 0.9))
+			_meter_icon(String(icons[k]), p, c)
+		else:
+			UITheme.dot(self, p, 9.0, c)
+		var lab := (("%d" % int(round(float(vals[k])))) if absf(float(vals[k]) - round(float(vals[k]))) < 1e-6 else ("%.1f" % float(vals[k]))) + " " + unit
+		var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x
+		_pt(font, Vector2(p.x - tw / 2.0, r.end.y - 12.0), lab, UITheme.fs(15), c)
+	var e := coef * (v - ref)
+	var es := ("%.2f" % e).rstrip("0").rstrip(".").replace("-", "−")
+	_mt(font, r.get_center().x, cy - maxr - 6.0 if cy - maxr - 6.0 > r.position.y + 18.0 else r.position.y + 20.0,
+		"× 10^{%s}" % es, UITheme.fs(20), Color(1, 0.95, 0.8))
 	_geo[i] = {}

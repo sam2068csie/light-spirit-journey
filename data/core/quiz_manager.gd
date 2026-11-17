@@ -192,6 +192,11 @@ const MISTAKE_INFO := {
 	"elog_echo":       {"name": "a + a^{−1} 的乘法公式", "level": 2},
 	"elog_grow":       {"name": "倍增與減半的應用", "level": 2},
 	"elog_cmp":        {"name": "指數比大小", "level": 2},
+	"elog_def":        {"name": "對數的意義、10^{log a} = a", "level": 1},
+	"elog_rule":       {"name": "對數律", "level": 1},
+	"elog_shift":      {"name": "首數平移、用 log 比倍數", "level": 2},
+	"elog_range":      {"name": "對數的範圍與整數部分", "level": 2},
+	"elog_app":        {"name": "分貝、地震與公式的應用", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

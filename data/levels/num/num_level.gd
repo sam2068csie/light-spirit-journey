@@ -696,6 +696,9 @@ class NumView extends PlaneView:
 		var sts: Array = rd.get("steps", [])
 		if not done and step < sts.size() and String(sts[step].get("kind", "")) in ["pdrag", "stack", "etap"]:
 			return true
+		# 十倍石階上點、分籃子：也大張（只限高一指數的圖上元件）
+		if not done and step < sts.size() and String(sts[step].get("kind", "")) in ["ltap", "lsort"] and _big_field():
+			return true
 		return super()
 
 	func _process(delta: float) -> void:
@@ -713,7 +716,7 @@ class NumView extends PlaneView:
 
 	func _big_field() -> bool:
 		for it in rd.get("field", []):
-			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race"]:
+			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race", "rule", "meter"] or bool(it.get("stair", false)):
 				return true
 		return false
 
