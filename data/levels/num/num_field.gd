@@ -212,6 +212,10 @@ func _draw() -> void:
 				_draw_rule(i, it, r)
 			"meter":
 				_draw_meter(i, it, r)
+			"digits":
+				_draw_digits(i, it, r)
+			"rope":
+				_draw_rope_e3(i, it, r)
 		x += w
 
 
@@ -477,7 +481,8 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	s.mv_t = mv_t
 	if int(spec.get("item", 0)) == i:
 		if mode == "tap":
-			_draw_marks(sx, y - 26.0, font)
+			# 尾數尺（logticks）：點的上面有指針的標籤，提示寫到數線下面
+			_draw_marks(sx, y - 26.0, font, y + 50.0 if bool(it.get("logticks", false)) else -1.0)
 		elif mode == "drag":
 			_draw_drag(sx, y, y - 26.0, r, font)
 
@@ -778,7 +783,7 @@ func global_of_value(v: float) -> Vector2:
 	return get_global_transform() * Vector2(x, float(g.y))
 
 
-func _draw_marks(sx: Callable, ry: float, font: Font) -> void:
+func _draw_marks(sx: Callable, ry: float, font: Font, ty := -1.0) -> void:
 	var t := _t()
 	for mk in marks:
 		var age := t - float(mk.t)
@@ -793,7 +798,7 @@ func _draw_marks(sx: Callable, ry: float, font: Font) -> void:
 		UITheme.dot(self, Vector2(px, ry), 7.0, Color(1, 0.4, 0.4, al))
 		if String(mk.text) != "":
 			var hw := maxf(90.0, MathLabel.text_width(font, String(mk.text), UITheme.fs(16)) / 2.0 + 8.0)
-			_mt(font, clampf(px, hw, maxf(hw, size.x - hw)), ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
+			_mt(font, clampf(px, hw, maxf(hw, size.x - hw)), ty if ty > 0.0 else ry - 26.0, String(mk.text), UITheme.fs(16), Color(1, 0.55, 0.55, al))
 
 
 # ---- 拖珠子：snaps 是 a 到 b 的幾分之幾，標在數線下面 ----
@@ -2360,6 +2365,171 @@ func _draw_fold(i: int, it: Dictionary, r: Rect2) -> void:
 	_geo[i] = {}
 
 
+# ---- 數字條（高一指數 E3）----
+## {"k": "digits", "rows": [{"s": "23412976"（可以有小數點）, "v": "k"（滑桿：小數點往左移幾位，負的往右）, "at": 第幾步出現,
+##   "k0": 滑桿還沒動時的值, "sig": [[第幾步起, 圈幾位有效數字], …]}, …]}
+##   一排數字方塊，小數點是一顆會發光的點；右邊寫 × 10^{k}。小數點停在第一個不是 0 的數字後面時方塊發光。
+##   sig：圈起前 n 位有效數字（金框），後面的變暗，下一位畫一個小三角形（≥ 5 綠色往上、< 5 灰色）。
+func _draw_digits(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var st := _step()
+	var rows := []
+	for row in it.get("rows", []):
+		if st >= int(row.get("at", 0)):
+			rows.append(row)
+	if rows.is_empty():
+		_geo[i] = {}
+		return
+	var rh := minf(96.0, r.size.y / rows.size())
+	var y0 := r.get_center().y - rh * rows.size() / 2.0
+	for ri in rows.size():
+		var row: Dictionary = rows[ri]
+		var s := String(row.s)
+		var p0 := s.find(".")
+		var dg := s.replace(".", "")
+		if p0 < 0:
+			p0 = dg.length()
+		var nd := dg.length()
+		var fz := 0
+		while fz < nd and dg[fz] == "0":
+			fz += 1
+		var k := int(round(_slide_val(String(row.get("v", "k")), float(row.get("k0", 0)))))
+		var p := clampi(p0 - k, 0, nd)
+		var tw := minf(36.0, (r.size.x - 130.0) / nd)
+		var th := tw * 1.25
+		var x0 := r.get_center().x - (nd * tw + 110.0) / 2.0
+		var yc := y0 + rh * (ri + 0.5)
+		var ok := p == fz + 1
+		var sig := 0
+		for sg in row.get("sig", []):
+			if st >= int(sg[0]):
+				sig = int(sg[1])
+		for d in nd:
+			var rc := Rect2(x0 + d * tw + 2.0, yc - th / 2.0, tw - 4.0, th)
+			var own := "dg%d_%d_%d" % [i, ri, d]
+			var dim := d < fz and p > fz
+			if sig > 0 and d >= fz + sig:
+				dim = true
+			var fill := Color(0.16, 0.18, 0.3, 0.9)
+			if ok and not dim:
+				fill = Color(0.3, 0.26, 0.12, 0.95).lerp(Color(0.4, 0.34, 0.14, 0.95), 0.5 + 0.5 * sin(t * 3.0))
+			draw_rect(rc, Color(fill.r, fill.g, fill.b, fill.a * (0.4 if dim else 1.0)))
+			var edge := Color(1, 0.9, 0.6, 0.35)
+			if sig > 0 and d >= fz and d < fz + sig:
+				edge = COLS.gold
+			draw_rect(rc, edge, false, 2.0 if edge == COLS.gold else 1.0)
+			_box(rc, own)
+			var tc := Color(1, 0.96, 0.85, 0.35 if dim else 1.0)
+			_mt(font, rc.get_center().x, rc.get_center().y + th * 0.22, dg[d], UITheme.fs(int(clampf(tw * 0.62, 14, 22))), tc, own)
+			if sig > 0 and d == fz + sig:
+				var up := int(dg[d]) >= 5
+				var tc2: Color = COLS.lime if up else COLS.dim
+				var cx := rc.get_center().x
+				var by := rc.end.y + 6.0
+				if up:
+					draw_colored_polygon(PackedVector2Array([Vector2(cx, by), Vector2(cx - 6, by + 9), Vector2(cx + 6, by + 9)]), tc2)
+				else:
+					draw_colored_polygon(PackedVector2Array([Vector2(cx, by + 9), Vector2(cx - 6, by), Vector2(cx + 6, by)]), tc2)
+		# 小數點
+		var px := x0 + p * tw
+		var py := yc + th / 2.0 - 3.0
+		UITheme.dot(self, Vector2(px, py), 11.0 + (2.0 * sin(t * 5.0) if ok else 0.0), Color(1, 0.85, 0.4, 0.3))
+		UITheme.dot(self, Vector2(px, py), 4.5, COLS.gold)
+		var ks := str(k).replace("-", "−")
+		_mt(font, x0 + nd * tw + 58.0, yc + 7.0, "× 10^{%s}" % ks, UITheme.fs(20), COLS.gold if ok else Color(1, 0.95, 0.85, 0.8))
+	_geo[i] = {}
+
+
+# ---- 測繩（高一指數 E3）----
+## 從崖頂垂下的繩子，每一個結是一位數（每 5 或 10 個結標一次數字）。三種用法：
+##   先猜  {"k": "rope", "g": "g"（先猜的滑桿）, "gat": 第幾步是先猜, "n": 真的位數, "at": 第幾步之後垂下真的繩子}
+##   跟著滑桿 {"k": "rope", "v": "n", "lg": 0.0969（每 1 的 log）, "goal": 8（畫一條虛線）}：繩長 = ⌊v × lg⌋ + 1 個結
+##   比長短 {"k": "rope", "ropes": [[長度（log 的值）, "標籤", 第幾步之後垂下, 顏色], …], "cut": 138（前面一樣長的部分折起來）}
+func _draw_rope_e3(i: int, it: Dictionary, r: Rect2) -> void:
+	var font := get_theme_default_font()
+	var t := _t()
+	var st := _step()
+	var ledge := r.position.y + 26.0
+	var bottom := r.end.y - 26.0
+	# 崖頂
+	draw_rect(Rect2(r.position.x + 4.0, ledge - 8.0, r.size.x - 8.0, 8.0), Color(0.45, 0.36, 0.32, 0.8))
+	draw_line(Vector2(r.position.x + 4.0, ledge - 8.0), Vector2(r.end.x - 4.0, ledge - 8.0), Color(1, 0.85, 0.6, 0.5), 2.0)
+	var ropes := []      # [長度, 標籤（上面）, 底下的字, 顏色, 虛線?]
+	var cut := float(it.get("cut", 0.0))
+	var goal := -1.0
+	if it.has("ropes"):
+		for rp in it.ropes:
+			if st >= int(rp[2]):
+				var c: Color = COLS.get(String(rp[3]) if rp.size() > 3 else "gold", COLS.gold)
+				var v := float(rp[0])
+				var lab := ("%.2f" % v).rstrip("0").rstrip(".")
+				ropes.append([v, String(rp[1]), lab, c, false])
+			else:
+				ropes.append([cut, String(rp[1]), "", COLS.dim, true])
+	elif it.has("v"):
+		var nv := _slide_val(String(it.v), float(it.get("v0", 1.0)))
+		var nk := floorf(nv * float(it.get("lg", 0.3010)) + 1e-9) + 1.0
+		goal = float(it.get("goal", -1.0))
+		var hit := goal > 0.0 and is_equal_approx(nk, goal)
+		ropes.append([nk, "", str(int(nk)), COLS.lime if hit else COLS.gold, false])
+	else:
+		var g := -1.0
+		var stt: Dictionary = _st.get(i, {})
+		if st == int(it.get("gat", -1)):
+			stt["g"] = _slide_val(String(it.get("g", "g")), -1.0)
+			_st[i] = stt
+		g = float(stt.get("g", -1.0))
+		if g >= 0.0:
+			ropes.append([g, "", "?" + str(int(g)), Color(0.8, 0.6, 1.0), false])
+		if st >= int(it.get("at", 99)):
+			ropes.append([float(it.n), "", str(int(it.n)), COLS.gold, false])
+	var lmax := maxf(goal, 1.0)
+	for rp in ropes:
+		lmax = maxf(lmax, float(rp[0]) - cut)
+	lmax = maxf(lmax, 5.0)
+	var sp := minf(16.0, (bottom - ledge - 8.0) / lmax)
+	var every := 5 if lmax <= 25 else 10
+	var n := ropes.size()
+	var label_x := r.position.x + 26.0
+	for k in n:
+		var rp: Array = ropes[k]
+		var x := r.position.x + 50.0 + (r.size.x - 70.0) * (k + 0.5) / maxf(n, 1)
+		var c: Color = rp[3]
+		var ln := float(rp[0]) - cut
+		var sway := 1.5 * sin(t * 1.3 + k)
+		var yb := ledge + ln * sp
+		if bool(rp[4]):
+			c = Color(c.r, c.g, c.b, 0.25)
+		draw_line(Vector2(x, ledge), Vector2(x + sway, yb), c, 2.0, true)
+		if cut > 0.0:
+			# 折起來的部分：一個斷開的記號
+			var zy := ledge + 6.0
+			draw_polyline(PackedVector2Array([Vector2(x - 7, zy), Vector2(x - 2, zy - 4), Vector2(x + 2, zy + 4), Vector2(x + 7, zy)]), Color(1, 1, 1, 0.8), 2.0)
+		for kn in range(1, int(floorf(ln + 1e-9)) + 1):
+			var ky := ledge + kn * sp
+			var big := (int(cut) + kn) % every == 0
+			UITheme.dot(self, Vector2(x + sway * kn / maxf(ln, 1.0), ky), 3.5 if big else 2.2, c)
+		if String(rp[1]) != "":
+			_mt(font, x, ledge - 14.0, String(rp[1]), UITheme.fs(15), c)
+		if String(rp[2]) != "":
+			_mt(font, x + sway, yb + 20.0, String(rp[2]), UITheme.fs(15), c)
+	# 刻度（左邊）：每 5 或 10 個結
+	var base := int(cut)
+	var kk := every - (base % every) if base % every != 0 else every
+	while kk <= lmax + 1e-9:
+		var ky := ledge + kk * sp
+		draw_line(Vector2(label_x + 6.0, ky), Vector2(label_x + 14.0, ky), Color(1, 1, 1, 0.4), 1.0)
+		_mt(font, label_x - 6.0, ky + 5.0, str(base + kk), UITheme.fs(12), Color(1, 1, 1, 0.5))
+		kk += every
+	if cut > 0.0:
+		_mt(font, label_x - 4.0, ledge + 4.0, str(int(cut)), UITheme.fs(12), Color(1, 1, 1, 0.5))
+	if goal > 0.0:
+		var gy := ledge + goal * sp
+		draw_dashed_line(Vector2(label_x + 16.0, gy), Vector2(r.end.x - 8.0, gy), Color(1, 0.85, 0.4, 0.55), 1.5, 5.0)
+	_geo[i] = {}
+
+
 # ---- 發光礦石 ----
 
 func _draw_glow(i: int, it: Dictionary, r: Rect2) -> void:
@@ -2592,6 +2762,8 @@ func _draw_meter(i: int, it: Dictionary, r: Rect2) -> void:
 		var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(15)).x
 		_pt(font, Vector2(p.x - tw / 2.0, r.end.y - 12.0), lab, UITheme.fs(15), c)
 	var e := coef * (v - ref)
+	if bool(it.get("flip", false)):
+		e = -e      # 右邊比較小：寫左邊是右邊的幾倍
 	var es := ("%.2f" % e).rstrip("0").rstrip(".").replace("-", "−")
 	_mt(font, r.get_center().x, cy - maxr - 6.0 if cy - maxr - 6.0 > r.position.y + 18.0 else r.position.y + 20.0,
 		"× 10^{%s}" % es, UITheme.fs(20), Color(1, 0.95, 0.8))

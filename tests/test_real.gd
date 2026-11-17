@@ -550,6 +550,9 @@ func answer_step(st: Dictionary, wrong: bool) -> void:
 
 
 func _bump(s: String) -> String:
+	# 小數（近似值的題目）：加 1 才會超出容許的誤差
+	if s.contains(".") and s.replace("−", "-").is_valid_float():
+		return String.num(float(s.replace("−", "-")) + 1.0, 4)
 	var q: Array = lv.parse_q(s.replace("−", "-"))
 	if q.is_empty():
 		return "7"

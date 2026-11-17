@@ -53,7 +53,7 @@ static func _tap(name: String, q: String, a: float, b: float, miss: float, wrong
 static func _slide(name: String, q: String, n: String, lo: float, hi: float, stp: float, start: float, goal: float,
 		eq: String, line: String, nudge: String, tag: String, traps := []) -> Dictionary:
 	return {"kind": "slide", "name": name, "q": q, "params": [{"n": n, "min": lo, "max": hi, "step": stp, "v": start}],
-		"lines": [], "eq": eq, "goal": {n: goal}, "traps": traps, "line": line, "nudge": nudge, "tag": tag}
+		"lines": [], "eq": eq, "goal": {n: goal}, "traps": traps, "line": line, "nudge": nudge, "tag": tag, "dec": stp < 1.0}
 
 
 ## 石階上的一個點（v 是 log 的值）

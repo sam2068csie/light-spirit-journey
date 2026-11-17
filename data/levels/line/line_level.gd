@@ -514,7 +514,8 @@ func _refresh_slide() -> void:
 	for nm in slide_val_labels.keys():
 		var vl = slide_val_labels[nm]
 		if is_instance_valid(vl):
-			vl.text = "= " + CoordPlane.frac(float(slide_vals.get(nm, 0.0)))
+			var sv := float(slide_vals.get(nm, 0.0))
+			vl.text = "= " + (CoordPlane.dec_s(sv) if bool(st.get("dec", false)) else CoordPlane.frac(sv))
 	_pv().plane.dyn_vals = slide_vals
 	_pv().plane.record_trails()
 	if slide_eq != null and is_instance_valid(slide_eq):
@@ -525,7 +526,7 @@ func _refresh_slide() -> void:
 			# 水平線 y = k 和折線的交點個數（R8）
 			_pv().plane.cross_k = float(slide_vals.get(String(st.cross), 0.0))
 			tpl = tpl.replace("{#cross}", _pv().plane.cross_text(_pv().plane.cross_k))
-		slide_eq.text = CoordPlane.fill_eq(tpl, slide_vals)
+		slide_eq.text = CoordPlane.fill_eq(tpl, slide_vals, bool(st.get("dec", false)))
 	_pv().plane.queue_redraw()
 
 
@@ -1057,7 +1058,14 @@ class CoordPlane extends TowerPlot.Plot:
 		return num(v)
 
 	## "y = {m}x + {k}" 把 {…} 換成數值：「+ −2」寫成「− 2」，x、y 前面的係數 1 不寫
-	static func fill_eq(tpl: String, vals: Dictionary) -> String:
+	## 小數的寫法（滑桿加 "dec": true 時用：5.4 不寫成 \frac{27}{5}）
+	static func dec_s(v: float) -> String:
+		var s := ("%.2f" % v).rstrip("0").rstrip(".")
+		if s == "-0":
+			s = "0"
+		return s.replace("-", "−")
+
+	static func fill_eq(tpl: String, vals: Dictionary, dec := false) -> String:
 		var out := ""
 		var i := 0
 		while i < tpl.length():
@@ -1097,7 +1105,7 @@ class CoordPlane extends TowerPlot.Plot:
 			if coef and absf(v + 1.0) < 1e-9:
 				out += "−"
 				continue
-			out += frac(v)
+			out += dec_s(v) if dec else frac(v)
 		# 圓心在原點：(x)^{2} 寫成 x^{2}
 		out = out.replace("(x)^{2}", "x^{2}").replace("(y)^{2}", "y^{2}")
 		# 第一項被省掉時，開頭的「+ 」「− 」整理一下

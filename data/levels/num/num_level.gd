@@ -716,7 +716,8 @@ class NumView extends PlaneView:
 
 	func _big_field() -> bool:
 		for it in rd.get("field", []):
-			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race", "rule", "meter"] or bool(it.get("stair", false)):
+			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race", "rule", "meter", "digits", "rope"] \
+					or bool(it.get("stair", false)) or bool(it.get("logticks", false)):
 				return true
 		return false
 

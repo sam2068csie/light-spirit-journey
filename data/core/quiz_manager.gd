@@ -197,6 +197,11 @@ const MISTAKE_INFO := {
 	"elog_shift":      {"name": "首數平移、用 log 比倍數", "level": 2},
 	"elog_range":      {"name": "對數的範圍與整數部分", "level": 2},
 	"elog_app":        {"name": "分貝、地震與公式的應用", "level": 2},
+	"elog_sci":        {"name": "科學記號與有效數字", "level": 1},
+	"elog_digits":     {"name": "幾位數、小數點後第幾位", "level": 2},
+	"elog_lead":       {"name": "最高位數字（尾數）", "level": 2},
+	"elog_inv":        {"name": "由位數反推、反求 n", "level": 3},
+	"elog_napp":       {"name": "位數的應用", "level": 3},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
