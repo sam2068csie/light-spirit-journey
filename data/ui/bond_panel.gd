@@ -74,7 +74,6 @@ static func detail(host: Node) -> Control:
 	info.text = "i"
 	info.tooltip_text = "親密度怎麼增加、每一級的獎勵"
 	info.focus_mode = Control.FOCUS_NONE
-	info.toggle_mode = true
 	info.custom_minimum_size = Vector2(38, 38)
 	info.add_theme_font_override("font", UITheme.bold_font())
 	info.add_theme_font_size_override("font_size", UITheme.fs(18))
@@ -95,45 +94,8 @@ static func detail(host: Node) -> Control:
 	col.add_child(bar(pr.frac, Vector2(0, 12)))
 	var nxt: Dictionary = pr.next
 	col.add_child(_text("已經是最高等級了！" if nxt.is_empty() else "下一級：%s" % nxt.name, 15, UITheme.TEXT_DIM, true))
-	# ---- 藏起來的說明（點 i 才出現）----
-	var more := VBoxContainer.new()
-	more.name = "More"
-	more.visible = false
-	more.add_theme_constant_override("separation", 8)
-	col.add_child(more)
-	more.add_child(HSeparator.new())
-	if not nxt.is_empty():
-		more.add_child(_text("目前 %d 點，Lv.%d 要 %d 點" % [pr.pts, nxt.lv, nxt.need], 14, UITheme.TEXT_DIM, true))
-	var parts := []
-	for it in TODAY:
-		var cap := int(Bond.BOND_CAP[it[0]])
-		parts.append("%s %d／%d" % [it[1], cap - g.bond_left(it[0]), cap])
-	more.add_child(_section("今天"))
-	more.add_child(_text("、".join(parts), 14, UITheme.TEXT))
-	more.add_child(_section("怎麼增加"))
-	more.add_child(_text("答對一題 +1（改對也算）、第一次通過旅程 +5、觀念卡片 +3、今日修煉 +5、每日任務全完成 +5、摸摸頭 +1、聊天 +2。只會增加，不會變少。", 14, UITheme.TEXT))
-	more.add_child(_section("每一級的獎勵"))
-	for l in Bond.BOND_LEVELS:
-		var got := int(l.lv) <= int(pr.lv)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		var lab := Label.new()
-		lab.text = "Lv.%d %s" % [l.lv, l.name]
-		lab.custom_minimum_size = Vector2(150, 0)
-		lab.add_theme_font_override("font", UITheme.bold_font())
-		lab.add_theme_font_size_override("font_size", UITheme.fs(15))
-		lab.add_theme_color_override("font_color", PINK if got else UITheme.TEXT_DIM)
-		row.add_child(lab)
-		var un := _text(String(l.unlock) + ("" if l.ready else "（之後開放）"), 14, UITheme.TEXT if got else UITheme.TEXT_DIM)
-		un.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(un)
-		more.add_child(row)
-	var card := _card_of(col)
-	info.toggled.connect(func(on: bool):
-		more.visible = on
-		if card != null:
-			card.custom_minimum_size.x = 720.0 if on else 460.0
-		g.sfx("click"))
+	# 說明和獎勵：點 i 才從 i 的位置跳出提示框（原本的視窗不變），點提示框外面就收起來
+	info.pressed.connect(func(): tip(layer, info, g, pr))
 	var ok := Button.new()
 	ok.text = "關閉"
 	ok.focus_mode = Control.FOCUS_NONE
@@ -145,12 +107,83 @@ static func detail(host: Node) -> Control:
 	return layer
 
 
-## 視窗的外框（展開說明時加寬）
-static func _card_of(n: Node) -> PanelContainer:
-	var p := n.get_parent()
-	while p != null and not (p is PanelContainer):
-		p = p.get_parent()
-	return p as PanelContainer
+## 「i」的提示框：蓋在整個畫面上一層透明的底（點到就收起來），框從 i 的右下方長出來
+static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
+	var old := layer.find_child("Tip", true, false)
+	if old != null:
+		old.queue_free()
+		return null
+	var back := Control.new()
+	back.name = "Tip"
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	back.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(back)
+	back.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed:
+			back.queue_free())
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	var sb := UITheme.box(Color(0.1, 0.07, 0.2, 0.98), 16, PINK, 2, 16)
+	sb.shadow_color = Color(0, 0, 0, 0.5)
+	sb.shadow_size = 16
+	box.add_theme_stylebox_override("panel", sb)
+	back.add_child(box)
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(sc)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 6)
+	vb.custom_minimum_size = Vector2(500, 0)
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(vb)
+	var nxt: Dictionary = pr.next
+	if not nxt.is_empty():
+		vb.add_child(_text("目前 %d 點，Lv.%d 要 %d 點" % [pr.pts, nxt.lv, nxt.need], 14, UITheme.TEXT_DIM))
+	var parts := []
+	for it in TODAY:
+		var cap := int(Bond.BOND_CAP[it[0]])
+		parts.append("%s %d／%d" % [it[1], cap - g.bond_left(it[0]), cap])
+	vb.add_child(_section("今天"))
+	vb.add_child(_text("、".join(parts), 14, UITheme.TEXT))
+	vb.add_child(_section("怎麼增加"))
+	vb.add_child(_text("答對一題 +1（改對也算）、第一次通過旅程 +5、觀念卡片 +3、今日修煉 +5、每日任務全完成 +5、摸摸頭 +1、聊天 +2。只會增加，不會變少。", 14, UITheme.TEXT))
+	vb.add_child(_section("每一級的獎勵"))
+	for l in Bond.BOND_LEVELS:
+		var got := int(l.lv) <= int(pr.lv)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var lab := Label.new()
+		lab.text = "Lv.%d %s" % [l.lv, l.name]
+		lab.custom_minimum_size = Vector2(140, 0)
+		lab.add_theme_font_override("font", UITheme.bold_font())
+		lab.add_theme_font_size_override("font_size", UITheme.fs(14))
+		lab.add_theme_color_override("font_color", PINK if got else UITheme.TEXT_DIM)
+		row.add_child(lab)
+		var un := _text(String(l.unlock) + ("" if l.ready else "（之後開放）"), 13, UITheme.TEXT if got else UITheme.TEXT_DIM)
+		un.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(un)
+		vb.add_child(row)
+	# 放在 i 的下面、右邊對齊 i；太高就捲動，不超出畫面
+	var place := func() -> void:
+		if not is_instance_valid(box):
+			return
+		var vp := back.get_viewport_rect().size
+		var ar := anchor.get_global_rect()
+		var top := ar.end.y + 10.0
+		var need := vb.get_combined_minimum_size().y
+		sc.custom_minimum_size = Vector2(500, minf(need, vp.y - top - 52.0))
+		box.reset_size()
+		var x := clampf(ar.end.x - box.size.x + 8.0, 12.0, vp.x - box.size.x - 12.0)
+		box.position = Vector2(x, top) - back.get_global_rect().position
+		box.pivot_offset = Vector2(ar.get_center().x - x, 0)
+		box.scale = Vector2(0.85, 0.85)
+		box.modulate.a = 0.0
+		var tw := box.create_tween().set_parallel(true)
+		tw.tween_property(box, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(box, "modulate:a", 1.0, 0.12)
+	place.call_deferred()
+	g.sfx("click")
+	return back
 
 
 ## 粉紅色的進度條

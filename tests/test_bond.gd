@@ -107,12 +107,19 @@ func _initialize() -> void:
 	await wait(0.4)
 	await shot("bond_detail")
 	var info: Button = h._overlay.find_child("Info", true, false)
-	var more: Control = h._overlay.find_child("More", true, false)
-	ok(info != null and more != null and not more.visible, "說明一開始藏起來")
-	info.button_pressed = true
-	await wait(0.4)
-	ok(more.visible, "點 i 展開說明")
-	await shot("bond_detail_more")
+	ok(info != null and h._overlay.find_child("Tip", true, false) == null, "說明一開始藏起來")
+	info.pressed.emit()
+	await wait(0.5)
+	var tipn: Control = h._overlay.find_child("Tip", true, false)
+	ok(tipn != null, "點 i 跳出提示框")
+	await shot("bond_detail_tip")
+	var cl := InputEventMouseButton.new()
+	cl.button_index = MOUSE_BUTTON_LEFT
+	cl.pressed = true
+	cl.position = Vector2(20, 20)
+	tipn.gui_input.emit(cl)
+	await wait(0.2)
+	ok(not is_instance_valid(tipn) and is_instance_valid(h._overlay), "點提示框外面：只收起提示框，視窗還在")
 	finish("BOND")
 
 
