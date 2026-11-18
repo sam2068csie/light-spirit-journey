@@ -2,7 +2,7 @@ extends "res://data/levels/engine/step_level.gd"
 ## 直線與圓（C1～C8）共用的關卡引擎：一步一步推導（step_level.gd）＋下方的坐標方格
 ##
 ## 題目（variant）可以多一個 "plane"：推導紀錄下方畫一塊坐標方格（x、y 同比例，有格線和刻度）
-##   {"x": [−2, 10], "y": [−2, 8], "shapes": [...]}
+##   {"x": [−2, 10], "y": [−2, 8], "axis_names": ["t", "f"]（坐標軸的名字，省略是 x、y）, "shapes": [...]}
 ##   shapes 和終焉之塔的幾何圖一樣（seg、poly、circle、dot、label、angle、right…），多一種 line（整條直線）：
 ##     {"k": "line", "p": [x1, y1], "q": [x2, y2]}（過兩點）或 {"k": "line", "abc": [a, b, c]}（ax + by + c = 0）
 ##   每個圖層都可以寫 "at"：第幾步開始出現（0 = 一開始就有）、"until"：第幾步之後消失
@@ -1711,7 +1711,7 @@ class CoordPlane extends TowerPlot.Plot:
 			var xb := _to(Vector2(wr.end.x, 0))
 			draw_line(xa, xb, ax, 1.5, true)
 			draw_colored_polygon(PackedVector2Array([xb, xb + Vector2(-9, -4.5), xb + Vector2(-9, 4.5)]), ax)
-			draw_string(font, xb + Vector2(-14, -8), "x", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			draw_string(font, xb + Vector2(-14, -8), String(data.get("axis_names", ["x", "y"])[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
 			for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x))):
 				if ix == 0 or ix % tick != 0:
 					continue
@@ -1725,7 +1725,7 @@ class CoordPlane extends TowerPlot.Plot:
 			var yb := _to(Vector2(0, wr.end.y))
 			draw_line(ya, yb, ax, 1.5, true)
 			draw_colored_polygon(PackedVector2Array([yb, yb + Vector2(-4.5, 9), yb + Vector2(4.5, 9)]), ax)
-			draw_string(font, yb + Vector2(8, 14), "y", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			draw_string(font, yb + Vector2(8, 14), String(data.get("axis_names", ["x", "y"])[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
 			for iy in range(int(ceilf(wr.position.y)), int(floorf(wr.end.y))):
 				if iy == 0 or iy % tick != 0:
 					continue

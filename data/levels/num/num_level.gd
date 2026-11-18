@@ -46,6 +46,14 @@ func radicals_ok() -> bool:
 	return false
 
 
+## 每一題重新開始：上一題滑桿的值不要留下來（例如礦石的 t = 60 跑到賽跑去）
+func _start_round() -> void:
+	slide_vals = {}
+	if fview != null and is_instance_valid(fview) and fview is PlaneView and (fview as PlaneView).plane != null:
+		(fview as PlaneView).plane.dyn_vals = {}
+	super()
+
+
 func _ensure_fview() -> void:
 	if fview == null:
 		var v := NumView.new()
@@ -717,7 +725,7 @@ class NumView extends PlaneView:
 	func _big_field() -> bool:
 		for it in rd.get("field", []):
 			if String(it.get("k", "")) in ["pillar", "gems", "fold", "glow", "race", "rule", "meter", "digits", "rope"] \
-					or bool(it.get("stair", false)) or bool(it.get("logticks", false)):
+					or bool(it.get("stair", false)) or bool(it.get("logticks", false)) or bool(it.get("big", false)):
 				return true
 		return false
 

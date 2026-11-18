@@ -44,7 +44,7 @@ const MATH_SYMS := "+−-=<>≤≥≠≈±×÷·()[]|,.:;'%∞"
 const SIDE_PAD := {"·": 0.14}
 ## 這些字母組合是函數名稱，維持正體（數學排版慣例）
 const UPRIGHT_WORDS := ["log", "ln", "lg", "sin", "cos", "tan", "cot", "sec", "csc", "lim", "max", "min", "exp", "mod", "gcd",
-	"pH", "Ct", "dB", "PCR", "Esc", "fps", "ms", "zzz", "II", "III", "IV", "OK", "sub"]   # 單位、縮寫也不斜
+	"pH", "Ct", "dB", "PCR", "Esc", "fps", "ms", "zzz", "II", "III", "IV", "OK", "sub", "mm", "cm", "km"]   # 單位、縮寫也不斜
 const GREEK_VARS := "αβγθλμφω"
 
 static var italic_vars := true   ## false：變數不用斜體
@@ -198,6 +198,13 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				out.append({"ch": "", "frac": {"num": num, "den": den}, "scale": scale, "dy": dy,
 					"color": colors.back(), "glue": glue, "rads": rads})
 			continue
+		# 正體（單位）：\rm{m}，單獨一個 m 也不寫成斜體的變數
+		if c == "\\" and s.substr(i, 4) == "\\rm{":
+			var r0 := out.size()
+			i = _parse_into(s, i + 4, scale, dy, colors, out, glue, true, rads)
+			for k in range(r0, out.size()):
+				out[k]["rm"] = true
+			continue
 		# 線段的上橫線：\ol{AB}、弧：\arc{AB}（用根號的機制，只畫上面那條槓或弧線、不畫勾）
 		if c == "\\" and (s.substr(i, 4) == "\\ol{" or s.substr(i, 5) == "\\arc{"):
 			var is_arc := s.substr(i, 5) == "\\arc{"
@@ -259,6 +266,10 @@ static func _mark_italic(arr: Array) -> void:
 			_mark_italic(ch.frac.den)
 			i += 1
 			continue
+		if ch.get("rm", false):
+			ch["mf"] = 1
+			i += 1
+			continue
 		if not _is_letter(ch.ch):
 			var cc: String = ch.ch
 			if cc.length() == 1 and ((cc >= "0" and cc <= "9") or MATH_SYMS.contains(cc)) and not ch.has("rad"):
@@ -269,7 +280,7 @@ static func _mark_italic(arr: Array) -> void:
 			continue
 		var j := i
 		var word := ""
-		while j < arr.size() and _is_letter(arr[j].ch) and arr[j].scale == ch.scale and arr[j].dy == ch.dy:
+		while j < arr.size() and _is_letter(arr[j].ch) and arr[j].scale == ch.scale and arr[j].dy == ch.dy and not arr[j].get("rm", false):
 			word += arr[j].ch
 			j += 1
 		var greek := GREEK_VARS.contains(word.substr(0, 1))

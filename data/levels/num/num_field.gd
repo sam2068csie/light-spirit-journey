@@ -378,12 +378,16 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(x1 + 14, y), Vector2(x1 + 4, y - 6), Vector2(x1 + 4, y + 6)]), Color(1, 0.95, 0.85, 0.75))
 	# 刻度
 	if bool(it.get("logticks", false)):
-		# 對數尺：位置是 log k，標的是 k（1、2、3…10）
-		for k in range(1, 11):
+		# 對數尺：位置是 log k，標的是 k（1、2、3…10）。右邊越來越擠：從 10 往左寫，太近的就只畫刻度、不寫數字
+		var last_x := INF
+		for k in range(10, 0, -1):
 			var px: float = sx.call(log(float(k)) / log(10.0))
 			draw_line(Vector2(px, y - 6), Vector2(px, y + 6), Color(1, 0.95, 0.85, 0.55), 1.5)
 			var lab := str(k)
 			var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14)).x
+			if px + w / 2.0 + 4.0 > last_x and k != 1:
+				continue
+			last_x = px - w / 2.0     # 這個數字的左邊緣
 			_pt(font, Vector2(px - w / 2.0, y + 22), lab, UITheme.fs(14), Color(1, 0.95, 0.85, 0.6))
 	elif bool(it.get("stair", false)):
 		# 十倍石階：刻度寫真數（10 的 n 次方）
@@ -401,6 +405,8 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 			if px >= x0 - 1.0 and px <= x1 + 1.0:
 				draw_line(Vector2(px, y - 6), Vector2(px, y + 6), Color(1, 0.95, 0.85, 0.5), 1.5)
 				var lab := _fmt(v, stp)
+				if lab.contains("."):
+					lab = lab.rstrip("0").trim_suffix(".")     # 0.0、1.0 寫成 0、1
 				var w := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(13)).x
 				_pt(font, Vector2(px - w / 2.0, y + 22), lab, UITheme.fs(13), Color(1, 0.95, 0.85, 0.5))
 			v += stp
@@ -1860,6 +1866,15 @@ func _draw_ladder(i: int, it: Dictionary, r: Rect2) -> void:
 	var fs := UITheme.fs(15)
 	var top_lit := -1
 	var hits := []
+	# 點階梯的時候：下一個要算的那一階（還是 ?、最早會知道的）發金光，看得出要算誰
+	var target := -1
+	if mode == "rung":
+		var best := 1 << 30
+		for k in n:
+			var at := int(rungs[k].get("at", 0))
+			if at > st and at < best:
+				best = at
+				target = k
 	for k in n:
 		var rg: Dictionary = rungs[k]
 		var y := bottom - (k + 0.5) * sp
@@ -1867,6 +1882,8 @@ func _draw_ladder(i: int, it: Dictionary, r: Rect2) -> void:
 		if lit:
 			top_lit = k
 		var c := Color(1, 0.95, 0.85) if lit else Color(1, 1, 1, 0.45)
+		if k == target:
+			c = Color(1, 0.85, 0.35, 0.75 + 0.25 * sin(t * 4.0))
 		var right := k % 2 == 0
 		var txt := String(rg.s) + " = " + (String(rg.v) if lit else "?")
 		var tw := MathLabel.text_width(font, txt, fs)
@@ -2020,17 +2037,18 @@ func _draw_pillar(i: int, it: Dictionary, r: Rect2) -> void:
 				lo = minf(lo, cum)
 				hi = maxf(hi, cum)
 		if not sk.is_empty() and String(sk.col) == String(cn):
+			# 湊積木：範圍是最大的那一塊的 2.5 倍（0.4、0.15 這種小數的積木才看得清楚）
 			var mx := 0.0
 			for b in sk.blocks:
-				mx += absf(float(b[1])) * int(sk.get("max", 4))
-			lo = minf(lo, -mx * 0.5)
-			hi = maxf(hi, mx * 0.5)
+				mx = maxf(mx, absf(float(b[1])))
+			lo = minf(lo, -mx * 2.5)
+			hi = maxf(hi, mx * 2.5)
 			lo = minf(lo, float(sk.goal))
 			hi = maxf(hi, float(sk.goal))
 	var has_tray := show_tray or (not sk.is_empty() and mode == "stack")
 	var top := r.position.y + (tray_h + 34.0 if has_tray else 30.0)
 	var bot := r.end.y - 30.0
-	var u := minf(40.0, (bot - top) / maxf(hi - lo, 0.5))
+	var u := minf(40.0 if sk.is_empty() else 160.0, (bot - top) / maxf(hi - lo, 0.5 if sk.is_empty() else 0.1))
 	var y0 := top + hi * u
 	var n := cols.size()
 	var cw := 46.0
@@ -2090,7 +2108,8 @@ func _draw_pillar(i: int, it: Dictionary, r: Rect2) -> void:
 		var inner := maxf(cw - 8.0, 14.0 * nseg)
 		var sw := inner / nseg
 		var x_in := cx - inner / 2.0
-		var used := []      # 已經寫了標籤的高度範圍（避免疊在一起）
+		var used := [[], []]   # 右邊、左邊已經寫了標籤的高度範圍（避免疊在一起）
+		var nlab := 0
 		for q in segs.size():
 			var sg: Array = segs[q]
 			var ya := y0 - float(sg[0]) * u
@@ -2102,8 +2121,8 @@ func _draw_pillar(i: int, it: Dictionary, r: Rect2) -> void:
 			_box(rc, "pseg%d_%d" % [ci, q])
 			if q > 0:
 				draw_line(Vector2(rc.position.x - 2.0, ya), Vector2(rc.position.x, ya), Color(col.r, col.g, col.b, 0.8), 1.0)
-			# 一段夠高、旁邊又沒有別的標籤，才寫它是幾次方（寫在柱子右邊）
-			if absf(yb - ya) < 20.0:
+			# 一段夠高、旁邊又沒有別的標籤，才寫它是幾次方（右邊、左邊輪流寫，比較不會擠掉）
+			if absf(yb - ya) < (12.0 if sg[2] < 0 else 20.0):
 				continue
 			var lab := ""
 			if int(sg[2]) >= 0:
@@ -2112,22 +2131,32 @@ func _draw_pillar(i: int, it: Dictionary, r: Rect2) -> void:
 				if c.has("key") and _step() < int(c.key):
 					lab = "?"
 			else:
-				lab = String(sg[3])
+				lab = ("−" if float(sg[1]) < float(sg[0]) else "+") + String(sg[3])
 			if lab == "":
 				continue
 			var ext := MathLabel.line_extent(lab, UITheme.fs(13))
 			var ly := (ya + yb) / 2.0
 			var lo_y := ly - (ext.x + ext.y) / 2.0 - 2.0
 			var hi_y := ly + (ext.x + ext.y) / 2.0 + 2.0
-			var clash := false
-			for ur in used:
-				if lo_y < float(ur[1]) and hi_y > float(ur[0]):
-					clash = true
-			if clash:
+			var side := -1
+			for cand in [nlab % 2, 1 - nlab % 2]:
+				var clash := false
+				for ur in used[cand]:
+					if lo_y < float(ur[1]) and hi_y > float(ur[0]):
+						clash = true
+				if not clash:
+					side = cand
+					break
+			if side < 0:
 				continue
-			used.append([lo_y, hi_y])
-			_mt(font, x_in + inner + 6.0 + MathLabel.text_width(font, lab, UITheme.fs(13)) / 2.0,
-				ly + (ext.x - ext.y) / 2.0, lab, UITheme.fs(13), Color(col.r, col.g, col.b, 0.95))
+			nlab += 1
+			used[side].append([lo_y, hi_y])
+			var lw := MathLabel.text_width(font, lab, UITheme.fs(13))
+			var lx := x_in + inner + 6.0 + lw / 2.0 if side == 0 else x_in - 6.0 - lw / 2.0
+			# 標籤和那一段之間畫一小段線，看得出是哪一段
+			var sx := rc.end.x if side == 0 else rc.position.x
+			draw_line(Vector2(sx, ly), Vector2(x_in + inner + 3.0 if side == 0 else x_in - 3.0, ly), Color(col.r, col.g, col.b, 0.5), 1.0)
+			_mt(font, lx, ly + (ext.x - ext.y) / 2.0, lab, UITheme.fs(13), Color(col.r, col.g, col.b, 0.95))
 		# 柱子名字（質數）寫在最下面，總高度寫在柱頂
 		_mt(font, cx, bot + 22.0, cn, UITheme.fs(17), col)
 		if any and all_on:
@@ -2211,6 +2240,17 @@ func _draw_gems(i: int, it: Dictionary, r: Rect2) -> void:
 		toks.append(k)
 		if k < parts.size() - 1:
 			toks.append(-1 - k)
+	# 原野很大：放得下就用大一點的字和寶石（一排放得下為準）
+	for cand in [30, 26, 23]:
+		var w0 := 0.0
+		for tk in toks:
+			w0 += (cand * 1.45 if tk < 0 else MathLabel.text_width(font, String(parts[tk]), UITheme.fs(cand))) + cand * 0.3
+		if w0 <= r.size.x - 20.0:
+			fs = UITheme.fs(cand)
+			gw = cand * 1.45
+			sp = cand * 0.3
+			break
+	_gem_r = clampf(gw * 0.5, 15.0, 22.0)
 	var tw := func(tk: int) -> float:
 		return gw if tk < 0 else MathLabel.text_width(font, String(parts[tk]), fs)
 	var total := 0.0
@@ -2262,6 +2302,9 @@ func _draw_gems(i: int, it: Dictionary, r: Rect2) -> void:
 	_geo[i] = {"gems": hits}
 
 
+var _gem_r := 15.0     # 寶石的大小（_draw_gems 依字的大小決定）
+
+
 func _draw_gem(font: Font, k: int, p: Vector2, it: Dictionary, done: bool, t: float, hits: Array) -> float:
 	var bad := done and k == int(it.get("bad", -1))
 	var c := Color(0.55, 0.85, 1.0)
@@ -2271,14 +2314,15 @@ func _draw_gem(font: Font, k: int, p: Vector2, it: Dictionary, done: bool, t: fl
 		c = COLS.bad
 	if gem_bad.has(k) and t - float(gem_bad[k]) < 0.8:
 		p.x += sin((t - float(gem_bad[k])) * 40.0) * 3.0
-	var s := 15.0
+	var s := _gem_r
 	var dia := PackedVector2Array([p + Vector2(0, -s), p + Vector2(s, 0), p + Vector2(0, s), p + Vector2(-s, 0)])
 	draw_colored_polygon(dia, Color(c.r, c.g, c.b, 0.22))
 	dia.append(dia[0])
 	draw_polyline(dia, c, 2.0, true)
 	var lab := "≠" if bad else "="
-	var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(18)).x
-	_pt(font, Vector2(p.x - tw / 2.0, p.y + 7.0), lab, UITheme.fs(18), c, "gem%d" % k)
+	var gfs := UITheme.fs(int(clampf(s * 1.2, 18, 26)))
+	var tw := font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, gfs).x
+	_pt(font, Vector2(p.x - tw / 2.0, p.y + gfs * 0.38), lab, gfs, c, "gem%d" % k)
 	var rc := Rect2(p - Vector2(s, s), Vector2(2 * s, 2 * s))
 	_box(rc, "gem%d" % k)
 	if bad:
@@ -2318,7 +2362,7 @@ func _draw_fold(i: int, it: Dictionary, r: Rect2) -> void:
 		return yb - (log(maxf(m, 1e-12)) / log(10.0) - l0) / (l1 - l0) * (yb - yt)
 	# 刻度：1 mm、1 m、1 km、10^{3} km…（左邊）
 	draw_line(Vector2(ax, yb), Vector2(ax, yt), Color(1, 1, 1, 0.35), 1.5)
-	var ticks := [[1e-3, "1 mm"], [1.0, "1 m"], [1e3, "1 km"], [1e6, "10^{3} km"], [1e9, "10^{6} km"]]
+	var ticks := [[1e-3, "1 mm"], [1.0, "1 \\rm{m}"], [1e3, "1 km"], [1e6, "10^{3} km"], [1e9, "10^{6} km"]]
 	for tk in ticks:
 		var m := float(tk[0])
 		if m > top_m * 3.0:
@@ -2344,7 +2388,7 @@ func _draw_fold(i: int, it: Dictionary, r: Rect2) -> void:
 	if guess >= 0.0 and _step() > int(it.get("gat", -1)):
 		var gy: float = ly.call(t0 * pow(2.0, guess))
 		draw_dashed_line(Vector2(bx - 12.0, gy), Vector2(bx + bw + 12.0, gy), Color(0.8, 0.6, 1.0, 0.9), 2.0, 5.0)
-		_mt(font, bx - 30.0, gy + 5.0, "?" + str(int(guess)), UITheme.fs(13), Color(0.8, 0.6, 1.0))
+		_mt(font, bx - 30.0, gy + 5.0, str(int(guess)), UITheme.fs(13), Color(0.8, 0.6, 1.0))
 	# 地標（由低到高；太靠近的往上錯開，用虛線接回真正的高度）
 	var mx := bx + bw + 60.0
 	var last_y := INF
@@ -2481,7 +2525,7 @@ func _draw_rope_e3(i: int, it: Dictionary, r: Rect2) -> void:
 			_st[i] = stt
 		g = float(stt.get("g", -1.0))
 		if g >= 0.0:
-			ropes.append([g, "", "?" + str(int(g)), Color(0.8, 0.6, 1.0), false])
+			ropes.append([g, "", str(int(g)), Color(0.8, 0.6, 1.0), false])
 		if st >= int(it.get("at", 99)):
 			ropes.append([float(it.n), "", str(int(it.n)), COLS.gold, false])
 	var lmax := maxf(goal, 1.0)
@@ -2536,6 +2580,11 @@ func _draw_glow(i: int, it: Dictionary, r: Rect2) -> void:
 	var font := get_theme_default_font()
 	var t := _t()
 	var tv := _slide_val(String(it.get("t", "t")), 0.0)
+	# "show": {"2": 30, …}：第 2 步（判斷「30 年後」）時，礦石換成 30 年的樣子
+	var shw: Dictionary = it.get("show", {})
+	var judging := shw.has(str(_step()))
+	if judging:
+		tv = float(shw[str(_step())])     # 判斷的時候只看亮度，不寫 2 的幾次方（不然答案就寫在圖上了）
 	var rocks: Array = it.get("rocks", [])
 	var n := rocks.size()
 	var exps := []
@@ -2561,7 +2610,11 @@ func _draw_glow(i: int, it: Dictionary, r: Rect2) -> void:
 		_mt(font, cx, cy + 6.0, String(rk.s), UITheme.fs(18), Color(0.1, 0.1, 0.15), "rock%d" % k)
 		var es := _expo(e)
 		var lab := ("2^{%s}" % es) if es != "" else "%.3f" % pow(2.0, e)
+		if judging:
+			lab = "?"
 		_mt(font, cx, cy + 66.0, lab, UITheme.fs(17), Color(col.r, col.g, col.b))
+	# 現在是第幾年（拖完之後的判斷題，看得出這是 t = 60 那一刻）
+	_mt(font, r.get_center().x, r.position.y + 26.0, "t = %s" % ("%.1f" % tv).trim_suffix(".0"), UITheme.fs(16), Color(1, 0.95, 0.8, 0.8))
 	if same:
 		var a := Vector2(r.position.x + r.size.x * 0.25 + 46.0, cy)
 		var b := Vector2(r.position.x + r.size.x * 0.75 - 46.0, cy)
@@ -2764,7 +2817,12 @@ func _draw_meter(i: int, it: Dictionary, r: Rect2) -> void:
 	var e := coef * (v - ref)
 	if bool(it.get("flip", false)):
 		e = -e      # 右邊比較小：寫左邊是右邊的幾倍
-	var es := ("%.2f" % e).rstrip("0").rstrip(".").replace("-", "−")
-	_mt(font, r.get_center().x, cy - maxr - 6.0 if cy - maxr - 6.0 > r.position.y + 18.0 else r.position.y + 20.0,
-		"× 10^{%s}" % es, UITheme.fs(20), Color(1, 0.95, 0.8))
+	var es := ("%.2f" % e).rstrip("0").rstrip(".")
+	if es == "-0" or es == "":
+		es = "0"
+	es = es.replace("-", "−")
+	# "label_at"：第幾步之後才寫倍數（要學生自己算倍數的題目，先不寫出來）
+	if _step() >= int(it.get("label_at", 0)):
+		_mt(font, r.get_center().x, cy - maxr - 6.0 if cy - maxr - 6.0 > r.position.y + 18.0 else r.position.y + 20.0,
+			"× 10^{%s}" % es, UITheme.fs(20), Color(1, 0.95, 0.8))
 	_geo[i] = {}

@@ -70,8 +70,8 @@ static func _shuffle3(ans: String, w1: String, w2: String) -> Dictionary:
 
 ## 尾數（兩位小數）：離格線至少 0.02
 static func _mant(d: int) -> float:
-	var lo: float = LOGD[d] + 0.02
-	var hi: float = LOGD[d + 1] - 0.02
+	var lo: float = LOGD[d] + 0.025
+	var hi: float = LOGD[d + 1] - 0.025
 	var m := snappedf(randf_range(lo, hi), 0.01)
 	return clampf(m, snappedf(lo + 0.005, 0.01), snappedf(hi - 0.005, 0.01))
 
@@ -82,7 +82,7 @@ static func _ms(v: float) -> String:
 
 ## 速算題：
 ##   digits  log x = n.ab ⇒ 幾位數（n + 1、n、n + 2）；log x = −n.ab ⇒ 小數點後第幾位開始不是 0（n + 1、n、n + 2）
-##   lead    log x = n.ab ⇒ 最高位數字（d、d + 1、d − 1；d = 1 時 2、3）
+##   lead    log x = n.ab ⇒ 最高位數字（d、d + 1、d − 1；d = 1 時 2、3；d 只出 1～6，尾數離格線至少 0.025）
 static func gen_problems(kind: String, n: int) -> Array:
 	var out := []
 	var seen := {}
@@ -110,7 +110,8 @@ static func gen_problems(kind: String, n: int) -> Array:
 				w2 = str(ch + 2)
 			pb["tag"] = BankE3.T_DIG
 		else:
-			var d := randi_range(1, 9)
+			# 最高位 1～6：格子夠寬，心算 log 2、log 3、log 5 就分得出來（7、8、9 的格子太窄，速算不公平）
+			var d := randi_range(1, 6)
 			var mm := _mant(d)
 			pb = {"eq": "log x = %s，最高位數字？" % _ms(ch + mm), "nudge": "尾數 %s 在 log %d 和 log %d 之間。" % [_ms(mm), d, d + 1]}
 			ans = str(d)
