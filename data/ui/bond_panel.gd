@@ -44,7 +44,7 @@ static func levelup(host: Node, lv: int) -> Control:
 	col.add_child(title)
 	col.add_child(_text("「%s」" % LV_LINES.get(lv, "謝謝你陪著我！"), 18, UITheme.TEXT, true))
 	var un := String(info.unlock)
-	col.add_child(_text(("解鎖：" + un) if info.ready else ("下一次更新開放：" + un), 16, Color("ffd36e") if info.ready else UITheme.TEXT_DIM, true))
+	col.add_child(_text(("解鎖　" + un) if info.ready else ("解鎖　%s（未開放）" % un), 16, Color("ffd36e") if info.ready else UITheme.TEXT_DIM, true))
 	var ok := Button.new()
 	ok.text = "好耶！"
 	ok.focus_mode = Control.FOCUS_NONE
@@ -73,7 +73,7 @@ static func detail(host: Node) -> Control:
 	var info := Button.new()
 	info.name = "Info"
 	info.text = "i"
-	info.tooltip_text = "親密度怎麼增加、每一級的獎勵"
+	info.tooltip_text = "增加方式、等級獎勵"
 	info.focus_mode = Control.FOCUS_NONE
 	info.custom_minimum_size = Vector2(38, 38)
 	info.add_theme_font_override("font", UITheme.bold_font())
@@ -94,7 +94,7 @@ static func detail(host: Node) -> Control:
 	col.add_child(title)
 	col.add_child(bar(pr.frac, Vector2(0, 12)))
 	var nxt: Dictionary = pr.next
-	col.add_child(_text("已經是最高等級了！" if nxt.is_empty() else "下一級：%s" % nxt.name, 15, UITheme.TEXT_DIM, true))
+	col.add_child(_text("已達最高等級" if nxt.is_empty() else "下一級　%s" % nxt.name, 15, UITheme.TEXT_DIM, true))
 	# 說明和獎勵：點 i 才從 i 的位置跳出提示框（原本的視窗不變），點提示框外面就收起來
 	info.pressed.connect(func(): tip(layer, info, g, pr))
 	var ok := Button.new()
@@ -139,8 +139,8 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 	sc.add_child(vb)
 	var nxt: Dictionary = pr.next
 	if not nxt.is_empty():
-		vb.add_child(_text("目前 %d 點，Lv.%d 要 %d 點" % [pr.pts, nxt.lv, nxt.need], 14, UITheme.TEXT_DIM))
-	vb.add_child(_section("怎麼增加（右邊是今天的次數）"))
+		vb.add_child(_text("親密度　%d／%d" % [pr.pts, nxt.need], 14, UITheme.TEXT_DIM))
+	vb.add_child(_section("增加方式（今日次數）"))
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 18)
@@ -163,7 +163,7 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 		var cl := _text(cnt, 14, UITheme.TEXT_DIM)
 		cl.autowrap_mode = TextServer.AUTOWRAP_OFF
 		grid.add_child(cl)
-	vb.add_child(_section("每一級的獎勵"))
+	vb.add_child(_section("等級獎勵"))
 	for l in Bond.BOND_LEVELS:
 		var got := int(l.lv) <= int(pr.lv)
 		var row := HBoxContainer.new()
@@ -175,7 +175,7 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 		lab.add_theme_font_size_override("font_size", UITheme.fs(14))
 		lab.add_theme_color_override("font_color", PINK if got else UITheme.TEXT_DIM)
 		row.add_child(lab)
-		var un := _text(String(l.unlock) + ("" if l.ready else "（之後開放）"), 13, UITheme.TEXT if got else UITheme.TEXT_DIM)
+		var un := _text(String(l.unlock) + ("" if l.ready else "（未開放）"), 13, UITheme.TEXT if got else UITheme.TEXT_DIM)
 		un.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(un)
 		vb.add_child(row)

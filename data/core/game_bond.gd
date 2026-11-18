@@ -7,16 +7,16 @@ extends "res://data/core/game_economy.gd"
 
 ## 10 級：累計多少點、名稱（暫定，世界觀定了再改）、解鎖什麼（ready：這一期做好了沒）
 const BOND_LEVELS := [
-	{"lv": 1, "need": 0, "name": "初識", "unlock": "小屋裡可以摸摸光靈、和它聊天", "ready": true},
-	{"lv": 2, "need": 40, "name": "打招呼", "unlock": "主畫面的光靈會對你冒小愛心", "ready": true},
-	{"lv": 3, "need": 120, "name": "熟悉", "unlock": "新表情：害羞", "ready": true},
-	{"lv": 4, "need": 250, "name": "好朋友", "unlock": "限定頭飾「友誼之星」、家具「光靈的小床」", "ready": true},
-	{"lv": 5, "need": 450, "name": "陪讀夥伴", "unlock": "幫光靈取暱稱叫你", "ready": false},
-	{"lv": 6, "need": 700, "name": "默契", "unlock": "教光靈：每天一題", "ready": false},
+	{"lv": 1, "need": 0, "name": "初識", "unlock": "小屋互動：摸摸頭、聊天", "ready": true},
+	{"lv": 2, "need": 40, "name": "打招呼", "unlock": "主畫面愛心特效", "ready": true},
+	{"lv": 3, "need": 120, "name": "熟悉", "unlock": "表情「害羞」", "ready": true},
+	{"lv": 4, "need": 250, "name": "好朋友", "unlock": "頭飾「友誼之星」、家具「光靈的小床」", "ready": true},
+	{"lv": 5, "need": 450, "name": "陪讀夥伴", "unlock": "自訂暱稱", "ready": false},
+	{"lv": 6, "need": 700, "name": "默契", "unlock": "小屋互動：教光靈", "ready": false},
 	{"lv": 7, "need": 1000, "name": "心有靈犀", "unlock": "簽到守護上限 +1", "ready": true},
 	{"lv": 8, "need": 1400, "name": "知己", "unlock": "限定光環", "ready": false},
-	{"lv": 9, "need": 1900, "name": "羈絆", "unlock": "光靈長大：光暈變大", "ready": false},
-	{"lv": 10, "need": 2500, "name": "永恆之光", "unlock": "限定拖尾、稱號", "ready": false},
+	{"lv": 9, "need": 1900, "name": "羈絆", "unlock": "光靈外觀進化", "ready": false},
+	{"lv": 10, "need": 2500, "name": "永恆之光", "unlock": "拖尾特效、稱號", "ready": false},
 ]
 
 ## 每一種行為給多少親密度
