@@ -46,6 +46,11 @@ func radicals_ok() -> bool:
 	return false
 
 
+## 排序題的按鈕打亂，不會剛好是答案的順序（數與式、指數的關卡都用這個底層）
+func shuffle_order() -> bool:
+	return true
+
+
 ## 每一題重新開始：上一題滑桿的值不要留下來（例如礦石的 t = 60 跑到賽跑去）
 func _start_round() -> void:
 	slide_vals = {}

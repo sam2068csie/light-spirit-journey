@@ -1166,6 +1166,11 @@ var order_undo: Button
 var order_reset: Button
 
 
+## 排序題的按鈕要不要打亂（子類別覆寫）
+func shuffle_order() -> bool:
+	return false
+
+
 func _build_order(st: Dictionary) -> void:
 	go_btn.text = "確認順序"
 	order_seq = []
@@ -1189,10 +1194,11 @@ func _build_order(st: Dictionary) -> void:
 	grid.add_theme_constant_override("v_separation", 8)
 	rank_box.add_child(grid)
 	# 按鈕的位置打亂，而且不能剛好是答案的順序（題庫裡常常照答案的順序寫）
+	# 只有 shuffle_order() 是 true 的關卡才打亂（數與式、指數；已經上線的直線與圓維持原樣）
 	var shown: Array = range(st.items.size())
 	var answer: Array = range(st.items.size())
 	answer.sort_custom(func(a, b): return float(st.items[a].v) < float(st.items[b].v))
-	if shown.size() > 1:
+	if shown.size() > 1 and shuffle_order():
 		for _k in 20:
 			shown.shuffle()
 			if shown != answer:

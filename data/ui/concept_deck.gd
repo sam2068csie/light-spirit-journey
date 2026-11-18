@@ -616,7 +616,7 @@ func _build_card(inner0: VBoxContainer, cd: Dictionary) -> void:
 	var fs: Array = cd.get("formulas", [])
 	var short := true
 	for f in fs:
-		if _text_w(_full(f, color), 21) > (wmax - 40) / 2.0:
+		if _line_w(f, 21) > (wmax - 40) / 2.0 - 24.0:
 			short = false
 	var fgrid := GridContainer.new()
 	fgrid.columns = 2 if short and fs.size() > 1 else 1
@@ -631,7 +631,7 @@ func _build_card(inner0: VBoxContainer, cd: Dictionary) -> void:
 		fp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var fw := (wmax - 40) / (2.0 if fgrid.columns == 2 else 1.0)
 		var fsz := 21
-		while fsz > 15 and _text_w(_full(f, color), fsz) > fw - 24.0:
+		while fsz > 15 and _line_w(f, fsz) > fw - 24.0:
 			fsz -= 1
 		fp.add_child(_line(f, fsz, true, fw - 20.0, Color(1, 0.96, 0.85)))
 		fgrid.add_child(fp)
@@ -1348,6 +1348,16 @@ static func _full(m: String, c: Color) -> String:
 
 func _text_w(markup: String, fs: int) -> float:
 	return MathLabel.text_width(get_theme_default_font(), markup, UITheme.fs(fs))
+
+
+## 一行（含空格）排出來的寬度：空格至少 96 寬（ConceptSlot），段落之間隔 6
+func _line_w(m: String, fs: int) -> float:
+	var w := 0.0
+	var segs := _parse(m)
+	for sg in segs:
+		var tw := _text_w(_hl(String(sg.t), color), fs)
+		w += maxf(96.0, tw + 20.0) if sg.h else tw
+	return w + 6.0 * maxf(0.0, segs.size() - 1.0)
 
 
 

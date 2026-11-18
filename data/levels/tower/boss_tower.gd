@@ -2135,7 +2135,10 @@ class Plot extends Control:
 				if String(sh.get("s", "")) != "":
 					_label(font, sp, String(sh.s), sh.get("off", [8, -8]), dc)
 			"label":
-				_label(font, tr.call(sh.p), String(sh.s), sh.get("off", [0, 0]), _col(String(sh.get("c", "text"))), true)
+				if bool(sh.get("math", false)):     # "math": true：當成數學排版（變數是斜體，和分數的標籤一致）
+					_math_label(font, tr.call(sh.p), String(sh.s), sh.get("off", [0, 0]), _col(String(sh.get("c", "text"))), true, UITheme.fs(15))
+				else:
+					_label(font, tr.call(sh.p), String(sh.s), sh.get("off", [0, 0]), _col(String(sh.get("c", "text"))), true)
 			"angle":
 				# 角的小弧（像素半徑）
 				var cp: Vector2 = tr.call(sh.o)
@@ -2176,9 +2179,43 @@ class Plot extends Control:
 				return q
 		return first
 
+	## 有排版的標籤（\frac{x}{y} = 2 這種）：用 MathLabel 畫，位置和一般標籤一樣（off 是左邊的基線，center 是以那一點為中心），
+	## 會壓到已經畫好的字就往下、往上、往另一邊挪；後面墊一塊深色的底，和一般標籤的描邊一樣好讀
+	func _math_label(font: Font, sp: Vector2, s: String, off, c: Color, center: bool, fs: int) -> void:
+		var b0 := InkR.math_box(font, 0.0, 0.0, s, fs)      # 中心 0、基線 0 時的範圍
+		var w := b0.size.x
+		var h := b0.size.y
+		var cx0 := sp.x + float(off[0]) + (0.0 if center else w / 2.0)
+		var base0 := sp.y + float(off[1]) + (fs * 0.32 if center else 0.0)
+		var cands := [Vector2(cx0, base0), Vector2(cx0, base0 + h), Vector2(cx0, base0 - h),
+			Vector2(2.0 * sp.x - cx0, base0), Vector2(2.0 * sp.x - cx0, base0 + h), Vector2(2.0 * sp.x - cx0, base0 - h)]
+		var pick := Vector2.INF
+		for q0 in cands:
+			var q: Vector2 = q0
+			q.x = clampf(q.x, w / 2.0 + 2.0, size.x - w / 2.0 - 2.0)
+			q.y = clampf(q.y, -b0.position.y + 2.0, size.y - (b0.end.y) - 2.0)
+			if pick == Vector2.INF:
+				pick = q
+			var box := InkR.math_box(font, q.x, q.y, s, fs)
+			var hit := false
+			for e in ink:
+				if not e.shape and (e.r as Rect2).grow(-1.0).intersects(box.grow(-1.0)):
+					hit = true
+					break
+			if not hit:
+				pick = q
+				break
+		var box := InkR.math_box(font, pick.x, pick.y, s, fs)
+		draw_rect(box.grow(2.0), Color(0.04, 0.05, 0.12, 0.75))
+		MathLabel.draw_on(self, font, pick.x, pick.y, s, fs, c)
+		InkR.add_text(ink, box, s, c)
+
 	## 文字（center：以那一點為中心）
 	func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) -> void:
 		var fs := UITheme.fs(15)
+		if s.contains("\\") or s.contains("^{") or s.contains("_{"):
+			_math_label(font, sp, s, off, c, center, fs)
+			return
 		var sz := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		var tp := sp + Vector2(float(off[0]), float(off[1]))
 		if center:

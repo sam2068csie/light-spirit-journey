@@ -42,6 +42,9 @@ func _check_content() -> void:
 					for sg in Deck._parse(m):
 						if sg.h:
 							answers.append(String(sg.t))
+						# 空格會把一行切成好幾段分開畫：空格不能放在 \frac{…}、^{…}、√{…} 裡面（括號會被切斷）
+						var t := String(sg.t)
+						ok(t.count("{") == t.count("}"), "%s：空格放在 {…} 裡面，畫不出來：%s" % [where, m])
 				ok(answers.size() >= 1, "%s：沒有空格" % where)
 				for d in decoys:
 					ok(not answers.has(d), "%s：干擾積木「%s」剛好是答案" % [where, d])
