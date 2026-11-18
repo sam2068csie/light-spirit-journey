@@ -271,6 +271,7 @@ func _complete(i: int) -> void:
 		return
 	g.concepts[_key(i)] = true
 	g.inv["dust"] = int(g.inv.get("dust", 0)) + REWARD
+	g.bond_gain("card")      # 親密度 +3（第一次完成才有，和星塵一樣）
 	g.save_review()
 	g.sfx("success")
 	if _feedback != null:

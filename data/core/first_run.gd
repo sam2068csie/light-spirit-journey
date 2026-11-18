@@ -5,16 +5,18 @@ extends RefCounted
 ## 主畫面（main_menu.gd），一次只跳一個：
 ##   1. grade   第一次打開：選身分（高一／高二）。選完接著選段考範圍，再直接進那個年級的大地圖
 ##   2. signin  今天第一次打開：連續簽到
-##   3. notify  玩過一段之後回到主畫面：問要不要讓光靈提醒（手機版、只問一次）
+##   3. bond    光靈的親密度升級了，還沒播升級畫面
+##   4. notify  玩過一段之後回到主畫面：問要不要讓光靈提醒（手機版、只問一次）
 ##
 ## 大地圖（world_base.gd），一步做完再問下一步：
 ##   1. prologue  第一次打開這張地圖：序章＋操作教學（教學在跑，這一趟就到這裡）
 ##   2. souvenir  點亮一個單元之後：紀念品小劇情（可能連續好幾段）
-##   3. exam      這學期還沒選過段考範圍（換學期了、或是舊存檔）
+##   3. bond      光靈的親密度升級了，還沒播升級畫面（解題回來時最常在這裡跳）
+##   4. exam      這學期還沒選過段考範圍（換學期了、或是舊存檔）
 const WS := preload("res://data/maps/world_story.gd")
 
-const MENU_STEPS := ["grade", "signin", "notify"]
-const MAP_STEPS := ["prologue", "souvenir", "exam"]
+const MENU_STEPS := ["grade", "signin", "bond", "notify"]
+const MAP_STEPS := ["prologue", "souvenir", "bond", "exam"]
 
 
 ## 主畫面現在該跳哪一個（"" = 都不用）。args = 這次進主畫面帶的參數
@@ -26,6 +28,8 @@ static func menu_step(g, args: Dictionary) -> String:
 	# 剛結算完（攀登結果、修煉總結）先讓他看結果，不疊簽到
 	if not args.has("tower_result") and not args.has("summary") and g.streak_should_popup():
 		return "signin"
+	if not args.has("tower_result") and not args.has("summary") and g.bond_lvup_pending() > 0:
+		return "bond"
 	if not g.notify_asked and g.notifier.available() and not g.stars.is_empty():
 		return "notify"
 	return ""
@@ -37,6 +41,8 @@ static func map_step(g, world_key: String, grade: String) -> String:
 		return "prologue"
 	if WS.pending_souvenir(g, grade) != "":
 		return "souvenir"
+	if g.bond_lvup_pending() > 0:
+		return "bond"
 	if WS.needs_exam_pick(g, WS.my_grade(g, grade)):
 		return "exam"
 	return ""

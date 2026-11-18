@@ -1,7 +1,8 @@
 extends Node
 ## 遊戲管家（第 1 層）：所有存檔資料、設定、存檔／讀檔、星數、旅程完成度、錯題本
 ## 管家分成四層，一層繼承一層，外面一律用 Game.of(self) 拿到同一個物件，呼叫方式不變：
-##   game_state.gd（資料與存檔）→ game_audio.gd（音效、音樂）→ game_economy.gd（星塵、寶箱、每日任務、扭蛋、簽到）→ game.gd（換場景、修煉、終焉之塔）
+##   game_state.gd（資料與存檔）→ game_audio.gd（音效、音樂）→ game_economy.gd（星塵、寶箱、每日任務、扭蛋、簽到）
+##   → game_bond.gd（光靈的親密度）→ game.gd（換場景、修煉、終焉之塔）
 ## 下面的層不能呼叫上面的層（例如存檔不能播音效）；要加新功能時放在用得到的最低那一層。
 
 const SETTINGS_PATH := "user://settings.cfg"
@@ -144,6 +145,7 @@ var exam_pick := {}                    # 這次段考範圍：{"高二": {"term"
 
 
 var house := {}                        # 光靈小屋：{owned:[], placed:{格位:id}}
+var bond := {}                         # 光靈的親密度：{pts, day, today, hello, lvup}（game_bond.gd）
 
 
 var world11 := {}                      # 高二世界地圖（光潮群島）：{pos, visited, eggs, ret}
@@ -436,6 +438,7 @@ const SAVE_FIELDS := [
 	["world11", "world11", {}],
 	["concepts", "concepts", {}],
 	["house", "house", {}],
+	["bond", "bond", {}],
 	["tut", "tut", {}],
 	["grade_pick", "grade_pick", ""],
 	["exam_pick", "exam_pick", {}],

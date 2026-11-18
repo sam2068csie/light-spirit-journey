@@ -372,6 +372,11 @@ func _story_check() -> void:
 			"souvenir":
 				var su := WS.pending_souvenir(g, _grade_name())
 				await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
+			"bond":
+				var lv: int = g.bond_take_levelup()
+				if lv > 0:
+					var host: Node = get_tree().current_scene if get_tree().current_scene is Control else self
+					await preload("res://data/ui/bond_panel.gd").levelup(host, lv).tree_exited
 			"exam":
 				open_exam_pick()
 				return

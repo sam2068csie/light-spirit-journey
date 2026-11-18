@@ -217,7 +217,7 @@ func _tile(it: Dictionary, g) -> Control:
 	b.add_child(nl)
 	var sub := Label.new()
 	sub.text = ("穿著中" if worn else Cos.RARITY[r].name) if own \
-		else ("簽到限定" if it.has("how") else Cos.RARITY[r].name)
+		else (String(it.get("limit", "限定")) if it.has("how") else Cos.RARITY[r].name)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.position = Vector2(0, 108)
 	sub.size = Vector2(150, 20)

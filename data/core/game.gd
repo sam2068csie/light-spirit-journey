@@ -1,4 +1,4 @@
-extends "res://data/core/game_economy.gd"
+extends "res://data/core/game_bond.gd"
 const Paths := preload("res://data/core/paths.gd")
 ## 遊戲管家：設定、音樂、音效、換場景、存檔……（分成四層，見 game_state.gd 開頭的說明）
 ## 不需要設定 Autoload：任何腳本呼叫 Game.of(self) 時，會自動建立並掛在場景樹的根節點上，
@@ -136,7 +136,7 @@ func _process(delta: float) -> void:
 
 
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.18-f"
+const BUILD := "2026.11.18-g"
 
 
 ## 今天的修煉題（換日就重新出題）

@@ -6,6 +6,7 @@ extends RefCounted
 const MAP := {
 	"ambient.gd": "res://data/ui/ambient.gd",
 	"bg_layer.gd": "res://data/levels/engine/bg_layer.gd",
+	"bond_panel.gd": "res://data/ui/bond_panel.gd",
 	"boss_tower.gd": "res://data/levels/tower/boss_tower.gd",
 	"buddy.gd": "res://data/ui/buddy.gd",
 	"canvas_batch.gd": "res://data/maps/canvas_batch.gd",
@@ -38,6 +39,7 @@ const MAP := {
 	"gacha_page.gd": "res://data/ui/gacha_page.gd",
 	"game.gd": "res://data/core/game.gd",
 	"game_audio.gd": "res://data/core/game_audio.gd",
+	"game_bond.gd": "res://data/core/game_bond.gd",
 	"game_economy.gd": "res://data/core/game_economy.gd",
 	"game_state.gd": "res://data/core/game_state.gd",
 	"game_theme.gd": "res://data/ui/game_theme.gd",

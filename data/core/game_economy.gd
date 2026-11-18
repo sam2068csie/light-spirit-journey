@@ -340,6 +340,15 @@ const STREAK_CYCLE := 14
 const GUARD_MAX := 2
 
 
+## 守護最多存幾個（親密度 Lv 7 多一個：game_bond.gd 的 _guard_bonus）
+func guard_max() -> int:
+	return GUARD_MAX + _guard_bonus()
+
+
+func _guard_bonus() -> int:
+	return 0
+
+
 ## 一輪 14 天的獎勵
 static func streak_reward(pos: int, first_scarf: bool) -> Dictionary:
 	match pos:
@@ -397,7 +406,7 @@ func streak_claim() -> Dictionary:
 	while log.size() > 30:
 		log.pop_front()
 	var new_guard := false
-	if int(streak.count) % 7 == 0 and int(streak.guards) < GUARD_MAX:
+	if int(streak.count) % 7 == 0 and int(streak.guards) < guard_max():
 		streak.guards = int(streak.guards) + 1
 		new_guard = true
 	var rw := streak_reward(int(pv.pos), not owned.has("streak_scarf"))

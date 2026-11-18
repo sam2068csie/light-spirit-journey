@@ -30,6 +30,8 @@ const ITEMS := [
 	{"id": "shell", "name": "螺旋貝殼", "slots": ["sill", "top"], "src": "egg10:fib", "how": "曦光大陸 · 古老的石碑", "draw": "shell", "col": Color("ffd6ec")},
 	{"id": "dice", "name": "大骰子", "slots": ["top", "floor"], "src": "egg10:dice", "how": "曦光大陸 · 骰子市集的攤販", "draw": "dice", "col": Color("fffaf0")},
 	{"id": "shipbottle", "name": "瓶中船", "slots": ["sill", "top"], "src": "egg11:wreck", "how": "光潮群島 · 沉船殘骸", "draw": "shipbottle", "col": Color("9fd8ff")},
+	# ---- 親密度獎勵 ----
+	{"id": "spirit_bed", "name": "光靈的小床", "slots": ["floor", "wide"], "src": "bond:4", "how": "光靈的親密度升到 Lv 4「好朋友」", "draw": "spiritbed", "col": Color("ffd6ec")},
 	{"id": "orb", "name": "漩渦水晶球", "slots": ["top", "sill"], "src": "egg11:whirl", "how": "光潮群島 · 海上的漩渦", "draw": "orb", "col": Color("6ee7c0")},
 ]
 

@@ -5,6 +5,7 @@ extends Control
 ##   ・擺設模式：點格位 → 從抽屜挑家具放上去（只列出放得進那種格位的家具）
 ##   ・商店：用星塵買家具（小家具每天買得起、少量昂貴大家具）；彩蛋家具在地圖上解開才拿得到
 ##   ・小屋等級：點亮 10／25／50 座聖地升級（目前先做 Lv.1 的房間，等級和下一階段先顯示出來）
+##   ・光靈（親密度，game_bond.gd）：點光靈 → 摸摸頭、聊天；按住光靈來回摸也算摸摸頭。左下角是親密度，點開看說明
 ## 存檔：Game.house {owned: [家具 id], placed: {"格位編號": 家具 id}}
 const UITheme := preload("res://data/ui/game_theme.gd")
 const QP := preload("res://data/ui/quest_panel.gd")
@@ -14,6 +15,7 @@ const Center := preload("res://data/core/review_center.gd")
 const HI := preload("res://data/house/house_items.gd")
 const SL := preload("res://data/ui/spirit_look.gd")
 const SA := preload("res://data/house/souvenir_art.gd")
+const BondPanel := preload("res://data/ui/bond_panel.gd")
 
 const W := 1152.0
 const H := 648.0
@@ -56,6 +58,23 @@ var _bar: ProgressBar
 var _bar_lab: Label
 var _deco_btn: Button
 var _hint: Label
+# 光靈的親密度
+var _bond_lab: Label
+var _bond_bar: ProgressBar
+var _menu: Control                  # 點光靈跳出來的「摸摸頭／聊天」
+var _menu_t := 0.0
+var _mood := "normal"
+var _mood_t := 0.0
+var _blink := 2.0
+var _hearts: Array = []             # [{p, v, life}]
+var _pops: Array = []               # 飄上去的「+1」：[{s, p, life}]
+var _press_spirit := false          # 按在光靈身上
+var _rub := 0.0                     # 按住光靈來回摸了多遠
+var _rub_last := Vector2.ZERO
+var _rubbed := false
+
+const PET_LINES := ["嘿嘿～好舒服！", "再摸一下下嘛～", "呼嚕呼嚕……", "被摸頭了，好開心！"]
+const PET_FULL := "嘿嘿……今天摸夠了啦，明天再摸～"
 
 
 func _ready() -> void:
@@ -63,7 +82,15 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_ui()
 	_refresh()
-	_talk(LINES[0] if randf() < 0.5 else LINES[1])
+	var g = Game.of(self)
+	if g.bond_take_hello() == "welcome":
+		_talk("好想你！歡迎回來～", 4.0)
+		_set_mood("happy", 2.5)
+		_burst_hearts(6)
+		_pop("+%d 親密度" % int(g.BOND_PTS.welcome))
+	else:
+		_talk(LINES[0] if randf() < 0.5 else LINES[1])
+	_check_levelup.call_deferred()
 
 
 # ================= 資料 =================
@@ -94,6 +121,8 @@ func owns(id: String) -> bool:
 		return (g.world10.get("eggs", []) as Array).has(src.substr(6))
 	if src.begins_with("egg11:"):
 		return (g.world11.get("eggs", []) as Array).has(src.substr(6))
+	if src.begins_with("bond:"):
+		return g.bond_level() >= int(src.substr(5))
 	return false
 
 
@@ -212,6 +241,31 @@ func _build_ui() -> void:
 	_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
+	# 左下角：親密度（點開看說明）
+	var bb := Button.new()
+	bb.focus_mode = Control.FOCUS_NONE
+	bb.position = Vector2(16, H - 96)
+	bb.size = Vector2(290, 58)
+	bb.add_theme_stylebox_override("normal", UITheme.box(Color(0.08, 0.06, 0.16, 0.82), 14, Color(1, 0.56, 0.75, 0.45), 1, 8))
+	bb.add_theme_stylebox_override("hover", UITheme.box(Color(0.12, 0.08, 0.22, 0.9), 14, Color(1, 0.56, 0.75, 0.8), 1, 8))
+	bb.add_theme_stylebox_override("pressed", UITheme.box(Color(0.12, 0.08, 0.22, 0.9), 14, Color(1, 0.56, 0.75, 0.8), 1, 8))
+	bb.pressed.connect(_open_bond)
+	add_child(bb)
+	var heart := HeartIcon.new()
+	heart.position = Vector2(10, 12)
+	heart.size = Vector2(34, 34)
+	bb.add_child(heart)
+	_bond_lab = Label.new()
+	_bond_lab.position = Vector2(52, 6)
+	_bond_lab.add_theme_font_override("font", UITheme.bold_font())
+	_bond_lab.add_theme_font_size_override("font_size", UITheme.fs(15))
+	_bond_lab.add_theme_color_override("font_color", BondPanel.PINK)
+	_bond_lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bb.add_child(_bond_lab)
+	_bond_bar = BondPanel.bar(0.0, Vector2(222, 10))
+	_bond_bar.position = Vector2(54, 36)
+	_bond_bar.size = Vector2(222, 10)
+	bb.add_child(_bond_bar)
 
 
 func _refresh() -> void:
@@ -232,13 +286,20 @@ func _refresh() -> void:
 		_bar_lab.text = "升級：點亮 %d／%d 座聖地" % [lit, nxt.need]
 	_top_dust.text = str(int(Game.of(self).inv.get("dust", 0)))
 	_deco_btn.text = "完成擺設" if deco else "擺設模式"
-	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點紀念品櫃，或點布告欄看每日任務"
+	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點光靈和它玩，或點紀念品櫃、布告欄"
+	_refresh_bond()
 	queue_redraw()
 
 
-func _talk(s: String) -> void:
+func _refresh_bond() -> void:
+	var pr: Dictionary = Game.of(self).bond_progress()
+	_bond_lab.text = "親密度　Lv.%d %s" % [pr.lv, pr.name]
+	_bond_bar.value = float(pr.frac)
+
+
+func _talk(s: String, dur := 3.2) -> void:
 	_say = s
-	_say_t = 3.2
+	_say_t = dur
 
 
 func _back() -> void:
@@ -248,6 +309,8 @@ func _back() -> void:
 		_close_drawer()
 		return
 	if close_overlay():
+		return
+	if _close_menu():
 		return
 	if deco:
 		_toggle_deco()
@@ -291,9 +354,12 @@ func _close_btn(vb: VBoxContainer, txt := "關閉") -> void:
 # ================= 點擊房間 =================
 
 func _gui_input(e: InputEvent) -> void:
+	if not deco and _spirit_input(e):
+		return
 	if not (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT):
 		return
 	var p: Vector2 = e.position
+	_close_menu()
 	if deco:
 		for i in SLOTS.size():
 			if (SLOTS[i].r as Rect2).grow(6).has_point(p):
@@ -304,8 +370,6 @@ func _gui_input(e: InputEvent) -> void:
 		_open_shelf()
 	elif BOARD.has_point(p):
 		_open_quests()
-	elif p.distance_to(_spirit) < 50.0:
-		_talk(LINES[randi() % LINES.size()])
 	else:
 		for i in SLOTS.size():
 			if (SLOTS[i].r as Rect2).has_point(p) and _placed(i) != "":
@@ -698,6 +762,164 @@ func _open_upgrade() -> void:
 	_close_btn(vb)
 
 
+# ================= 光靈：摸摸頭、聊天（親密度） =================
+
+## 按在光靈身上：放開時沒有在摸 → 跳出選單；按住來回摸 → 摸摸頭。回傳 true = 這個事件處理掉了
+func _spirit_input(e: InputEvent) -> bool:
+	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+		if e.pressed:
+			if e.position.distance_to(_spirit) < 50.0:
+				_press_spirit = true
+				_rub = 0.0
+				_rubbed = false
+				_rub_last = e.position
+				return true
+			return false
+		if _press_spirit:
+			_press_spirit = false
+			if not _rubbed and _rub < 24.0:
+				_toggle_menu()
+			return true
+	elif e is InputEventMouseMotion and _press_spirit:
+		_rub += e.position.distance_to(_rub_last)
+		_rub_last = e.position
+		if _rub > 150.0 and not _rubbed:
+			_rubbed = true
+			_close_menu()
+			_pet()
+		return true
+	return false
+
+
+func _toggle_menu() -> void:
+	if _close_menu():
+		return
+	var g = Game.of(self)
+	_menu = HBoxContainer.new()
+	_menu.add_theme_constant_override("separation", 10)
+	for spec in [["摸摸頭", _pet, g.bond_left("pet")], ["聊天", _chat, g.bond_left("chat")]]:
+		var b := Button.new()
+		b.text = spec[0]
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(96, 44)
+		var on := int(spec[2]) > 0
+		UITheme.button_3d(b, Color("b0507a") if on else Color("4a3a60"), Color("6e2a4c") if on else Color("2a2140"), Color.WHITE, 16, 4, 10, 4)
+		var f: Callable = spec[1]
+		b.pressed.connect(func():
+			_close_menu()
+			f.call())
+		_menu.add_child(b)
+	add_child(_menu)
+	_menu.reset_size()
+	_menu.position = Vector2(clampf(_spirit.x - _menu.size.x / 2.0, 20.0, W - 20.0 - _menu.size.x), _spirit.y - 136.0)
+	_menu_t = 6.0
+	_say_t = 0.0                      # 選單和對話泡泡不要疊在一起
+	g.sfx("click")
+
+
+func _close_menu() -> bool:
+	if is_instance_valid(_menu):
+		_menu.queue_free()
+		_menu = null
+		return true
+	return false
+
+
+func _pet() -> void:
+	var g = Game.of(self)
+	var n: int = g.bond_gain("pet")
+	var shy_ok: bool = g.bond_level() >= 3
+	if n > 0:
+		_set_mood("shy" if shy_ok and randf() < 0.4 else "happy", 1.8)
+		_talk(PET_LINES.pick_random())
+		_burst_hearts(6)
+		_pop("+%d 親密度" % n)
+		g.sfx("correct")
+	else:
+		_set_mood("shy" if shy_ok else "happy", 1.8)
+		_talk(PET_FULL)
+		_burst_hearts(2)
+		g.sfx("click")
+	_after_gain()
+
+
+func _chat() -> void:
+	var g = Game.of(self)
+	var first: bool = g.bond_left("chat") > 0
+	var n: int = g.bond_gain("chat")
+	_talk(g.bond_chat_line(first), 4.8)
+	_set_mood("happy", 2.0)
+	if n > 0:
+		_pop("+%d 親密度" % n)
+		_burst_hearts(3)
+	g.sfx("ping")
+	_after_gain()
+
+
+func _after_gain() -> void:
+	_refresh_bond()
+	_check_levelup()
+
+
+## 升級了：等一下下（先看完愛心）再跳出升級視窗
+func _check_levelup() -> void:
+	var g = Game.of(self)
+	if g.bond_lvup_pending() <= 0 or is_instance_valid(_overlay) or is_instance_valid(_quest_panel):
+		return
+	await get_tree().create_timer(0.9).timeout
+	if not is_inside_tree() or is_instance_valid(_overlay):
+		return
+	var lv: int = g.bond_take_levelup()
+	if lv <= 0:
+		return
+	_overlay = BondPanel.levelup(self, lv)
+	_refresh()
+
+
+func _open_bond() -> void:
+	if is_instance_valid(_overlay) or is_instance_valid(_quest_panel) or deco:
+		return
+	_close_menu()
+	_overlay = BondPanel.detail(self)
+
+
+func _set_mood(m: String, dur: float) -> void:
+	_mood = m
+	_mood_t = dur
+
+
+func _burst_hearts(k: int) -> void:
+	for i in k:
+		_hearts.append({"p": _spirit + Vector2(randf_range(-26, 26), randf_range(-34, -10)),
+			"v": Vector2(randf_range(-18, 18), randf_range(-70, -40)), "life": 1.0 + randf() * 0.4})
+
+
+func _pop(s: String) -> void:
+	_pops.append({"s": s, "p": _spirit + Vector2(0, -92), "life": 1.4})
+
+
+func _bond_tick(delta: float) -> void:
+	if _mood_t > 0.0:
+		_mood_t -= delta
+		if _mood_t <= 0.0:
+			_mood = "normal"
+	_blink -= delta
+	if _blink < -0.12:
+		_blink = randf_range(2.0, 4.5)
+	for h in _hearts:
+		h.p += h.v * delta
+		h.life -= delta * 0.8
+	_hearts = _hearts.filter(func(h): return float(h.life) > 0.0)
+	for pp in _pops:
+		pp.p += Vector2(0, -26.0 * delta)
+		pp.life -= delta * 0.7
+	_pops = _pops.filter(func(pp): return float(pp.life) > 0.0)
+	if is_instance_valid(_menu):
+		_menu_t -= delta
+		if _menu_t <= 0.0:
+			_close_menu()
+
+
 # ================= 每幀 =================
 
 var _redraw_acc := 0.0
@@ -709,7 +931,11 @@ func _process(delta: float) -> void:
 	if _wait <= 0.0 and not deco:
 		_spirit_to = Vector2(randf_range(470, 730), randf_range(500, 530))
 		_wait = randf_range(3.0, 6.0)
+	if _press_spirit or is_instance_valid(_menu):
+		_spirit_to = _spirit           # 摸頭、選單開著的時候不要飄走
+		_wait = maxf(_wait, 2.0)
 	_spirit = _spirit.move_toward(_spirit_to, 60.0 * delta)
+	_bond_tick(delta)
 	if _say_t > 0.0:
 		_say_t -= delta
 	elif randf() < delta * 0.05 and not deco:
@@ -766,10 +992,20 @@ func _draw() -> void:
 		_face_left = false
 	if _face_left:
 		draw_set_transform(sp, 0.0, Vector2(-1, 1))
-		SL.draw_all(self, Vector2.ZERO, 26.0, Game.of(self).equipped, t)
+		SL.draw_mood(self, Vector2.ZERO, 26.0, Game.of(self).equipped, t, _mood, _blink)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
-		SL.draw_all(self, sp, 26.0, Game.of(self).equipped, t)
+		SL.draw_mood(self, sp, 26.0, Game.of(self).equipped, t, _mood, _blink)
+	# 摸頭、聊天的小愛心和「+1」
+	for h in _hearts:
+		var a := clampf(float(h.life), 0.0, 1.0)
+		SL.heart(self, h.p, 10.0 + 4.0 * (1.0 - a), Color(1, 0.56, 0.75, a))
+	for pp in _pops:
+		var a := clampf(float(pp.life) * 1.5, 0.0, 1.0)
+		var pw := font.get_string_size(pp.s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		var pos: Vector2 = pp.p - Vector2(pw / 2.0, 0)
+		draw_string_outline(font, pos, pp.s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, 6, Color(0.05, 0.03, 0.12, a))
+		draw_string(font, pos, pp.s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1, 0.62, 0.8, a))
 	if _say_t > 0.0 and _say != "":
 		var tw := font.get_string_size(_say, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var br := Rect2(sp + Vector2(-tw / 2.0 - 12, -78), Vector2(tw + 24, 30))
@@ -1017,6 +1253,16 @@ static func _draw_item(ci: CanvasItem, id: String, r: Rect2, dim := false) -> vo
 			ci.draw_rect(Rect2(b + Vector2(-s * 0.2, -s * 0.25), Vector2(s * 0.4, s * 0.25)), Color("c97b5a"))
 			ci.draw_rect(Rect2(b + Vector2(-3, -r.size.y * 0.7), Vector2(6, r.size.y * 0.5)), Color("6b4f2e"))
 			UITheme.dot(ci, b + Vector2(0, -r.size.y * 0.72), s * 0.4, c)
+		"spiritbed":
+			# 光靈的小床：圓圓的小籃子＋軟墊，上面掛一個彎月
+			var bc := b + Vector2(0, -s * 0.2)
+			ci.draw_colored_polygon(PackedVector2Array([bc + Vector2(-s * 0.48, -s * 0.06), bc + Vector2(s * 0.48, -s * 0.06), bc + Vector2(s * 0.4, s * 0.2), bc + Vector2(-s * 0.4, s * 0.2)]), Color("c98a5a") if not dim else c.darkened(0.2))
+			UITheme.dot(ci, bc + Vector2(0, -s * 0.08), s * 0.4, c)
+			UITheme.dot(ci, bc + Vector2(-s * 0.12, -s * 0.14), s * 0.16, c.lightened(0.25))
+			var mc := bc + Vector2(s * 0.3, -s * 0.62)
+			UITheme.dot(ci, mc, s * 0.16, Color("ffe7a3") if not dim else c)
+			UITheme.dot(ci, mc + Vector2(s * 0.07, -s * 0.04), s * 0.13, Color(0.2, 0.18, 0.32))
+			ci.draw_line(mc + Vector2(0, -s * 0.16), mc + Vector2(0, -s * 0.36), Color("c9a46e"), 1.5)
 		"cushion":
 			UITheme.dot(ci, b + Vector2(0, -s * 0.3), s * 0.42, c)
 			UITheme.dot(ci, b + Vector2(-s * 0.1, -s * 0.38), s * 0.2, c.lightened(0.2))
@@ -1143,3 +1389,21 @@ class SouvenirIcon extends Control:
 			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -12), c + Vector2(10, 0), c + Vector2(0, 12), c + Vector2(-10, 0)]), col)
 		else:
 			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -12), c + Vector2(10, 0), c + Vector2(0, 12), c + Vector2(-10, 0)]), Color(1, 1, 1, 0.1))
+
+
+## 親密度的小愛心圖示（左下角）
+class HeartIcon extends Control:
+	const SL := preload("res://data/ui/spirit_look.gd")
+	var t := 0.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var k := maxf(0.0, sin(t * 3.0))
+		SL.heart(self, size / 2.0, size.x * 0.42 * (1.0 + 0.08 * k * k), Color("ff8fbf"))
+		SL.heart(self, size / 2.0 + Vector2(-size.x * 0.12, -size.y * 0.1), size.x * 0.12, Color(1, 1, 1, 0.55))

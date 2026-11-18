@@ -101,6 +101,40 @@ static func draw_all(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: fl
 	draw_front(ci, c, r, eq, t)
 
 
+## 有表情的光靈（小屋用）：mood = normal／happy（眼睛彎彎）／shy（害羞：眼睛彎彎＋臉紅）／surprised（眼睛圓圓）
+##   blink < 0：眨眼中（normal 才會眨）
+static func draw_mood(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: float, mood: String, blink := 1.0) -> void:
+	draw_back(ci, c, r, eq, t)
+	draw_body(ci, c, r, eq, t)
+	var e1 := c + Vector2(r * 0.22, -r * 0.22)
+	var e2 := c + Vector2(r * 0.67, -r * 0.22)
+	var er := maxf(0.9, r * 0.2)
+	var lw := maxf(1.4, r * 0.11)
+	match mood:
+		"happy", "shy":
+			# 眼睛彎彎：往上拱的小弧線
+			for e in [e1, e2]:
+				ci.draw_arc(e + Vector2(0, er * 0.5), er * 1.1, PI * 1.15, PI * 1.85, 8, INK, lw, true)
+			if mood == "shy":
+				UITheme.dot(ci, e1 + Vector2(-r * 0.12, r * 0.34), r * 0.15, Color(1.0, 0.5, 0.6, 0.6))
+				UITheme.dot(ci, e2 + Vector2(r * 0.1, r * 0.34), r * 0.15, Color(1.0, 0.5, 0.6, 0.6))
+		"surprised":
+			for e in [e1, e2]:
+				UITheme.dot(ci, e, er * 1.35, INK)
+		_:
+			for e in [e1, e2]:
+				if blink < 0.0:
+					ci.draw_line(e + Vector2(-er, 0), e + Vector2(er, 0), INK, lw, true)
+				else:
+					UITheme.dot(ci, e, er, INK)
+	draw_front(ci, c, r, eq, t)
+
+
+## 小愛心（親密度用）
+static func heart(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	_heart(ci, c, s, col)
+
+
 ## 移動中的軌跡：pts[0] 是最新的位置
 static func draw_path_trail(ci: CanvasItem, pts: Array, r: float, eq: Dictionary, t: float) -> void:
 	var kind := String(eq.get("trail", ""))
@@ -350,6 +384,13 @@ static func _hat(ci: CanvasItem, c: Vector2, r: float, id: String, t: float) -> 
 	var top := c.y - r * 0.92
 	var lw := maxf(1.0, r * 0.1)
 	match id:
+		"friend_star":
+			# 友誼之星（親密度 Lv 4）：頭上一顆金色小星星，中間一顆粉紅愛心，輕輕閃
+			var sc := Vector2(hx + r * 0.1, top - r * 0.22 + r * 0.04 * sin(t * 2.2))
+			var tw := 1.0 + 0.06 * sin(t * 4.0)
+			UITheme.dot(ci, sc, r * 0.5 * tw, Color(1.0, 0.85, 0.4, 0.18))
+			_star(ci, sc, r * 0.42 * tw, Color("ffcf5a"))
+			_heart(ci, sc + Vector2(0, r * 0.02), r * 0.16, Color("ff7eb6"))
 		"sprout":
 			var base := Vector2(hx, top + r * 0.05)
 			var tipp := base + Vector2(0, -r * 0.42)

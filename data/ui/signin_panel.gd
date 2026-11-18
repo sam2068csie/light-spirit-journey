@@ -122,7 +122,7 @@ func _build() -> void:
 	gl.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 	gl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	st.add_child(gl)
-	for k in g.GUARD_MAX:
+	for k in g.guard_max():
 		var sh := Shield.new()
 		sh.full = k < int(g.streak.guards)
 		sh.custom_minimum_size = Vector2(30, 34)
@@ -150,7 +150,7 @@ func _build() -> void:
 
 	# 說明＋中斷提示
 	var info := Label.new()
-	info.text = "漏簽時守護會自動補上（連簽 7 天多一個，最多 %d 個）。守護不夠，連續天數減半。" % g.GUARD_MAX
+	info.text = "漏簽時守護會自動補上（連簽 7 天多一個，最多 %d 個）。守護不夠，連續天數減半。" % g.guard_max()
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", UITheme.fs(15))
 	info.add_theme_color_override("font_color", UITheme.TEXT_DIM)

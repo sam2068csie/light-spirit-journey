@@ -63,6 +63,8 @@ func _ready() -> void:
 			_open_grade_pick.call_deferred()
 		"signin":
 			_open_signin.call_deferred()
+		"bond":
+			_open_bond_levelup.call_deferred()
 		"notify":
 			_ask_notify.call_deferred()
 
@@ -1340,6 +1342,13 @@ func _open_gacha() -> void:
 		_refresh_quest_badges())
 
 
+## 光靈的親密度升級了
+func _open_bond_levelup() -> void:
+	var lv: int = Game.of(self).bond_take_levelup()
+	if lv > 0:
+		preload("res://data/ui/bond_panel.gd").levelup(self, lv)
+
+
 func _open_signin() -> void:
 	var p := preload("res://data/ui/signin_panel.gd").new()
 	add_child(p)
@@ -1418,11 +1427,13 @@ class TitleSpirit extends Control:
 	var hit_t := -10.0              # 上一次撞牆的時間
 	var hit_x := true               # 撞的是左右牆（true）還是上下牆
 	var tilt := 0.0
+	var bond_lv := 1                # 光靈的親密度等級（Lv 2 起會冒小愛心）
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		eq = Game.of(self).equipped.duplicate()
+		bond_lv = Game.of(self).bond_level()
 
 	func _center() -> Vector2:
 		if home == null:
@@ -1555,6 +1566,12 @@ class TitleSpirit extends Control:
 		draw_set_transform(c, tilt, squash)
 		SL.draw_all(self, Vector2.ZERO, r, eq, t)      # 原版的光靈＋衣櫃裡穿的裝扮
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# 親密度 Lv 2 以上：每隔幾秒冒一顆小愛心（只看得到，不能點）
+		if bond_lv >= 2:
+			var ph := fmod(t, 5.0)
+			if ph < 1.6:
+				var hp := c + Vector2(r * 0.7 + ph * 8.0, -r * 1.05 - ph * 26.0)
+				SL.heart(self, hp, 9.0 + ph * 2.0, Color(1, 0.56, 0.75, 1.0 - ph / 1.6))
 
 	func _spark(p: Vector2, rr: float, col: Color) -> void:
 		var pts := PackedVector2Array()
