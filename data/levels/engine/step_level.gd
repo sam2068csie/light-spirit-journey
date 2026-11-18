@@ -1188,6 +1188,16 @@ func _build_order(st: Dictionary) -> void:
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	rank_box.add_child(grid)
+	# 按鈕的位置打亂，而且不能剛好是答案的順序（題庫裡常常照答案的順序寫）
+	var shown: Array = range(st.items.size())
+	var answer: Array = range(st.items.size())
+	answer.sort_custom(func(a, b): return float(st.items[a].v) < float(st.items[b].v))
+	if shown.size() > 1:
+		for _k in 20:
+			shown.shuffle()
+			if shown != answer:
+				break
+	var made := {}
 	for i in st.items.size():
 		var it: Dictionary = st.items[i]
 		var b := MathLabel.make_button(it.text, 17, Vector2(0, 44))
@@ -1205,8 +1215,10 @@ func _build_order(st: Dictionary) -> void:
 			order_seq.append(idx)
 			Game.of(self).play("bell", Game.semi(Game.scale_semi(2 + order_seq.size())), -8.0)
 			_refresh_order())
-		grid.add_child(b)
+		made[i] = b
 		order_btns.append(b)
+	for i in shown:
+		grid.add_child(made[i])
 	if st.items.size() % 2 == 1:
 		grid.add_child(Control.new())
 	# 反悔用：退回一個、整個重排

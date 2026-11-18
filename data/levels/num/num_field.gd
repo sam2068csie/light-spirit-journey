@@ -163,8 +163,8 @@ func _box(r: Rect2, own: String) -> void:
 
 func _draw() -> void:
 	ink.clear()
-	if items.is_empty():
-		return
+	if items.is_empty() or size.x < 160.0 or size.y < 60.0:
+		return      # 還沒排好位置（例如選單蓋著的時候）就先不畫，免得所有東西擠在同一點
 	var bg := Rect2(Vector2.ZERO, size)
 	draw_rect(bg, Color(0.05, 0.05, 0.1, 0.55))
 	var m := _miss()
@@ -263,13 +263,15 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(hub.x - 15, ground), Vector2(hub.x + 15, ground), Vector2(hub.x + 6, hub.y), Vector2(hub.x - 6, hub.y)]), body)
 	draw_colored_polygon(PackedVector2Array([Vector2(hub.x - 9, hub.y + 4), Vector2(hub.x + 9, hub.y + 4), Vector2(hub.x, hub.y - 10)]), body.lightened(0.15))
 	var head := String(it.get("int", "0")) + "." + String(it.get("pre", ""))
+	# "hide": true：分數化成小數的題目，算出來之前柱子、扇葉都寫 ?（不然答案就寫在風車上了）
+	var hide := bool(it.get("hide", false)) and not lit
 	var fs := UITheme.fs(15)
 	var hw := font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var plate := Rect2(hub.x - hw / 2.0 - 6, plate_top, hw + 12, 22)
 	draw_rect(plate, Color(0.12, 0.1, 0.16, 0.95))
 	draw_rect(plate, Color(1, 0.86, 0.5, 0.5), false, 1.0)
 	_box(plate, "plate%d" % i)
-	_pt(font, Vector2(plate.position.x + 6, plate.end.y - 6), head, fs, Color(1, 0.92, 0.75), "plate%d" % i)
+	_pt(font, Vector2(plate.position.x + 6, plate.end.y - 6), "?" if hide else head, fs, Color(1, 0.92, 0.75), "plate%d" % i)
 	# 扇葉：木頭的臂＋偏一邊的帆布，帆布上寫一個數字（字保持正的）
 	var sail := Color(0.5, 0.5, 0.62, 0.75).lerp(Color(1.0, 0.9, 0.62, 0.92), 1.0 if lit else 0.0)
 	if _miss() > 0.0:
@@ -292,7 +294,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 		for q in [0.45, 0.72]:
 			draw_line(hub + d * L * q, hub + d * L * q + nm * sw * (0.7 + 0.3 * q), Color(0.3, 0.22, 0.18, 0.35), 1.0)
 		draw_line(hub, p1, arm, 3.0, true)
-		var ch := rep.substr(k, 1)
+		var ch := "?" if hide else rep.substr(k, 1)
 		var dfs := UITheme.fs(16)
 		var cw := font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs)
 		var cp := hub + d * L * 0.64 + nm * sw * 0.45
@@ -330,7 +332,7 @@ func _draw_mill(i: int, it: Dictionary, r: Rect2) -> void:
 				mw = MathLabel.text_width(font, mark, mfs)
 			_mt(font, sx + mw / 2.0, y + 46.0, mark, mfs, Color(1, 0.86, 0.45, al))
 	else:
-		_pt(font, Vector2(sx, y), head + "…", sfs, Color(1, 1, 1, 0.3))
+		_pt(font, Vector2(sx, y), ("?" if hide else head) + "…", sfs, Color(1, 1, 1, 0.3))
 
 
 # ================= 數線 =================
@@ -487,8 +489,8 @@ func _draw_nline(i: int, it: Dictionary, r: Rect2) -> void:
 	s.mv_t = mv_t
 	if int(spec.get("item", 0)) == i:
 		if mode == "tap":
-			# 尾數尺（logticks）：點的上面有指針的標籤，提示寫到數線下面
-			_draw_marks(sx, y - 26.0, font, y + 50.0 if bool(it.get("logticks", false)) else -1.0)
+			# 點錯的提示寫到數線下面（上面有柱子、點的名字，容易疊在一起）；下面放不下才寫上面
+			_draw_marks(sx, y - 26.0, font, y + 50.0 if r.end.y - y > 58.0 else -1.0)
 		elif mode == "drag":
 			_draw_drag(sx, y, y - 26.0, r, font)
 
@@ -1409,7 +1411,8 @@ func _draw_runners(i: int, rn: Dictionary, sx: Callable, y: float, st: int, t: f
 			draw_line(Vector2(sx.call(v0), p.y), p, Color(cols[k].r, cols[k].g, cols[k].b, 0.35), 3.0)
 		UITheme.dot(self, p, 12.0, Color(cols[k].r, cols[k].g, cols[k].b, 0.25))
 		UITheme.dot(self, p, 5.5, cols[k])
-		_mt(font, p.x - 12.0, p.y - 4.0, String(names[k]), UITheme.fs(14), cols[k])
+		# 名字：A 寫在點的左邊、B 寫在右邊（追上的時候兩個點上下疊在一起，名字才不會疊）
+		_mt(font, p.x - 14.0 if k == 0 else p.x + 14.0, p.y + 5.0, String(names[k]), UITheme.fs(14), cols[k])
 	if u >= 1.0:
 		var age := t - float(s.run_t) - 2.4
 		var pm := Vector2(sx.call(meet), y - 19.0)

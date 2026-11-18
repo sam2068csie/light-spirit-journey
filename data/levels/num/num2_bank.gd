@@ -249,6 +249,7 @@ static func _slots() -> Array:
 					"5|x − a| = 3|a − b| 只有內分點成立", T_DCMP),
 			 ]},
 			{"eq": "A(a)、B(b)、P(x)，a < b\n3|x − a| = |x − b|\nP 在哪裡？哪些一定成立？",
+			 "insight": "p|x − a| = q|x − b| ⇒ \\ol{PA} : \\ol{PB} = q : p（比要反過來）\n3|x − a| = |x − b| ⇒ \\ol{PA} : \\ol{PB} = 1 : 3：兩個 P 都靠近 A。",
 			 "field": [_nl([-6, 10], [_bead(2, "P", 2, 2), _bead(-4, "P", 2, 2)], {"rope": _rope(0, 8, [[-4, 2]]), "noticks": true})],
 			 "steps": [
 				_j("審判一", "\\ol{PA} : \\ol{PB} = 1 : 3", true, "3\\ol{PA} = \\ol{PB} ⇒ \\ol{PA} : \\ol{PB} = 1 : 3（比要反過來寫）。",
@@ -308,6 +309,7 @@ static func _slots() -> Array:
 					"p、q、r 在 a 往 b 走 \\frac{1}{3}、\\frac{3}{4}、\\frac{5}{4} 的地方 ⇒ a < p < q < b < r"),
 			 ]},
 			{"eq": "a = √2、b = √5\np = \\frac{3√2 + √5}{4}　q = \\frac{√2 + 2√5}{3}　r = \\frac{4√2 − √5}{3}\na、b、p、q、r 由小到大排",
+			 "insight": "把 √ 看成 a、b：\\frac{3a + b}{4} 在 a 往 b 走 \\frac{1}{4} 的地方\n係數有負的（\\frac{4a − b}{3}）就在外面：比 a 再往外走。",
 			 "field": [_nl([1.0, 2.65], [_bead(1.6197, "p", 1, 1), _bead(1.9621, "q", 1, 1), _bead(1.1402, "r", 1, 1)],
 				{"rope": _rope(1.4142, 2.2361, [[1.1402, 1]], ["a", "b"]), "noticks": true})],
 			 "steps": [

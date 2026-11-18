@@ -683,8 +683,15 @@ class NumView extends PlaneView:
 			field = NumField.new()
 			add_child(field)
 		field.reset(fd, self)
-		field.visible = not fd.is_empty() and kind == "forge"
+		field_at = int(round.get("field_at", 0))
+		field.visible = _field_want()
 		_place_plane()
+
+	## "field_at"：第幾步之後才出現原野（排序題的數線，排好之前空著沒有意義）
+	var field_at := 0
+
+	func _field_want() -> bool:
+		return not rd.get("field", []).is_empty() and kind == "forge" and (done or step >= field_at)
 
 	func _field_on() -> bool:
 		return field != null and field.visible
@@ -711,6 +718,10 @@ class NumView extends PlaneView:
 
 	func _process(delta: float) -> void:
 		super(delta)
+		if field != null and field.visible != _field_want():
+			field.visible = _field_want()
+			_place_plane()
+			queue_redraw()
 		# 高一指數的圖上元件：拖、湊、點、滑桿的步驟原野大張一點（只有坐標方格時 PlaneView 自己會調）
 		if _field_on() and (plane == null or not plane.visible) and _big_field():
 			var want := PLANE_BIG if _want_big() else PLANE_SMALL

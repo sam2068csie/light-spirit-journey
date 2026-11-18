@@ -1712,6 +1712,12 @@ class CoordPlane extends TowerPlot.Plot:
 			draw_line(xa, xb, ax, 1.5, true)
 			draw_colored_polygon(PackedVector2Array([xb, xb + Vector2(-9, -4.5), xb + Vector2(-9, 4.5)]), ax)
 			draw_string(font, xb + Vector2(-14, -8), String(data.get("axis_names", ["x", "y"])[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(14), Color(1, 1, 1, 0.7))
+			# x 軸上有寫名字的點（A、Q…）：那裡的刻度數字不寫，免得和點的名字疊在一起
+			var named := []
+			for sh in data.get("shapes", []):
+				if String(sh.get("k", "")) == "dot" and String(sh.get("s", "")) != "" and sh.has("p") \
+						and absf(float(sh.p[1])) < 1e-6 and _vis(sh):
+					named.append(float(sh.p[0]))
 			for ix in range(int(ceilf(wr.position.x)), int(floorf(wr.end.x))):
 				if ix == 0 or ix % tick != 0:
 					continue
@@ -1719,6 +1725,12 @@ class CoordPlane extends TowerPlot.Plot:
 				draw_line(p + Vector2(0, -3), p + Vector2(0, 3), ax, 1.0)
 				var s := num(ix)
 				var w := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				var near := false
+				for nx in named:
+					if absf(_to(Vector2(nx, 0)).x - p.x) < w / 2.0 + 10.0:
+						near = true
+				if near or p.x - w / 2.0 < _to(Vector2(wr.position.x, 0)).x + 2.0:
+					continue      # 也不寫被左邊切掉一半的數字
 				draw_string(font, p + Vector2(-w / 2.0, 15), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.45))
 		if has_y:
 			var ya := _to(Vector2(0, wr.position.y))
