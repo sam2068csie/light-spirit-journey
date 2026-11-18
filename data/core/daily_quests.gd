@@ -9,9 +9,9 @@ const RESET_HOUR := 5            # 早上 5 點換日：熬夜過 12 點不會�
 ## 每日挑戰：依日期輪流
 const CHALLENGES := {
 	"perfect": {"title": "完美解題", "desc": "任一題拿到三顆星", "need": 1, "go": "levels"},
-	"tower3": {"title": "攀登終焉之塔", "desc": "爬到第 3 層", "need": 3, "go": "tower"},
+	"tower3": {"title": "攀登終焉之塔", "desc": "抵達第 3 層", "need": 3, "go": "tower"},
 	"timed": {"title": "限時試煉", "desc": "通過 1 題限時試煉", "need": 1, "go": "levels"},
-	"daily": {"title": "完成今日修煉", "desc": "做完今日修煉", "need": 1, "go": "review"},
+	"daily": {"title": "完成今日修煉", "desc": "完成 1 次今日修煉", "need": 1, "go": "review"},
 }
 const CH_ORDER := ["perfect", "tower3", "timed", "daily"]
 
@@ -24,9 +24,9 @@ const TIERS := [
 
 ## 物品
 const ITEMS := {
-	"dust": {"name": "星塵", "desc": "完成任務得到的星塵。"},
-	"shard": {"name": "光之碎片", "desc": "從每日寶箱開出來的碎片。"},
-	"crystal": {"name": "光之結晶", "desc": "五個任務全部完成才拿得到的結晶。"},
+	"dust": {"name": "星塵", "desc": "任務獎勵"},
+	"shard": {"name": "光之碎片", "desc": "每日寶箱獎勵"},
+	"crystal": {"name": "光之結晶", "desc": "完成全部 5 個任務"},
 }
 
 
@@ -50,7 +50,7 @@ static func challenge_today() -> String:
 static func defs(ch: String) -> Array:
 	var c: Dictionary = CHALLENGES.get(ch, CHALLENGES.perfect)
 	return [
-		{"id": "login", "key": "login", "title": "每日登入", "desc": "打開遊戲就完成", "need": 1, "dust": 20, "go": ""},
+		{"id": "login", "key": "login", "title": "每日登入", "desc": "登入遊戲", "need": 1, "dust": 20, "go": ""},
 		{"id": "ans3", "key": "ans", "title": "小試身手", "desc": "任意關卡答對 3 題", "need": 3, "dust": 30, "go": "levels"},
 		{"id": "ans5", "key": "ans", "title": "勤學不倦", "desc": "任意關卡答對 5 題", "need": 5, "dust": 40, "go": "levels"},
 		{"id": "weak", "key": "weak", "title": "弱點特訓", "desc": "完成 1 題修煉題", "need": 1, "dust": 50, "go": "review"},

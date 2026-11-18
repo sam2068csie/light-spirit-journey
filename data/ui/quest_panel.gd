@@ -66,7 +66,7 @@ func _ready() -> void:
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	head.add_child(title)
 	var sub := Label.new()
-	sub.text = "每天早上 5:00 更新"
+	sub.text = "每日 05:00 重置"
 	sub.add_theme_font_size_override("font_size", UITheme.fs(13))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -291,7 +291,7 @@ func _claim(_id: String) -> void:
 	if n <= 0:
 		return
 	g.sfx("correct")
-	_show_toast(("一次領取 %d 個任務：" % cnt if cnt > 1 else "") + "星塵 +%d" % n)
+	_show_toast(("領取 %d 個任務　" % cnt if cnt > 1 else "") + "星塵 +%d" % n)
 	_refresh()
 
 
@@ -301,7 +301,7 @@ func claim_tier(n: int) -> void:
 	if not g.quest_tier_ready(n):
 		for t in DQ.TIERS:
 			if int(t.n) == n:
-				var msg := ("已經領過了：" if g.quest_state().tiers.has(n) else "領取 %d 個任務的獎勵後可以領：" % n) + "%s（%s）" % [t.name, t.desc]
+				var msg := ("已領取　" if g.quest_state().tiers.has(n) else "完成 %d 個任務後可領取　" % n) + "%s（%s）" % [t.name, t.desc]
 				_show_toast(msg, UITheme.TEXT)
 		return
 	var res: Array = g.quest_claim_tiers_all()
@@ -311,7 +311,7 @@ func claim_tier(n: int) -> void:
 		if got.has(k):
 			parts.append("%s ×%d" % [DQ.ITEMS[k].name, int(got[k])])
 	g.sfx("fanfare" if (res[1] as Array).has(5) else "success")
-	_show_toast("獲得：" + "、".join(parts))
+	_show_toast("獲得　" + "、".join(parts))
 	_refresh()
 
 

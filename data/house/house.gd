@@ -279,14 +279,14 @@ func _refresh() -> void:
 			break
 	if nxt.is_empty():
 		_bar.value = 100
-		_bar_lab.text = "已經是最高等級！"
+		_bar_lab.text = "已達最高等級"
 	else:
 		_bar.max_value = float(nxt.need)
 		_bar.value = lit
-		_bar_lab.text = "升級：點亮 %d／%d 座聖地" % [lit, nxt.need]
+		_bar_lab.text = "下一級　聖地 %d／%d" % [lit, nxt.need]
 	_top_dust.text = str(int(Game.of(self).inv.get("dust", 0)))
 	_deco_btn.text = "完成擺設" if deco else "擺設模式"
-	_hint.text = "點格位，再從下面挑家具放上去" if deco else "點光靈和它玩，或點紀念品櫃、布告欄"
+	_hint.text = "選擇格位，擺放家具" if deco else "點擊光靈、紀念品櫃或布告欄"
 	_refresh_bond()
 	queue_redraw()
 
@@ -433,7 +433,7 @@ func _pick_slot(i: int) -> void:
 	_drawer.add_child(vb)
 	var kind: String = SLOTS[i].kind
 	var hd := Label.new()
-	hd.text = "第 %d 格（%s）可以放：" % [i + 1, KIND_NAME[kind]]
+	hd.text = "格位 %d　%s" % [i + 1, KIND_NAME[kind]]
 	hd.add_theme_font_override("font", UITheme.bold_font())
 	hd.add_theme_font_size_override("font_size", UITheme.fs(15))
 	hd.add_theme_color_override("font_color", UITheme.ACCENT)
@@ -476,7 +476,7 @@ func _pick_slot(i: int) -> void:
 	row.add_theme_constant_override("separation", 8)
 	sc.add_child(row)
 	if _placed(i) != "":
-		row.add_child(_drawer_card({"id": "", "name": "收起來"}, true, "清空這一格"))
+		row.add_child(_drawer_card({"id": "", "name": "收回"}, true, "清空格位"))
 	var any := false
 	for it in HI.ITEMS:
 		if not (kind in it.slots):
@@ -484,12 +484,12 @@ func _pick_slot(i: int) -> void:
 		var own := owns(it.id)
 		var where := ""
 		if not own:
-			where = ("%d 星塵（去商店買）" % it.price) if it.has("price") else String(it.get("how", ""))
+			where = ("商店　%d 星塵" % it.price) if it.has("price") else String(it.get("how", ""))
 		row.add_child(_drawer_card(it, own, where))
 		any = true
 	if not any:
 		var l := Label.new()
-		l.text = "還沒有可以放在這裡的家具。"
+		l.text = "沒有可擺放的家具"
 		row.add_child(l)
 
 
@@ -619,7 +619,7 @@ func _open_shelf() -> void:
 	Game.of(self).sfx("click")
 	var vb := _modal(Color("f0d29a"), 860, "紀念品櫃")
 	var tip := Label.new()
-	tip.text = "點亮一個單元的所有聖地，就會得到該單元的紀念品。全單元 100% 時，紀念品會發光並出現專屬特效"
+	tip.text = "取得　點亮單元全部聖地　　發光　單元全題型答對（100%）"
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -645,7 +645,7 @@ func _open_shelf() -> void:
 			units.append_array(Units.units_of_term(term))
 		if units.is_empty():
 			var l := Label.new()
-			l.text = "（之後開放）"
+			l.text = "（未開放）"
 			l.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 			row.add_child(l)
 			continue
@@ -692,11 +692,11 @@ func _open_shelf() -> void:
 				big.visible = true
 				big.queue_redraw()
 				if stt == 2:
-					detail.text = "★ %s　%s（全單元 100%%）\n%s" % [uu.title, sv.name, sv.story]
+					detail.text = "★ %s　%s（已發光）\n%s" % [uu.title, sv.name, sv.story]
 				elif stt == 1:
-					detail.text = "%s　%s\n%s\n把這個單元每一段旅程的所有題型都答對（100%%），它就會發光！" % [uu.title, sv.name, sv.story]
+					detail.text = "%s　%s\n%s\n發光條件　單元全題型答對（100%%）" % [uu.title, sv.name, sv.story]
 				else:
-					detail.text = "%s：點亮這個單元的所有聖地就會出現。" % uu.title)
+					detail.text = "%s　未取得\n取得條件　點亮單元全部聖地" % uu.title)
 			row.add_child(b)
 	var drow := HBoxContainer.new()
 	drow.add_theme_constant_override("separation", 14)
@@ -708,7 +708,7 @@ func _open_shelf() -> void:
 	detail.custom_minimum_size = Vector2(0, 60)
 	detail.add_theme_font_size_override("font_size", UITheme.fs(14))
 	detail.add_theme_color_override("font_color", UITheme.TEXT)
-	detail.text = "點一件紀念品看看。"
+	detail.text = "選擇紀念品查看"
 	drow.add_child(detail)
 	_close_btn(vb)
 
@@ -723,7 +723,7 @@ func _open_upgrade() -> void:
 	var lit := lit_sites()
 	var cur := house_level()
 	var tip := Label.new()
-	tip.text = "目前總共點亮 %d 座聖地" % lit
+	tip.text = "已點亮聖地　%d 座" % lit
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tip.add_theme_font_size_override("font_size", UITheme.fs(14))
 	tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -748,13 +748,13 @@ func _open_upgrade() -> void:
 		d.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		hb.add_child(d)
 		var need := Label.new()
-		need.text = "一開始就有" if int(lv.need) == 0 else ("已達成" if ok else "點亮 %d 座" % lv.need)
+		need.text = "初始" if int(lv.need) == 0 else ("已達成" if ok else "聖地 %d 座" % lv.need)
 		need.custom_minimum_size = Vector2(100, 0)
 		need.add_theme_font_size_override("font_size", UITheme.fs(14))
 		need.add_theme_color_override("font_color", UITheme.GOOD if ok else UITheme.TEXT_DIM)
 		hb.add_child(need)
 	var note := Label.new()
-	note.text = "（閣樓、陽台、觀星塔的房間還在施工中）"
+	note.text = "閣樓、陽台、觀星塔（未開放）"
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_size_override("font_size", UITheme.fs(13))
 	note.add_theme_color_override("font_color", UITheme.TEXT_DIM)

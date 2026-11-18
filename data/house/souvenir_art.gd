@@ -42,7 +42,7 @@ const INFO := {
 
 static func info(uid: String) -> Dictionary:
 	return INFO.get(uid, {"name": "紀念品", "col": Color("c8d0f0"), "fx": "",
-		"story": "點亮這個單元的所有聖地就會出現。"})
+		"story": "取得條件　點亮單元全部聖地"})
 
 
 static func _p(ci: CanvasItem, pts: Array, c: Color) -> void:

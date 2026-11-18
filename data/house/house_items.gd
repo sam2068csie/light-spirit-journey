@@ -31,7 +31,7 @@ const ITEMS := [
 	{"id": "dice", "name": "大骰子", "slots": ["top", "floor"], "src": "egg10:dice", "how": "曦光大陸 · 骰子市集的攤販", "draw": "dice", "col": Color("fffaf0")},
 	{"id": "shipbottle", "name": "瓶中船", "slots": ["sill", "top"], "src": "egg11:wreck", "how": "光潮群島 · 沉船殘骸", "draw": "shipbottle", "col": Color("9fd8ff")},
 	# ---- 親密度獎勵 ----
-	{"id": "spirit_bed", "name": "光靈的小床", "slots": ["floor", "wide"], "src": "bond:4", "how": "光靈的親密度升到 Lv 4「好朋友」", "draw": "spiritbed", "col": Color("ffd6ec")},
+	{"id": "spirit_bed", "name": "光靈的小床", "slots": ["floor", "wide"], "src": "bond:4", "how": "親密度 Lv.4", "draw": "spiritbed", "col": Color("ffd6ec")},
 	{"id": "orb", "name": "漩渦水晶球", "slots": ["top", "sill"], "src": "egg11:whirl", "how": "光潮群島 · 海上的漩渦", "draw": "orb", "col": Color("6ee7c0")},
 ]
 
@@ -40,10 +40,10 @@ const SA := preload("res://data/house/souvenir_art.gd")
 
 ## 小屋等級：點亮幾座聖地升級（高一、高二、高三都算）
 const LEVELS := [
-	{"lv": 1, "name": "小木屋", "need": 0, "desc": "一個房間：紀念品櫃、書桌、布告欄，10 個格位。"},
-	{"lv": 2, "name": "加蓋閣樓", "need": 10, "desc": "多一層閣樓：床、天窗，8 個新格位。"},
-	{"lv": 3, "name": "前院陽台", "need": 25, "desc": "門口多一個陽台：盆栽、鞦韆，季節會換景色。"},
-	{"lv": 4, "name": "觀星塔", "need": 50, "desc": "小屋旁邊的觀星塔：看各單元熟練度的星盤。"},
+	{"lv": 1, "name": "小木屋", "need": 0, "desc": "紀念品櫃、書桌、布告欄　格位 10"},
+	{"lv": 2, "name": "加蓋閣樓", "need": 10, "desc": "閣樓：床、天窗　格位 +8"},
+	{"lv": 3, "name": "前院陽台", "need": 25, "desc": "陽台：盆栽、鞦韆、四季景色"},
+	{"lv": 4, "name": "觀星塔", "need": 50, "desc": "觀星塔：單元熟練度星盤"},
 ]
 
 
