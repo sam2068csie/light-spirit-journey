@@ -131,7 +131,7 @@ func _ready() -> void:
 	_btn_shine = _pull_button(br, UITheme.CYAN, Color("1f7fa8"), Color("082436"))
 	_btn_shine.pressed.connect(func(): _pull("shine"))
 	var note := Label.new()
-	note.text = "十連保底稀有，閃光抽保底史詩。重複的會變成光之碎片。"
+	note.text = "十連保底稀有　閃光抽保底史詩　重複裝扮轉為光之碎片"
 	note.add_theme_font_size_override("font_size", UITheme.fs(13))
 	note.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -244,13 +244,13 @@ func _refresh() -> void:
 	_btn_one.disabled = not g.gacha_can("one")
 	_btn_ten.disabled = not g.gacha_can("ten")
 	_btn_shine.disabled = not g.gacha_can("shine")
-	_pull_label(_btn_one, "單抽（今日首抽半價）" if g.gacha_half_ready() else "單抽", "dust", int(c1.amt), UITheme.GOLD_INK)
+	_pull_label(_btn_one, "單抽（首抽半價）" if g.gacha_half_ready() else "單抽", "dust", int(c1.amt), UITheme.GOLD_INK)
 	_pull_label(_btn_ten, "十連", "dust", Cos.COST_TEN, Color.WHITE)
 	_pull_label(_btn_shine, "閃光抽", "crystal", Cos.COST_SHINE, Color("082436"))
 	var left: int = Cos.PITY_SR - int(g.gacha.pity_sr)
-	_pity_label.text = "再 %d 抽，必得史詩以上" % left
+	_pity_label.text = "史詩保底　剩 %d 抽" % left
 	_pity_bar.value = int(g.gacha.pity_sr)
-	_ssr_label.text = "傳說保底：再 %d 抽必得傳說　（已經抽了 %d 次）" % [Cos.PITY_SSR - int(g.gacha.pity_ssr), int(g.gacha.pulls)]
+	_ssr_label.text = "傳說保底　剩 %d 抽（累計 %d 抽）" % [Cos.PITY_SSR - int(g.gacha.pity_ssr), int(g.gacha.pulls)]
 	_book_label.text = "圖鑑 %d / %d" % [g.owned.size(), Cos.ITEMS.size()]
 
 
@@ -329,18 +329,18 @@ func _open_rates() -> void:
 		# 只寫件數和每件的機率（全部名稱太長了；想看有哪些可以去衣櫃）
 		var n: int = Cos.items_of_rarity(r).size()
 		var il := Label.new()
-		il.text = "共 %d 件，每件約 %.2f%%" % [n, Cos.RARITY[r].rate * 100.0 / maxf(1.0, n)]
+		il.text = "共 %d 件　每件約 %.2f%%" % [n, Cos.RARITY[r].rate * 100.0 / maxf(1.0, n)]
 		il.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		il.add_theme_font_size_override("font_size", UITheme.fs(15))
 		il.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		row.add_child(il)
 	var rules := Label.new()
-	rules.text = "・同一稀有度裡每件機率相同\n・連續 %d 抽沒出史詩以上，第 %d 抽保證史詩\n・連續 %d 抽沒出傳說，第 %d 抽保證傳說\n・重複的裝扮變成光之碎片：普通 5、稀有 15、史詩 50、傳說 150\n・全部的裝扮可以在衣櫃裡看到" % [Cos.PITY_SR, Cos.PITY_SR, Cos.PITY_SSR, Cos.PITY_SSR]
+	rules.text = "・同一稀有度內機率均等\n・連續 %d 抽未出史詩以上：第 %d 抽必得史詩\n・連續 %d 抽未出傳說：第 %d 抽必得傳說\n・重複裝扮轉為光之碎片：普通 5、稀有 15、史詩 50、傳說 150\n・所有裝扮可在衣櫃查看" % [Cos.PITY_SR, Cos.PITY_SR, Cos.PITY_SSR, Cos.PITY_SSR]
 	rules.add_theme_font_size_override("font_size", UITheme.fs(15))
 	rules.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	c.add_child(rules)
 	var ok := Button.new()
-	ok.text = "知道了"
+	ok.text = "確定"
 	ok.custom_minimum_size = Vector2(200, 50)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	UITheme.accent_button(ok, 18)
@@ -496,7 +496,7 @@ class Reveal extends Control:
 		cap.size = Vector2(400, 400)
 		add_child(cap)
 		var tip := Label.new()
-		tip.text = "點一下打開！"
+		tip.text = "點擊開啟"
 		tip.add_theme_font_size_override("font_size", UITheme.fs(17))
 		tip.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -562,7 +562,7 @@ class Reveal extends Control:
 		v.add_child(ds)
 		if not res.new:
 			var dup := Label.new()
-			dup.text = "已經有了 → 光之碎片 +%d" % int(res.shards)
+			dup.text = "重複 → 光之碎片 +%d" % int(res.shards)
 			dup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			dup.add_theme_font_size_override("font_size", UITheme.fs(15))
 			dup.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
@@ -769,7 +769,7 @@ class TenCard extends Control:
 			draw_colored_polygon(top, col)
 			draw_colored_polygon(bot, Color(0.96, 0.96, 1.0))
 			draw_arc(c, 38.0, 0, TAU, 26, col.darkened(0.3), 2.0, true)
-			draw_string(font, Vector2(0, size.y - 14), "點一下", HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(13), Color(1, 1, 1, 0.4))
+			draw_string(font, Vector2(0, size.y - 14), "點擊", HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(13), Color(1, 1, 1, 0.4))
 			return
 		var it := Cos.item(String(res.id))
 		draw_string(font, Vector2(0, 150), it.name, HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(15), rc if r > 0 else UITheme.TEXT)

@@ -81,7 +81,7 @@ func _open_grade_pick() -> void:
 	col.add_child(sp)
 	col.add_child(UITheme.title_label("歡迎來到光靈的旅程！", 28, UITheme.ACCENT))
 	var sub := Label.new()
-	sub.text = "你現在幾年級？\n（之後點地圖上方的金色橫幅可修改）"
+	sub.text = "選擇年級\n（可在地圖上方的金色橫幅修改）"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", UITheme.fs(16))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -93,7 +93,7 @@ func _open_grade_pick() -> void:
 	var specs := [
 		["高一", "曦光大陸", "數與式、直線與圓、機率……", Color("f5c84c"), true],
 		["高二", "光潮群島", "三角函數、指對數、向量……", Color("5fd4ff"), true],
-		["高三", "？？？", "之後開放", Color("8a8fb0"), false],
+		["高三", "？？？", "未開放", Color("8a8fb0"), false],
 	]
 	for spec in specs:
 		var c: Color = spec[3]
@@ -146,9 +146,9 @@ func _ask_notify() -> void:
 	var sp := TitleSpirit.new()
 	sp.custom_minimum_size = Vector2(0, 130)
 	col.add_child(sp)
-	col.add_child(UITheme.title_label("要讓光靈提醒你嗎？", 24, UITheme.ACCENT))
+	col.add_child(UITheme.title_label("開啟光靈提醒？", 24, UITheme.ACCENT))
 	var l := Label.new()
-	l.text = "好幾天沒來時，光靈會在 %s 通知你。\n（可在設定裡關掉或改時間）" % g.notify_time
+	l.text = "多日未登入時，光靈於 %s 提醒\n（可在設定中關閉或修改時間）" % g.notify_time
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	l.custom_minimum_size = Vector2(400, 0)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -159,7 +159,7 @@ func _ask_notify() -> void:
 	row.add_theme_constant_override("separation", 10)
 	col.add_child(row)
 	var no := Button.new()
-	no.text = "先不要"
+	no.text = "暫不開啟"
 	no.custom_minimum_size = Vector2(0, 50)
 	no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	no.pressed.connect(func():
@@ -168,7 +168,7 @@ func _ask_notify() -> void:
 		layer.queue_free())
 	row.add_child(no)
 	var yes := Button.new()
-	yes.text = "好呀！"
+	yes.text = "開啟"
 	yes.custom_minimum_size = Vector2(0, 50)
 	yes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UITheme.accent_button(yes, 19)
@@ -407,7 +407,7 @@ func _refresh_units() -> void:
 	for gr in ["高一", "高二"]:
 		var tb := Button.new()
 		tb.text = WS.world_name(gr)
-		tb.tooltip_text = "去看%s（%s的單元）" % [WS.world_name(gr), gr]
+		tb.tooltip_text = "%s　%s單元" % [WS.world_name(gr), gr]
 		tb.focus_mode = Control.FOCUS_NONE
 		tb.custom_minimum_size = Vector2(108, 44)
 		var on: bool = gr == _grade
@@ -497,7 +497,7 @@ func _unit_card(g, u: Dictionary, no: int) -> Control:
 	v.add_child(tl)
 	var ex := Label.new()
 	var in_exam: bool = open and WS.exam_units(Game.of(self), Units.grade_of(u.id)).has(u.id)
-	ex.text = "★ 這次段考範圍" if in_exam else ("" if open else "新的世界還在建造中")
+	ex.text = "★ 這次段考範圍" if in_exam else ("" if open else "未開放")
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ex.add_theme_font_size_override("font_size", UITheme.fs(13))
 	ex.add_theme_color_override("font_color", UITheme.ACCENT if in_exam else UITheme.TEXT_DIM)
@@ -537,7 +537,7 @@ func _unit_card(g, u: Dictionary, no: int) -> Control:
 			_ensure_map()
 			_show_page("levels"))
 	else:
-		b.text = "即將開放"
+		b.text = "未開放"
 		b.icon = UITheme.icon("lock", 16, UITheme.TEXT_DIM)
 		b.disabled = true
 		UITheme.tight(b, 4)
@@ -608,13 +608,13 @@ func _refresh_review() -> void:
 			"v": float(m.solid) / maxf(1.0, m.total), "w": float(m.weak) / maxf(1.0, m.total)})
 	lcol.add_child(radar)
 	var foot := Label.new()
-	foot.text = "已掌握 %d ／ %d 個觀念　·　待加強 %d 個" % [solid, total, weak]
+	foot.text = "已掌握 %d／%d　·　待加強 %d" % [solid, total, weak]
 	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	foot.add_theme_font_size_override("font_size", UITheme.fs(15))
 	foot.add_theme_color_override("font_color", UITheme.TEXT)
 	lcol.add_child(foot)
 	var legend := Label.new()
-	legend.text = "金色：已掌握　　紅色：待加強"
+	legend.text = "金色　已掌握　　紅色　待加強"
 	legend.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	legend.add_theme_font_size_override("font_size", UITheme.fs(13))
 	legend.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -638,7 +638,7 @@ func _refresh_review() -> void:
 	dh.add_child(streak)
 	if items.is_empty():
 		var empty := Label.new()
-		empty.text = "還沒有複習題。\n答錯的觀念會自動收進這裡。"
+		empty.text = "尚無複習題\n答錯的觀念自動收錄於此"
 		empty.add_theme_font_size_override("font_size", UITheme.fs(15))
 		empty.add_theme_color_override("font_color", UITheme.TEXT)
 		dcol.add_child(empty)
@@ -657,7 +657,7 @@ func _refresh_review() -> void:
 			chips.add_child(_daily_chip(items[i], int(res[i]) if i < res.size() else -1, i == res.find(-1)))
 		var note := Label.new()
 		var n_weak := items.filter(func(it): return not it.get("refresh", false)).size()
-		note.text = "%d 題弱點題%s，約 5 分鐘。" % [n_weak, "＋%d 題回鍋複習" % (items.size() - n_weak) if items.size() > n_weak else ""]
+		note.text = "弱點題 %d%s　約 5 分鐘" % [n_weak, "　回鍋複習 %d" % (items.size() - n_weak) if items.size() > n_weak else ""]
 		note.add_theme_font_size_override("font_size", UITheme.fs(15))
 		note.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		dcol.add_child(note)
@@ -665,7 +665,7 @@ func _refresh_review() -> void:
 		go2.custom_minimum_size = Vector2(0, 44)
 		UITheme.accent_button(go2, 19)
 		if g.daily_done():
-			go2.text = "今天完成了 ✓　再練一組弱點  ▶"
+			go2.text = "今日已完成 ✓　再練一組  ▶"
 			go2.pressed.connect(func():
 				var extra: Array = Center.make_daily(g).slice(0, 3)
 				if extra.is_empty():
@@ -687,8 +687,8 @@ func _refresh_review() -> void:
 	var weakest: Array = Center.weakest(g, 8, g.cur_unit)
 	if weakest.is_empty():
 		var ok := Label.new()
-		ok.text = "目前沒有待加強的觀念，太厲害了！" if total > 0 and solid > 0 \
-			else "還沒有錯題紀錄。"
+		ok.text = "無待加強觀念" if total > 0 and solid > 0 \
+			else "尚無錯題紀錄"
 		ok.add_theme_font_size_override("font_size", UITheme.fs(15))
 		ok.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		ok.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -895,8 +895,8 @@ func _show_summary(results: Array, kind: String) -> void:
 		col.add_child(row)
 	var msg := Label.new()
 	var better := results.filter(func(rr): return int(rr.stars) > 0).size()
-	msg.text = ("%d 個觀念變強了！" % better if better > 0 else "這次比較難，沒關係，明天再來練。") \
-		+ ("\n已經累積修煉 %d 天，明天見！" % g.review_days.size() if done_today else "")
+	msg.text = ("%d 個觀念變強了！" % better if better > 0 else "這次比較難，明天再挑戰") \
+		+ ("\n累積修煉 %d 天" % g.review_days.size() if done_today else "")
 	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	msg.add_theme_font_size_override("font_size", UITheme.fs(15))
 	msg.add_theme_color_override("font_color", UITheme.TEXT)
@@ -985,7 +985,7 @@ func _open_unit_picker(tower: bool) -> void:
 			b.focus_mode = Control.FOCUS_NONE
 			b.custom_minimum_size = Vector2(260, 50)
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			b.text = "  %s%s" % [u.title, "　✓ 目前" if cur else ("" if ok else ("　即將開放" if not Units.is_open(u) else "　還沒有塔"))]
+			b.text = "  %s%s" % [u.title, "　✓ 目前" if cur else ("" if ok else ("　即將開放" if not Units.is_open(u) else "　無終焉之塔"))]
 			b.add_theme_font_size_override("font_size", UITheme.fs(15))
 			var edge := UITheme.ACCENT if cur else Color(c.r, c.g, c.b, 0.5 if ok else 0.12)
 			b.add_theme_stylebox_override("normal", UITheme.box(Color(c.r, c.g, c.b, 0.12 if ok else 0.03), 12, edge, 2 if cur else 1, 8))
@@ -1055,11 +1055,11 @@ func _refresh_tower() -> void:
 	col.add_theme_constant_override("separation", 10)
 	p.add_child(col)
 	col.add_child(_h("挑戰規則", UITheme.ROSE))
-	for rule in [["▲", "共 %d 層，每層一題" % Center.tower_top(g.cur_unit)],
-			["◷", "每層限時，越往上越短"],
-			["♥", "三顆心：答錯或超時扣一顆"],
-			["✦", "每 5 層是試煉大題"],
-			["◎", "每層星塵每天限領一次"]]:
+	for rule in [["▲", "共 %d 層　每層一題" % Center.tower_top(g.cur_unit)],
+			["◷", "每層限時　越高越短"],
+			["♥", "生命 3　答錯或超時 −1"],
+			["✦", "每 5 層　試煉大題"],
+			["◎", "星塵　每層每日限領一次"]]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		var ic := Label.new()
@@ -1080,8 +1080,8 @@ func _refresh_tower() -> void:
 	var rec := HBoxContainer.new()
 	rec.add_theme_constant_override("separation", 30)
 	col.add_child(rec)
-	for pair in [["最高紀錄", ("登頂！（%d 層）" % g.tower_best if g.tower_best >= Center.tower_top(g.cur_unit) else "第 %d 層" % g.tower_best) if g.tower_best > 0 else "還沒有"], ["累積攀登", "%d 次" % g.tower_runs],
-			["今日星塵", ("領到第 %d 層" % g.tower_paid_today()) if g.tower_paid_today() > 0 else "還沒領"]]:
+	for pair in [["最高紀錄", ("登頂！（%d 層）" % g.tower_best if g.tower_best >= Center.tower_top(g.cur_unit) else "第 %d 層" % g.tower_best) if g.tower_best > 0 else "無"], ["累積攀登", "%d 次" % g.tower_runs],
+			["今日星塵", ("已領至第 %d 層" % g.tower_paid_today()) if g.tower_paid_today() > 0 else "未領取"]]:
 		var v := VBoxContainer.new()
 		var l1 := Label.new()
 		l1.text = pair[0]
@@ -1121,7 +1121,7 @@ func _show_tower_result(res: Dictionary) -> void:
 	var summit: bool = res.get("summit", false)
 	col.add_child(UITheme.title_label("登頂成功！" if summit else "攀登結束", 28, UITheme.ROSE))
 	var floors := int(res.floors)
-	col.add_child(UITheme.title_label(("爬完全部 %d 層，終焉之塔被你征服了！" % floors) if summit else ("這次爬到第 %d 層" % floors if floors > 0 else "還沒爬上第 1 層"), 26 if not summit else 22, UITheme.ACCENT))
+	col.add_child(UITheme.title_label(("爬完全部 %d 層，終焉之塔被你征服了！" % floors) if summit else ("抵達第 %d 層" % floors if floors > 0 else "未通過第 1 層"), 26 if not summit else 22, UITheme.ACCENT))
 	if summit:
 		Game.of(self).sfx("fanfare")
 	if res.get("record", false) and floors > 0:
@@ -1145,9 +1145,9 @@ func _show_tower_result(res: Dictionary) -> void:
 	elif floors > 0:
 		var paid := int(rw.get("paid", floors))
 		if paid >= Center.tower_top(Game.of(self).cur_unit):
-			tl.text = "今天的星塵都領過了，明天再來"
+			tl.text = "今日星塵已領完"
 		else:
-			tl.text = "第 1～%d 層今天已領過，爬更高才有星塵" % paid
+			tl.text = "第 1～%d 層今日已領取　更高層才有星塵" % paid
 		tl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		tl.add_theme_font_size_override("font_size", UITheme.fs(15))
 	else:

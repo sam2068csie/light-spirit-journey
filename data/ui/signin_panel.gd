@@ -84,7 +84,7 @@ func _build() -> void:
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	head.add_child(title)
 	var sub := Label.new()
-	sub.text = "每天早上 5:00 換日"
+	sub.text = "每日 05:00 重置"
 	sub.add_theme_font_size_override("font_size", UITheme.fs(13))
 	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -150,7 +150,7 @@ func _build() -> void:
 
 	# 說明＋中斷提示
 	var info := Label.new()
-	info.text = "漏簽時守護會自動補上（連簽 7 天多一個，最多 %d 個）。守護不夠，連續天數減半。" % g.guard_max()
+	info.text = "漏簽時自動消耗守護　連簽 7 天 +1（上限 %d）\n守護不足：連續天數減半" % g.guard_max()
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", UITheme.fs(15))
 	info.add_theme_color_override("font_color", UITheme.TEXT_DIM)
@@ -158,10 +158,10 @@ func _build() -> void:
 	if can and int(pv.missed) > 0:
 		var warn := Label.new()
 		if int(pv.guards_used) > 0:
-			warn.text = "漏了 %d 天：用 %d 個守護補上，連續不中斷！" % [int(pv.missed), int(pv.guards_used)]
+			warn.text = "漏簽 %d 天　消耗守護 %d　連續不中斷" % [int(pv.missed), int(pv.guards_used)]
 			warn.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 		else:
-			warn.text = "漏了 %d 天，守護不夠：連續天數減半（%d → %d 天）。" % [int(pv.missed), int(g.streak.count), int(g.streak.count) / 2]
+			warn.text = "漏簽 %d 天　守護不足　連續天數減半（%d → %d 天）" % [int(pv.missed), int(g.streak.count), int(g.streak.count) / 2]
 			warn.add_theme_color_override("font_color", UITheme.ORANGE)
 		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		warn.add_theme_font_size_override("font_size", UITheme.fs(15))
@@ -178,7 +178,7 @@ func _build() -> void:
 		tw.tween_property(b, "modulate", Color(1.1, 1.08, 0.95), 0.6).set_trans(Tween.TRANS_SINE)
 		tw.tween_property(b, "modulate", Color.WHITE, 0.6).set_trans(Tween.TRANS_SINE)
 	else:
-		b.text = "今天已簽到 ✓　明天再來！"
+		b.text = "今日已簽到 ✓"
 		b.disabled = true
 		UITheme.accent_button(b, 18)
 	_body.add_child(b)
@@ -283,12 +283,12 @@ func _claim() -> void:
 		parts.append("光之碎片 ×%d" % int(rw.shard))
 	var lines := PackedStringArray()
 	if int(res.guards_used) > 0:
-		lines.append("光靈的守護補上了漏簽的 %d 天！" % int(res.guards_used))
+		lines.append("守護補簽 %d 天" % int(res.guards_used))
 	elif res.halved:
-		lines.append("中斷了一下，連續天數保留一半，繼續加油！")
-	lines.append("連續第 %d 天：獲得 %s" % [int(res.count), "、".join(parts)])
+		lines.append("連續天數減半")
+	lines.append("連續第 %d 天　獲得 %s" % [int(res.count), "、".join(parts)])
 	if res.new_guard:
-		lines.append("連續 7 天！多了一個光靈的守護")
+		lines.append("連續 7 天　光靈的守護 +1")
 	g.sfx("fanfare" if rw.has("item") or rw.has("crystal") else "success")
 	_build()
 	_toast.text = "\n".join(lines)

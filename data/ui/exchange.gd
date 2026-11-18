@@ -191,16 +191,16 @@ func _show_sel(g) -> void:
 	_desc.text = it.desc
 	var cost: int = g.exchange_cost(it.id)
 	if g.owned.has(it.id):
-		_price.text = "已經擁有了"
+		_price.text = "已擁有"
 		_price.add_theme_color_override("font_color", UITheme.GOOD)
 		_buy.disabled = true
 		_buy.text = "已擁有"
 	else:
 		var enough: bool = int(g.inv.shard) >= cost
-		_price.text = "需要 光之碎片 %d　（目前 %d）" % [cost, int(g.inv.shard)]
+		_price.text = "光之碎片　%d／%d" % [int(g.inv.shard), cost]
 		_price.add_theme_color_override("font_color", UITheme.CYAN_LIGHT if enough else UITheme.BAD)
 		_buy.disabled = not enough
-		_buy.text = "兌換" if enough else "碎片不夠"
+		_buy.text = "兌換" if enough else "碎片不足"
 
 
 func _tile(it: Dictionary, g) -> Control:
@@ -259,7 +259,7 @@ func _do_buy() -> void:
 	if not g.exchange(_sel):
 		return
 	g.sfx("fanfare" if int(it.r) >= 2 else "success")
-	_toast.text = "換到了：%s！到衣櫃穿上吧" % it.name
+	_toast.text = "獲得 %s　可至衣櫃穿上" % it.name
 	_toast.add_theme_color_override("font_color", UITheme.CYAN_LIGHT)
 	_toast.modulate.a = 1.0
 	var tw := create_tween()

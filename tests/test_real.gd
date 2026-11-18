@@ -681,7 +681,7 @@ func _tutorial() -> bool:
 func _pick_button() -> Button:
 	var all := []
 	_collect(current_scene, all)
-	var pri := ["打開", "收下", "領取", "再玩一次", "下一題", "看結果", "▶", "繼續", "知道了", "開始"]
+	var pri := ["打開", "收下", "領取", "再玩一次", "下一題", "看結果", "▶", "繼續", "知道了", "確定", "開始"]
 	# 結算畫面：還有沒玩過的題型就「再玩一次」，否則「下一題」
 	var more := false
 	for n in current_scene.find_children("*", "Label", true, false):

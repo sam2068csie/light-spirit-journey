@@ -181,9 +181,9 @@ func _refresh() -> void:
 		_info_name.add_theme_color_override("font_color", Cos.RARITY[r].color if r > 0 else UITheme.TEXT)
 		_info_desc.text = it.desc
 	else:
-		_info_name.text = "點右邊的裝扮試穿"
+		_info_name.text = "點擊裝扮試穿"
 		_info_name.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-		_info_desc.text = "沒有的可以去扭蛋機抽"
+		_info_desc.text = "未擁有的裝扮可從扭蛋機取得"
 
 
 func _tile(it: Dictionary, g) -> Control:
@@ -229,9 +229,9 @@ func _tile(it: Dictionary, g) -> Control:
 	b.pressed.connect(func():
 		if not own:
 			_sel = ""
-			_info_name.text = "還沒拿到：" + Cos.RARITY[r].name + "的" + _cat_name(it.cat)
+			_info_name.text = "未擁有　" + Cos.RARITY[r].name + _cat_name(it.cat)
 			_info_name.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-			_info_desc.text = ("限定裝扮：" + String(it.how) + "。") if it.has("how") else "到扭蛋機抽抽看吧！"
+			_info_desc.text = ("取得方式　" + String(it.how)) if it.has("how") else "取得方式　扭蛋機"
 			return
 		g.toggle_equip(id)
 		g.play("bell", 1.2, -10.0)

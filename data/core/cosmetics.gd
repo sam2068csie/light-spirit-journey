@@ -30,7 +30,7 @@ const EXCHANGE := [30, 80, 250, 600]   # 碎片兌換所：各稀有度要幾個
 ## 扭蛋池 59 件：普通 23、稀有 18、史詩 12、傳說 6；另有簽到限定的「簽到圍巾」、親密度限定的「友誼之星」（pool = false，抽不到也換不到）
 const ITEMS := [
 	# 頭飾
-	{"id": "friend_star", "cat": "hat", "r": 2, "name": "友誼之星", "pool": false, "how": "光靈的親密度升到 Lv 4「好朋友」獲得", "limit": "親密度限定",
+	{"id": "friend_star", "cat": "hat", "r": 2, "name": "友誼之星", "pool": false, "how": "親密度 Lv.4", "limit": "親密度限定",
 		"desc": "光靈升到「好朋友」時送你的小星星，中間藏著一顆愛心。"},
 	{"id": "sprout", "cat": "hat", "r": 0, "name": "小草芽", "desc": "頭上冒出兩片小葉子，每天長一點點。"},
 	{"id": "bow", "cat": "hat", "r": 0, "name": "蝴蝶結", "desc": "粉紅色的蝴蝶結，出門前要綁好。"},
@@ -56,7 +56,7 @@ const ITEMS := [
 	{"id": "freckles", "cat": "face", "r": 0, "name": "小雀斑", "desc": "曬太陽留下的可愛小點點。"},
 	{"id": "bandaid", "cat": "face", "r": 0, "name": "OK 繃", "desc": "算錯了沒關係，貼一下就好，再試一次！"},
 	{"id": "hero_mask", "cat": "face", "r": 1, "name": "英雄眼罩", "desc": "函數俠參上！專門打倒不合的根。"},
-	{"id": "streak_scarf", "cat": "face", "r": 2, "name": "簽到圍巾", "pool": false, "how": "連續簽到 14 天獲得", "limit": "簽到限定",
+	{"id": "streak_scarf", "cat": "face", "r": 2, "name": "簽到圍巾", "pool": false, "how": "連續簽到 14 天", "limit": "簽到限定",
 		"desc": "連續簽到 14 天才拿得到的紅圍巾。每天一點點，累積起來就很可觀，就像 1.01^{365} ≈ 37.8。"},
 	# 光芒
 	{"id": "mint", "cat": "aura", "r": 0, "name": "薄荷綠", "col": Color("7ef0c0"), "desc": "清清涼涼的綠色光芒。"},
