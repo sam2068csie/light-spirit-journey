@@ -1,7 +1,7 @@
 extends RefCounted
 ## 光靈親密度的兩個視窗（資料在 game_bond.gd）
 ##   levelup(host, lv)：升級了！（小屋、主畫面、大地圖都可能跳出來；每次升級只播一次）
-##   detail(host)：小屋左下角點開：現在幾級、進度條；右上角的「i」點了才展開（今天拿了多少、怎麼增加、每一級的獎勵）
+##   detail(host)：小屋左下角點開：現在幾級、進度條；右上角的「i」點了才展開（怎麼增加＋今天的次數、每一級的獎勵）
 ## 兩個都回傳視窗的根節點（關掉時會 queue_free，可以等 tree_exited）
 const UITheme := preload("res://data/ui/game_theme.gd")
 const Game := preload("res://data/core/game.gd")
@@ -23,8 +23,9 @@ const LV_LINES := {
 	10: "謝謝你一路陪著我。我們的光，會一直亮著。",
 }
 
-## 今天的進度（說明視窗）：[種類, 名稱]
-const TODAY := [["learn", "答對題目"], ["pet", "摸摸頭"], ["chat", "聊天"], ["daily", "今日修煉"], ["quests", "每日任務全完成"]]
+## 怎麼增加（「i」的提示框）：[種類, 名稱]；有每日上限的，同一行右邊寫今天做了幾次
+const WAYS := [["learn", "答對一題"], ["journey", "第一次通過旅程"], ["card", "觀念卡片"], ["daily", "今日修煉"],
+	["quests", "每日任務全完成"], ["pet", "摸摸頭"], ["chat", "聊天"]]
 
 
 static func levelup(host: Node, lv: int) -> Control:
@@ -139,14 +140,29 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 	var nxt: Dictionary = pr.next
 	if not nxt.is_empty():
 		vb.add_child(_text("目前 %d 點，Lv.%d 要 %d 點" % [pr.pts, nxt.lv, nxt.need], 14, UITheme.TEXT_DIM))
-	var parts := []
-	for it in TODAY:
-		var cap := int(Bond.BOND_CAP[it[0]])
-		parts.append("%s %d／%d" % [it[1], cap - g.bond_left(it[0]), cap])
-	vb.add_child(_section("今天"))
-	vb.add_child(_text("、".join(parts), 14, UITheme.TEXT))
-	vb.add_child(_section("怎麼增加"))
-	vb.add_child(_text("答對一題 +1（改對也算）、第一次通過旅程 +5、觀念卡片 +3、今日修煉 +5、每日任務全完成 +5、摸摸頭 +1、聊天 +2。只會增加，不會變少。", 14, UITheme.TEXT))
+	vb.add_child(_section("怎麼增加（右邊是今天的次數）"))
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 2)
+	vb.add_child(grid)
+	for it in WAYS:
+		var k: String = it[0]
+		var name := _text(String(it[1]), 14, UITheme.TEXT)
+		name.autowrap_mode = TextServer.AUTOWRAP_OFF
+		name.custom_minimum_size = Vector2(170, 0)
+		grid.add_child(name)
+		var pl := _text("+%d" % int(Bond.BOND_PTS[k]), 14, PINK)
+		pl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		pl.custom_minimum_size = Vector2(40, 0)
+		grid.add_child(pl)
+		var cnt := ""
+		if Bond.BOND_CAP.has(k):
+			var cap := int(Bond.BOND_CAP[k])
+			cnt = "%d／%d" % [cap - g.bond_left(k), cap]
+		var cl := _text(cnt, 14, UITheme.TEXT_DIM)
+		cl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		grid.add_child(cl)
 	vb.add_child(_section("每一級的獎勵"))
 	for l in Bond.BOND_LEVELS:
 		var got := int(l.lv) <= int(pr.lv)
