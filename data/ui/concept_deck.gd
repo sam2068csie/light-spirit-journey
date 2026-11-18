@@ -832,6 +832,10 @@ func _scatter(gen: int, rng: RandomNumberGenerator) -> void:
 	for t in _tiles:
 		var tl: ConceptTile = t
 		tl.fit()
+		# 比積木區還寬的積木（長的式子）：字縮小到放得下，不會凸出積木區
+		while tl.size.x > w - 24.0 and tl._label.font_size > 12:
+			tl._label.font_size -= 1
+			tl.fit()
 		var gap := rng.randf_range(14.0, 46.0)
 		if x + tl.size.x > w - 12.0 and not cur.is_empty():
 			rows.append(cur)

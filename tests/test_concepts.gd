@@ -8,7 +8,8 @@ const Units := preload("res://data/core/units.gd")
 const Cards := preload("res://data/ui/concept_cards.gd")
 const Deck := preload("res://data/ui/concept_deck.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
-const MAX_TILE_W := 300.0
+const GameTheme := preload("res://data/ui/game_theme.gd")
+const MAX_TILE_W := 250.0   # 積木區 300 寬：左右各留 12、積木本身的邊 26，字要在 250 以內（太寬會自動縮字，但不要靠它）
 
 
 func _initialize() -> void:
@@ -52,7 +53,7 @@ func _check_content() -> void:
 					for x in grp:
 						ok(answers.has(x), "%s：swap 裡的「%s」不是這張卡片的答案" % [where, x])
 				for x in answers + decoys:
-					var w := MathLabel.text_width(font, String(x), 17)
+					var w := MathLabel.text_width(font, String(x), GameTheme.fs(17))
 					ok(w <= MAX_TILE_W, "%s：積木「%s」太寬（%d px）" % [where, x, int(w)])
 	ok(n_cards > 50, "卡片數量 %d" % n_cards)
 
