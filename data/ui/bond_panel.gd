@@ -1,7 +1,7 @@
 extends RefCounted
 ## 光靈親密度的兩個視窗（資料在 game_bond.gd）
 ##   levelup(host, lv)：升級了！（小屋、主畫面、大地圖都可能跳出來；每次升級只播一次）
-##   detail(host)：小屋左下角點開：現在幾級、今天拿了多少、怎麼增加、每一級解鎖什麼
+##   detail(host)：小屋左下角點開：現在幾級、進度條；右上角的「i」點了才展開（今天拿了多少、怎麼增加、每一級的獎勵）
 ## 兩個都回傳視窗的根節點（關掉時會 queue_free，可以等 tree_exited）
 const UITheme := preload("res://data/ui/game_theme.gd")
 const Game := preload("res://data/core/game.gd")
@@ -55,38 +55,64 @@ static func levelup(host: Node, lv: int) -> Control:
 	return layer
 
 
+## 一打開只看到：光靈、等級、進度條、下一級叫什麼。說明和獎勵藏在右上角的「i」裡，點了才展開
 static func detail(host: Node) -> Control:
 	var g = Game.of(host)
 	var pr: Dictionary = g.bond_progress()
-	var o := UITheme.modal(host, PINK, 720)
+	var o := UITheme.modal(host, PINK, 460)
 	var layer: Control = o[0]
 	var col: VBoxContainer = o[1]
 	col.add_theme_constant_override("separation", 10)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 14)
-	col.add_child(head)
+	# 右上角的資訊按鈕
+	var top := HBoxContainer.new()
+	col.add_child(top)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(sp)
+	var info := Button.new()
+	info.name = "Info"
+	info.text = "i"
+	info.tooltip_text = "親密度怎麼增加、每一級的獎勵"
+	info.focus_mode = Control.FOCUS_NONE
+	info.toggle_mode = true
+	info.custom_minimum_size = Vector2(38, 38)
+	info.add_theme_font_override("font", UITheme.bold_font())
+	info.add_theme_font_size_override("font_size", UITheme.fs(18))
+	for st in ["normal", "hover", "pressed", "hover_pressed"]:
+		var on: bool = String(st).contains("pressed")
+		info.add_theme_stylebox_override(st, UITheme.box(Color(1, 0.56, 0.75, 0.3 if on else 0.08), 19, PINK, 2, 0))
+	info.add_theme_color_override("font_color", PINK)
+	info.add_theme_color_override("font_hover_color", Color.WHITE)
+	info.add_theme_color_override("font_pressed_color", Color.WHITE)
+	info.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+	top.add_child(info)
 	var pic := Portrait.new()
-	pic.custom_minimum_size = Vector2(110, 96)
-	head.add_child(pic)
-	var hv := VBoxContainer.new()
-	hv.add_theme_constant_override("separation", 6)
-	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hv.alignment = BoxContainer.ALIGNMENT_CENTER
-	head.add_child(hv)
-	hv.add_child(UITheme.title_label("光靈的親密度　Lv.%d %s" % [pr.lv, pr.name], 24, PINK))
-	hv.add_child(bar(pr.frac, Vector2(0, 12)))
+	pic.custom_minimum_size = Vector2(0, 120)
+	col.add_child(pic)
+	var title := UITheme.title_label("Lv.%d %s" % [pr.lv, pr.name], 26, PINK)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	col.add_child(bar(pr.frac, Vector2(0, 12)))
 	var nxt: Dictionary = pr.next
-	hv.add_child(_text("已經是最高等級了！" if nxt.is_empty() else "下一級：Lv.%d %s（目前 %d／%d 點）" % [nxt.lv, nxt.name, pr.pts, nxt.need], 14, UITheme.TEXT_DIM))
-	# 今天
+	col.add_child(_text("已經是最高等級了！" if nxt.is_empty() else "下一級：%s" % nxt.name, 15, UITheme.TEXT_DIM, true))
+	# ---- 藏起來的說明（點 i 才出現）----
+	var more := VBoxContainer.new()
+	more.name = "More"
+	more.visible = false
+	more.add_theme_constant_override("separation", 8)
+	col.add_child(more)
+	more.add_child(HSeparator.new())
+	if not nxt.is_empty():
+		more.add_child(_text("目前 %d 點，Lv.%d 要 %d 點" % [pr.pts, nxt.lv, nxt.need], 14, UITheme.TEXT_DIM, true))
 	var parts := []
 	for it in TODAY:
 		var cap := int(Bond.BOND_CAP[it[0]])
 		parts.append("%s %d／%d" % [it[1], cap - g.bond_left(it[0]), cap])
-	col.add_child(_section("今天"))
-	col.add_child(_text("、".join(parts), 15, UITheme.TEXT))
-	col.add_child(_section("怎麼增加"))
-	col.add_child(_text("答對一題 +1（答錯後改對也算）、第一次通過一段旅程 +5、完成觀念卡片 +3、做完今日修煉 +5、每日任務全完成 +5；小屋裡摸摸頭 +1、聊天 +2。親密度只會增加，好幾天沒來也不會變少。", 14, UITheme.TEXT))
-	col.add_child(_section("每一級解鎖"))
+	more.add_child(_section("今天"))
+	more.add_child(_text("、".join(parts), 14, UITheme.TEXT))
+	more.add_child(_section("怎麼增加"))
+	more.add_child(_text("答對一題 +1（改對也算）、第一次通過旅程 +5、觀念卡片 +3、今日修煉 +5、每日任務全完成 +5、摸摸頭 +1、聊天 +2。只會增加，不會變少。", 14, UITheme.TEXT))
+	more.add_child(_section("每一級的獎勵"))
 	for l in Bond.BOND_LEVELS:
 		var got := int(l.lv) <= int(pr.lv)
 		var row := HBoxContainer.new()
@@ -101,7 +127,13 @@ static func detail(host: Node) -> Control:
 		var un := _text(String(l.unlock) + ("" if l.ready else "（之後開放）"), 14, UITheme.TEXT if got else UITheme.TEXT_DIM)
 		un.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(un)
-		col.add_child(row)
+		more.add_child(row)
+	var card := _card_of(col)
+	info.toggled.connect(func(on: bool):
+		more.visible = on
+		if card != null:
+			card.custom_minimum_size.x = 720.0 if on else 460.0
+		g.sfx("click"))
 	var ok := Button.new()
 	ok.text = "關閉"
 	ok.focus_mode = Control.FOCUS_NONE
@@ -111,6 +143,14 @@ static func detail(host: Node) -> Control:
 	col.add_child(ok)
 	g.sfx("open")
 	return layer
+
+
+## 視窗的外框（展開說明時加寬）
+static func _card_of(n: Node) -> PanelContainer:
+	var p := n.get_parent()
+	while p != null and not (p is PanelContainer):
+		p = p.get_parent()
+	return p as PanelContainer
 
 
 ## 粉紅色的進度條

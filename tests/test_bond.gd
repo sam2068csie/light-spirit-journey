@@ -106,6 +106,13 @@ func _initialize() -> void:
 	ok(is_instance_valid(h._overlay), "左下角打開親密度說明")
 	await wait(0.4)
 	await shot("bond_detail")
+	var info: Button = h._overlay.find_child("Info", true, false)
+	var more: Control = h._overlay.find_child("More", true, false)
+	ok(info != null and more != null and not more.visible, "說明一開始藏起來")
+	info.button_pressed = true
+	await wait(0.4)
+	ok(more.visible, "點 i 展開說明")
+	await shot("bond_detail_more")
 	finish("BOND")
 
 
