@@ -118,6 +118,7 @@ const MAP := {
 	"main_menu.gd": "res://data/ui/main_menu.gd",
 	"map_layer.gd": "res://data/maps/map_layer.gd",
 	"math_text.gd": "res://data/ui/math_text.gd",
+	"name_tip.gd": "res://data/ui/name_tip.gd",
 	"notifier.gd": "res://data/core/notifier.gd",
 	"num1_bank.gd": "res://data/levels/num/num1_bank.gd",
 	"num2_bank.gd": "res://data/levels/num/num2_bank.gd",

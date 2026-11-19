@@ -230,16 +230,7 @@ func _refresh() -> void:
 	for c in _hold.get_children():
 		c.queue_free()
 	for k in ["dust", "shard", "crystal"]:
-		var ii := QP.ItemIcon.new()
-		ii.kind = k
-		ii.custom_minimum_size = Vector2(24, 24)
-		ii.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		_hold.add_child(ii)
-		var n := Label.new()
-		n.text = str(int(g.inv.get(k, 0)))
-		n.add_theme_font_size_override("font_size", UITheme.fs(15))
-		n.custom_minimum_size = Vector2(40, 0)
-		_hold.add_child(n)
+		_hold.add_child(QP.wallet_chip(k, int(g.inv.get(k, 0)), 40))     # 點一下顯示中文名稱
 	var c1: Dictionary = g.gacha_cost("one")
 	_btn_one.disabled = not g.gacha_can("one")
 	_btn_ten.disabled = not g.gacha_can("ten")

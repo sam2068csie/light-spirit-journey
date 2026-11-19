@@ -48,4 +48,28 @@ func _initialize() -> void:
 	g.goto("main_menu.gd")
 	await wait(1.0)
 	ok(current_scene != null and String(current_scene.get_script().resource_path).ends_with("main_menu.gd"), "換場景")
+	# 扭蛋機的貨幣：點一下跳出中文名稱，點別的地方收起來
+	var m = current_scene
+	m._open_gacha()
+	await wait(1.0)
+	var gp = m.get_child(m.get_child_count() - 1)
+	var NT := preload("res://data/ui/name_tip.gd")
+	var names := []
+	for chip in gp._hold.get_children():
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = true
+		chip.gui_input.emit(e)
+		await wait(0.3)
+		names.append(NT._cur.text if is_instance_valid(NT._cur) else "")
+		if chip == gp._hold.get_child(1):
+			await shot("gacha_currency_tip")
+	ok(names == ["星塵", "光之碎片", "光之結晶"], "點貨幣顯示中文名稱：%s" % str(names))
+	var far := InputEventMouseButton.new()
+	far.button_index = MOUSE_BUTTON_LEFT
+	far.pressed = true
+	far.position = Vector2(300, 400)
+	NT._cur._input(far)
+	await wait(0.1)
+	ok(not is_instance_valid(NT._cur), "點別的地方：名稱收起來")
 	finish("ECONOMY")

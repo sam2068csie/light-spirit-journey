@@ -153,17 +153,7 @@ func _refresh() -> void:
 	for c in _hold.get_children():
 		c.queue_free()
 	for k in ["dust", "shard", "crystal"]:
-		var ii := ItemIcon.new()
-		ii.kind = k
-		ii.custom_minimum_size = Vector2(24, 24)
-		ii.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		ii.tooltip_text = DQ.ITEMS[k].name
-		_hold.add_child(ii)
-		var n := Label.new()
-		n.text = str(int(g.inv.get(k, 0)))
-		n.add_theme_font_size_override("font_size", UITheme.fs(15))
-		n.custom_minimum_size = Vector2(34, 0)
-		_hold.add_child(n)
+		_hold.add_child(wallet_chip(k, int(g.inv.get(k, 0)), 34))
 	# 區間獎勵
 	_tier.done_n = g.quest_got_count()      # 完成並領取的任務數
 	_tier.claimed = g.quest_state().tiers.duplicate()
@@ -443,6 +433,30 @@ static func amount_row(pairs: Array, font_size := 14, color := Color.WHITE, icon
 			gap.custom_minimum_size = Vector2(6, 0)
 			row.add_child(gap)
 	return row
+
+
+## 持有的貨幣：圖示＋數量。點一下在旁邊跳出中文名稱（name_tip.gd）。扭蛋機、布告欄共用
+static func wallet_chip(k: String, amount: int, minw: float) -> HBoxContainer:
+	var chip := HBoxContainer.new()
+	chip.add_theme_constant_override("separation", 6)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var ii := ItemIcon.new()
+	ii.kind = k
+	ii.custom_minimum_size = Vector2(24, 24)
+	ii.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_child(ii)
+	var n := Label.new()
+	n.text = str(amount)
+	n.add_theme_font_size_override("font_size", UITheme.fs(15))
+	n.custom_minimum_size = Vector2(minw, 0)
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(n)
+	chip.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			preload("res://data/ui/name_tip.gd").show_for(ii, String(DQ.ITEMS[k].name))
+			chip.accept_event())
+	return chip
 
 
 class ItemIcon extends Control:
