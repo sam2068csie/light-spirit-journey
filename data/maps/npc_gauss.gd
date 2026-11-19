@@ -2,7 +2,7 @@ extends RefCounted
 ## Q 版高斯（地圖 NPC）：頭大身體小、圓圓的大眼睛，程式畫的（不用圖檔）
 ##   參考 1840 年 Jensen 的肖像：黑色絨布軟帽、白髮與白色落腮鬚、藍眼睛、白色高領＋皺褶領巾、深色外袍配酒紅色絨布翻領
 ##   GaussNpc.draw(ci, 腳底的位置, 頭的半徑, 時間, 表情)
-##   表情：normal（平常，會眨眼）、happy（眼睛彎彎、張嘴笑）、think（一手摸下巴、眼睛往上看）、talk（嘴巴一開一合、舉起食指）
+##   表情：normal（平常，會眨眼）、happy（眼睛彎彎、張嘴笑）、think（一手摸下巴、眼睛往上看）、talk（嘴巴一開一合、張開手掌揮手）
 const UITheme := preload("res://data/ui/game_theme.gd")
 
 const SKIN := Color("f7d9c0")
@@ -43,10 +43,19 @@ static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal
 		UITheme.dot(ci, chin, s * 0.11, SKIN)
 		ci.draw_line(chin, chin + Vector2(-s * 0.12, -s * 0.08), SKIN, maxf(2.0, s * 0.08), true)
 	elif mood == "talk":
-		var up := head + Vector2(s * 1.18, s * 0.62)
-		UITheme.dot(ci, up, s * 0.11, SKIN)
-		ci.draw_line(up, up + Vector2(0, -s * 0.24), SKIN, maxf(2.0, s * 0.09), true)
-		UITheme.dot(ci, up + Vector2(0, -s * 0.24), maxf(1.0, s * 0.045), SKIN)
+		# 張開手掌揮手：圓手掌＋四根短短的手指張成扇形＋旁邊的大拇指，左右搖
+		#   （不要只伸一根手指：小圓手分不出是哪一根，會被看成不禮貌的手勢）
+		var palm := head + Vector2(s * 1.18, s * 0.6)
+		var sway := sin(t * 7.0) * 0.3
+		for k in 4:
+			var a := -PI / 2.0 + sway + (k - 1.5) * 0.36
+			var d := Vector2(cos(a), sin(a))
+			ci.draw_line(palm + d * s * 0.06, palm + d * s * 0.2, SKIN, maxf(2.0, s * 0.075), true)
+			UITheme.dot(ci, palm + d * s * 0.2, maxf(1.0, s * 0.037), SKIN)
+		var ta := sway + 0.15
+		var td := Vector2(cos(ta), sin(ta))
+		ci.draw_line(palm, palm + td * s * 0.16, SKIN, maxf(2.0, s * 0.08), true)
+		UITheme.dot(ci, palm, s * 0.12, SKIN)
 
 
 # ───────────────────────── 身體 ─────────────────────────
@@ -82,7 +91,7 @@ static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood
 			_arm(ci, Vector2(p.x + s * 0.38, arm_y), Vector2(p.x + s * 0.5, top - s * 0.02), s)
 			_arm(ci, Vector2(p.x - s * 0.38, arm_y), Vector2(p.x - s * 0.52, p.y - s * 0.34), s)
 		"talk":
-			# 舉起食指：「我想到了！」
+			# 舉起手揮手（手掌畫在頭前面，draw 裡）
 			_arm(ci, Vector2(p.x + s * 0.38, arm_y), Vector2(p.x + s * 1.18, top - s * 0.3), s)
 			_arm(ci, Vector2(p.x - s * 0.38, arm_y), Vector2(p.x - s * 0.52, p.y - s * 0.34), s)
 		_:
