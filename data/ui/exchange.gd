@@ -15,6 +15,8 @@ var _cat := "hat"
 var _sel := ""
 var _tabs: HBoxContainer
 var _grid: GridContainer
+var _scroll: ScrollContainer          # 一類放不下 12 件時往下捲（UITheme.grid_scroll）
+var _shown_cat := ""
 var _preview
 var _name: Label
 var _desc: Control
@@ -107,11 +109,10 @@ func _ready() -> void:
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 8)
 	rv.add_child(_tabs)
-	_grid = GridContainer.new()
-	_grid.columns = 4
-	_grid.add_theme_constant_override("h_separation", 12)
-	_grid.add_theme_constant_override("v_separation", 12)
-	rv.add_child(_grid)
+	var gs := UITheme.grid_scroll(4)
+	_scroll = gs[0]
+	_grid = gs[1]
+	rv.add_child(_scroll)
 
 	_toast = Label.new()
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -162,7 +163,10 @@ func _refresh() -> void:
 			_sel = ""
 			_refresh())
 		_tabs.add_child(b)
+	var keep := _scroll.scroll_vertical if _cat == _shown_cat else 0
+	_shown_cat = _cat
 	for c in _grid.get_children():
+		_grid.remove_child(c)
 		c.queue_free()
 	var list := Cos.items_of(_cat).filter(func(x): return x.get("pool", true))   # 簽到限定的換不到
 	list = Cos.by_rarity(list)
@@ -174,7 +178,10 @@ func _refresh() -> void:
 		if _sel == "" and not list.is_empty():
 			_sel = list[0].id
 	for it in list:
-		_grid.add_child(_tile(it, g))
+		var tl: Control = _tile(it, g)
+		tl.mouse_filter = Control.MOUSE_FILTER_PASS     # 按在格子上拖動也能捲動
+		_grid.add_child(tl)
+	UITheme.restore_scroll.call_deferred(_scroll, keep)
 	_show_sel(g)
 
 

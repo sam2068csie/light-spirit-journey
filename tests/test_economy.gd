@@ -102,8 +102,11 @@ func _wardrobe_scroll(m) -> void:
 		var need_scroll := n > 12
 		ok(sc.scroll_vertical == 0, "%s：換分類從最上面開始" % cat.name)
 		ok((vb.max_value - vb.page > 1.0) == need_scroll, "%s %d 件：%s" % [cat.name, n, "要捲動" if need_scroll else "不用捲"])
-		# 滾輪往下捲到底
-		for k in 8:
+		# 滾輪往下捲到底（無畫面的 headless 模式送不進滑鼠事件：直接捲到底，只檢查看不看得到）
+		var real_input := DisplayServer.get_name() != "headless"
+		if not real_input:
+			sc.scroll_vertical = 100000
+		for k in (8 if real_input else 0):
 			var e := InputEventMouseButton.new()
 			e.button_index = MOUSE_BUTTON_WHEEL_DOWN
 			e.pressed = true
@@ -119,7 +122,7 @@ func _wardrobe_scroll(m) -> void:
 		var vis := sc.get_global_rect().grow(1.0).encloses(last.get_global_rect())
 		ok(vis, "%s：最後一件「%s」捲得到、看得完整" % [cat.name, last.get_child(1).text if last.get_child_count() > 1 else ""])
 		if need_scroll:
-			ok(sc.scroll_vertical > 0, "%s：滾輪捲得動" % cat.name)
+			ok(sc.scroll_vertical > 0, "%s：%s" % [cat.name, "滾輪捲得動" if real_input else "捲得下去"])
 			await shot("wardrobe_%s_bottom" % cat.id)
 			# 穿上第 4 排的裝扮：重畫後停在原位
 			var before := sc.scroll_vertical
@@ -128,3 +131,26 @@ func _wardrobe_scroll(m) -> void:
 			ok(abs(w._scroll.scroll_vertical - before) <= 2, "%s：穿上第 4 排的裝扮，畫面停在原位（%d → %d）" % [cat.name, before, w._scroll.scroll_vertical])
 	w._close()
 	await wait(0.2)
+	# 兌換所：一樣要捲得到最後一件
+	m._open_gacha()
+	await wait(1.0)
+	var gp = m.get_child(m.get_child_count() - 1)
+	gp._open_exchange()
+	await wait(0.8)
+	var ex = null
+	for c in gp.get_children():
+		if c.get_script() == preload("res://data/ui/exchange.gd"):
+			ex = c
+	ok(ex != null, "打開兌換所")
+	for cat in Cos.CATS:
+		ex._cat = cat.id
+		ex._sel = ""
+		ex._refresh()
+		await wait(0.4)
+		var sc: ScrollContainer = ex._scroll
+		var n: int = ex._grid.get_child_count()
+		sc.scroll_vertical = 100000
+		await wait(0.2)
+		var last: Control = ex._grid.get_child(n - 1)
+		ok(sc.get_global_rect().grow(1.0).encloses(last.get_global_rect()), "兌換所 %s %d 件：最後一件捲得到" % [cat.name, n])
+	await shot("exchange_pet_bottom")

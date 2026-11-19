@@ -118,31 +118,11 @@ func _ready() -> void:
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 8)
 	rv.add_child(_tabs)
-	_scroll = ScrollContainer.new()
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var vsb := _scroll.get_v_scroll_bar()
-	vsb.custom_minimum_size = Vector2(5, 0)
-	vsb.add_theme_stylebox_override("scroll", UITheme.box(Color(1, 1, 1, 0.04), 3, Color(0, 0, 0, 0), 0, 0))
-	for st in ["grabber", "grabber_highlight", "grabber_pressed"]:
-		vsb.add_theme_stylebox_override(st, UITheme.box(Color(1, 1, 1, 0.25), 3, Color(0, 0, 0, 0), 0, 0))
+	var gs := UITheme.grid_scroll(4)
+	_scroll = gs[0]
+	_grid = gs[1]
 	rv.add_child(_scroll)
-	var pad := MarginContainer.new()
-	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pad.add_theme_constant_override("margin_right", 10)      # 留位置給捲軸
-	_scroll.add_child(pad)
-	_grid = GridContainer.new()
-	_grid.columns = 4
-	_grid.add_theme_constant_override("h_separation", 8)
-	_grid.add_theme_constant_override("v_separation", 12)
-	pad.add_child(_grid)
 	_refresh()
-
-
-func _restore_scroll(v: int) -> void:
-	await get_tree().process_frame
-	if is_instance_valid(_scroll):
-		_scroll.scroll_vertical = v
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -196,7 +176,7 @@ func _refresh() -> void:
 		var tl: Button = _tile(it, g)
 		tl.mouse_filter = Control.MOUSE_FILTER_PASS     # 按在格子上拖動也能捲動
 		_grid.add_child(tl)
-	_restore_scroll.call_deferred(keep)
+	UITheme.restore_scroll.call_deferred(_scroll, keep)
 	# 說明
 	var show_id := _sel
 	if show_id == "" or Cos.item(show_id).cat != _cat:

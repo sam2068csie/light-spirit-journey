@@ -32,6 +32,10 @@ static func glow_color(eq: Dictionary, t: float) -> Color:
 			var x := fposmod(t * 0.35, 3.0)
 			var i := int(x)
 			return cols[i].lerp(cols[(i + 1) % 3], x - i)
+		"sincos":
+			# 青色的份量 sin²、粉色的份量 cos²（加起來剛好 1）
+			var cs := cos(t * 1.4)
+			return Color("5ad8ff").lerp(Color("ff8fbf"), cs * cs)
 		"rainbow":
 			return Color.from_hsv(fposmod(t * 0.18, 1.0), 0.5, 1.0)
 		"galaxy":
@@ -68,6 +72,17 @@ static func draw_back(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: f
 			var a := t * 0.8 + k * TAU / 3.0
 			var p := c + Vector2(cos(a) * r * 1.85, sin(a) * r * 1.35)
 			_heart(ci, p, r * (0.24 + 0.04 * sin(t * 3.0 + k)), Color(1.0, 0.5, 0.72, 0.85))
+	if eq.get("aura", "") == "ripples":
+		# 同心圓波紋：一圈圈往外擴散、越外面越淡
+		for k in 3:
+			var ph := fposmod(t * 0.45 + k / 3.0, 1.0)
+			ci.draw_arc(c, r * (1.05 + 1.5 * ph), 0, TAU, 40, Color(g.r, g.g, g.b, 0.6 * (1.0 - ph)), maxf(1.0, r * 0.06), true)
+	if eq.get("aura", "") == "sincos":
+		# 正餘弦雙色：青環亮度 |sin|、粉環亮度 |cos|
+		var sv := absf(sin(t * 1.4))
+		var cv := absf(cos(t * 1.4))
+		ci.draw_arc(c, r * 1.35, 0, TAU, 40, Color(0.35, 0.85, 1.0, 0.12 + 0.7 * sv), maxf(1.5, r * 0.12), true)
+		ci.draw_arc(c, r * 1.8, 0, TAU, 40, Color(1.0, 0.56, 0.75, 0.12 + 0.7 * cv), maxf(1.5, r * 0.12), true)
 	if eq.get("aura", "") == "galaxy":
 		for k in 9:
 			var a := t * 0.35 + k * TAU / 9.0
@@ -178,6 +193,22 @@ static func draw_path_trail(ci: CanvasItem, pts: Array, r: float, eq: Dictionary
 		var f := 1.0 - float(k) / n
 		var p: Vector2 = pts[k]
 		match kind:
+			"maple_leaves":
+				if k % 4 == 1:
+					_leaf(ci, p + Vector2(0, k * 0.5), r * (0.2 + 0.18 * f), t * 1.5 + k, Color(1.0, 0.42 + 0.22 * fposmod(k * 0.37, 1.0), 0.2, 0.9 * f))
+			"ruler_dash":
+				if k % 2 == 0 and k + 1 < n:
+					var q: Vector2 = pts[k + 1]
+					ci.draw_line(p, q, Color(0.92, 0.95, 1.0, 0.85 * f), maxf(1.0, r * 0.07), true)
+				if k == 0 or k == n - 1:
+					UITheme.dot(ci, p, r * 0.09, Color(1.0, 0.85, 0.4, 0.95 * maxf(f, 0.5)))
+			"parabola_hop":
+				if k % 2 == 0:
+					var u := fposmod(k / 7.0, 1.0)
+					UITheme.dot(ci, p + Vector2(0, -4.0 * u * (1.0 - u) * r * 0.7), r * (0.05 + 0.08 * f), Color(0.6, 1.0, 0.75, 0.85 * f))
+			"radian_fan":
+				if k % 5 == 2:
+					_fan(ci, p, r * (0.3 + 0.3 * f), t * 1.2 + k * 0.6, Color(1.0, 0.82, 0.35, 0.85 * f))
 			"star_trail":
 				if k % 3 == 1:
 					_star(ci, p, r * (0.25 + 0.35 * f), Color(1, 0.95, 0.6, 0.85 * f))
@@ -239,6 +270,36 @@ static func draw_path_trail(ci: CanvasItem, pts: Array, r: float, eq: Dictionary
 
 static func _idle_trail(ci: CanvasItem, c: Vector2, r: float, kind: String, t: float) -> void:
 	match kind:
+		"maple_leaves":
+			for k in 4:
+				var ph := fposmod(t * 0.35 + k / 4.0, 1.0)
+				var p := c + Vector2(-r * (1.1 + 0.45 * k) + r * 0.3 * sin(t * 1.6 + k), r * (-0.8 + 1.9 * ph))
+				_leaf(ci, p, r * 0.24, t * 1.5 + k, Color(1.0, 0.45 + 0.08 * k, 0.2, 0.9 * sin(ph * PI)))
+		"ruler_dash":
+			# 尺規虛線：從光靈往後畫出一條直線（兩端各一點），畫完停一下再重畫
+			var a := c + Vector2(-r * 1.05, r * 0.15)
+			var b := c + Vector2(-r * 3.1, r * 0.15)
+			var e := a.lerp(b, clampf(fposmod(t * 0.5, 1.4), 0.0, 1.0))
+			if a.distance_to(e) > 1.0:
+				ci.draw_dashed_line(a, e, Color(0.92, 0.95, 1.0, 0.85), maxf(1.0, r * 0.08), maxf(2.0, r * 0.18))
+			UITheme.dot(ci, a, r * 0.1, Color("ffcf5a"))
+			UITheme.dot(ci, e, r * 0.1, Color("ffcf5a"))
+		"parabola_hop":
+			# 光點沿著一段段拋物線往後跳（淡淡的是走過的路線）
+			var path := PackedVector2Array()
+			for k in 31:
+				var s := k / 30.0
+				var u := fposmod(s * 2.0, 1.0)
+				path.append(c + Vector2(-r * (1.0 + 2.2 * s), r * 0.5 - 4.0 * u * (1.0 - u) * r * 0.8))
+			ci.draw_polyline(path, Color(0.6, 1.0, 0.75, 0.25), maxf(1.0, r * 0.05), true)
+			var s2 := fposmod(t * 0.45, 1.0)
+			var u2 := fposmod(s2 * 2.0, 1.0)
+			UITheme.dot(ci, c + Vector2(-r * (1.0 + 2.2 * s2), r * 0.5 - 4.0 * u2 * (1.0 - u2) * r * 0.8), r * 0.13, Color(0.7, 1.0, 0.8, 0.95))
+		"radian_fan":
+			for k in 3:
+				var ph := fposmod(t * 0.4 + k / 3.0, 1.0)
+				var p := c + Vector2(-r * (1.2 + 1.8 * ph), r * (0.3 - 0.4 * ph))
+				_fan(ci, p, r * 0.55 * (1.0 - 0.35 * ph), t * 0.8 + k * 2.0, Color(1.0, 0.82, 0.35, 0.9 * (1.0 - ph)))
 		"bond_trail":
 			for k in 6:
 				var ph := fposmod(t * 0.55 + k / 6.0, 1.0)
@@ -334,6 +395,50 @@ static func _face(ci: CanvasItem, c: Vector2, r: float, id: String, t: float) ->
 	var e2 := c + Vector2(r * 0.67, -r * 0.22)
 	var lw := maxf(1.0, r * 0.08)
 	match id:
+		"theta_sticker":
+			# θ 貼紙：臉頰上一個小 θ（白邊的橢圓＋中間一橫）
+			var q := e2 + Vector2(r * 0.12, r * 0.5)
+			var col := Color("2f9fe0")
+			var pts := PackedVector2Array()
+			for k in 21:
+				var a := TAU * k / 20.0
+				pts.append(q + Vector2(cos(a) * r * 0.13, sin(a) * r * 0.2))
+			ci.draw_polyline(pts, Color(1, 1, 1, 0.95), maxf(3.0, r * 0.16), true)
+			ci.draw_polyline(pts, col, maxf(1.4, r * 0.08), true)
+			ci.draw_line(q + Vector2(-r * 0.13, 0), q + Vector2(r * 0.13, 0), col, maxf(1.4, r * 0.08), true)
+		"whiskers":
+			# 貓咪鬍鬚：兩邊各三根＋粉紅小鼻子
+			var wc := Color(0.3, 0.27, 0.4, 0.85)
+			var ww := maxf(1.0, r * 0.045)
+			for k in 3:
+				var dy := (k - 1) * r * 0.09
+				var a1 := e1 + Vector2(-r * 0.1, r * 0.36 + dy)
+				ci.draw_line(a1, a1 + Vector2(-r * 0.42, (k - 1) * r * 0.08), wc, ww, true)
+				var a2 := e2 + Vector2(r * 0.12, r * 0.36 + dy)
+				ci.draw_line(a2, a2 + Vector2(r * 0.42, (k - 1) * r * 0.08), wc, ww, true)
+			UITheme.dot(ci, (e1 + e2) / 2.0 + Vector2(0, r * 0.26), r * 0.06, Color("ff9ab8"))
+		"slope_glasses":
+			# 斜率眼鏡：方框鏡片，右邊鏡腳上一個斜率三角形（金 = 橫走、粉 = 上升、青 = 斜邊）
+			var fc := Color("5ad8ff")
+			for e in [e1, e2]:
+				var rc := Rect2(e.x - r * 0.2, e.y - r * 0.16, r * 0.4, r * 0.32)
+				ci.draw_rect(rc, Color(0.35, 0.85, 1.0, 0.14), true)
+				ci.draw_rect(rc, fc, false, lw)
+			ci.draw_line(e1 + Vector2(r * 0.2, -r * 0.04), e2 + Vector2(-r * 0.2, -r * 0.04), fc, lw, true)
+			var b0 := e2 + Vector2(r * 0.22, r * 0.04)
+			var b1 := b0 + Vector2(r * 0.34, 0)
+			var b2 := b1 + Vector2(0, -r * 0.22)
+			ci.draw_line(b0, b1, Color("ffcf5a"), lw, true)
+			ci.draw_line(b1, b2, Color("ff8fbf"), lw, true)
+			ci.draw_line(b0, b2, fc, lw, true)
+		"constellation":
+			# 星座臉紋：臉頰上四顆小星星連成一串，一閃一閃
+			var pts := [e1 + Vector2(-r * 0.18, r * 0.42), e1 + Vector2(r * 0.05, r * 0.58), e2 + Vector2(-r * 0.12, r * 0.5), e2 + Vector2(r * 0.16, r * 0.34)]
+			for k in 3:
+				ci.draw_line(pts[k], pts[k + 1], Color(0.55, 0.62, 0.95, 0.9), maxf(1.0, r * 0.045), true)
+			for k in 4:
+				var tw := 0.5 + 0.5 * sin(t * 3.0 + k * 1.7)
+				_star(ci, pts[k], r * (0.11 + 0.05 * tw), Color(0.98, 0.78, 0.25, 0.75 + 0.25 * tw))
 		"blush":
 			UITheme.dot(ci, e1 + Vector2(-r * 0.12, r * 0.34), r * 0.15, Color(1.0, 0.5, 0.6, 0.55))
 			UITheme.dot(ci, e2 + Vector2(r * 0.1, r * 0.34), r * 0.15, Color(1.0, 0.5, 0.6, 0.55))
@@ -435,6 +540,73 @@ static func _hat(ci: CanvasItem, c: Vector2, r: float, id: String, t: float) -> 
 	var top := c.y - r * 0.92
 	var lw := maxf(1.0, r * 0.1)
 	match id:
+		"parabola_band":
+			# 拋物線髮箍：開口向下的拋物線，頂點（金色小點）在頭頂
+			var col := Color("ff8fbf")
+			var vtx := Vector2(hx, top - r * 0.08)
+			var pts := PackedVector2Array()
+			for k in 21:
+				var x := -1.0 + k / 10.0
+				pts.append(vtx + Vector2(x * r * 0.92, x * x * r * 0.62))
+			ci.draw_polyline(pts, col.darkened(0.35), maxf(2.0, r * 0.2), true)
+			ci.draw_polyline(pts, col, maxf(1.2, r * 0.12), true)
+			UITheme.dot(ci, vtx, r * 0.1, Color("ffcf5a"))
+		"wool_hat":
+			# 毛線帽：半圓帽身＋直條針織紋＋白色反摺＋毛球
+			var wc := Color("6f8cff")
+			var hc := Vector2(hx, top + r * 0.38)
+			var dome := PackedVector2Array()
+			for k in 17:
+				var a := PI + PI * k / 16.0
+				dome.append(hc + Vector2(cos(a) * r * 0.82, sin(a) * r * 0.62))
+			ci.draw_colored_polygon(dome, wc)
+			for k in 4:
+				var x := hc.x - r * 0.5 + k * r * 0.33
+				ci.draw_line(Vector2(x, hc.y - r * 0.42), Vector2(x, hc.y - r * 0.06), wc.darkened(0.22), maxf(1.0, r * 0.05), true)
+			ci.draw_colored_polygon(_round_rect(Rect2(hc.x - r * 0.88, hc.y - r * 0.12, r * 1.76, r * 0.26)), Color("e8ecff"))
+			UITheme.dot(ci, hc + Vector2(0, -r * 0.7), r * 0.2, Color("e8ecff"))
+		"compass_hat":
+			# 圓規帽：針腳插在頭頂，筆腳繞著畫一圈（畫過的地方留下青色的線），畫完停一下再重來
+			var o := Vector2(hx, top + r * 0.02)
+			var rad := r * 0.62
+			var drawn := minf(fposmod(t * 0.9, TAU + 1.2), TAU)
+			var arc := PackedVector2Array()
+			for k in 33:
+				var a := -PI / 2.0 + drawn * k / 32.0
+				arc.append(o + Vector2(cos(a) * rad, sin(a) * rad * 0.42))
+			if drawn > 0.05:
+				ci.draw_polyline(arc, Color("5ad8ff"), maxf(1.5, r * 0.09), true)
+			var pen: Vector2 = arc[arc.size() - 1]
+			var pivot := o + Vector2((pen.x - o.x) * 0.5, -r * 0.75)
+			var metal := Color("c9d2e8")
+			ci.draw_line(pivot, o, metal, maxf(1.5, r * 0.09), true)
+			ci.draw_line(pivot, pen, metal, maxf(1.5, r * 0.09), true)
+			UITheme.dot(ci, pen, r * 0.07, Color("ffcf5a"))
+			ci.draw_line(pivot, pivot + Vector2(0, -r * 0.22), Color("8a93b8"), maxf(1.5, r * 0.1), true)
+			UITheme.dot(ci, pivot, r * 0.1, Color("8a93b8"))
+		"unit_circle":
+			# 單位圓光環：頭上的單位圓＋坐標軸，光點繞圈
+			#   往 x 軸的垂線長 = sin θ（粉）、往 y 軸的水平線長 = cos θ（青）；軸上的點：x 軸是 cos θ（青）、y 軸是 sin θ（粉）
+			var cc := Vector2(hx, top - r * 0.82 + r * 0.04 * sin(t * 1.6))
+			var rad := r * 0.66
+			var axis := Color(1, 1, 1, 0.45)
+			var aw := maxf(1.0, r * 0.04)
+			ci.draw_line(cc + Vector2(-rad * 1.3, 0), cc + Vector2(rad * 1.3, 0), axis, aw, true)
+			ci.draw_line(cc + Vector2(0, -rad * 1.3), cc + Vector2(0, rad * 1.3), axis, aw, true)
+			var gold := Color("ffcf5a")
+			ci.draw_arc(cc, rad, 0, TAU, 40, Color(gold.r, gold.g, gold.b, 0.3), maxf(2.0, r * 0.2), true)
+			ci.draw_arc(cc, rad, 0, TAU, 40, gold, maxf(1.0, r * 0.07), true)
+			var th := t * 1.3
+			var pt := cc + Vector2(cos(th), -sin(th)) * rad
+			var dw := maxf(1.2, r * 0.07)
+			var pink := Color("ff8fbf")
+			var cyan := Color("5ad8ff")
+			ci.draw_dashed_line(pt, Vector2(pt.x, cc.y), pink, dw, maxf(2.0, r * 0.08))
+			ci.draw_dashed_line(pt, Vector2(cc.x, pt.y), cyan, dw, maxf(2.0, r * 0.08))
+			ci.draw_line(cc, pt, Color(1, 1, 1, 0.6), dw, true)
+			UITheme.dot(ci, Vector2(pt.x, cc.y), r * 0.08, cyan)
+			UITheme.dot(ci, Vector2(cc.x, pt.y), r * 0.08, pink)
+			UITheme.dot(ci, pt, r * 0.12, Color.WHITE)
 		"friend_star":
 			# 友誼之星（親密度 Lv 4）：頭上一顆金色小星星，中間一顆粉紅愛心，輕輕閃
 			var sc := Vector2(hx + r * 0.1, top - r * 0.22 + r * 0.04 * sin(t * 2.2))
@@ -574,6 +746,107 @@ static func _pet(ci: CanvasItem, c: Vector2, r: float, id: String, t: float, bac
 	var p := c + Vector2(cos(a) * r * 1.95, sin(a) * r * 0.55 - r * 0.35)
 	var sc := 0.85 if behind else 1.0
 	match id:
+		"penguin":
+			# 小企鵝：左右搖擺；白肚子一直延伸到臉，眼睛畫在白色上
+			var tilt := sin(t * 6.0) * 0.18
+			var up := Vector2(sin(tilt), -cos(tilt))
+			var side := Vector2(cos(tilt), sin(tilt))
+			var body := PackedVector2Array()
+			var belly := PackedVector2Array()
+			for k in 20:
+				var aa := TAU * k / 20.0
+				body.append(p + (side * cos(aa) * r * 0.26 + up * sin(aa) * r * 0.36) * sc)
+				belly.append(p + (up * r * 0.02 + side * cos(aa) * r * 0.17 + up * sin(aa) * r * 0.29) * sc)
+			for sd in [-1.0, 1.0]:
+				UITheme.dot(ci, p + (-up * r * 0.36 + side * sd * r * 0.1) * sc, r * 0.06 * sc, Color("ffb347"))
+			ci.draw_colored_polygon(body, Color("2a3150"))
+			ci.draw_colored_polygon(belly, Color("f4f6ff"))
+			var head := p + up * r * 0.18 * sc
+			for sd in [-1.0, 1.0]:
+				UITheme.dot(ci, head + side * sd * r * 0.075 * sc, r * 0.035 * sc, INK)
+			ci.draw_colored_polygon(PackedVector2Array([head + (-up * r * 0.05 - side * r * 0.05) * sc, head + (-up * r * 0.05 + side * r * 0.05) * sc, head - up * r * 0.13 * sc]), Color("ffb347"))
+		"hamster":
+			# 餘式倉鼠：把瓜子塞進臉頰（臉頰鼓起來），再拿下一顆
+			var q := p + Vector2(0, -absf(sin(t * 4.0)) * r * 0.05)
+			var fur := Color("e8b07a")
+			for sd in [-1.0, 1.0]:
+				UITheme.dot(ci, q + Vector2(sd * r * 0.17, -r * 0.2) * sc, r * 0.08 * sc, fur.darkened(0.1))
+				UITheme.dot(ci, q + Vector2(sd * r * 0.17, -r * 0.2) * sc, r * 0.045 * sc, Color("ffc0c8"))
+			UITheme.dot(ci, q, r * 0.28 * sc, fur)
+			var stuff := sin(t * 2.0)
+			var puff := 1.0 + 0.3 * maxf(0.0, stuff)
+			for sd in [-1.0, 1.0]:
+				UITheme.dot(ci, q + Vector2(sd * r * 0.2, r * 0.06) * sc, r * 0.12 * puff * sc, Color("f6d3a8"))
+			UITheme.dot(ci, q + Vector2(0, r * 0.1) * sc, r * 0.13 * sc, Color("fff0dc"))
+			for sd in [-1.0, 1.0]:
+				UITheme.dot(ci, q + Vector2(sd * r * 0.09, -r * 0.06) * sc, r * 0.04 * sc, INK)
+			UITheme.dot(ci, q + Vector2(0, r * 0.02) * sc, r * 0.03 * sc, Color("ff8fa8"))
+			if stuff < 0.0:
+				var sq := q + Vector2(r * 0.04, r * 0.22) * sc
+				var sd_pts := PackedVector2Array()
+				for k in 12:
+					var aa := TAU * k / 12.0
+					sd_pts.append(sq + Vector2(cos(aa) * r * 0.045, sin(aa) * r * 0.075).rotated(0.5) * sc)
+				ci.draw_colored_polygon(sd_pts, Color("4a4458"))
+				ci.draw_line(sq + Vector2(-r * 0.02, -r * 0.04) * sc, sq + Vector2(r * 0.02, r * 0.04) * sc, Color(1, 1, 1, 0.7), maxf(0.8, r * 0.02), true)
+		"hourglass":
+			# 半衰期沙漏：沙子從上流到下，流完就翻面，每翻一次剩一半（1 → 1/2 → 1/4 → 1/8 → 重來）
+			var per := 2.6
+			var n := int(floor(t / per)) % 4
+			var u := clampf(fposmod(t / per, 1.0) / 0.9, 0.0, 1.0)
+			var amt := pow(0.5, n)
+			var w := r * 0.2 * sc
+			var h := r * 0.28 * sc
+			var q := p + Vector2(0, sin(t * 2.0) * r * 0.04)
+			var glass := Color(0.75, 0.9, 1.0, 0.28)
+			ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-w, -h), q + Vector2(w, -h), q]), glass)
+			ci.draw_colored_polygon(PackedVector2Array([q, q + Vector2(w, h), q + Vector2(-w, h)]), glass)
+			var sand := Color("ffcf5a")
+			var top_a := amt * (1.0 - u)
+			if top_a > 0.02:
+				var k1 := sqrt(top_a)
+				ci.draw_colored_polygon(PackedVector2Array([q, q + Vector2(-w * k1, -h * k1), q + Vector2(w * k1, -h * k1)]), sand)
+			var bot_a := amt * u
+			if bot_a > 0.02:
+				var he := h * sqrt(1.0 - bot_a)
+				var we := w * he / h
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-w, h), q + Vector2(w, h), q + Vector2(we, he), q + Vector2(-we, he)]), sand)
+			if u < 1.0:
+				ci.draw_line(q, q + Vector2(0, h * 0.9), sand, maxf(1.0, r * 0.03), true)
+			var wood := Color("c98a5a")
+			ci.draw_rect(Rect2(q.x - w * 1.25, q.y - h - r * 0.06 * sc, w * 2.5, r * 0.06 * sc), wood)
+			ci.draw_rect(Rect2(q.x - w * 1.25, q.y + h, w * 2.5, r * 0.06 * sc), wood)
+			for sd in [-1.0, 1.0]:
+				ci.draw_line(q + Vector2(sd * w * 1.1, -h), q + Vector2(sd * w * 1.1, h), wood, maxf(1.0, r * 0.03), true)
+		"star_whale":
+			# 星空鯨魚：深藍色身體、淺藍肚子、背上幾顆星星，偶爾噴出一串星星
+			var s2 := sc * 1.1
+			var q := p + Vector2(0, sin(t * 2.0) * r * 0.06)
+			var dir := -1.0 if cos(t * 1.5) > 0.0 else 1.0
+			var flap := sin(t * 5.0) * r * 0.05
+			var tail := q + Vector2(-dir * r * 0.38, -r * 0.02) * s2
+			ci.draw_colored_polygon(PackedVector2Array([tail, tail + Vector2(-dir * r * 0.24, -r * 0.18 + flap) * s2, tail + Vector2(-dir * r * 0.13, 0) * s2, tail + Vector2(-dir * r * 0.24, r * 0.12 - flap) * s2]), Color("2f3f8f"))
+			var body := PackedVector2Array()
+			for k in 24:
+				var aa := TAU * k / 24.0
+				body.append(q + Vector2(cos(aa) * r * 0.42, sin(aa) * r * 0.26) * s2)
+			ci.draw_colored_polygon(body, Color("3b4fa8"))
+			var bel := PackedVector2Array()
+			for k in 13:
+				var aa := PI * k / 12.0
+				bel.append(q + Vector2(cos(aa) * r * 0.34, r * 0.05 + sin(aa) * r * 0.17) * s2)
+			ci.draw_colored_polygon(bel, Color("8fb0ff"))
+			UITheme.dot(ci, q + Vector2(dir * r * 0.24, -r * 0.05) * s2, r * 0.04 * s2, Color.WHITE)
+			UITheme.dot(ci, q + Vector2(dir * r * 0.245, -r * 0.05) * s2, r * 0.025 * s2, INK)
+			for k in 4:
+				var tw := 0.5 + 0.5 * sin(t * 3.0 + k * 1.9)
+				_spark(ci, q + Vector2(dir * r * (-0.2 + 0.12 * k), -r * (0.12 + 0.05 * (k % 2))) * s2, r * (0.04 + 0.04 * tw) * s2, Color(1, 1, 0.85, 0.5 + 0.5 * tw))
+			var ph := fposmod(t * 0.4, 1.0)
+			if ph < 0.5:
+				for j in 3:
+					var up := ph * 2.0
+					var sp := q + Vector2(dir * r * 0.12 + (j - 1) * r * 0.08 * up, -r * 0.26 - r * 0.4 * up) * s2
+					_spark(ci, sp, r * 0.07 * (1.0 - up) * s2 + 0.5, Color(0.85, 0.95, 1.0, 1.0 - up))
 		"firefly":
 			var bl := 0.5 + 0.5 * sin(t * 6.0)
 			UITheme.dot(ci, p, r * 0.42 * sc, Color(0.85, 1.0, 0.4, 0.18 + 0.2 * bl))
@@ -704,6 +977,34 @@ static func _pet(ci: CanvasItem, c: Vector2, r: float, id: String, t: float, bac
 
 
 # ---------------- 小工具 ----------------
+
+## 小楓葉：五個尖角＋一小段葉柄
+static func _leaf(ci: CanvasItem, p: Vector2, s: float, rot: float, col: Color) -> void:
+	if s < 1.0:
+		return
+	var pts := PackedVector2Array()
+	for i in 10:
+		var a := rot + i * TAU / 10.0
+		pts.append(p + Vector2(cos(a), sin(a)) * (s if i % 2 == 0 else s * 0.48))
+	ci.draw_colored_polygon(pts, col)
+	var d := Vector2(cos(rot + PI * 0.9), sin(rot + PI * 0.9))
+	ci.draw_line(p, p + d * s * 0.9, col.darkened(0.3), maxf(1.0, s * 0.12), true)
+
+
+## 1 弧度的扇形：圓心角 1 弧度，弧長剛好等於半徑
+static func _fan(ci: CanvasItem, p: Vector2, rad: float, rot: float, col: Color) -> void:
+	if rad < 1.5:
+		return
+	var pts := PackedVector2Array([p])
+	for i in 9:
+		var a := rot + 1.0 * i / 8.0
+		pts.append(p + Vector2(cos(a), sin(a)) * rad)
+	ci.draw_colored_polygon(pts, Color(col.r, col.g, col.b, col.a * 0.5))
+	pts.append(p)
+	ci.draw_polyline(pts, Color(col.r, col.g, col.b, col.a * 0.7), maxf(1.0, rad * 0.07), true)
+	# 弧（長度 = 半徑）加亮
+	ci.draw_polyline(pts.slice(1, 10), Color(1.0, 0.97, 0.85, col.a), maxf(1.2, rad * 0.14), true)
+
 
 static func _star(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 	var pts := PackedVector2Array()

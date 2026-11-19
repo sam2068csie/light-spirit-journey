@@ -668,6 +668,36 @@ static func modal(parent: Node, border: Color, width: int = 0, fade: bool = true
 	return [layer, col]
 
 
+## 一排排的格子放進捲動區（衣櫃、兌換所）：回傳 [ScrollContainer, GridContainer]
+##   放不下時往下捲：滾輪、細捲軸、手指拖都可以（格子按鈕要設 MOUSE_FILTER_PASS，按在上面拖才捲得動）
+static func grid_scroll(columns: int, hsep := 8, vsep := 12) -> Array:
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var vsb := sc.get_v_scroll_bar()
+	vsb.custom_minimum_size = Vector2(5, 0)
+	vsb.add_theme_stylebox_override("scroll", box(Color(1, 1, 1, 0.04), 3, Color(0, 0, 0, 0), 0, 0))
+	for st in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		vsb.add_theme_stylebox_override(st, box(Color(1, 1, 1, 0.25), 3, Color(0, 0, 0, 0), 0, 0))
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", 10)      # 留位置給捲軸
+	sc.add_child(pad)
+	var grid := GridContainer.new()
+	grid.columns = columns
+	grid.add_theme_constant_override("h_separation", hsep)
+	grid.add_theme_constant_override("v_separation", vsep)
+	pad.add_child(grid)
+	return [sc, grid]
+
+
+## 重畫格子之後回到原本捲到的位置（等一幀，新格子排好才設得上去）
+static func restore_scroll(sc: ScrollContainer, v: int) -> void:
+	await sc.get_tree().process_frame
+	if is_instance_valid(sc):
+		sc.scroll_vertical = v
+
+
 ## 視窗的內容放進 ScrollContainer：平常和沒有捲動時一模一樣大，太高才把高度限制在畫面內（手指拖動、滾輪都能捲）
 static func _scroll_wrap(layer: Control, card: PanelContainer, col: VBoxContainer, sb: StyleBox) -> void:
 	var sc := ScrollContainer.new()
