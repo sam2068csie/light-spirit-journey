@@ -42,6 +42,12 @@ static func line(kind: String, arg = null) -> String:
 	var s: String = arr.pick_random()
 	if arg != null and s.contains("%"):
 		s = s % arg
+	# 親密度 Lv 5 取了暱稱：鼓勵、過關的話有時候會叫你的名字
+	if kind in ["perfect", "pass", "wrong3", "start"] and randf() < 0.35:
+		var ml := Engine.get_main_loop()
+		var g = (ml as SceneTree).root.get_node_or_null("Game") if ml is SceneTree else null
+		if g != null and g.has_method("bond_nick") and g.bond_nick() != "":
+			s = g.bond_nick() + "，" + s
 	return s
 
 

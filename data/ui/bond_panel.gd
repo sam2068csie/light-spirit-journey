@@ -1,6 +1,8 @@
 extends RefCounted
 ## 光靈親密度的兩個視窗（資料在 game_bond.gd）
 ##   levelup(host, lv)：升級了！（小屋、主畫面、大地圖都可能跳出來；每次升級只播一次）
+##   snacks(host, on_pick)：點心選單（第二期）
+##   nick_editor(host, on_done)：取暱稱（Lv 5）
 ##   detail(host)：小屋左下角點開：現在幾級、進度條；右上角的「i」點了才展開（怎麼增加＋今天的次數、每一級的獎勵）
 ## 兩個都回傳視窗的根節點（關掉時會 queue_free，可以等 tree_exited）
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -25,7 +27,7 @@ const LV_LINES := {
 
 ## 怎麼增加（「i」的提示框）：[種類, 名稱]；有每日上限的，同一行右邊寫今天做了幾次
 const WAYS := [["learn", "答對一題"], ["journey", "第一次通過旅程"], ["card", "觀念卡片"], ["daily", "今日修煉"],
-	["quests", "每日任務全完成"], ["pet", "摸摸頭"], ["chat", "聊天"]]
+	["quests", "每日任務全完成"], ["pet", "摸摸頭"], ["chat", "聊天"], ["snack", "點心"]]
 
 
 static func levelup(host: Node, lv: int) -> Control:
@@ -45,15 +47,173 @@ static func levelup(host: Node, lv: int) -> Control:
 	col.add_child(_text("「%s」" % LV_LINES.get(lv, "謝謝你陪著我！"), 18, UITheme.TEXT, true))
 	var un := String(info.unlock)
 	col.add_child(_text(("解鎖　" + un) if info.ready else ("解鎖　%s（未開放）" % un), 16, Color("ffd36e") if info.ready else UITheme.TEXT_DIM, true))
+	# Lv 5：直接在這裡取暱稱（可以留空，之後在親密度視窗裡再取）
+	var nick_in: LineEdit = null
+	var warn: Label = null
+	if lv == Bond.NICK_LV:
+		nick_in = _nick_input(String(g.bond.get("nick", "")))
+		col.add_child(nick_in)
+		warn = _text("", 14, UITheme.BAD, true)
+		col.add_child(warn)
 	var ok := Button.new()
 	ok.text = "好耶！"
 	ok.focus_mode = Control.FOCUS_NONE
 	ok.custom_minimum_size = Vector2(0, 48)
 	UITheme.accent_button(ok, 18)
-	ok.pressed.connect(func(): layer.queue_free())
+	ok.pressed.connect(func():
+		if nick_in != null and nick_in.text.strip_edges() != "" and not g.bond_set_nick(nick_in.text):
+			warn.text = "暱稱 1～%d 字" % Bond.NICK_MAX
+			return
+		layer.queue_free())
 	col.add_child(ok)
 	g.sfx("fanfare")
 	return layer
+
+
+static func _nick_input(cur: String) -> LineEdit:
+	var le := LineEdit.new()
+	le.placeholder_text = "暱稱（1～%d 字）" % Bond.NICK_MAX
+	le.max_length = Bond.NICK_MAX
+	le.text = cur
+	le.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	le.custom_minimum_size = Vector2(260, 46)
+	le.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	le.add_theme_font_size_override("font_size", UITheme.fs(18))
+	le.add_theme_stylebox_override("normal", UITheme.box(Color(1, 1, 1, 0.06), 12, PINK, 2, 10))
+	le.add_theme_stylebox_override("focus", UITheme.box(Color(1, 1, 1, 0.1), 12, Color.WHITE, 2, 10))
+	return le
+
+
+## 取暱稱／改暱稱
+static func nick_editor(host: Node, on_done: Callable) -> Control:
+	var g = Game.of(host)
+	var o := UITheme.modal(host, PINK, 420)
+	var layer: Control = o[0]
+	var col: VBoxContainer = o[1]
+	col.add_theme_constant_override("separation", 12)
+	var title := UITheme.title_label("暱稱", 24, PINK)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	var le := _nick_input(g.bond_nick())
+	col.add_child(le)
+	var warn := _text("", 14, UITheme.BAD, true)
+	col.add_child(warn)
+	var ok := Button.new()
+	ok.text = "確定"
+	ok.focus_mode = Control.FOCUS_NONE
+	ok.custom_minimum_size = Vector2(0, 46)
+	UITheme.accent_button(ok, 17)
+	ok.pressed.connect(func():
+		if not g.bond_set_nick(le.text):
+			warn.text = "暱稱 1～%d 字" % Bond.NICK_MAX
+			return
+		layer.queue_free()
+		on_done.call())
+	col.add_child(ok)
+	le.text_submitted.connect(func(_t): ok.pressed.emit())
+	return layer
+
+
+## 點心選單：6 種點心＋價格；這週已經發現的喜好打愛心。on_pick(id)
+static func snacks(host: Node, on_pick: Callable) -> Control:
+	var g = Game.of(host)
+	var o := UITheme.modal(host, PINK, 640)
+	var layer: Control = o[0]
+	var col: VBoxContainer = o[1]
+	col.add_theme_constant_override("separation", 10)
+	var title := UITheme.title_label("點心", 26, PINK)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	var found: Array = g.bond_found()
+	col.add_child(_text("本週喜好　%d／2　　持有星塵　%d" % [found.size(), int(g.inv.get("dust", 0))], 15, UITheme.TEXT_DIM, true))
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(grid)
+	var can_feed: bool = g.bond_left("snack") > 0
+	for sn in Bond.SNACKS:
+		var id: String = sn.id
+		var afford := int(g.inv.get("dust", 0)) >= int(sn.price)
+		var b := Button.new()
+		b.name = "Snack_" + id
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(176, 132)
+		b.disabled = not (can_feed and afford)
+		b.add_theme_stylebox_override("normal", UITheme.box(Color(1, 1, 1, 0.05), 14, Color(1, 0.56, 0.75, 0.4), 1, 8))
+		b.add_theme_stylebox_override("hover", UITheme.box(Color(1, 0.56, 0.75, 0.15), 14, PINK, 2, 8))
+		b.add_theme_stylebox_override("pressed", UITheme.box(Color(1, 0.56, 0.75, 0.25), 14, PINK, 2, 8))
+		b.add_theme_stylebox_override("disabled", UITheme.box(Color(1, 1, 1, 0.02), 14, Color(1, 1, 1, 0.1), 1, 8))
+		var ic := SnackIcon.new()
+		ic.id = id
+		ic.liked = found.has(id)
+		ic.dim = b.disabled
+		ic.position = Vector2(48, 6)
+		ic.size = Vector2(80, 70)
+		b.add_child(ic)
+		var nm := _text(String(sn.name), 15, UITheme.TEXT if not b.disabled else UITheme.TEXT_DIM, true)
+		nm.position = Vector2(0, 78)
+		nm.size = Vector2(176, 24)
+		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(nm)
+		var pr := _text("%d 星塵" % int(sn.price), 13, Color("ffe7a3") if afford else UITheme.BAD, true)
+		pr.position = Vector2(0, 102)
+		pr.size = Vector2(176, 22)
+		pr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(pr)
+		b.pressed.connect(func():
+			layer.queue_free()
+			on_pick.call(id))
+		grid.add_child(b)
+	if not can_feed:
+		col.add_child(_text("今日已餵食", 15, UITheme.TEXT_DIM, true))
+	var close := Button.new()
+	close.text = "關閉"
+	close.focus_mode = Control.FOCUS_NONE
+	close.custom_minimum_size = Vector2(0, 44)
+	UITheme.accent_button(close, 16)
+	close.pressed.connect(func(): layer.queue_free())
+	col.add_child(close)
+	g.sfx("open")
+	return layer
+
+
+## 點心的樣子（程式畫的）：c 中心、s 大小
+static func draw_snack(ci: CanvasItem, id: String, c: Vector2, s: float, dim := false) -> void:
+	var k := 0.45 if dim else 1.0
+	var f := func(col: Color) -> Color: return Color(col.r * k + 0.15 * (1 - k), col.g * k + 0.15 * (1 - k), col.b * k + 0.2 * (1 - k), col.a)
+	match id:
+		"moon_cake":
+			UITheme.dot(ci, c, s * 0.42, f.call(Color("d99a4e")))
+			UITheme.dot(ci, c, s * 0.34, f.call(Color("f0c27a")))
+			UITheme.dot(ci, c + Vector2(-s * 0.04, 0), s * 0.16, f.call(Color("fff1c9")))
+			UITheme.dot(ci, c + Vector2(s * 0.04, -s * 0.03), s * 0.14, f.call(Color("f0c27a")))
+		"star_candy":
+			var pts := PackedVector2Array()
+			for i in 10:
+				var a := -PI / 2 + i * PI / 5
+				pts.append(c + Vector2(cos(a), sin(a)) * (s * 0.44 if i % 2 == 0 else s * 0.2))
+			ci.draw_colored_polygon(pts, f.call(Color("ffcf5a")))
+			UITheme.dot(ci, c + Vector2(-s * 0.08, -s * 0.1), s * 0.06, Color(1, 1, 1, 0.8 * k))
+		"dew_jelly":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.4, s * 0.3), c + Vector2(s * 0.4, s * 0.3), c + Vector2(s * 0.32, -s * 0.1), c + Vector2(0, -s * 0.34), c + Vector2(-s * 0.32, -s * 0.1)]), f.call(Color("6fd3f5")))
+			UITheme.dot(ci, c + Vector2(-s * 0.14, -s * 0.08), s * 0.08, Color(1, 1, 1, 0.75 * k))
+			ci.draw_line(c + Vector2(-s * 0.44, s * 0.32), c + Vector2(s * 0.44, s * 0.32), f.call(Color("c9a46e")), 3.0)
+		"rainbow_puff":
+			UITheme.dot(ci, c + Vector2(-s * 0.18, s * 0.08), s * 0.22, f.call(Color("ffb3d9")))
+			UITheme.dot(ci, c + Vector2(s * 0.18, s * 0.08), s * 0.22, f.call(Color("a6e1ff")))
+			UITheme.dot(ci, c + Vector2(0, -s * 0.14), s * 0.24, f.call(Color("fff2a6")))
+		"honey_orb":
+			UITheme.dot(ci, c, s * 0.46, Color(1, 0.7, 0.3, 0.25 * k))
+			UITheme.dot(ci, c, s * 0.34, f.call(Color("ffb347")))
+			UITheme.dot(ci, c + Vector2(0, s * 0.36), s * 0.08, f.call(Color("ffb347")))
+			UITheme.dot(ci, c + Vector2(-s * 0.1, -s * 0.12), s * 0.08, Color(1, 1, 1, 0.75 * k))
+		"comet_pudding":
+			ci.draw_line(c + Vector2(s * 0.18, -s * 0.3), c + Vector2(s * 0.46, -s * 0.46), f.call(Color("ffe7a3")), 3.0)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.36, s * 0.32), c + Vector2(s * 0.36, s * 0.32), c + Vector2(s * 0.24, -s * 0.2), c + Vector2(-s * 0.24, -s * 0.2)]), f.call(Color("c9a6ff")))
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.26, -s * 0.12), c + Vector2(s * 0.26, -s * 0.12), c + Vector2(s * 0.22, -s * 0.24), c + Vector2(-s * 0.22, -s * 0.24)]), f.call(Color("8a5a2b")))
+			UITheme.dot(ci, c + Vector2(s * 0.18, -s * 0.3), s * 0.06, f.call(Color("fff6c9")))
 
 
 ## 一打開只看到：光靈、等級、進度條、下一級叫什麼。說明和獎勵藏在右上角的「i」裡，點了才展開
@@ -95,6 +255,19 @@ static func detail(host: Node) -> Control:
 	col.add_child(bar(pr.frac, Vector2(0, 12)))
 	var nxt: Dictionary = pr.next
 	col.add_child(_text("已達最高等級" if nxt.is_empty() else "下一級　%s" % nxt.name, 15, UITheme.TEXT_DIM, true))
+	# Lv 5 起：暱稱（點一下修改）
+	if int(pr.lv) >= Bond.NICK_LV:
+		var nk := Button.new()
+		nk.name = "Nick"
+		nk.flat = true
+		nk.focus_mode = Control.FOCUS_NONE
+		nk.text = "暱稱　%s　✎" % (g.bond_nick() if g.bond_nick() != "" else "未設定")
+		nk.add_theme_font_size_override("font_size", UITheme.fs(15))
+		nk.add_theme_color_override("font_color", PINK)
+		nk.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		nk.pressed.connect(func():
+			nick_editor(layer, func(): nk.text = "暱稱　%s　✎" % g.bond_nick()))
+		col.add_child(nk)
 	# 說明和獎勵：點 i 才從 i 的位置跳出提示框（原本的視窗不變），點提示框外面就收起來
 	info.pressed.connect(func(): tip(layer, info, g, pr))
 	var ok := Button.new()
@@ -152,7 +325,7 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 		name.autowrap_mode = TextServer.AUTOWRAP_OFF
 		name.custom_minimum_size = Vector2(170, 0)
 		grid.add_child(name)
-		var pl := _text("+%d" % int(Bond.BOND_PTS[k]), 14, PINK)
+		var pl := _text("+1～3" if k == "snack" else "+%d" % int(Bond.BOND_PTS[k]), 14, PINK)
 		pl.autowrap_mode = TextServer.AUTOWRAP_OFF
 		pl.custom_minimum_size = Vector2(40, 0)
 		grid.add_child(pl)
@@ -256,3 +429,20 @@ class Portrait extends Control:
 			var a := t * 1.1 + k * TAU / 4.0
 			var p := c + Vector2(r * 0.45, 0) + Vector2(cos(a) * r * 1.7, sin(a) * r * 0.75 - r * 0.2)
 			SL.heart(self, p, r * 0.16, Color(PINK.r, PINK.g, PINK.b, 0.55 + 0.35 * sin(a)))
+
+
+## 點心圖示（點心選單用）：liked = 這週已經發現是喜歡的口味（右上角一顆愛心）
+class SnackIcon extends Control:
+	const BP := preload("res://data/ui/bond_panel.gd")
+	const SL := preload("res://data/ui/spirit_look.gd")
+	var id := ""
+	var liked := false
+	var dim := false
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		BP.draw_snack(self, id, size / 2.0, minf(size.x, size.y), dim)
+		if liked:
+			SL.heart(self, Vector2(size.x - 8, 10), 9.0, Color("ff8fbf"))

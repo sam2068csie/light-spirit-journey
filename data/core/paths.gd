@@ -4,6 +4,7 @@ extends RefCounted
 ## 搬檔案或新增腳本之後，執行 tools/gen_paths.py 重新產生這張表（自動測試會檢查有沒有漏）。
 
 const MAP := {
+	"album.gd": "res://data/ui/album.gd",
 	"ambient.gd": "res://data/ui/ambient.gd",
 	"bg_layer.gd": "res://data/levels/engine/bg_layer.gd",
 	"bond_panel.gd": "res://data/ui/bond_panel.gd",

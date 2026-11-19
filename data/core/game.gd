@@ -136,7 +136,7 @@ func _process(delta: float) -> void:
 
 
 ## 版本號（主畫面右下角會顯示）：每次交給你新的檔案時更新，方便確認手機上裝的是不是最新版
-const BUILD := "2026.11.19-b"
+const BUILD := "2026.11.19-c"
 
 
 ## 今天的修煉題（換日就重新出題）
@@ -307,6 +307,8 @@ func tower_continue() -> void:
 func _tower_end(floors: int, summit := false) -> void:
 	var record := floors > tower_best
 	tower_best = maxi(tower_best, floors)
+	if summit:
+		bond_memory("tower:" + cur_unit, "終焉之塔登頂", "tower")      # 回憶相簿
 	tower_runs += 1
 	var rw := tower_reward(floors)
 	save_review()

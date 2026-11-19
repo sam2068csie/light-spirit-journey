@@ -5,7 +5,8 @@ extends Control
 ##   ・擺設模式：點格位 → 從抽屜挑家具放上去（只列出放得進那種格位的家具）
 ##   ・商店：用星塵買家具（小家具每天買得起、少量昂貴大家具）；彩蛋家具在地圖上解開才拿得到
 ##   ・小屋等級：點亮 10／25／50 座聖地升級（目前先做 Lv.1 的房間，等級和下一階段先顯示出來）
-##   ・光靈（親密度，game_bond.gd）：點光靈 → 摸摸頭、聊天；按住光靈來回摸也算摸摸頭。左下角是親密度，點開看說明
+##   ・光靈（親密度，game_bond.gd）：點光靈 → 摸摸頭、聊天、點心（Lv 3）、拍照；按住光靈來回摸也算摸摸頭。左下角是親密度，點開看說明
+##   ・相簿（上方按鈕）：回憶照片（album.gd）
 ## 存檔：Game.house {owned: [家具 id], placed: {"格位編號": 家具 id}}
 const UITheme := preload("res://data/ui/game_theme.gd")
 const QP := preload("res://data/ui/quest_panel.gd")
@@ -16,6 +17,7 @@ const HI := preload("res://data/house/house_items.gd")
 const SL := preload("res://data/ui/spirit_look.gd")
 const SA := preload("res://data/house/souvenir_art.gd")
 const BondPanel := preload("res://data/ui/bond_panel.gd")
+const Album := preload("res://data/ui/album.gd")
 
 const W := 1152.0
 const H := 648.0
@@ -72,6 +74,8 @@ var _press_spirit := false          # 按在光靈身上
 var _rub := 0.0                     # 按住光靈來回摸了多遠
 var _rub_last := Vector2.ZERO
 var _rubbed := false
+var _eat := {}                      # 正在吃的點心：{id, t}
+var _flash := 0.0                   # 拍照的閃光
 
 const PET_LINES := ["嘿嘿～好舒服！", "再摸一下下嘛～", "呼嚕呼嚕……", "被摸頭了，好開心！"]
 const PET_FULL := "嘿嘿……今天摸夠了啦，明天再摸～"
@@ -222,7 +226,7 @@ func _build_ui() -> void:
 	_top_dust.add_theme_font_size_override("font_size", UITheme.fs(15))
 	_top_dust.add_theme_color_override("font_color", Color("ffe7a3"))
 	hb.add_child(_top_dust)
-	for spec in [["升級", _open_upgrade, Color("3a3360")], ["商店", _open_shop, Color("3a3360")], ["擺設模式", _toggle_deco, UITheme.ACCENT]]:
+	for spec in [["相簿", _open_album, Color("3a3360")], ["升級", _open_upgrade, Color("3a3360")], ["商店", _open_shop, Color("3a3360")], ["擺設模式", _toggle_deco, UITheme.ACCENT]]:
 		var b := Button.new()
 		b.text = spec[0]
 		b.focus_mode = Control.FOCUS_NONE
@@ -797,7 +801,11 @@ func _toggle_menu() -> void:
 	var g = Game.of(self)
 	_menu = HBoxContainer.new()
 	_menu.add_theme_constant_override("separation", 10)
-	for spec in [["摸摸頭", _pet, g.bond_left("pet")], ["聊天", _chat, g.bond_left("chat")]]:
+	var specs := [["摸摸頭", _pet, g.bond_left("pet")], ["聊天", _chat, g.bond_left("chat")]]
+	if g.bond_level() >= g.SNACK_LV:
+		specs.append(["點心", _snack, g.bond_left("snack")])
+	specs.append(["拍照", _photo, g.bond_left("photo")])
+	for spec in specs:
 		var b := Button.new()
 		b.text = spec[0]
 		b.focus_mode = Control.FOCUS_NONE
@@ -856,6 +864,54 @@ func _chat() -> void:
 	_after_gain()
 
 
+func _snack() -> void:
+	if is_instance_valid(_overlay):
+		return
+	_overlay = BondPanel.snacks(self, _feed)
+
+
+func _feed(id: String) -> void:
+	var g = Game.of(self)
+	var r: Dictionary = g.bond_feed(id)
+	if not r.ok:
+		_talk(String(r.why))
+		return
+	var nm := String(g.snack_info(id).name)
+	_eat = {"id": id, "t": 1.0}
+	if r.liked:
+		_set_mood("shy" if randf() < 0.5 else "happy", 2.4)
+		_talk(("就是這個！這週最想吃%s了！" if r.first else "又是%s！最喜歡了～") % nm, 4.0)
+		_burst_hearts(9)
+		g.sfx("fanfare")
+	else:
+		_set_mood("happy", 1.8)
+		_talk("謝謝你的%s～好吃！" % nm, 3.4)
+		_burst_hearts(3)
+		g.sfx("correct")
+	_pop("+%d 親密度" % int(r.pts))
+	_refresh()
+	_after_gain()
+
+
+func _photo() -> void:
+	var g = Game.of(self)
+	if g.bond_photo():
+		_flash = 1.0
+		_set_mood("happy", 2.0)
+		_talk("喀嚓！存進相簿了～")
+		g.sfx("ping")
+	else:
+		_talk("今天已經拍過了，明天再拍～")
+		g.sfx("click")
+
+
+func _open_album() -> void:
+	if is_instance_valid(_overlay) or is_instance_valid(_quest_panel) or deco:
+		return
+	_close_menu()
+	_overlay = Album.open(self)
+
+
 func _after_gain() -> void:
 	_refresh_bond()
 	_check_levelup()
@@ -910,6 +966,12 @@ func _bond_tick(delta: float) -> void:
 		h.p += h.v * delta
 		h.life -= delta * 0.8
 	_hearts = _hearts.filter(func(h): return float(h.life) > 0.0)
+	if not _eat.is_empty():
+		_eat.t = float(_eat.t) - delta * 1.2
+		if float(_eat.t) <= 0.0:
+			_eat = {}
+	if _flash > 0.0:
+		_flash = maxf(0.0, _flash - delta * 2.2)
 	for pp in _pops:
 		pp.p += Vector2(0, -26.0 * delta)
 		pp.life -= delta * 0.7
@@ -996,6 +1058,10 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		SL.draw_mood(self, sp, 26.0, Game.of(self).equipped, t, _mood, _blink)
+	# 吃點心：點心從右上飄到光靈嘴邊、越來越小
+	if not _eat.is_empty():
+		var k := clampf(float(_eat.t), 0.0, 1.0)
+		BondPanel.draw_snack(self, String(_eat.id), sp + Vector2(18, -6) + Vector2(30, -40) * k, 14.0 + 14.0 * k)
 	# 摸頭、聊天的小愛心和「+1」
 	for h in _hearts:
 		var a := clampf(float(h.life), 0.0, 1.0)
@@ -1006,6 +1072,8 @@ func _draw() -> void:
 		var pos: Vector2 = pp.p - Vector2(pw / 2.0, 0)
 		draw_string_outline(font, pos, pp.s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, 6, Color(0.05, 0.03, 0.12, a))
 		draw_string(font, pos, pp.s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color(1, 0.62, 0.8, a))
+	if _flash > 0.0:
+		draw_rect(Rect2(0, 0, W, H), Color(1, 1, 1, _flash * 0.75))     # 拍照的閃光
 	if _say_t > 0.0 and _say != "":
 		var tw := font.get_string_size(_say, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var br := Rect2(sp + Vector2(-tw / 2.0 - 12, -78), Vector2(tw + 24, 30))

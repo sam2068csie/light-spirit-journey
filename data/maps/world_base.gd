@@ -371,6 +371,7 @@ func _story_check() -> void:
 				return      # 教學在跑：段考範圍下次進地圖再問
 			"souvenir":
 				var su := WS.pending_souvenir(g, _grade_name())
+				g.bond_memory("sv:" + su, "點亮　" + String(WS.Units.unit(su).title), "unit:" + su)     # 回憶相簿
 				await WS.play(self, "sv_" + su, WS.souvenir_lines(su), "點亮！" + String(WS.Units.unit(su).title), su)
 			"bond":
 				var lv: int = g.bond_take_levelup()

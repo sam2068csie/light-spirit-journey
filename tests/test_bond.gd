@@ -120,7 +120,124 @@ func _initialize() -> void:
 	tipn.gui_input.emit(cl)
 	await wait(0.2)
 	ok(not is_instance_valid(tipn) and is_instance_valid(h._overlay), "點提示框外面：只收起提示框，視窗還在")
+	h.close_overlay()
+	await _phase2(h)
 	finish("BOND")
+
+
+## 第二期：點心、回憶相簿、暱稱
+func _phase2(h) -> void:
+	# ---- 點心 ----
+	g.bond = {"pts": 100, "day": DQ.day_key(), "today": {}, "seed": 12345}
+	g.inv["dust"] = 100
+	ok(not g.bond_feed("moon_cake").ok and int(g.inv.dust) == 100, "Lv 2：還不能餵點心，也不扣星塵")
+	g.bond.pts = 120
+	var likes: Array = g.bond_likes()
+	ok(likes.size() == 2 and likes[0] != likes[1], "這週喜歡 2 種點心：%s" % str(likes))
+	ok(g.bond_likes() == likes, "同一週口味不變")
+	var seen := {}
+	for sd in 30:
+		g.bond.seed = 1000 + sd
+		seen[str(g.bond_likes())] = true
+	ok(seen.size() >= 6, "每個人的口味不一樣：30 個玩家有 %d 種組合" % seen.size())
+	g.bond.seed = 12345
+	var other := ""
+	for sn in g.SNACKS:
+		if not likes.has(sn.id):
+			other = sn.id
+			break
+	var price := int(g.snack_info(other).price)
+	var p0 := int(g.bond.pts)
+	var r: Dictionary = g.bond_feed(other)
+	ok(r.ok and not r.liked and int(r.pts) == 1 and int(g.inv.dust) == 100 - price and int(g.bond.pts) == p0 + 1, "不是喜歡的口味：+1、扣星塵 %d" % price)
+	r = g.bond_feed(likes[0])
+	ok(not r.ok and String(r.why) == "今日已餵食", "點心每天 1 次")
+	g.bond.today = {}
+	r = g.bond_feed(likes[0])
+	ok(r.ok and r.liked and r.first and int(r.pts) == 3 and g.bond_found().has(likes[0]), "喜歡的口味：+3，這週發現 1 種")
+	g.bond.today = {}
+	r = g.bond_feed(likes[0])
+	ok(r.ok and r.liked and not r.first, "同一種再餵：還是 +3，但不是新發現")
+	g.inv["dust"] = 0
+	g.bond.today = {}
+	r = g.bond_feed(likes[1])
+	ok(not r.ok and String(r.why) == "星塵不足", "星塵不夠不能餵")
+	g.bond.found = {"week": g.bond_week() - 1, "ids": likes.duplicate()}
+	ok(g.bond_found().is_empty(), "換週：發現的喜好重來")
+	# ---- 回憶相簿 ----
+	g.bond = {"pts": 449, "day": DQ.day_key(), "today": {}, "mem": []}
+	g.bond_gain("journey")
+	var ids := []
+	for m in g.bond_memories():
+		ids.append(String(m.id))
+	ok(ids.has("lv:5"), "升到 Lv 5 自動拍一張：%s" % str(ids))
+	ok(g.bond_photo() and not g.bond_photo(), "小屋合照每天 1 張")
+	ok(g.bond_memory("x", "測試", "map") and not g.bond_memory("x", "測試", "map"), "同一個回憶只拍一次")
+	for i in 90:
+		g.bond.mem.append({"id": "photo:%d" % i, "title": "小屋合照", "scene": "house", "day": DQ.day_key(), "eq": {}})
+	g.bond_memory("y", "測試", "map")
+	ids = []
+	for m in g.bond_memories():
+		ids.append(String(m.id))
+	ok(ids.size() <= g.MEM_MAX and ids.has("lv:5") and ids.has("y"), "相簿滿了先丟舊的合照：%d 張" % ids.size())
+	# ---- 暱稱 ----
+	g.bond = {"pts": 449, "day": DQ.day_key(), "today": {}}
+	ok(not g.bond_set_nick("小明"), "Lv 4：還不能取暱稱")
+	g.bond.pts = 450
+	ok(g.bond_set_nick("  小明 ") and g.bond_nick() == "小明", "Lv 5：暱稱（去掉空白）")
+	ok(not g.bond_set_nick("一二三四五六七") and not g.bond_set_nick("   "), "暱稱 1～6 字")
+	ok(g.bond_chat_line(true).begins_with("小明，"), "聊天會叫暱稱：%s" % g.bond_chat_line(true))
+	var called := false
+	for i in 60:
+		if preload("res://data/ui/buddy.gd").line("pass").begins_with("小明，"):
+			called = true
+	ok(called, "關卡裡的光靈有時會叫暱稱")
+	# ---- 畫面 ----
+	g.bond.mem = [
+		{"id": "lv:2", "title": "親密度 Lv.2", "scene": "levelup", "day": "2026-11-02", "eq": {}},
+		{"id": "first_star3", "title": "第一次三顆星", "scene": "map", "day": "2026-11-03", "eq": g.equipped.duplicate()},
+		{"id": "sv:h1num", "title": "點亮　數與式", "scene": "unit:h1num", "day": "2026-11-08", "eq": {}},
+		{"id": "tower:h1num", "title": "終焉之塔登頂", "scene": "tower", "day": "2026-11-12", "eq": {}},
+		{"id": "photo:2026-11-18", "title": "小屋合照", "scene": "house", "day": "2026-11-18", "eq": g.equipped.duplicate()}]
+	g.bond.today = {}
+	g.inv["dust"] = 100
+	h._refresh()
+	h._toggle_menu()
+	await wait(0.3)
+	ok(is_instance_valid(h._menu) and h._menu.get_child_count() == 4, "Lv 3 以上：摸摸頭、聊天、點心、拍照")
+	await shot("bond2_menu")
+	h._close_menu()
+	h._snack()
+	await wait(0.5)
+	await shot("bond2_snacks")
+	var btn: Button = h._overlay.find_child("Snack_" + likes[0], true, false)
+	ok(btn != null and not btn.disabled, "點心選單")
+	btn.pressed.emit()
+	await wait(0.6)
+	ok(int(g.bond.today.get("snack", 0)) == 1 and int(g.inv.dust) == 100 - int(g.snack_info(likes[0]).price), "選了點心：餵食、扣星塵")
+	await shot("bond2_feed")
+	await wait(2.0)
+	h.close_overlay()
+	h._photo()
+	await wait(0.1)
+	await shot("bond2_photo")
+	await wait(0.8)
+	h._open_album()
+	await wait(0.6)
+	ok(is_instance_valid(h._overlay), "相簿")
+	await shot("bond2_album")
+	h.close_overlay()
+	await wait(0.2)
+	var lu: Control = preload("res://data/ui/bond_panel.gd").levelup(h, 5)
+	await wait(0.6)
+	ok(lu.find_children("*", "LineEdit", true, false).size() == 1, "升到 Lv 5：可以取暱稱")
+	await shot("bond2_lv5")
+	lu.queue_free()
+	h._open_bond()
+	await wait(0.4)
+	ok(h._overlay.find_child("Nick", true, false) != null, "親密度視窗：暱稱")
+	await shot("bond2_detail")
+	h.close_overlay()
 
 
 func _btn(p: Vector2, down: bool) -> InputEventMouseButton:
