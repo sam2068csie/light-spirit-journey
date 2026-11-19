@@ -72,4 +72,59 @@ func _initialize() -> void:
 	NT._cur._input(far)
 	await wait(0.1)
 	ok(not is_instance_valid(NT._cur), "點別的地方：名稱收起來")
+	await _wardrobe_scroll(m)
 	finish("ECONOMY")
+
+
+## 衣櫃：一類超過 12 件（第 4 排）要捲得到；滾輪能捲；穿上裝扮停在原位；換分類回到最上面
+func _wardrobe_scroll(m) -> void:
+	var Cos := preload("res://data/core/cosmetics.gd")
+	for it in Cos.ITEMS:
+		g.owned[it.id] = 1
+	for c in m.get_children():
+		if c.get_script() == preload("res://data/ui/gacha_page.gd"):
+			c.queue_free()
+	await wait(0.3)
+	m._open_wardrobe()
+	await wait(1.0)
+	var w = null
+	for c in m.get_children():
+		if c.get_script() == preload("res://data/ui/wardrobe.gd"):
+			w = c
+	ok(w != null, "打開衣櫃")
+	for cat in Cos.CATS:
+		w._cat = cat.id
+		w._refresh()
+		await wait(0.4)
+		var sc: ScrollContainer = w._scroll
+		var n: int = w._grid.get_child_count()
+		var vb := sc.get_v_scroll_bar()
+		var need_scroll := n > 12
+		ok(sc.scroll_vertical == 0, "%s：換分類從最上面開始" % cat.name)
+		ok((vb.max_value - vb.page > 1.0) == need_scroll, "%s %d 件：%s" % [cat.name, n, "要捲動" if need_scroll else "不用捲"])
+		# 滾輪往下捲到底
+		for k in 8:
+			var e := InputEventMouseButton.new()
+			e.button_index = MOUSE_BUTTON_WHEEL_DOWN
+			e.pressed = true
+			e.position = sc.get_global_rect().get_center()
+			e.global_position = e.position
+			get_root().push_input(e)
+			var e2: InputEventMouseButton = e.duplicate()
+			e2.pressed = false
+			get_root().push_input(e2)
+			await wait(0.03)
+		await wait(0.3)
+		var last: Control = w._grid.get_child(n - 1)
+		var vis := sc.get_global_rect().grow(1.0).encloses(last.get_global_rect())
+		ok(vis, "%s：最後一件「%s」捲得到、看得完整" % [cat.name, last.get_child(1).text if last.get_child_count() > 1 else ""])
+		if need_scroll:
+			ok(sc.scroll_vertical > 0, "%s：滾輪捲得動" % cat.name)
+			await shot("wardrobe_%s_bottom" % cat.id)
+			# 穿上第 4 排的裝扮：重畫後停在原位
+			var before := sc.scroll_vertical
+			last.pressed.emit()
+			await wait(0.4)
+			ok(abs(w._scroll.scroll_vertical - before) <= 2, "%s：穿上第 4 排的裝扮，畫面停在原位（%d → %d）" % [cat.name, before, w._scroll.scroll_vertical])
+	w._close()
+	await wait(0.2)

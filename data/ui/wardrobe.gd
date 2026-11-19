@@ -14,6 +14,8 @@ static var _last_cat := ""        # 這次開遊戲期間最後看的分類（�
 var _preview
 var _tabs: HBoxContainer
 var _grid: GridContainer
+var _scroll: ScrollContainer          # 格子放不下（一類超過 12 件）時往下捲：滾輪、捲軸、手指拖都可以
+var _shown_cat := ""                  # 上一次畫的分類：換分類才回到最上面，穿脫裝扮時停在原位
 var _info_name: Label
 var _info_desc: Control
 var _sel := ""
@@ -116,12 +118,31 @@ func _ready() -> void:
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 8)
 	rv.add_child(_tabs)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var vsb := _scroll.get_v_scroll_bar()
+	vsb.custom_minimum_size = Vector2(5, 0)
+	vsb.add_theme_stylebox_override("scroll", UITheme.box(Color(1, 1, 1, 0.04), 3, Color(0, 0, 0, 0), 0, 0))
+	for st in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		vsb.add_theme_stylebox_override(st, UITheme.box(Color(1, 1, 1, 0.25), 3, Color(0, 0, 0, 0), 0, 0))
+	rv.add_child(_scroll)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", 10)      # 留位置給捲軸
+	_scroll.add_child(pad)
 	_grid = GridContainer.new()
 	_grid.columns = 4
-	_grid.add_theme_constant_override("h_separation", 12)
+	_grid.add_theme_constant_override("h_separation", 8)
 	_grid.add_theme_constant_override("v_separation", 12)
-	rv.add_child(_grid)
+	pad.add_child(_grid)
 	_refresh()
+
+
+func _restore_scroll(v: int) -> void:
+	await get_tree().process_frame
+	if is_instance_valid(_scroll):
+		_scroll.scroll_vertical = v
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -165,11 +186,17 @@ func _refresh() -> void:
 			_last_cat = cid
 			_refresh())
 		_tabs.add_child(b)
-	# 格子
+	# 格子（換分類回到最上面；穿脫裝扮重畫時停在原位）
+	var keep := _scroll.scroll_vertical if _cat == _shown_cat else 0
+	_shown_cat = _cat
 	for c in _grid.get_children():
+		_grid.remove_child(c)
 		c.queue_free()
 	for it in Cos.by_rarity(Cos.items_of(_cat)):      # 依稀有度排：普通 → 傳說
-		_grid.add_child(_tile(it, g))
+		var tl: Button = _tile(it, g)
+		tl.mouse_filter = Control.MOUSE_FILTER_PASS     # 按在格子上拖動也能捲動
+		_grid.add_child(tl)
+	_restore_scroll.call_deferred(keep)
 	# 說明
 	var show_id := _sel
 	if show_id == "" or Cos.item(show_id).cat != _cat:
