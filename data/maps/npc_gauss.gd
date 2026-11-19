@@ -3,6 +3,7 @@ extends RefCounted
 ##   參考 1840 年 Jensen 的肖像：黑色絨布軟帽、白髮與白色落腮鬚、藍眼睛、白色高領＋皺褶領巾、深色外袍配酒紅色絨布翻領
 ##   GaussNpc.draw(ci, 腳底的位置, 頭的半徑, 時間, 表情)
 ##   表情：normal（平常，會眨眼）、happy（眼睛彎彎、張嘴笑）、think（一手摸下巴、眼睛往上看）、talk（嘴巴一開一合、張開手掌揮手）
+##   walk：走路的步伐（弧度，一直加上去；< 0 是站著）：兩隻腳輪流抬起來、身體上下跳、手前後擺
 const UITheme := preload("res://data/ui/game_theme.gd")
 
 const SKIN := Color("f7d9c0")
@@ -23,8 +24,10 @@ const FW := 0.8                 # 臉是長橢圓：半寬 0.8、半高 1.1（�
 const FH := 1.1
 
 
-static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal") -> void:
+static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal", walk := -1.0) -> void:
 	var bob := sin(t * 2.2) * s * 0.025                 # 呼吸
+	if walk >= 0.0:
+		bob = -absf(sin(walk)) * s * 0.07               # 走路：每一步跳一下
 	var body_h := s * 0.95
 	var head := p + Vector2(0, -body_h - s * 0.92 + bob)
 	var blink := fposmod(t, 3.7) < 0.12 and mood == "normal"
@@ -32,11 +35,12 @@ static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal
 	_ell(ci, p + Vector2(0, s * 0.04), s * 0.78, s * 0.16, Color(0, 0, 0, 0.28))
 	# 腳
 	for sx in [-1.0, 1.0]:
-		_ell(ci, p + Vector2(sx * s * 0.2, -s * 0.04), s * 0.17, s * 0.1, SHOE)
-	_body(ci, p + Vector2(0, bob * 0.5), s, body_h, t, mood)
+		var lift := maxf(0.0, sin(walk) * sx) * s * 0.12 if walk >= 0.0 else 0.0
+		_ell(ci, p + Vector2(sx * s * 0.2, -s * 0.04 - lift), s * 0.17, s * 0.1, SHOE)
+	_body(ci, p + Vector2(0, bob * 0.5), s, body_h, t, mood, walk)
 	_head(ci, head, s, t, mood, blink)
 	_collar(ci, p + Vector2(0, bob * 0.5), head, s, body_h)
-	# 要畫在頭前面的手：思考時摸下巴、說話時舉起食指
+	# 要畫在頭前面的手：思考時摸下巴、說話時揮手
 	if mood == "think":
 		var chin := head + Vector2(s * 0.3, s * 0.98)
 		_ell(ci, chin + Vector2(s * 0.04, s * 0.06), s * 0.13, s * 0.1, LAPEL)
@@ -60,7 +64,7 @@ static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal
 
 # ───────────────────────── 身體 ─────────────────────────
 
-static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood: String) -> void:
+static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood: String, walk := -1.0) -> void:
 	var top := p.y - h
 	# 外袍：上窄下寬的圓角梯形
 	var coat := PackedVector2Array([
@@ -96,7 +100,10 @@ static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood
 			_arm(ci, Vector2(p.x - s * 0.38, arm_y), Vector2(p.x - s * 0.52, p.y - s * 0.34), s)
 		_:
 			for sx in [-1.0, 1.0]:
-				_arm(ci, Vector2(p.x + sx * s * 0.38, arm_y), Vector2(p.x + sx * s * 0.54, p.y - s * 0.32 + sin(t * 2.2 + sx) * s * 0.02), s)
+				var swing := sin(t * 2.2 + sx) * s * 0.02
+				if walk >= 0.0:
+					swing = -sin(walk) * sx * s * 0.09         # 和同一邊的腳反方向擺
+				_arm(ci, Vector2(p.x + sx * s * 0.38, arm_y), Vector2(p.x + sx * s * 0.54, p.y - s * 0.32 + swing), s)
 
 
 ## 白色高領：下巴兩旁往上翹的兩片尖領

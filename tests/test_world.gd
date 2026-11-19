@@ -81,9 +81,50 @@ func _check(grade: String, key: String, unit: String, focus: Vector2, far: Vecto
 	_reset(unit)
 
 
+## 高斯在高一地圖上到處亂晃：一直站在能走的地方、真的會走遠；光靈走近就停下來揮手、待久了笑
+func _check_gauss() -> void:
+	var w = await _world("高一")
+	ok(w != null and w.has_method("_gauss_tick"), "高一：地圖上有高斯")
+	w.pos = Vector2(6800, 600)                 # 光靈站遠一點，不要打擾他
+	w._gauss = {}
+	w._gauss_tick(0.0)
+	var start: Vector2 = w._gauss.p
+	ok(w._free(start), "高斯：一開始站在能走的地方")
+	var bad := 0
+	var far := 0.0
+	var walked := false
+	var stopped := false
+	for i in 6000:                             # 模擬 5 分鐘
+		w._gauss_tick(0.05)
+		var gp: Vector2 = w._gauss.p
+		if not w._free(gp):
+			bad += 1
+		far = maxf(far, gp.distance_to(start))
+		walked = walked or float(w._gauss.step) >= 0.0
+		stopped = stopped or float(w._gauss.wait) > 0.0
+	ok(bad == 0, "高斯：一直走在能走的地方（%d 次不在）" % bad)
+	ok(walked and stopped, "高斯：會走、也會停下來")
+	ok(far > 900.0, "高斯：會晃到遠的地方（最遠 %.0f）" % far)
+	var gp: Vector2 = w._gauss.p
+	w.pos = gp + Vector2(-150, 0)
+	w._gauss_tick(0.05)
+	ok(String(w._gauss.mood) == "talk" and float(w._gauss.step) < 0.0 and bool(w._gauss.left), "高斯：光靈走近 → 停下來、轉向光靈揮手")
+	for i in 60:
+		w._gauss_tick(0.05)
+	ok(String(w._gauss.mood) == "happy" and (w._gauss.p as Vector2) == gp, "高斯：光靈待久了 → 笑，而且不走開")
+	w.cam = gp
+	await wait(0.3)
+	await shot("world_gauss")
+	w.pos = Vector2(6800, 600)
+	for i in 200:
+		w._gauss_tick(0.05)
+	ok(String(w._gauss.mood) != "talk", "高斯：光靈走開 → 繼續晃")
+
+
 func _initialize() -> void:
 	await setup()
 	g.power_save = false
 	await _check("高二", "trig", "trig", Vector2(1500, 900), Vector2(5000, 3800))
 	await _check("高一", "poly", "h1poly", Vector2(2760, 2600), Vector2(6000, 600))
+	await _check_gauss()
 	finish("WORLD")

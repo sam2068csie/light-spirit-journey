@@ -4,6 +4,7 @@ extends "res://data/maps/world_base.gd"
 ##   ・走到地區入口（大門）會跳出卡片，Enter／點按鈕進入
 ##   ・不想跑圖：左上「單元列表」直接選單元進入
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
+##   ・Q 版高斯（npc_gauss.gd）在地圖上到處亂晃，光靈走近會停下來揮手（還沒有對話）
 ## 左岸「秋晨之地」是高一上四區（晨光、楓紅、麥田），晨昏之橋過去是右岸「星夜之地」高一下五區（星空、螢火蟲、極光）。
 ## 每個地區的地形都藏著那個單元的數學（不寫算式）：
 ##   數之原野＝方格麥田與數線柵欄　倍增峽谷＝每往下一層、落差加倍的岩層　圓規湖＝正圓的湖、切線棧道、大圓規
@@ -18,6 +19,7 @@ extends "res://data/maps/world_base.gd"
 const MapLayer := preload("res://data/maps/map_layer.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Center := preload("res://data/core/review_center.gd")
+const GaussNpc := preload("res://data/maps/npc_gauss.gd")
 
 const WORLD := Vector2(7200, 4400)
 const BASE_ZOOM := 0.62           # 平常的鏡頭（拉高視角，一次看到比較大的範圍）
@@ -101,6 +103,10 @@ const STELE_U := 30.0                 # 石碑前黃金螺線石板的單位長
 const STELE_O := Vector2(1300, 556)   # 1×1 石板的左上角
 ## 彩蛋三：橋東邊的骰子攤車
 const DICE_NPC := Vector2(4560, 2860)
+## 高斯：在地圖上到處亂晃的 NPC（畫法在 npc_gauss.gd）
+const GAUSS_S := 40.0                 # 頭的大小（整個人大約 3.2 倍高，比光靈高一點）
+const GAUSS_SPEED := 130.0
+const GAUSS_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(3150, 3500)]
 
 var _fade: ColorRect
 var face := Vector2(1, 0)
@@ -140,6 +146,7 @@ var _hud: MapLayer
 var _zoom_lock := false           # 進出地區的鏡頭動畫：不要被自動縮放蓋掉
 var _seen_open := ""              # 上次畫的時候哪些地區開放（變了就重畫雲和大門）
 var _gloom: MapLayer              # 還沒點亮的地區上面的暗影（點亮的做法在 world_base.gd）
+var _gauss := {}                  # 高斯：p 位置、goal 這一段要走到哪、far 大方向、wait 停多久、mood、step 步伐、left 面向左、near_t 光靈在旁邊多久
 
 static var _soft_tex: Texture2D
 
@@ -539,6 +546,110 @@ func _in_cloud(p: Vector2) -> int:
 		if not _open.has(z.id) and cloud_k(z, p) < 0.96:
 			return i
 	return -1
+
+
+# ================= 高斯：到處亂晃 =================
+## 走一小段（200～600）就停下來（發呆、摸下巴想事情、笑一笑），再挑下一段。
+## 每一段大致朝著一個「大方向」（小屋、開放的地區入口、石碑、橋……）走，到了再換，所以整張地圖都會晃到。
+## 只走 _free 的地方：不進雲、不下水、不穿過樹和建築。光靈走近：停下來、轉向光靈揮手，待久了就笑。
+
+func _gauss_init() -> void:
+	var start: Vector2 = GAUSS_STARTS[randi() % GAUSS_STARTS.size()]
+	var p := start
+	# 從起點一圈一圈往外找能站的位置
+	for r in range(0, 1200, 40):
+		var found := false
+		for k in 16:
+			var q := start + Vector2.from_angle(k * TAU / 16.0) * float(r)
+			if _free(q):
+				p = q
+				found = true
+				break
+		if found:
+			break
+	_gauss = {"p": p, "goal": p, "far": _gauss_far(p), "wait": randf_range(0.5, 2.0), "mood": "normal", "step": -1.0, "left": false, "near_t": 0.0, "walk_t": 0.0}
+
+
+## 大方向：離現在的位置夠遠的一個地點
+func _gauss_far(from: Vector2) -> Vector2:
+	var spots: Array = [HOUSE + Vector2(260, 120), SPAWN, STELE + Vector2(0, 200), WINDMILL + Vector2(200, 0), CHEST,
+		BRIDGE.get_center(), RIGHT_SPAWN, DICE_NPC + Vector2(0, 200), EXIT_SIGN + Vector2(-200, -100)]
+	for z in ZONES:
+		if _open.has(z.id):
+			spots.append(z.gate + Vector2(0, 140))
+	spots = spots.filter(func(q): return from.distance_to(q) > 900.0)
+	return spots[randi() % spots.size()] if not spots.is_empty() else from
+
+
+## 從 a 直直走到 b 的路上都能站嗎（每 40 取一點）
+func _gauss_path_ok(a: Vector2, b: Vector2) -> bool:
+	var n := maxi(1, int(a.distance_to(b) / 40.0))
+	for i in range(1, n + 1):
+		if not _free(a.lerp(b, float(i) / n)):
+			return false
+	return true
+
+
+## 挑下一段要走到哪；挑不到就換一個大方向
+func _gauss_pick() -> void:
+	var p: Vector2 = _gauss.p
+	var far: Vector2 = _gauss.far
+	if p.distance_to(far) < 400.0:
+		far = _gauss_far(p)
+		_gauss.far = far
+	for i in 16:
+		var a := (far - p).angle() + randf_range(-0.9, 0.9) if randf() < 0.75 else randf() * TAU
+		var q := p + Vector2.from_angle(a) * randf_range(200.0, 600.0)
+		if _free(q) and _gauss_path_ok(p, q):
+			_gauss.goal = q
+			_gauss.walk_t = 0.0
+			return
+	_gauss.far = _gauss_far(p)
+	_gauss.wait = 1.0
+
+
+func _gauss_tick(delta: float) -> void:
+	if _gauss.is_empty():
+		_gauss_init()
+	var p: Vector2 = _gauss.p
+	# 光靈走近：停下來，轉向光靈；先揮手，待久了就笑
+	var d := p.distance_to(pos)
+	if d < 230.0 or (float(_gauss.near_t) > 0.0 and d < 300.0):
+		_gauss.near_t = float(_gauss.near_t) + delta
+		_gauss.step = -1.0
+		_gauss.left = pos.x < p.x
+		_gauss.mood = "talk" if float(_gauss.near_t) < 2.5 else "happy"
+		_gauss.wait = maxf(float(_gauss.wait), 1.2)
+		return
+	if float(_gauss.near_t) > 0.0:
+		_gauss.near_t = 0.0
+		_gauss.mood = "normal"
+	# 停著
+	if float(_gauss.wait) > 0.0:
+		_gauss.wait = float(_gauss.wait) - delta
+		_gauss.step = -1.0
+		if float(_gauss.wait) <= 0.0:
+			_gauss.mood = "normal"
+			_gauss_pick()
+		return
+	# 走向這一段的終點
+	var goal: Vector2 = _gauss.goal
+	var to := goal - p
+	_gauss.walk_t = float(_gauss.walk_t) + delta
+	if to.length() < 8.0 or float(_gauss.walk_t) > 8.0:
+		_gauss.wait = randf_range(1.5, 4.5)
+		var k := randf()
+		_gauss.mood = "think" if k < 0.35 else ("happy" if k < 0.5 else "normal")
+		_gauss.step = -1.0
+		return
+	var np := p + to.normalized() * minf(to.length(), GAUSS_SPEED * delta)
+	if not _free(np):
+		_gauss.wait = 0.8                  # 擋住了（不太會發生：挑路的時候檢查過）
+		return
+	_gauss.p = np
+	_gauss.step = fmod(maxf(0.0, float(_gauss.step)) + delta * 9.0, TAU * 100.0)
+	if absf(to.x) > 4.0:
+		_gauss.left = to.x < 0.0
 
 
 # ================= 存檔 =================
@@ -1026,6 +1137,8 @@ func _process(delta: float) -> void:
 		zoom = lerpf(zoom, want, 1.0 - exp(-3.0 * delta))
 	cam = cam.lerp(_cam_target(), 1.0 - exp(-8.0 * delta))
 	_check_world(delta)
+	if is_visible_in_tree():
+		_gauss_tick(delta)
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
@@ -2621,6 +2734,10 @@ func _p_fx(L) -> void:
 			var ph := fmod(f * 2.0 + j * 0.071, 1.0)
 			var q := c + Vector2(sin(j * 2.4) * box.size.x * 0.35, cos(j * 1.7) * box.size.y * 0.3 - ph * 220.0)
 			_dot(L, q, 6.0, Color(1.0, 0.95, 0.7, sin(f * PI) * (1.0 - ph)), 32)
+	# 高斯（比光靈遠＝y 比較小的時候先畫，被光靈擋住）
+	var gauss_back: bool = not _gauss.is_empty() and float(_gauss.p.y) <= pos.y
+	if gauss_back:
+		_gauss_draw(L, v)
 	# 光靈
 	for p in _trail:
 		_dot(L, p.p, 4.5 * (1.0 - p.life / 0.8), Color(1.0, 0.92, 0.6, 0.7 * (1.0 - p.life / 0.8)), 32)
@@ -2631,6 +2748,17 @@ func _p_fx(L) -> void:
 		_face_left = face.x < 0.0
 	L.draw_set_transform(pos + Vector2(0, bob - 10.0), 0.0, Vector2(-1.0 if _face_left else 1.0, 1.0))
 	SL.draw_all(L, Vector2.ZERO, SPIRIT_R, Game.of(self).equipped, t)
+	L.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if not _gauss.is_empty() and not gauss_back:
+		_gauss_draw(L, v)
+
+
+func _gauss_draw(L, v: Rect2) -> void:
+	var gp: Vector2 = _gauss.p
+	if not v.grow(160.0).has_point(gp):
+		return
+	L.draw_set_transform(gp, 0.0, Vector2(-1.0 if bool(_gauss.left) else 1.0, 1.0))
+	GaussNpc.draw(L, Vector2.ZERO, GAUSS_S, t + 0.7, String(_gauss.mood), float(_gauss.step))
 	L.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
