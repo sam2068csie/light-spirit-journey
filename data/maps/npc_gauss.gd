@@ -20,6 +20,9 @@ const SHIRT := Color("fbf8ef")
 const SHIRT_SH := Color("ddd6c4")
 const EYE := Color("2a2440")
 const SHOE := Color("4a3426")
+const NAME := "高斯"
+const TITLE := "數學王子 · 散步中"         # 靠近時下方卡片的副標
+
 ## ───────────── 對話：六個小故事（2026/11/19 使用者決定：跟他說話時隨機挑一個，和他走到哪裡無關） ─────────────
 ## 每一句：[說話的人, 表情, 句子]；高斯的表情 normal／happy／think／talk，光靈的 happy／surprised／normal
 ## 史實（查過資料）：
@@ -88,28 +91,11 @@ const HELLO := [
 ]
 
 
-## 挑一個故事：還沒聽過的先說（隨機）；全部聽過了，就從頭再隨機，但不要跟上一次一樣
-static func pick_story(heard: Array, last := "") -> String:
-	var left: Array = TALKS.keys().filter(func(k): return not heard.has(k))
-	if left.is_empty():
-		left = TALKS.keys().filter(func(k): return k != last)
-	return String(left[randi() % left.size()])
-
-
-## 一次對話的全部台詞（給 npc_talk.gd）：開場白＋一個故事
-static func talk_lines(story: String, first: bool) -> Array:
-	var raw: Array = (HELLO_FIRST if first else HELLO[randi() % HELLO.size()]) + TALKS[story]
-	var out: Array = []
-	for r in raw:
-		out.append({"who": r[0], "mood": r[1], "text": r[2]})
-	return out
-
-
 const FW := 0.8                 # 臉是長橢圓：半寬 0.8、半高 1.1（乘頭的大小 s）
 const FH := 1.1
 
 
-static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal", walk := -1.0) -> void:
+static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal", walk := -1.0, _base := Transform2D.IDENTITY) -> void:
 	var bob := sin(t * 2.2) * s * 0.025                 # 呼吸
 	if walk >= 0.0:
 		bob = -absf(sin(walk)) * s * 0.07               # 走路：每一步跳一下

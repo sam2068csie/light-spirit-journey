@@ -4,7 +4,7 @@ extends "res://data/maps/world_base.gd"
 ##   ・走到地區入口（大門）會跳出卡片，Enter／點按鈕進入
 ##   ・不想跑圖：左上「單元列表」直接選單元進入
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
-##   ・Q 版高斯（npc_gauss.gd）在地圖上到處亂晃，光靈走近會停下來揮手；跟他聊聊會隨機說一個小故事（npc_talk.gd 的對話框）
+##   ・Q 版高斯、拉馬努金（npc_gauss.gd、npc_ramanujan.gd）在地圖上到處亂晃，光靈走近會停下來揮手；跟他們聊聊會隨機說一個小故事（npc_talk.gd 的對話框）
 ## 左岸「秋晨之地」是高一上四區（晨光、楓紅、麥田），晨昏之橋過去是右岸「星夜之地」高一下五區（星空、螢火蟲、極光）。
 ## 每個地區的地形都藏著那個單元的數學（不寫算式）：
 ##   數之原野＝方格麥田與數線柵欄　倍增峽谷＝每往下一層、落差加倍的岩層　圓規湖＝正圓的湖、切線棧道、大圓規
@@ -20,6 +20,7 @@ const MapLayer := preload("res://data/maps/map_layer.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Center := preload("res://data/core/review_center.gd")
 const GaussNpc := preload("res://data/maps/npc_gauss.gd")
+const RamanujanNpc := preload("res://data/maps/npc_ramanujan.gd")
 const NpcTalk := preload("res://data/ui/npc_talk.gd")
 
 const WORLD := Vector2(7200, 4400)
@@ -104,10 +105,11 @@ const STELE_U := 30.0                 # 石碑前黃金螺線石板的單位長
 const STELE_O := Vector2(1300, 556)   # 1×1 石板的左上角
 ## 彩蛋三：橋東邊的骰子攤車
 const DICE_NPC := Vector2(4560, 2860)
-## 高斯：在地圖上到處亂晃的 NPC（畫法在 npc_gauss.gd）
-const GAUSS_S := 40.0                 # 頭的大小（整個人大約 3.2 倍高，比光靈高一點）
-const GAUSS_SPEED := 130.0
-const GAUSS_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(2000, 3000)]
+## 散步的數學家：在地圖上到處亂晃的 NPC（畫法和台詞在各自的 npc_*.gd）
+const NPCS := [{"id": "gauss", "script": GaussNpc}, {"id": "ramanujan", "script": RamanujanNpc}]
+const NPC_S := 40.0                   # 頭的大小（整個人大約 3.2 倍高，比光靈高一點）
+const NPC_SPEED := 130.0
+const NPC_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(2000, 3000)]
 
 var _fade: ColorRect
 var face := Vector2(1, 0)
@@ -147,7 +149,7 @@ var _hud: MapLayer
 var _zoom_lock := false           # 進出地區的鏡頭動畫：不要被自動縮放蓋掉
 var _seen_open := ""              # 上次畫的時候哪些地區開放（變了就重畫雲和大門）
 var _gloom: MapLayer              # 還沒點亮的地區上面的暗影（點亮的做法在 world_base.gd）
-var _gauss := {}                  # 高斯：p 位置、goal 這一段要走到哪、far 大方向、wait 停多久、mood、step 步伐、left 面向左、near_t 光靈在旁邊多久
+var _npcs: Array = []             # 散步的數學家（欄位說明在「散步的數學家 NPC」那一段）
 
 static var _soft_tex: Texture2D
 
@@ -549,30 +551,39 @@ func _in_cloud(p: Vector2) -> int:
 	return -1
 
 
-# ================= 高斯：到處亂晃 =================
-## 走一小段（200～600）就停下來（發呆、摸下巴想事情、笑一笑），再挑下一段。
+# ================= 散步的數學家 NPC（高斯、拉馬努金） =================
+## 每位走一小段（200～600）就停下來（發呆、摸下巴想事情、笑一笑），再挑下一段。
 ## 每一段大致朝著一個「大方向」（小屋、開放的地區入口、石碑、橋……）走，到了再換，所以整張地圖都會晃到。
 ## 只走 _free 的地方：不進雲、不下水、不穿過樹和建築。光靈走近：停下來、轉向光靈揮手，待久了就笑。
+## 跟他聊聊：隨機說一個小故事（還沒聽過的先說），存檔 world10["npc"][id] = {heard: [], last: ""}
+## _npcs 每一位：id、script（畫法和台詞）、p 位置、goal 這一段要走到哪、far 大方向、wait 停多久、mood、step 步伐、
+##   left 面向左、near_t 光靈在旁邊多久、walk_t 這一段走多久了、miss 連續挑不到路的次數
 
-func _gauss_init() -> void:
-	var start: Vector2 = GAUSS_STARTS[randi() % GAUSS_STARTS.size()]
-	var p := start
-	# 從起點一圈一圈往外找能站的位置
-	for r in range(0, 1200, 40):
-		var found := false
-		for k in 16:
-			var q := start + Vector2.from_angle(k * TAU / 16.0) * float(r)
-			if _free(q):
-				p = q
-				found = true
+func _npc_init() -> void:
+	_npcs = []
+	var starts: Array = NPC_STARTS.duplicate()
+	starts.shuffle()
+	for i in NPCS.size():
+		var start: Vector2 = starts[i % starts.size()]
+		var p := start
+		# 從起點一圈一圈往外找能站的位置
+		for r in range(0, 1200, 40):
+			var found := false
+			for k in 16:
+				var q := start + Vector2.from_angle(k * TAU / 16.0) * float(r)
+				if _free(q):
+					p = q
+					found = true
+					break
+			if found:
 				break
-		if found:
-			break
-	_gauss = {"p": p, "goal": p, "far": _gauss_far(p), "wait": randf_range(0.5, 2.0), "mood": "normal", "step": -1.0, "left": false, "near_t": 0.0, "walk_t": 0.0}
+		var spec: Dictionary = NPCS[i]
+		_npcs.append({"id": spec.id, "script": spec.script, "p": p, "goal": p, "far": _npc_far(p), "wait": randf_range(0.5, 2.0),
+			"mood": "normal", "step": -1.0, "left": false, "near_t": 0.0, "walk_t": 0.0, "miss": 0, "toff": 0.7 + i * 1.9})
 
 
 ## 大方向：離現在的位置夠遠的一個地點
-func _gauss_far(from: Vector2) -> Vector2:
+func _npc_far(from: Vector2) -> Vector2:
 	var spots: Array = [HOUSE + Vector2(260, 120), SPAWN, STELE + Vector2(0, 200), WINDMILL + Vector2(200, 0), CHEST,
 		BRIDGE.get_center(), RIGHT_SPAWN, DICE_NPC + Vector2(0, 200), EXIT_SIGN + Vector2(-200, -100)]
 	for z in ZONES:
@@ -583,7 +594,7 @@ func _gauss_far(from: Vector2) -> Vector2:
 
 
 ## 從 a 直直走到 b 的路上都能站嗎（每 40 取一點）
-func _gauss_path_ok(a: Vector2, b: Vector2) -> bool:
+func _npc_path_ok(a: Vector2, b: Vector2) -> bool:
 	var n := maxi(1, int(a.distance_to(b) / 40.0))
 	for i in range(1, n + 1):
 		if not _free(a.lerp(b, float(i) / n)):
@@ -591,94 +602,117 @@ func _gauss_path_ok(a: Vector2, b: Vector2) -> bool:
 	return true
 
 
-## 挑下一段要走到哪；挑不到就換一個大方向
-func _gauss_pick() -> void:
-	var p: Vector2 = _gauss.p
-	var far: Vector2 = _gauss.far
-	if p.distance_to(far) < 400.0:
-		far = _gauss_far(p)
-		_gauss.far = far
-	# 一直挑不到（卡在樹叢之間的小空地）：改走短一點、方向不拘，先走出來
-	var stuck := int(_gauss.get("miss", 0)) >= 2
-	for i in 16:
-		var a := (far - p).angle() + randf_range(-0.9, 0.9) if randf() < 0.75 and not stuck else randf() * TAU
-		var q := p + Vector2.from_angle(a) * (randf_range(80.0, 260.0) if stuck else randf_range(200.0, 600.0))
-		if _free(q) and _gauss_spot_ok(q) and _gauss_path_ok(p, q):
-			_gauss.goal = q
-			_gauss.walk_t = 0.0
-			_gauss.miss = 0
-			return
-	_gauss.miss = int(_gauss.get("miss", 0)) + 1
-	_gauss.far = _gauss_far(p)
-	_gauss.wait = 1.0
-
-
-func _gauss_tick(delta: float) -> void:
-	if _gauss.is_empty():
-		_gauss_init()
-	var p: Vector2 = _gauss.p
-	# 光靈走近：停下來，轉向光靈；先揮手，待久了就笑
-	var d := p.distance_to(pos)
-	if d < 230.0 or (float(_gauss.near_t) > 0.0 and d < 300.0):
-		_gauss.near_t = float(_gauss.near_t) + delta
-		_gauss.step = -1.0
-		_gauss.left = pos.x < p.x
-		_gauss.mood = "talk" if float(_gauss.near_t) < 2.5 else "happy"
-		_gauss.wait = maxf(float(_gauss.wait), 1.2)
-		return
-	if float(_gauss.near_t) > 0.0:
-		_gauss.near_t = 0.0
-		_gauss.mood = "normal"
-	# 停著
-	if float(_gauss.wait) > 0.0:
-		_gauss.wait = float(_gauss.wait) - delta
-		_gauss.step = -1.0
-		if float(_gauss.wait) <= 0.0:
-			_gauss.mood = "normal"
-			_gauss_pick()
-		return
-	# 走向這一段的終點
-	var goal: Vector2 = _gauss.goal
-	var to := goal - p
-	_gauss.walk_t = float(_gauss.walk_t) + delta
-	if to.length() < 8.0 or float(_gauss.walk_t) > 8.0:
-		_gauss.wait = randf_range(1.5, 4.5)
-		var k := randf()
-		_gauss.mood = "think" if k < 0.35 else ("happy" if k < 0.5 else "normal")
-		_gauss.step = -1.0
-		return
-	var np := p + to.normalized() * minf(to.length(), GAUSS_SPEED * delta)
-	if not _free(np):
-		_gauss.wait = 0.8                  # 擋住了（不太會發生：挑路的時候檢查過）
-		return
-	_gauss.p = np
-	_gauss.step = fmod(maxf(0.0, float(_gauss.step)) + delta * 9.0, TAU * 100.0)
-	if absf(to.x) > 4.0:
-		_gauss.left = to.x < 0.0
-
-
-## 跟高斯聊天：隨機一個故事（還沒聽過的先說），存檔記得聽過哪些
-func _talk_gauss() -> void:
-	var st := _state()
-	var heard: Array = st.get("gauss_heard", [])
-	var story := GaussNpc.pick_story(heard, String(st.get("gauss_last", "")))
-	var lines := GaussNpc.talk_lines(story, heard.is_empty())
-	if not heard.has(story):
-		heard.append(story)
-	st["gauss_heard"] = heard
-	st["gauss_last"] = story
-	_overlay = NpcTalk.open(self, lines, func(): _overlay = null)
-
-
-## 這裡適合停下來嗎：不要停在入口、小屋門口這些地方（光靈靠近時他會停住，會擋到）
-func _gauss_spot_ok(q: Vector2) -> bool:
+## 這裡適合停下來嗎：不要停在入口、小屋門口這些地方（光靈靠近時他會停住，會擋到），也不要和另一位擠在一起
+func _npc_spot_ok(q: Vector2, me: Dictionary = {}) -> bool:
 	for z in ZONES:
 		if q.distance_to(z.gate) < 220.0:
 			return false
 	for b in [[HOUSE, 300.0], [STELE, 220.0], [DICE_NPC, 220.0], [EXIT_SIGN, 240.0], [CHEST, 160.0]]:
 		if q.distance_to(b[0]) < float(b[1]):
 			return false
+	for o in _npcs:
+		if o != me and q.distance_to(o.goal) < 160.0:
+			return false
 	return true
+
+
+## 挑下一段要走到哪；挑不到就換一個大方向
+func _npc_pick(n: Dictionary) -> void:
+	var p: Vector2 = n.p
+	var far: Vector2 = n.far
+	if p.distance_to(far) < 400.0:
+		far = _npc_far(p)
+		n.far = far
+	# 一直挑不到（卡在樹叢之間的小空地）：改走短一點、方向不拘，先走出來
+	var stuck := int(n.miss) >= 2
+	for i in 16:
+		var a := (far - p).angle() + randf_range(-0.9, 0.9) if randf() < 0.75 and not stuck else randf() * TAU
+		var q := p + Vector2.from_angle(a) * (randf_range(80.0, 260.0) if stuck else randf_range(200.0, 600.0))
+		if _free(q) and _npc_spot_ok(q, n) and _npc_path_ok(p, q):
+			n.goal = q
+			n.walk_t = 0.0
+			n.miss = 0
+			return
+	n.miss = int(n.miss) + 1
+	n.far = _npc_far(p)
+	n.wait = 1.0
+
+
+func _npc_tick(delta: float) -> void:
+	if _npcs.is_empty():
+		_npc_init()
+	for n in _npcs:
+		_npc_step(n, delta)
+
+
+func _npc_step(n: Dictionary, delta: float) -> void:
+	var p: Vector2 = n.p
+	# 光靈走近：停下來，轉向光靈；先揮手，待久了就笑
+	var d := p.distance_to(pos)
+	if d < 230.0 or (float(n.near_t) > 0.0 and d < 300.0):
+		n.near_t = float(n.near_t) + delta
+		n.step = -1.0
+		n.left = pos.x < p.x
+		n.mood = "talk" if float(n.near_t) < 2.5 else "happy"
+		n.wait = maxf(float(n.wait), 1.2)
+		return
+	if float(n.near_t) > 0.0:
+		n.near_t = 0.0
+		n.mood = "normal"
+	# 停著
+	if float(n.wait) > 0.0:
+		n.wait = float(n.wait) - delta
+		n.step = -1.0
+		if float(n.wait) <= 0.0:
+			n.mood = "normal"
+			_npc_pick(n)
+		return
+	# 走向這一段的終點
+	var goal: Vector2 = n.goal
+	var to := goal - p
+	n.walk_t = float(n.walk_t) + delta
+	if to.length() < 8.0 or float(n.walk_t) > 8.0:
+		n.wait = randf_range(1.5, 4.5)
+		var k := randf()
+		n.mood = "think" if k < 0.35 else ("happy" if k < 0.5 else "normal")
+		n.step = -1.0
+		return
+	var np := p + to.normalized() * minf(to.length(), NPC_SPEED * delta)
+	if not _free(np):
+		n.wait = 0.8                  # 擋住了（不太會發生：挑路的時候檢查過）
+		return
+	n.p = np
+	n.step = fmod(maxf(0.0, float(n.step)) + delta * 9.0, TAU * 100.0)
+	if absf(to.x) > 4.0:
+		n.left = to.x < 0.0
+
+
+func _npc(id: String) -> Dictionary:
+	for n in _npcs:
+		if n.id == id:
+			return n
+	return {}
+
+
+## 跟 NPC 聊天：隨機一個故事（還沒聽過的先說），存檔記得聽過哪些
+func _talk_npc(i: int) -> void:
+	var n: Dictionary = _npcs[i]
+	var st := _state()
+	if not st.has("npc"):
+		st["npc"] = {}
+	var rec: Dictionary = st.npc.get(n.id, {})
+	if n.id == "gauss" and rec.is_empty() and st.has("gauss_heard"):      # 舊存檔（只有高斯的時候）
+		rec = {"heard": st.gauss_heard, "last": st.get("gauss_last", "")}
+		st.erase("gauss_heard")
+		st.erase("gauss_last")
+	var heard: Array = rec.get("heard", [])
+	var sc = n.script
+	var story := NpcTalk.pick_story(sc, heard, String(rec.get("last", "")))
+	var lines := NpcTalk.story_lines(sc, story, heard.is_empty())
+	if not heard.has(story):
+		heard.append(story)
+	st.npc[n.id] = {"heard": heard, "last": story}
+	_overlay = NpcTalk.open(self, lines, func(): _overlay = null)
 
 
 # ================= 存檔 =================
@@ -801,9 +835,10 @@ func _update_card() -> void:
 			_card_title.text = "擲骰子的攤販"
 			_card_sub.text = "「猜對機率就送你獎品！」" if not _has("eggs", "dice") else "「你已經是機率高手啦！」"
 			_card_btn.text = "聊聊"
-		"gauss":
-			_card_title.text = "高斯"
-			_card_sub.text = "數學王子 · 散步中"
+		"npc":
+			var sc = _npcs[int(_near.i)].script
+			_card_title.text = sc.NAME
+			_card_sub.text = sc.TITLE
 			_card_btn.text = "聊聊"
 		"chest":
 			_card_title.text = "數字石的寶箱"
@@ -831,8 +866,8 @@ func _interact() -> void:
 				mm._set_grade("高二")
 		"zone":
 			_open_zone(int(_near.i))
-		"gauss":
-			_talk_gauss()
+		"npc":
+			_talk_npc(int(_near.i))
 		"stele":
 			_open_stele()
 		"chest":
@@ -1173,7 +1208,7 @@ func _process(delta: float) -> void:
 	cam = cam.lerp(_cam_target(), 1.0 - exp(-8.0 * delta))
 	_check_world(delta)
 	if is_visible_in_tree():
-		_gauss_tick(delta)
+		_npc_tick(delta)
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
@@ -1220,10 +1255,14 @@ func _check_world(delta: float) -> void:
 					Game.of(self).play("bonk", 1.0, -6.0)      # 只有聲音，不要整個畫面閃紅（不是扣血）
 					_show_toast("石頭暗下去了……要照什麼順序踩呢？")
 				break
-	# 靠近什麼（高斯放最前面：和入口、小屋重疊時，那些優先）
+	# 靠近什麼（NPC 放最前面：和入口、小屋重疊時，那些優先；兩位都靠近時選比較近的）
 	_near = {}
-	if not _gauss.is_empty() and pos.distance_to(_gauss.p) < 150.0:
-		_near = {"kind": "gauss"}
+	var best := 150.0
+	for i in _npcs.size():
+		var dn := pos.distance_to(_npcs[i].p)
+		if dn < best:
+			best = dn
+			_near = {"kind": "npc", "i": i}
 	for i in ZONES.size():
 		if pos.distance_to(ZONES[i].gate) < 110.0:
 			_near = {"kind": "zone", "i": i}
@@ -2771,10 +2810,12 @@ func _p_fx(L) -> void:
 			var ph := fmod(f * 2.0 + j * 0.071, 1.0)
 			var q := c + Vector2(sin(j * 2.4) * box.size.x * 0.35, cos(j * 1.7) * box.size.y * 0.3 - ph * 220.0)
 			_dot(L, q, 6.0, Color(1.0, 0.95, 0.7, sin(f * PI) * (1.0 - ph)), 32)
-	# 高斯（比光靈遠＝y 比較小的時候先畫，被光靈擋住）
-	var gauss_back: bool = not _gauss.is_empty() and float(_gauss.p.y) <= pos.y
-	if gauss_back:
-		_gauss_draw(L, v)
+	# 散步的數學家（比光靈遠＝y 比較小的先畫，被光靈擋住；比光靈近的畫在光靈後面）
+	var npc_order := _npcs.duplicate()
+	npc_order.sort_custom(func(a, b): return float(a.p.y) < float(b.p.y))
+	for n in npc_order:
+		if float(n.p.y) <= pos.y:
+			_npc_draw(L, v, n)
 	# 光靈
 	for p in _trail:
 		_dot(L, p.p, 4.5 * (1.0 - p.life / 0.8), Color(1.0, 0.92, 0.6, 0.7 * (1.0 - p.life / 0.8)), 32)
@@ -2786,16 +2827,20 @@ func _p_fx(L) -> void:
 	L.draw_set_transform(pos + Vector2(0, bob - 10.0), 0.0, Vector2(-1.0 if _face_left else 1.0, 1.0))
 	SL.draw_all(L, Vector2.ZERO, SPIRIT_R, Game.of(self).equipped, t)
 	L.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	if not _gauss.is_empty() and not gauss_back:
-		_gauss_draw(L, v)
+	for n in npc_order:
+		if float(n.p.y) > pos.y:
+			_npc_draw(L, v, n)
 
 
-func _gauss_draw(L, v: Rect2) -> void:
-	var gp: Vector2 = _gauss.p
+func _npc_draw(L, v: Rect2, n: Dictionary) -> void:
+	var gp: Vector2 = n.p
 	if not v.grow(160.0).has_point(gp):
 		return
-	L.draw_set_transform(gp, 0.0, Vector2(-1.0 if bool(_gauss.left) else 1.0, 1.0))
-	GaussNpc.draw(L, Vector2.ZERO, GAUSS_S, t + 0.7, String(_gauss.mood), float(_gauss.step))
+	# 身後一圈淡淡的光：深色頭髮、深色衣服在暗暗的森林裡也看得出輪廓
+	blob(L, gp + Vector2(0, -NPC_S * 1.5), Vector2(NPC_S * 2.6, NPC_S * 3.0), Color(1.0, 0.95, 0.8, 0.2))
+	var xf := Transform2D(0.0, Vector2(-1.0 if bool(n.left) else 1.0, 1.0), 0.0, gp)
+	L.draw_set_transform_matrix(xf)
+	n.script.draw(L, Vector2.ZERO, NPC_S, t + float(n.toff), String(n.mood), float(n.step), xf)
 	L.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

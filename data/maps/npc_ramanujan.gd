@@ -1,5 +1,5 @@
 extends RefCounted
-## Q 版拉馬努金（地圖 NPC，草稿）：和 npc_gauss.gd 同一套比例（頭大身體小），程式畫的
+## Q 版拉馬努金（地圖 NPC）：和 npc_gauss.gd 同一套比例（頭大身體小），程式畫的
 ##   參考他最常見的照片：圓臉、溫暖的深棕膚色、往後梳的濃密黑髮（額頭高）、又大又深的眼睛、濃眉、沒有鬍子；
 ##   深色西裝、白襯衫、領帶。招牌道具：一塊寫著 1729 的小石板（他年輕時用石板演算）
 ##   RamanujanNpc.draw(ci, 腳底的位置, 頭的大小, 時間, 表情, 步伐)
@@ -8,13 +8,13 @@ extends RefCounted
 ##   walk：走路的步伐（弧度；< 0 是站著）
 const UITheme := preload("res://data/ui/game_theme.gd")
 
-const SKIN := Color("b97a52")
+const SKIN := Color("c08257")
 const SKIN_SH := Color("9c6241")
 const SKIN_HI := Color("cf9469")
 const HAIR := Color("1b1820")
 const HAIR_HI := Color("3b3644")
-const SUIT := Color("2f3550")
-const SUIT_HI := Color("414869")
+const SUIT := Color("3a4672")
+const SUIT_HI := Color("4d5a8a")
 const SHIRT := Color("fbf8ef")
 const SHIRT_SH := Color("ddd6c4")
 const TIE := Color("9a3d2f")
@@ -29,7 +29,87 @@ const FW := 0.88                # 圓臉：半寬 0.88、半高 0.94（乘頭的
 const FH := 0.94
 
 
-static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal", walk := -1.0) -> void:
+const NAME := "拉馬努金"
+const TITLE := "數字的好朋友 · 散步中"     # 靠近時下方卡片的副標
+
+## ───────────── 對話：六個小故事（2026/11/19 使用者決定；和高斯一樣，聊聊時隨機挑一個） ─────────────
+## 每一句：[說話的人, 表情, 句子]；拉馬努金的表情 normal／happy／think／talk，光靈的 happy／surprised／normal
+## 史實（查過資料）：
+##   taxi   哈代《Ramanujan》(1940)：去 Putney 探病，計程車 1729「很無聊」→ 兩種方法寫成兩個立方數的和的最小數。
+##          「每個正整數都是他的朋友」是李特爾伍德說的
+##   radical 1911 年《印度數學會期刊》第 289 題，好幾個月沒人解，最後他自己公布答案 3
+##   carr   1903 年從朋友那裡拿到卡爾的《基本結果大綱》：幾千條結果、幾乎沒有證明（哈代說 6165 條，實際約 4865 條）。
+##          用石板演算、用手肘擦（紙很貴），手肘磨得又黑又粗
+##   exam   1904 年拿獎學金進貢伯根農的政府學院，1905 年因為只顧數學、其他科沒讀，獎學金沒有續；
+##          1906 年進帕凱亞帕學院，考試數學過了、其他科不及格
+##   letter 在馬德拉斯港務局當辦事員；1913 年 1 月寫信給哈代，附上一長串沒證明的公式；1914 年到劍橋。
+##          「一定是對的，因為不是真的話，沒有人有那種想像力把它們編出來」是哈代說的
+##   part   分割數：5 有 7 種拆法；麥克馬洪少校算出 200 的拆法（3,972,999,029,388），哈代和他的估算公式幾乎一模一樣
+## 不放：1＋2＋3＋…＝−1/12（不是一般的加法，高中生容易誤會）；早逝、信仰的事先不提
+const TALKS := {
+	"taxi": [
+		["拉馬努金", "talk", "我在倫敦養病的時候，哈代教授來看我。"],
+		["拉馬努金", "happy", "他一進門就說：「我搭的計程車，車號是 1729，這個數字好無聊啊。」"],
+		["光靈", "surprised", "1729……聽起來真的很普通耶？"],
+		["拉馬努金", "think", "才不呢！它可以用兩種方法寫成兩個立方數相加：1^{3} + 12^{3}，還有 9^{3} + 10^{3}。"],
+		["拉馬努金", "happy", "而且，它是這種數裡面最小的一個。你看，一點都不無聊！"],
+		["拉馬努金", "talk", "我的朋友李特爾伍德說，每個正整數都是我的老朋友。我覺得他說得沒錯。"],
+	],
+	"radical": [
+		["拉馬努金", "talk", "年輕的時候，我在印度的數學期刊上出過一道題目。"],
+		["拉馬努金", "think", "根號裡面有根號，根號裡面又有根號，一直下去沒有盡頭。"],
+		["拉馬努金", "talk", "√{1 + 2√{1 + 3√{1 + 4√{1 + …}}}} = ？"],
+		["光靈", "surprised", "這……算得出來嗎？"],
+		["拉馬努金", "happy", "過了好幾個月都沒人寄答案來，最後我自己公布了：答案是 3！"],
+		["拉馬努金", "talk", "你看：3 = √{9} = √{1 + 2×4}，而 4 = √{1 + 3×5}，5 = √{1 + 4×6}……一層一層剝開，就是這道題。"],
+		["拉馬努金", "happy", "看起來好嚇人的式子，答案卻這麼簡單。我最喜歡這種題目了。"],
+	],
+	"carr": [
+		["拉馬努金", "talk", "十幾歲的時候，朋友借我一本公式書，是一位叫卡爾的老師編的。"],
+		["拉馬努金", "think", "裡面列了好幾千條公式，可是幾乎都只寫結果，沒寫怎麼來的。"],
+		["光靈", "surprised", "那不就看不懂了嗎？"],
+		["拉馬努金", "happy", "所以我就自己一條一條推出來！推著推著，還發現了好多書裡沒有的公式。"],
+		["拉馬努金", "talk", "那時候紙很貴，我都在石板上算，算完用手肘擦掉。手肘都被磨得又黑又粗了。"],
+		["拉馬努金", "happy", "這塊石板，就是那時候陪我的好夥伴。"],
+	],
+	"exam": [
+		["拉馬努金", "talk", "我讀書的成績很好，還拿到獎學金上了大學。"],
+		["拉馬努金", "think", "可是一進大學，我整天只想著數學，其他科目都沒讀……"],
+		["光靈", "surprised", "然後呢？"],
+		["拉馬努金", "talk", "第二年，獎學金就沒了。後來換了一所學校，數學考過了，其他科還是不及格。"],
+		["拉馬努金", "happy", "我繞了好大一圈，才終於能專心做數學。你可別學我喔！"],
+	],
+	"letter": [
+		["拉馬努金", "talk", "我在印度的港口辦公室當辦事員，下了班就做數學。"],
+		["拉馬努金", "think", "1913 年，我鼓起勇氣，寫信給英國劍橋的哈代教授，附上一長串公式。"],
+		["光靈", "surprised", "他會不會以為你在亂寫？"],
+		["拉馬努金", "happy", "他後來說：這些公式一定是對的，因為如果不是真的，沒有人有那種想像力把它們編出來。"],
+		["拉馬努金", "talk", "第二年，我就坐船到了劍橋，和他一起做研究。"],
+	],
+	"part": [
+		["拉馬努金", "talk", "你知道 5 有幾種拆法嗎？拆成幾個正整數加起來，不管順序。"],
+		["光靈", "normal", "5、4＋1、3＋2……"],
+		["拉馬努金", "happy", "還有 3＋1＋1、2＋2＋1、2＋1＋1＋1、1＋1＋1＋1＋1，一共 7 種！"],
+		["拉馬努金", "think", "數字一變大，拆法就多得嚇人。200 的拆法，將近四兆種！"],
+		["拉馬努金", "talk", "我和哈代教授找出一個公式來估算。麥克馬洪少校把 200 的拆法老老實實算了一遍，跟我們的公式幾乎一模一樣。"],
+	],
+}
+const HELLO_FIRST := [["拉馬努金", "happy", "你好！我叫拉馬努金，從印度來的。我最喜歡的就是數字了。"], ["拉馬努金", "talk", "要不要聽我說個故事？"]]
+const HELLO := [
+	[["拉馬努金", "happy", "啊，是你！我剛好想到一個故事。"]],
+	[["拉馬努金", "think", "我在石板上算到一半……先跟你聊聊吧！"]],
+	[["拉馬努金", "talk", "每個數字都好有趣喔。來，聽我說。"]],
+	[["拉馬努金", "happy", "嘿，小光靈！要不要聽一件以前的事？"]],
+]
+
+
+## base：呼叫的人已經設好的畫布變換（地圖上要移到 NPC 的位置、面向左時左右翻）。
+##   石板要轉一點角度，得用 draw_set_transform；畫完要設回 base，不然後面的頭會畫到原點去
+static var _base := Transform2D.IDENTITY
+
+
+static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal", walk := -1.0, base := Transform2D.IDENTITY) -> void:
+	_base = base
 	var bob := sin(t * 2.0) * s * 0.025
 	if walk >= 0.0:
 		bob = -absf(sin(walk)) * s * 0.07
@@ -87,7 +167,7 @@ static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood
 	for sx in [-1.0, 1.0]:
 		ci.draw_colored_polygon(PackedVector2Array([
 			Vector2(p.x + sx * s * 0.22, top + s * 0.04), Vector2(p.x + sx * s * 0.36, top + s * 0.08),
-			Vector2(p.x + sx * s * 0.16, v_bot.y + s * 0.02), Vector2(p.x + sx * s * 0.04, v_bot.y - s * 0.04)]), Color("252a40"))
+			Vector2(p.x + sx * s * 0.16, v_bot.y + s * 0.02), Vector2(p.x + sx * s * 0.04, v_bot.y - s * 0.04)]), Color("2c3558"))
 	# 鈕扣
 	UITheme.dot(ci, Vector2(p.x, v_bot.y + s * 0.14), maxf(1.0, s * 0.035), Color("1a1d2c"))
 	# 白襯衫的翻領（下巴下面兩個小三角）
@@ -130,7 +210,10 @@ static func _arm(ci: CanvasItem, from: Vector2, hand: Vector2, s: float) -> void
 ## 小石板：木框、深綠灰的板面、粉筆寫的 1729（太小就畫幾條短線代替字）
 static func _slate(ci: CanvasItem, c: Vector2, w: float, rot: float) -> void:
 	var h := w * 0.72
-	ci.draw_set_transform(c, rot, Vector2.ONE)
+	var xf := _base * Transform2D(rot, c)
+	if _base.determinant() < 0.0:
+		xf = xf * Transform2D.FLIP_X          # 面向左（整個人左右翻）時，石板上的字不要變成鏡像
+	ci.draw_set_transform_matrix(xf)
 	ci.draw_rect(Rect2(-w / 2.0, -h / 2.0, w, h), SLATE_RIM)
 	var iw := w - w * 0.14
 	var ih := h - w * 0.14
@@ -143,7 +226,7 @@ static func _slate(ci: CanvasItem, c: Vector2, w: float, rot: float) -> void:
 		for k in 2:
 			var y := -ih * 0.18 + k * ih * 0.36
 			ci.draw_line(Vector2(-iw * 0.32, y), Vector2(iw * (0.3 - 0.2 * k), y), CHALK, maxf(1.0, w * 0.05))
-	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ci.draw_set_transform_matrix(_base)
 
 
 # ───────────────────────── 頭 ─────────────────────────

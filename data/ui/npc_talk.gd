@@ -2,11 +2,13 @@ extends Control
 ## NPC 對話框（動物森友會那種）：畫面下方一個對話框，左邊是說話的人的頭像，字一個一個跑出來；
 ##   點一下／Enter／空白鍵：字還在跑 → 直接全部顯示；跑完了 → 下一句。Esc：結束。說完最後一句自己關掉。
 ## 用法：NpcTalk.open(父節點, 台詞, 說完要做的事)，回傳這個 Control（地圖把它當 _overlay）。
-##   台詞：[{who: "高斯"／"光靈", mood: 表情, text: 句子}, ...]
-##   高斯的表情用 npc_gauss.gd 的（normal／happy／think／talk），光靈的用 buddy.gd Face 的（normal／happy／surprised……）
+##   台詞：[{who: 名字, npc: 那位 NPC 的腳本（畫頭像用；光靈說的話沒有）, mood: 表情, text: 句子}, ...]
+##   NPC 的表情用它自己腳本的（normal／happy／think／talk），光靈的用 buddy.gd Face 的（normal／happy／surprised……）
+## NPC 腳本要有：NAME、TITLE、TALKS {故事: [[說話的人, 表情, 句子], ...]}、HELLO_FIRST、HELLO、draw()
+##   pick_story() 挑故事、story_lines() 組成一次對話的台詞
 const UITheme := preload("res://data/ui/game_theme.gd")
-const GaussNpc := preload("res://data/maps/npc_gauss.gd")
 const Buddy := preload("res://data/ui/buddy.gd")
+const MathLabel := preload("res://data/ui/math_text.gd")
 
 signal finished
 
@@ -18,6 +20,7 @@ var index := -1
 var typing := false
 var done := Callable()
 var _label: Label
+var _math: Control              # 有數學排版（√{…}、上標、分數）的句子改用 MathLabel 畫（根號才有橫線），淡入代替逐字
 var _who: Label
 var _who_box: PanelContainer
 var _portrait: Portrait
@@ -28,10 +31,10 @@ var _t := 0.0
 var _more_y := 0.0
 
 
-## 高斯的頭像：圓框裡畫半身（頭和肩膀）
+## NPC 的頭像：圓框裡畫半身（頭和肩膀）
 class Portrait extends Control:
 	var mood := "talk"
-	var gauss := true          # false：只畫圓框（光靈的頭像疊在上面）
+	var npc = null             # 那位 NPC 的腳本；null：只畫圓框（光靈的頭像疊在上面）
 	var t := 0.0
 	func _process(delta: float) -> void:
 		t += delta
@@ -39,12 +42,32 @@ class Portrait extends Control:
 	func _draw() -> void:
 		var c := size / 2.0
 		var r := size.x / 2.0
-		draw_circle(c, r, Color("f3e6c8") if gauss else Color("2a2f5a"))
+		draw_circle(c, r, Color("f3e6c8") if npc != null else Color("2a2f5a"))
 		# 半身像：頭放大到框的一半多，腳底落在框的下緣（再下面被 clip_contents 切掉）
 		var s := r * 0.6
-		if gauss:
-			GaussNpc.draw(self, c + Vector2(0, -r * 0.12 + s * 1.87), s, t, mood)
+		if npc != null:
+			npc.draw(self, c + Vector2(0, -r * 0.12 + s * 1.87), s, t, mood)
 		draw_arc(c, r - 2.0, 0, TAU, 64, Color("c98a3e"), 4.0, true)
+
+
+## 挑一個故事：還沒聽過的先說（隨機）；全部聽過了，就從頭再隨機，但不要跟上一次一樣
+static func pick_story(npc, heard: Array, last := "") -> String:
+	var left: Array = npc.TALKS.keys().filter(func(k): return not heard.has(k))
+	if left.is_empty():
+		left = npc.TALKS.keys().filter(func(k): return k != last)
+	return String(left[randi() % left.size()])
+
+
+## 一次對話的全部台詞：開場白（第一次見面自我介紹，之後隨機打招呼）＋一個故事
+static func story_lines(npc, story: String, first: bool) -> Array:
+	var raw: Array = (npc.HELLO_FIRST if first else npc.HELLO[randi() % npc.HELLO.size()]) + npc.TALKS[story]
+	var out: Array = []
+	for r in raw:
+		var ln := {"who": r[0], "mood": r[1], "text": r[2]}
+		if r[0] != "光靈":
+			ln["npc"] = npc
+		out.append(ln)
+	return out
 
 
 static func open(parent: Control, talk: Array, on_done := Callable()) -> Control:
@@ -117,6 +140,16 @@ func _ready() -> void:
 	_label.add_theme_constant_override("line_spacing", 6)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_label)
+	_math = MathLabel.new()
+	_math.position = _label.position + Vector2(0, -4)
+	_math.max_width = _label.size.x
+	_math.size = _label.size
+
+	_math.font_size = UITheme.fs(20)
+	_math.color = Color("4a3a2a")
+	_math.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_math.visible = false
+	add_child(_math)
 	# 右下角跳動的 ▼（可以按下一句）
 	_more = Label.new()
 	_more.text = "▼"
@@ -140,24 +173,39 @@ func _process(delta: float) -> void:
 ## 現在這一句
 func say(i: int) -> void:
 	var ln: Dictionary = lines[i]
-	var who := String(ln.get("who", "高斯"))
-	var gauss := who == "高斯"
+	var who := String(ln.get("who", ""))
+	var npc = ln.get("npc", null)
 	_who.text = who
-	_portrait.gauss = gauss
-	_face.visible = not gauss
-	if gauss:
+	_portrait.npc = npc
+	_face.visible = npc == null
+	if npc != null:
 		_portrait.mood = String(ln.get("mood", "talk"))
 	else:
 		_face.mood = String(ln.get("mood", "happy"))
 		_face.jump()
-	_label.text = String(ln.text)
-	_label.visible_ratio = 0.0
+	var txt := String(ln.text)
+	var math := is_math(txt)
+	_label.visible = not math
+	_math.visible = math
 	typing = true
 	if _tw:
 		_tw.kill()
 	_tw = create_tween()
-	_tw.tween_property(_label, "visible_ratio", 1.0, maxf(0.4, _label.text.length() / 28.0))
+	if math:
+		_math.valign_center = txt.count("√{") >= 3     # 疊了好幾層的根號比較高：放在框的中間，橫線才不會頂出框
+		_math.text = txt
+		_math.modulate.a = 0.0
+		_tw.tween_property(_math, "modulate:a", 1.0, 0.35)
+	else:
+		_label.text = txt
+		_label.visible_ratio = 0.0
+		_tw.tween_property(_label, "visible_ratio", 1.0, maxf(0.4, txt.length() / 28.0))
 	_tw.finished.connect(func(): typing = false)
+
+
+## 這句有沒有數學排版（要用 MathLabel 畫）
+static func is_math(txt: String) -> bool:
+	return txt.contains("√{") or txt.contains("^") or txt.contains("\\frac")
 
 
 func _next() -> void:
@@ -165,6 +213,7 @@ func _next() -> void:
 		if _tw:
 			_tw.kill()
 		_label.visible_ratio = 1.0
+		_math.modulate.a = 1.0
 		typing = false
 		return
 	index += 1

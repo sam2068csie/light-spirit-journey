@@ -81,79 +81,95 @@ func _check(grade: String, key: String, unit: String, focus: Vector2, far: Vecto
 	_reset(unit)
 
 
-## 高斯在高一地圖上到處亂晃：一直站在能走的地方、真的會走遠；光靈走近就停下來揮手、待久了笑
-func _check_gauss() -> void:
+## 散步的數學家（高斯、拉馬努金）在高一地圖上到處亂晃：一直站在能走的地方、真的會走遠；光靈走近就停下來揮手、待久了笑
+func _check_npcs() -> void:
 	var w = await _world("高一")
-	ok(w != null and w.has_method("_gauss_tick"), "高一：地圖上有高斯")
-	w.pos = Vector2(6800, 600)                 # 光靈站遠一點，不要打擾他
-	w._gauss = {}
-	w._gauss_tick(0.0)
-	var start: Vector2 = w._gauss.p
-	ok(w._free(start), "高斯：一開始站在能走的地方")
+	ok(w != null and w.has_method("_npc_tick"), "高一：地圖上有散步的數學家")
+	w.pos = Vector2(6800, 600)                 # 光靈站遠一點，不要打擾他們
+	w._npcs = []
+	w._npc_tick(0.0)
+	ok(w._npcs.size() == 2 and w._npc("gauss").size() > 0 and w._npc("ramanujan").size() > 0, "高斯和拉馬努金都在")
+	var start := {}
+	for n in w._npcs:
+		start[n.id] = n.p
+		ok(w._free(n.p), "%s：一開始站在能走的地方" % n.script.NAME)
 	var bad := 0
-	var far := 0.0
-	var walked := false
-	var stopped := false
+	var far := {"gauss": 0.0, "ramanujan": 0.0}
+	var walked := {}
+	var close := 0
 	for i in 6000:                             # 模擬 5 分鐘
-		w._gauss_tick(0.05)
-		var gp: Vector2 = w._gauss.p
-		if not w._free(gp):
-			bad += 1
-		far = maxf(far, gp.distance_to(start))
-		walked = walked or float(w._gauss.step) >= 0.0
-		stopped = stopped or float(w._gauss.wait) > 0.0
-	ok(bad == 0, "高斯：一直走在能走的地方（%d 次不在）" % bad)
-	ok(walked and stopped, "高斯：會走、也會停下來")
-	ok(far > 900.0, "高斯：會晃到遠的地方（最遠 %.0f）" % far)
-	var gp: Vector2 = w._gauss.p
+		w._npc_tick(0.05)
+		for n in w._npcs:
+			if not w._free(n.p):
+				bad += 1
+			far[n.id] = maxf(far[n.id], (n.p as Vector2).distance_to(start[n.id]))
+			if float(n.step) >= 0.0:
+				walked[n.id] = true
+		if (w._npcs[0].p as Vector2).distance_to(w._npcs[1].p) < 60.0:
+			close += 1
+	ok(bad == 0, "NPC：一直走在能走的地方（%d 次不在）" % bad)
+	ok(walked.size() == 2, "NPC：兩位都會走")
+	ok(far.gauss > 900.0 and far.ramanujan > 900.0, "NPC：都會晃到遠的地方（高斯 %.0f、拉馬努金 %.0f）" % [far.gauss, far.ramanujan])
+	ok(close < 300, "NPC：兩位不會一直擠在一起（%d 幀）" % close)
+	var g: Dictionary = w._npc("gauss")
+	var gp: Vector2 = g.p
 	w.pos = gp + Vector2(-150, 0)
-	w._gauss_tick(0.05)
-	ok(String(w._gauss.mood) == "talk" and float(w._gauss.step) < 0.0 and bool(w._gauss.left), "高斯：光靈走近 → 停下來、轉向光靈揮手")
+	w._npc_tick(0.05)
+	ok(String(g.mood) == "talk" and float(g.step) < 0.0 and bool(g.left), "高斯：光靈走近 → 停下來、轉向光靈揮手")
 	for i in 60:
-		w._gauss_tick(0.05)
-	ok(String(w._gauss.mood) == "happy" and (w._gauss.p as Vector2) == gp, "高斯：光靈待久了 → 笑，而且不走開")
-	w.cam = gp
-	await wait(0.3)
-	await shot("world_gauss")
+		w._npc_tick(0.05)
+	ok(String(g.mood) == "happy" and (g.p as Vector2) == gp, "高斯：光靈待久了 → 笑，而且不走開")
 	w.pos = Vector2(6800, 600)
 	for i in 200:
-		w._gauss_tick(0.05)
-	ok(String(w._gauss.mood) != "talk", "高斯：光靈走開 → 繼續晃")
-	await _check_gauss_talk(w)
+		w._npc_tick(0.05)
+	ok(String(g.mood) != "talk", "高斯：光靈走開 → 繼續晃")
+	for id in ["gauss", "ramanujan"]:
+		await _check_npc_talk(w, id)
 
 
-## 跟高斯聊天：靠近出現「聊聊」、對話框一句一句說完會關掉；六個故事都聽得到，聽過的先不重複
-func _check_gauss_talk(w) -> void:
-	w._state().erase("gauss_heard")
-	w._state().erase("gauss_last")
+## 跟 NPC 聊天：靠近出現「聊聊」、對話框一句一句說完會關掉；六個故事都聽得到，聽過的先不重複
+func _check_npc_talk(w, id: String) -> void:
+	for k in ["npc", "gauss_heard", "gauss_last"]:
+		w._state().erase(k)
+	w._npcs = []
+	w._npc_tick(0.0)
+	var n: Dictionary = w._npc(id)
+	var nm: String = n.script.NAME
+	# 找一個不在入口旁邊的位置，另一位移到遠處
 	var gp := Vector2.ZERO
-	for q in w.GAUSS_STARTS:
-		w._gauss = {}
-		w._gauss_tick(0.0)
-		if w._gauss_spot_ok(w._gauss.p):
-			gp = w._gauss.p
+	for q in w.NPC_STARTS:
+		if w._free(q) and w._npc_spot_ok(q, n):
+			gp = q
 			break
-	ok(gp != Vector2.ZERO, "高斯：找得到一個不在入口旁邊的位置")
+	ok(gp != Vector2.ZERO, "%s：找得到一個不在入口旁邊的位置" % nm)
+	n.p = gp
+	n.goal = gp
+	for o in w._npcs:
+		if o.id != id:
+			o.p = gp + Vector2(1600, 0)
+			o.goal = o.p
 	w.pos = gp + Vector2(-120, 0)
 	w.cam = w.pos
-	w._gauss_tick(0.05)
+	w._npc_tick(0.05)
 	w._check_world(0.0)
-	ok(String(w._near.get("kind", "")) == "gauss", "高斯：靠近 → 可以聊聊")
+	ok(String(w._near.get("kind", "")) == "npc" and w._npcs[int(w._near.get("i", -1))].id == id, "%s：靠近 → 可以聊聊" % nm)
 	await wait(0.2)
-	ok(w._card.visible and w._card_btn.text == "聊聊", "高斯：下方卡片顯示「聊聊」")
+	ok(w._card.visible and w._card_btn.text == "聊聊" and w._card_title.text == nm, "%s：下方卡片顯示名字和「聊聊」" % nm)
 	var seen := {}
-	for n in 6:
+	var total: int = n.script.TALKS.size()
+	for k in total:
 		w._interact()
 		var talk = w._overlay
-		ok(talk != null and talk.has_method("say"), "高斯：第 %d 次聊天打開對話框" % (n + 1))
+		ok(talk != null and talk.has_method("say"), "%s：第 %d 次聊天打開對話框" % [nm, k + 1])
 		if talk == null:
 			return
-		if n == 0:
-			ok(String(talk.lines[0].text).contains("我是高斯"), "高斯：第一次見面先自我介紹")
-			await wait(0.3)
-			await shot("gauss_talk")
-		var story := String(w._state().gauss_last)
-		ok(not seen.has(story), "高斯：還沒聽過的故事先說（第 %d 個：%s）" % [n + 1, story])
+		if k == 0:
+			ok(String(talk.lines[0].text).contains("我是" + nm) or String(talk.lines[0].text).contains("我叫" + nm), "%s：第一次見面先自我介紹" % nm)
+			ok(talk.lines[0].get("npc") == n.script, "%s：頭像畫的是他自己" % nm)
+			await wait(0.6)
+			await shot("npc_talk_%s" % id)
+		var story := String(w._state().npc[id].last)
+		ok(not seen.has(story), "%s：還沒聽過的故事先說（第 %d 個：%s）" % [nm, k + 1, story])
 		seen[story] = true
 		var guard := 0
 		while is_instance_valid(talk) and not talk.is_queued_for_deletion() and guard < 40:
@@ -161,25 +177,23 @@ func _check_gauss_talk(w) -> void:
 			talk._next()
 			guard += 1
 		await wait(0.05)
-		ok(not is_instance_valid(w._overlay), "高斯：說完最後一句，對話框關掉")
-	ok(seen.size() == 6 and (w._state().gauss_heard as Array).size() == 6, "高斯：六個故事都聽過了")
-	var last := String(w._state().gauss_last)
+		ok(not is_instance_valid(w._overlay), "%s：說完最後一句，對話框關掉" % nm)
+	ok(seen.size() == total and total == 6, "%s：六個故事都聽過了" % nm)
+	var last := String(w._state().npc[id].last)
 	w._interact()
-	ok(String(w._state().gauss_last) != last, "高斯：全部聽過之後，不會連續說同一個")
+	ok(String(w._state().npc[id].last) != last, "%s：全部聽過之後，不會連續說同一個" % nm)
 	w.close_overlay()
 	# 每一句都放得進對話框（最多三行）
-	var lab: Label = null
-	var probe = w.NpcTalk.open(w, [{"who": "高斯", "mood": "talk", "text": "測試"}])
+	var probe = w.NpcTalk.open(w, [{"who": nm, "npc": n.script, "mood": "talk", "text": "測試"}])
 	await wait(0.1)
-	lab = probe._label
+	var lab: Label = probe._label
 	var font := lab.get_theme_font("font")
 	var fs := lab.get_theme_font_size("font_size")
 	var worst := 0
-	for k in w.GaussNpc.TALKS:
-		for ln in w.GaussNpc.TALKS[k]:
-			var lines := int(ceil(font.get_string_size(String(ln[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x / lab.size.x))
-			worst = maxi(worst, lines)
-	ok(worst <= 3, "高斯：每一句最多三行（最長 %d 行）" % worst)
+	for key in n.script.TALKS:
+		for ln in n.script.TALKS[key]:
+			worst = maxi(worst, int(ceil(font.get_string_size(String(ln[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x / lab.size.x)))
+	ok(worst <= 3, "%s：每一句最多三行（最長 %d 行）" % [nm, worst])
 	probe.close()
 
 
@@ -188,5 +202,5 @@ func _initialize() -> void:
 	g.power_save = false
 	await _check("高二", "trig", "trig", Vector2(1500, 900), Vector2(5000, 3800))
 	await _check("高一", "poly", "h1poly", Vector2(2760, 2600), Vector2(6000, 600))
-	await _check_gauss()
+	await _check_npcs()
 	finish("WORLD")
