@@ -122,6 +122,7 @@ func _initialize() -> void:
 	ok(not is_instance_valid(tipn) and is_instance_valid(h._overlay), "點提示框外面：只收起提示框，視窗還在")
 	h.close_overlay()
 	await _phase2(h)
+	await _phase3(h)
 	finish("BOND")
 
 
@@ -238,6 +239,58 @@ func _phase2(h) -> void:
 	ok(h._overlay.find_child("Nick", true, false) != null, "親密度視窗：暱稱")
 	await shot("bond2_detail")
 	h.close_overlay()
+
+
+## 第三期：教光靈（答對 +3、答錯 +1，隔天再問同一張）
+func _phase3(h) -> void:
+	var Cards := preload("res://data/ui/concept_cards.gd")
+	g.concepts = {}
+	g.bond = {"pts": 700, "day": DQ.day_key(), "today": {}}
+	ok(g.bond_teach_pick().is_empty(), "沒做過觀念卡片：沒有題目")
+	var keys := []
+	for cd in Cards.cards("R1"):
+		if cd.has("check") and keys.size() < 3:
+			keys.append("R1|" + String(cd.title))
+			g.concepts[keys[-1]] = true
+	var it: Dictionary = g.bond_teach_pick()
+	ok(keys.has(String(it.get("key", ""))) and it.card.has("check"), "從做過的卡片出題：%s" % String(it.get("key", "")))
+	var k1 := String(it.key)
+	ok(g.bond_teach_answer(k1, false) == 1 and String(g.bond.retry) == k1, "答錯 +1，記下隔天再問")
+	ok(g.bond_teach_answer(k1, true) == 0, "每天 1 次")
+	# 隔天：先問昨天答錯的那張
+	var yest := Time.get_date_string_from_unix_time((g._day_n(DQ.day_key()) - 1) * 86400)
+	g.bond.teach[k1].day = yest
+	g.bond.today = {}
+	ok(String(g.bond_teach_pick().key) == k1, "隔天先問答錯的那張")
+	ok(g.bond_teach_answer(k1, true) == 3 and String(g.bond.retry) == "" and g.bond_taught_count() == 1, "答對 +3，學會 1 張")
+	g.bond.today = {}
+	var k2 := String(g.bond_teach_pick().key)
+	ok(k2 != k1 and keys.has(k2), "教會的卡片 %d 天內不再問" % g.TEACH_GAP)
+	g.bond.pts = 699
+	g.bond.today = {}
+	ok(g.bond_teach_answer(k2, true) == 0, "Lv 5：還不能教")
+	# ---- 畫面 ----
+	g.bond = {"pts": 700, "day": DQ.day_key(), "today": {}, "nick": "小明"}
+	h._refresh()
+	h._toggle_menu()
+	await wait(0.3)
+	ok(h._menu.get_child_count() == 5, "Lv 6：選單多了「教我」")
+	h._close_menu()
+	h._teach()
+	await wait(0.5)
+	ok(is_instance_valid(h._overlay), "教光靈的視窗")
+	await shot("bond3_teach")
+	var item: Dictionary = g.bond_teach_pick()
+	var right: Button = h._overlay.find_child("Opt%d" % int(item.card.check.a), true, false)
+	ok(right != null, "選項")
+	right.pressed.emit()
+	await wait(0.4)
+	ok(int(g.bond.today.get("teach", 0)) == 1, "答完記一次")
+	await shot("bond3_right")
+	(h._overlay.find_child("Close", true, false) as Button).pressed.emit()
+	await wait(0.3)
+	h._teach()
+	ok(h._say.begins_with("今天已經教過"), "今天教過了：光靈說明天再來")
 
 
 func _btn(p: Vector2, down: bool) -> InputEventMouseButton:

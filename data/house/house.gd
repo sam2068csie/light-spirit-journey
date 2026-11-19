@@ -5,7 +5,7 @@ extends Control
 ##   ・擺設模式：點格位 → 從抽屜挑家具放上去（只列出放得進那種格位的家具）
 ##   ・商店：用星塵買家具（小家具每天買得起、少量昂貴大家具）；彩蛋家具在地圖上解開才拿得到
 ##   ・小屋等級：點亮 10／25／50 座聖地升級（目前先做 Lv.1 的房間，等級和下一階段先顯示出來）
-##   ・光靈（親密度，game_bond.gd）：點光靈 → 摸摸頭、聊天、點心（Lv 3）、拍照；按住光靈來回摸也算摸摸頭。左下角是親密度，點開看說明
+##   ・光靈（親密度，game_bond.gd）：點光靈 → 摸摸頭、聊天、點心（Lv 3）、教我（Lv 6）、拍照；按住光靈來回摸也算摸摸頭。左下角是親密度，點開看說明
 ##   ・相簿（上方按鈕）：回憶照片（album.gd）
 ## 存檔：Game.house {owned: [家具 id], placed: {"格位編號": 家具 id}}
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -804,6 +804,8 @@ func _toggle_menu() -> void:
 	var specs := [["摸摸頭", _pet, g.bond_left("pet")], ["聊天", _chat, g.bond_left("chat")]]
 	if g.bond_level() >= g.SNACK_LV:
 		specs.append(["點心", _snack, g.bond_left("snack")])
+	if g.bond_level() >= g.TEACH_LV:
+		specs.append(["教我", _teach, g.bond_left("teach")])
 	specs.append(["拍照", _photo, g.bond_left("photo")])
 	for spec in specs:
 		var b := Button.new()
@@ -891,6 +893,27 @@ func _feed(id: String) -> void:
 	_pop("+%d 親密度" % int(r.pts))
 	_refresh()
 	_after_gain()
+
+
+## 教光靈：光靈拿一張做過的觀念卡片的小測來問你
+func _teach() -> void:
+	var g = Game.of(self)
+	if is_instance_valid(_overlay):
+		return
+	if g.bond_left("teach") <= 0:
+		_talk("今天已經教過了，明天再來～")
+		return
+	var item: Dictionary = g.bond_teach_pick()
+	if item.is_empty():
+		_talk("先去學幾張觀念卡片，再回來教我吧！", 3.6)
+		return
+	_overlay = BondPanel.teach(self, item, func(pts: int):
+		if pts <= 0:
+			return
+		_set_mood("happy", 2.2)
+		_burst_hearts(6 if pts >= 3 else 2)
+		_pop("+%d 親密度" % pts)
+		_after_gain())
 
 
 func _photo() -> void:

@@ -3,7 +3,8 @@ extends "res://data/core/game_economy.gd"
 ##
 ## 原則：親密度主要靠「一起學數學」累積，小屋互動只是每天幾分鐘的小甜頭；只增不減，沒來不會倒退。
 ## 存檔：bond = {pts（累計，只增不減）, day（今天，早上 5 點換日）, today: {種類: 次數}, hello（小屋第一句話）, lvup（還沒播的升級）,
-##   seed（這個玩家的口味種子）, found: {week, ids}（這週試出來的喜好）, mem: [回憶照片], nick（光靈怎麼叫你）}
+##   seed（這個玩家的口味種子）, found: {week, ids}（這週試出來的喜好）, mem: [回憶照片], nick（光靈怎麼叫你）,
+##   teach: {卡片 key: {day, ok}}（教光靈的紀錄）, retry（答錯的卡片，隔天再問）}
 ## 等級由 pts 算出來，不另外存。
 
 ## 10 級：累計多少點、名稱（暫定，世界觀定了再改）、解鎖什麼（ready：這一期做好了沒）
@@ -13,7 +14,7 @@ const BOND_LEVELS := [
 	{"lv": 3, "need": 120, "name": "熟悉", "unlock": "表情「害羞」、點心", "ready": true},
 	{"lv": 4, "need": 250, "name": "好朋友", "unlock": "頭飾「友誼之星」、家具「光靈的小床」", "ready": true},
 	{"lv": 5, "need": 450, "name": "陪讀夥伴", "unlock": "自訂暱稱", "ready": true},
-	{"lv": 6, "need": 700, "name": "默契", "unlock": "小屋互動：教光靈", "ready": false},
+	{"lv": 6, "need": 700, "name": "默契", "unlock": "小屋互動：教光靈", "ready": true},
 	{"lv": 7, "need": 1000, "name": "心有靈犀", "unlock": "簽到守護上限 +1", "ready": true},
 	{"lv": 8, "need": 1400, "name": "知己", "unlock": "限定光環", "ready": false},
 	{"lv": 9, "need": 1900, "name": "羈絆", "unlock": "光靈外觀進化", "ready": false},
@@ -32,14 +33,18 @@ const BOND_PTS := {
 	"welcome": 5,     # 3 天以上沒來：歡迎回來的小禮（不管幾天都一樣）
 	"snack": 1,       # 小屋：點心（Lv 3）
 	"snack_like": 3,  # 點心剛好是這週喜歡的口味
+	"teach": 3,       # 教光靈：答對（Lv 6）
+	"teach_try": 1,   # 教光靈：答錯也給（鼓勵去試），隔天再問同一張
 }
 
 ## 每天最多幾次（沒寫的不限：旅程、卡片本身就有限）
-const BOND_CAP := {"learn": 30, "daily": 1, "quests": 1, "pet": 3, "chat": 1, "snack": 1, "photo": 1}
+const BOND_CAP := {"learn": 30, "daily": 1, "quests": 1, "pet": 3, "chat": 1, "snack": 1, "photo": 1, "teach": 1}
 
 const WELCOME_DAYS := 3
 const SNACK_LV := 3
 const NICK_LV := 5
+const TEACH_LV := 6
+const TEACH_GAP := 3                  # 教會的卡片，至少隔幾天才會再被問
 const NICK_MAX := 6
 const MEM_MAX := 80                   # 相簿最多幾張（滿了先丟最舊的每日合照）
 
@@ -354,3 +359,94 @@ func bond_set_nick(s: String) -> bool:
 	bond["nick"] = t
 	save_review()
 	return true
+
+
+# ================= 教光靈（第三期） =================
+# 光靈拿一張你完成過的觀念卡片的小測來問你：答對 +3、答錯 +1（隔天再問同一張）。每天 1 次。
+# 題目直接用卡片的 check（concept_cards.gd），不另外出題。
+
+const CC := preload("res://data/ui/concept_cards.gd")
+
+
+func _teach_log() -> Dictionary:
+	if not (bond.get("teach") is Dictionary):
+		bond["teach"] = {}
+	return bond.teach
+
+
+## 完成過、而且有小測的卡片：[{key, lid, card}]
+func _teach_pool() -> Array:
+	var out := []
+	var by_lid := {}
+	for k in concepts:
+		var parts := String(k).split("|", true, 1)
+		if parts.size() != 2:
+			continue
+		if not by_lid.has(parts[0]):
+			by_lid[parts[0]] = CC.cards(parts[0])
+		for cd in by_lid[parts[0]]:
+			if String(cd.get("title", "")) == parts[1] and cd.has("check"):
+				out.append({"key": String(k), "lid": parts[0], "card": cd})
+				break
+	return out
+
+
+## 今天要問哪一張（{} = 還沒有完成過的卡片）。
+## 順序：昨天以前答錯的那張 → 從沒教過的 → 最久以前教的（教會的 TEACH_GAP 天內不再問）
+func bond_teach_pick() -> Dictionary:
+	var pool := _teach_pool()
+	if pool.is_empty():
+		return {}
+	var lg := _teach_log()
+	var today := _day_n(DQ.day_key())
+	var retry := String(bond.get("retry", ""))
+	if retry != "":
+		for it in pool:
+			if it.key == retry and _day_n(String(lg.get(retry, {}).get("day", DQ.day_key()))) < today:
+				return it
+	var best: Dictionary = {}
+	var best_day := 1 << 30
+	for it in pool:
+		var rec: Dictionary = lg.get(it.key, {})
+		var d := -1 if rec.is_empty() else _day_n(String(rec.day))
+		if d >= 0 and today - d < TEACH_GAP:
+			continue
+		if d < best_day:
+			best = it
+			best_day = d
+	if best.is_empty():
+		# 全部最近都教過了：問最久以前的那張
+		for it in pool:
+			var d := _day_n(String(lg.get(it.key, {}).get("day", "2000-01-01")))
+			if d < best_day:
+				best = it
+				best_day = d
+	return best
+
+
+## 答完了：回傳加了幾點（今天已經教過回傳 0）
+func bond_teach_answer(key: String, right: bool) -> int:
+	if bond_level() < TEACH_LV or bond_left("teach") <= 0:
+		return 0
+	var b := bond_state()
+	b.today["teach"] = int(b.today.get("teach", 0)) + 1
+	_teach_log()[key] = {"day": DQ.day_key(), "ok": right}
+	if right:
+		if String(b.get("retry", "")) == key:
+			b["retry"] = ""
+	else:
+		b["retry"] = key
+	var n := int(BOND_PTS.teach if right else BOND_PTS.teach_try)
+	_bond_add(n)
+	save_review()
+	return n
+
+
+## 光靈筆記本：教會的卡片數
+func bond_taught_count() -> int:
+	var n := 0
+	var lg := _teach_log()
+	for k in lg:
+		if bool(lg[k].get("ok", false)):
+			n += 1
+	return n

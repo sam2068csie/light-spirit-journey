@@ -3,12 +3,14 @@ extends RefCounted
 ##   levelup(host, lv)：升級了！（小屋、主畫面、大地圖都可能跳出來；每次升級只播一次）
 ##   snacks(host, on_pick)：點心選單（第二期）
 ##   nick_editor(host, on_done)：取暱稱（Lv 5）
+##   teach(host, item, on_done)：教光靈（Lv 6）：光靈拿觀念卡片的小測來問你
 ##   detail(host)：小屋左下角點開：現在幾級、進度條；右上角的「i」點了才展開（怎麼增加＋今天的次數、每一級的獎勵）
 ## 兩個都回傳視窗的根節點（關掉時會 queue_free，可以等 tree_exited）
 const UITheme := preload("res://data/ui/game_theme.gd")
 const Game := preload("res://data/core/game.gd")
 const Bond := preload("res://data/core/game_bond.gd")
 const SL := preload("res://data/ui/spirit_look.gd")
+const MathLabel := preload("res://data/ui/math_text.gd")
 
 const PINK := Color("ff8fbf")
 
@@ -27,7 +29,7 @@ const LV_LINES := {
 
 ## 怎麼增加（「i」的提示框）：[種類, 名稱]；有每日上限的，同一行右邊寫今天做了幾次
 const WAYS := [["learn", "答對一題"], ["journey", "第一次通過旅程"], ["card", "觀念卡片"], ["daily", "今日修煉"],
-	["quests", "每日任務全完成"], ["pet", "摸摸頭"], ["chat", "聊天"], ["snack", "點心"]]
+	["quests", "每日任務全完成"], ["pet", "摸摸頭"], ["chat", "聊天"], ["snack", "點心"], ["teach", "教光靈"]]
 
 
 static func levelup(host: Node, lv: int) -> Control:
@@ -325,7 +327,7 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 		name.autowrap_mode = TextServer.AUTOWRAP_OFF
 		name.custom_minimum_size = Vector2(170, 0)
 		grid.add_child(name)
-		var pl := _text("+1～3" if k == "snack" else "+%d" % int(Bond.BOND_PTS[k]), 14, PINK)
+		var pl := _text("+1～3" if k in ["snack", "teach"] else "+%d" % int(Bond.BOND_PTS[k]), 14, PINK)
 		pl.autowrap_mode = TextServer.AUTOWRAP_OFF
 		pl.custom_minimum_size = Vector2(40, 0)
 		grid.add_child(pl)
@@ -336,6 +338,8 @@ static func tip(layer: Control, anchor: Control, g, pr: Dictionary) -> Control:
 		var cl := _text(cnt, 14, UITheme.TEXT_DIM)
 		cl.autowrap_mode = TextServer.AUTOWRAP_OFF
 		grid.add_child(cl)
+	if int(pr.lv) >= Bond.TEACH_LV:
+		vb.add_child(_text("光靈筆記本　已學會 %d 張" % g.bond_taught_count(), 14, UITheme.TEXT_DIM))
 	vb.add_child(_section("等級獎勵"))
 	for l in Bond.BOND_LEVELS:
 		var got := int(l.lv) <= int(pr.lv)
@@ -446,3 +450,136 @@ class SnackIcon extends Control:
 		BP.draw_snack(self, id, size / 2.0, minf(size.x, size.y), dim)
 		if liked:
 			SL.heart(self, Vector2(size.x - 8, 10), 9.0, Color("ff8fbf"))
+
+
+# ───────────────────────── 教光靈 ─────────────────────────
+
+## 光靈拿一張觀念卡片的小測來問你。item = game_bond.gd 的 bond_teach_pick()；on_done(pts) 關掉時呼叫（pts = −1：沒答）
+static func teach(host: Node, item: Dictionary, on_done: Callable) -> Control:
+	var g = Game.of(host)
+	var cd: Dictionary = item.card
+	var ck: Dictionary = cd.check
+	var o := UITheme.modal(host, PINK, 760)
+	var layer: Control = o[0]
+	var col: VBoxContainer = o[1]
+	col.add_theme_constant_override("separation", 10)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	col.add_child(head)
+	var pic := Portrait.new()
+	pic.mood = "normal"
+	pic.custom_minimum_size = Vector2(110, 100)
+	head.add_child(pic)
+	var hv := VBoxContainer.new()
+	hv.alignment = BoxContainer.ALIGNMENT_CENTER
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hv)
+	hv.add_child(_text("教光靈　%s" % String(cd.title), 15, PINK))
+	var retry: bool = String(g.bond.get("retry", "")) == String(item.key)
+	var nk: String = g.bond_nick()
+	var you := (nk + "，") if nk != "" else ""
+	var line := ("「%s昨天那題我還是不太懂……再教我一次好嗎？」" % you) if retry \
+		else ("「%s你學過的「%s」，我還是搞不懂……可以教我嗎？」" % [you, String(cd.title)])
+	var ask := _text(line, 17, UITheme.TEXT)
+	hv.add_child(ask)
+	var q := MathLabel.new()
+	q.font_size = UITheme.fs(20)
+	q.color = UITheme.TEXT
+	q.max_width = 680
+	q.text = _hl(String(ck.q))
+	q.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(q)
+	var box := VBoxContainer.new()
+	box.name = "Opts"
+	box.add_theme_constant_override("separation", 8)
+	col.add_child(box)
+	var fb := MathLabel.new()
+	fb.font_size = UITheme.fs(15)
+	fb.color = UITheme.TEXT
+	fb.max_width = 680
+	fb.custom_minimum_size = Vector2(0, 46)
+	fb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(fb)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "稍後"
+	close.focus_mode = Control.FOCUS_NONE
+	close.custom_minimum_size = Vector2(0, 44)
+	UITheme.accent_button(close, 16)
+	var got := [-1]           # 這次加了幾點（−1 = 還沒答）
+	close.pressed.connect(func():
+		layer.queue_free()
+		on_done.call(got[0]))
+	var letters := ["A", "B", "C", "D"]
+	var order := range((ck.opts as Array).size())
+	order.shuffle()
+	var rows := []
+	for kk in order.size():
+		var oi: int = order[kk]
+		var b := Button.new()
+		b.name = "Opt%d" % oi
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 46)
+		b.add_theme_stylebox_override("normal", UITheme.box(Color(1, 1, 1, 0.05), 12, Color(1, 1, 1, 0.15), 1, 8))
+		b.add_theme_stylebox_override("hover", UITheme.box(Color(1, 0.56, 0.75, 0.12), 12, PINK, 1, 8))
+		b.add_theme_stylebox_override("pressed", UITheme.box(Color(1, 0.56, 0.75, 0.2), 12, PINK, 1, 8))
+		# 和觀念卡片的選項一樣：Button > HBox > 字母圓章＋算式（名字叫 Math 的算式會自動把按鈕撐高）
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 12)
+		hb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		hb.offset_left = 12
+		hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(hb)
+		var bl := Label.new()
+		bl.text = letters[kk]
+		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		bl.custom_minimum_size = Vector2(28, 28)
+		bl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bl.add_theme_font_size_override("font_size", UITheme.fs(15))
+		bl.add_theme_color_override("font_color", PINK)
+		bl.add_theme_stylebox_override("normal", UITheme.box(Color(1, 0.56, 0.75, 0.15), 13, Color(1, 0.56, 0.75, 0.6), 1, 0))
+		hb.add_child(bl)
+		var ml := MathLabel.new()
+		ml.name = "Math"
+		ml.font_size = UITheme.fs(18)
+		ml.color = UITheme.TEXT
+		ml.valign_center = true
+		ml.text = _hl(String(ck.opts[oi]))
+		ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ml.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hb.add_child(ml)
+		box.add_child(b)
+		rows.append([b, oi])
+		b.pressed.connect(func():
+			if int(got[0]) >= 0:
+				return
+			var right: bool = oi == int(ck.a)
+			got[0] = g.bond_teach_answer(String(item.key), right)
+			for r in rows:
+				var rb: Button = r[0]
+				rb.disabled = true
+				var good: bool = int(r[1]) == int(ck.a)
+				var mine: bool = rb == b
+				var cc: Color = UITheme.GOOD if good else (UITheme.BAD if mine else Color(1, 1, 1, 0.1))
+				rb.add_theme_stylebox_override("disabled", UITheme.box(Color(cc.r, cc.g, cc.b, 0.18 if (good or mine) else 0.03), 12, cc, 2 if (good or mine) else 1, 8))
+			var pts := "　[color=#ff8fbf]親密度 +%d[/color]" % int(got[0])
+			if right:
+				pic.mood = "happy"
+				ask.text = "「原來是這樣！我學會了，謝謝你～」"
+				fb.text = "[color=#6ee7a0]✔ 答對了[/color]　" + _hl(String(ck.get("why", ""))) + pts
+				g.sfx("correct")
+			else:
+				pic.mood = "surprised"
+				ask.text = "「咦？好像不是這樣……明天再一起想一次！」"
+				fb.text = "[color=#ff6b7a]✘ 正確答案：綠框[/color]　" + _hl(String(ck.get("why", ""))) + pts
+				g.sfx("wrong")
+			close.text = "完成")
+	col.add_child(close)
+	g.sfx("open")
+	return layer
+
+
+## [b]…[/b] → 金色（和觀念卡片一樣的強調）
+static func _hl(s: String) -> String:
+	return s.replace("[b]", "[color=#ffd36e]").replace("[/b]", "[/color]")
