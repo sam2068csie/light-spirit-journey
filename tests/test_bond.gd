@@ -123,7 +123,49 @@ func _initialize() -> void:
 	h.close_overlay()
 	await _phase2(h)
 	await _phase3(h)
+	await _rewards(h)
 	finish("BOND")
+
+
+## Lv 8、9、10 的外觀獎勵
+func _rewards(h) -> void:
+	var Cos := preload("res://data/core/cosmetics.gd")
+	for id in [g.HEART_LIGHT, g.BOND_TRAIL]:
+		g.owned.erase(id)
+		ok(not Cos.item(id).is_empty() and not Cos.item(id).get("pool", true), "%s 抽不到、換不到" % id)
+	g.bond = {"pts": 1399, "day": DQ.day_key(), "today": {}}
+	g.bond_state()
+	ok(not g.owned.has(g.HEART_LIGHT) and not preload("res://data/ui/spirit_look.gd").evolved(), "Lv 7：還沒有心之光、還沒進化")
+	g.bond_gain("journey")
+	ok(g.bond_level() == 8 and g.owned.has(g.HEART_LIGHT), "Lv 8：拿到心之光")
+	g.bond.pts = 1899
+	g.bond_gain("journey")
+	ok(g.bond_level() == 9 and preload("res://data/ui/spirit_look.gd").evolved() and g.bond_title() == "", "Lv 9：外觀進化，還沒有稱號")
+	g.bond.pts = 2499
+	g.bond_gain("journey")
+	ok(g.bond_level() == 10 and g.owned.has(g.BOND_TRAIL) and g.bond_title() == "光靈的摯友", "Lv 10：流光、稱號")
+	for l in g.BOND_LEVELS:
+		ok(bool(l.ready), "Lv %d 的獎勵都做好了" % l.lv)
+	# 畫面：穿上心之光＋流光
+	var keep: Dictionary = g.equipped.duplicate()
+	g.equipped = {"aura": g.HEART_LIGHT, "trail": g.BOND_TRAIL, "hat": g.FRIEND_STAR}
+	g.bond.today = {}
+	h._refresh()
+	await wait(0.8)
+	await shot("bond4_house")
+	h._open_bond()
+	await wait(0.5)
+	ok(h._overlay.find_child("Title", true, false) != null, "親密度視窗：稱號")
+	await shot("bond4_detail")
+	h.close_overlay()
+	g.goto("res://data/ui/main_menu.gd")
+	await wait(1.5)
+	await shot("bond4_title")
+	g.bond.pts = 1000
+	g.bond_state()
+	await wait(0.5)
+	await shot("bond4_title_lv7")
+	g.equipped = keep
 
 
 ## 第二期：點心、回憶相簿、暱稱

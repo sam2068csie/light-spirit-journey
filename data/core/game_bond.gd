@@ -16,9 +16,9 @@ const BOND_LEVELS := [
 	{"lv": 5, "need": 450, "name": "陪讀夥伴", "unlock": "自訂暱稱", "ready": true},
 	{"lv": 6, "need": 700, "name": "默契", "unlock": "小屋互動：教光靈", "ready": true},
 	{"lv": 7, "need": 1000, "name": "心有靈犀", "unlock": "簽到守護上限 +1", "ready": true},
-	{"lv": 8, "need": 1400, "name": "知己", "unlock": "限定光環", "ready": false},
-	{"lv": 9, "need": 1900, "name": "羈絆", "unlock": "光靈外觀進化", "ready": false},
-	{"lv": 10, "need": 2500, "name": "永恆之光", "unlock": "拖尾特效、稱號", "ready": false},
+	{"lv": 8, "need": 1400, "name": "知己", "unlock": "光芒「心之光」", "ready": true},
+	{"lv": 9, "need": 1900, "name": "羈絆", "unlock": "光靈外觀進化", "ready": true},
+	{"lv": 10, "need": 2500, "name": "永恆之光", "unlock": "拖尾「流光」、稱號「光靈的摯友」", "ready": true},
 ]
 
 ## 每一種行為給多少親密度
@@ -58,6 +58,11 @@ const SNACKS := [
 	{"id": "comet_pudding", "name": "流星布丁", "price": 30},
 ]
 const FRIEND_STAR := "friend_star"     # Lv 4 的限定頭飾（cosmetics.gd）
+const HEART_LIGHT := "heart_light"     # Lv 8 的限定光芒
+const BOND_TRAIL := "bond_trail"       # Lv 10 的限定拖尾
+const EVOLVE_LV := 9
+const TITLE_LV := 10
+const BOND_TITLE := "光靈的摯友"
 
 
 ## 整理存檔、換日（換日時看看是不是好幾天沒來）
@@ -77,6 +82,7 @@ func bond_state() -> Dictionary:
 			bond["hello"] = "welcome"
 			_bond_add(int(BOND_PTS.welcome))
 		save_review()
+	_sync_look()
 	return bond
 
 
@@ -141,8 +147,29 @@ func _bond_add(n: int) -> void:
 
 ## 等級到了就發的東西（重複呼叫沒關係）
 func _bond_unlocks() -> void:
-	if bond_level() >= 4 and not owned.has(FRIEND_STAR):
+	var lv := bond_level()
+	if lv >= 4 and not owned.has(FRIEND_STAR):
 		owned[FRIEND_STAR] = 1
+	if lv >= 8 and not owned.has(HEART_LIGHT):
+		owned[HEART_LIGHT] = 1
+	if lv >= TITLE_LV and not owned.has(BOND_TRAIL):
+		owned[BOND_TRAIL] = 1
+	_sync_look()
+
+
+## Lv 9 外觀進化：告訴 spirit_look.gd（所有畫光靈的地方）
+func _sync_look() -> void:
+	Engine.set_meta("spirit_evolved", bond_level() >= EVOLVE_LV)
+
+
+## 稱號（Lv 10 以前是空的）
+func bond_title() -> String:
+	return BOND_TITLE if bond_level() >= TITLE_LV else ""
+
+
+func _load_review() -> void:
+	super()
+	_sync_look()
 
 
 ## 還沒播的升級（0 = 沒有）

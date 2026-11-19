@@ -50,8 +50,24 @@ static func draw_back(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: f
 	if idle_trail and eq.get("trail", "") != "":
 		_idle_trail(ci, c, r, String(eq.trail), t)
 	var ga := float(Cos.item(String(eq.get("aura", ""))).get("glow", 1.0)) if eq.get("aura", "") != "" else 1.0     # 有些光芒的光暈比較濃
+	# 親密度 Lv 9「光靈外觀進化」：光暈更大，外圈一圈慢慢轉的光花（所有畫光靈的地方都會變，和裝扮疊在一起）
+	if evolved():
+		UITheme.dot(ci, c, r * 3.2, Color(g.r, g.g, g.b, 0.08 * ga))
+		ci.draw_arc(c, r * 1.5, 0, TAU, 48, Color(g.r, g.g, g.b, 0.35), maxf(1.0, r * 0.05), true)
+		for k in 6:
+			var a := t * 0.35 + k * TAU / 6.0
+			var tw := 0.5 + 0.5 * sin(t * 2.0 + k * 1.1)
+			_light_petal(ci, c, a, r, Color(g.r, g.g, g.b, 0.6 + 0.25 * tw))
+			_light_petal(ci, c, a, r * 0.6, Color(1, 1, 1, 0.45 + 0.3 * tw), r)
+			_spark(ci, c + Vector2(cos(a), sin(a)) * r * 1.98, r * (0.08 + 0.08 * tw), Color(1, 1, 1, 0.6 + 0.4 * tw))
 	UITheme.dot(ci, c, r * 2.45, Color(g.r, g.g, g.b, 0.12 * ga))
 	UITheme.dot(ci, c, r * 1.55, Color(g.r, g.g, g.b, 0.30 * ga))
+	if eq.get("aura", "") == "heart_light":
+		# 心之光（親密度 Lv 8）：三顆小愛心繞著轉
+		for k in 3:
+			var a := t * 0.8 + k * TAU / 3.0
+			var p := c + Vector2(cos(a) * r * 1.85, sin(a) * r * 1.35)
+			_heart(ci, p, r * (0.24 + 0.04 * sin(t * 3.0 + k)), Color(1.0, 0.5, 0.72, 0.85))
 	if eq.get("aura", "") == "galaxy":
 		for k in 9:
 			var a := t * 0.35 + k * TAU / 9.0
@@ -70,6 +86,25 @@ static func draw_back(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary, t: f
 			_spark(ci, c + Vector2(x, r * (1.2 - 2.6 * ph)), r * 0.16 * sin(ph * PI), Color(1.0, 0.88, 0.4, 0.9 * sin(ph * PI)))
 	if eq.get("pet", "") != "":
 		_pet(ci, c, r, String(eq.pet), t, true)
+
+
+## 光靈有沒有「外觀進化」（親密度 Lv 9；game_bond.gd 設定，存在 Engine 的 meta，不用 preload 管家）
+static func evolved() -> bool:
+	return bool(Engine.get_meta("spirit_evolved", false))
+
+
+## 進化後外圈的一片光花：從中心往外的小橢圓
+##   r = 花瓣大小；at = 花瓣離中心多遠的基準（預設和 r 一樣；畫裡面的白芯時用原本的半徑）
+static func _light_petal(ci: CanvasItem, c: Vector2, a: float, r: float, col: Color, at := -1.0) -> void:
+	var base := r if at < 0.0 else at
+	var d := Vector2(cos(a), sin(a))
+	var n := Vector2(-d.y, d.x)
+	var m := c + d * base * 1.5
+	var pts := PackedVector2Array()
+	for i in 14:
+		var th := i * TAU / 14.0
+		pts.append(m + d * cos(th) * r * 0.42 + n * sin(th) * r * 0.17)
+	ci.draw_colored_polygon(pts, col)
 
 
 static func draw_body(ci: CanvasItem, c: Vector2, r: float, eq: Dictionary = {}, t: float = 0.0) -> void:
@@ -146,6 +181,13 @@ static func draw_path_trail(ci: CanvasItem, pts: Array, r: float, eq: Dictionary
 			"star_trail":
 				if k % 3 == 1:
 					_star(ci, p, r * (0.25 + 0.35 * f), Color(1, 0.95, 0.6, 0.85 * f))
+			"bond_trail":
+				# 流光（親密度 Lv 10）：金色光帶＋每隔幾格一顆小愛心
+				UITheme.dot(ci, p, r * (0.12 + 0.5 * f * f), Color(1.0, 0.85, 0.45, 0.3 * f))
+				if k % 5 == 2:
+					_heart(ci, p, r * (0.2 + 0.22 * f), Color(1.0, 0.55, 0.75, 0.9 * f))
+				elif k % 5 == 4:
+					_spark(ci, p, r * 0.16 * f + 0.6, Color(1, 0.95, 0.7, 0.9 * f))
 			"bubbles":
 				if k % 4 == 2:
 					ci.draw_arc(p + Vector2(0, -k * 0.25), r * (0.2 + 0.25 * (1.0 - f)), 0, TAU, 14, Color(0.75, 0.9, 1.0, 0.7 * f), maxf(1.0, r * 0.07), true)
@@ -197,6 +239,15 @@ static func draw_path_trail(ci: CanvasItem, pts: Array, r: float, eq: Dictionary
 
 static func _idle_trail(ci: CanvasItem, c: Vector2, r: float, kind: String, t: float) -> void:
 	match kind:
+		"bond_trail":
+			for k in 6:
+				var ph := fposmod(t * 0.55 + k / 6.0, 1.0)
+				var p := c + Vector2(-r * (1.1 + 2.0 * ph), r * (0.25 * sin(t * 2.2 + k * 1.3) + 0.15))
+				UITheme.dot(ci, p, r * 0.3 * (1.0 - ph), Color(1.0, 0.85, 0.45, 0.35 * (1.0 - ph)))
+				if k % 2 == 0:
+					_heart(ci, p, r * 0.26 * (1.0 - 0.5 * ph), Color(1.0, 0.55, 0.75, 0.9 * (1.0 - ph)))
+				else:
+					_spark(ci, p, r * 0.14 * (1.0 - ph) + 0.6, Color(1, 0.95, 0.7, 0.9 * (1.0 - ph)))
 		"star_trail":
 			for k in 4:
 				var ph := fposmod(t * 0.8 + k * 0.25, 1.0)

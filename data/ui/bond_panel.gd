@@ -254,6 +254,10 @@ static func detail(host: Node) -> Control:
 	var title := UITheme.title_label("Lv.%d %s" % [pr.lv, pr.name], 26, PINK)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
+	if g.bond_title() != "":
+		var tt := _text("稱號　" + g.bond_title(), 16, Color("ffd36e"), true)
+		tt.name = "Title"
+		col.add_child(tt)
 	col.add_child(bar(pr.frac, Vector2(0, 12)))
 	var nxt: Dictionary = pr.next
 	col.add_child(_text("已達最高等級" if nxt.is_empty() else "下一級　%s" % nxt.name, 15, UITheme.TEXT_DIM, true))

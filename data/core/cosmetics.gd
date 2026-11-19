@@ -1,5 +1,5 @@
 extends RefCounted
-## 光靈裝扮的資料（共 61 件：扭蛋池 59 件＋簽到限定 1 件＋親密度限定 1 件），和扭蛋機的機率、保底規則。
+## 光靈裝扮的資料（共 63 件：扭蛋池 59 件＋簽到限定 1 件＋親密度限定 3 件），和扭蛋機的機率、保底規則。
 ## 樣子畫在 spirit_look.gd（全部用程式畫），持有與穿戴狀態存在 game.gd（owned / equipped / gacha）。
 
 ## 類別（衣櫃頁籤的順序）
@@ -27,7 +27,7 @@ const PITY_SSR := 60           # 連續 60 抽沒出傳說，第 60 抽保證傳
 
 const EXCHANGE := [30, 80, 250, 600]   # 碎片兌換所：各稀有度要幾個光之碎片
 
-## 扭蛋池 59 件：普通 23、稀有 18、史詩 12、傳說 6；另有簽到限定的「簽到圍巾」、親密度限定的「友誼之星」（pool = false，抽不到也換不到）
+## 扭蛋池 59 件：普通 23、稀有 18、史詩 12、傳說 6；另有簽到限定的「簽到圍巾」、親密度限定的「友誼之星」、光芒「心之光」、拖尾「流光」（pool = false，抽不到也換不到）
 const ITEMS := [
 	# 頭飾
 	{"id": "friend_star", "cat": "hat", "r": 2, "name": "友誼之星", "pool": false, "how": "親密度 Lv.4", "limit": "親密度限定",
@@ -59,6 +59,8 @@ const ITEMS := [
 	{"id": "streak_scarf", "cat": "face", "r": 2, "name": "簽到圍巾", "pool": false, "how": "連續簽到 14 天", "limit": "簽到限定",
 		"desc": "連續簽到 14 天才拿得到的紅圍巾。每天一點點，累積起來就很可觀，就像 1.01^{365} ≈ 37.8。"},
 	# 光芒
+	{"id": "heart_light", "cat": "aura", "r": 3, "name": "心之光", "pool": false, "how": "親密度 Lv.8", "limit": "親密度限定",
+		"col": Color("ff9fc8"), "glow": 1.3, "desc": "粉紅色的光芒，三顆小愛心繞著光靈轉。"},
 	{"id": "mint", "cat": "aura", "r": 0, "name": "薄荷綠", "col": Color("7ef0c0"), "desc": "清清涼涼的綠色光芒。"},
 	{"id": "sakura", "cat": "aura", "r": 0, "name": "櫻花粉", "col": Color("ff9ccf"), "desc": "像春天花瓣一樣的粉紅光芒。"},
 	{"id": "sky", "cat": "aura", "r": 1, "name": "天空藍", "col": Color("7cc8ff"), "desc": "晴天的顏色。"},
@@ -72,6 +74,8 @@ const ITEMS := [
 	{"id": "gold_aura", "cat": "aura", "r": 2, "name": "黃金光輝", "glow": 1.4, "desc": "金色光芒一明一暗，身邊飄著金色的光點。"},
 	{"id": "galaxy", "cat": "aura", "r": 3, "name": "銀河星光", "desc": "身邊繞著小星星的深紫光芒。銀河裡大約有 10^{11} 顆星星。"},
 	# 拖尾
+	{"id": "bond_trail", "cat": "trail", "r": 3, "name": "流光", "pool": false, "how": "親密度 Lv.10", "limit": "親密度限定",
+		"desc": "金色的光點和小愛心，一路跟在光靈後面。"},
 	{"id": "star_trail", "cat": "trail", "r": 0, "name": "小星星", "desc": "飛過的地方會留下閃亮的小星星。"},
 	{"id": "bubbles", "cat": "trail", "r": 1, "name": "泡泡", "desc": "啵、啵、啵～一路冒泡泡。"},
 	{"id": "expo_spark", "cat": "trail", "r": 2, "name": "指數火花", "desc": "火花沿著 y = 2^{x} 的形狀往上竄，越來越快！"},
