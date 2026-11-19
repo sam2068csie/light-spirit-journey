@@ -119,6 +119,68 @@ func _check_gauss() -> void:
 	for i in 200:
 		w._gauss_tick(0.05)
 	ok(String(w._gauss.mood) != "talk", "高斯：光靈走開 → 繼續晃")
+	await _check_gauss_talk(w)
+
+
+## 跟高斯聊天：靠近出現「聊聊」、對話框一句一句說完會關掉；六個故事都聽得到，聽過的先不重複
+func _check_gauss_talk(w) -> void:
+	w._state().erase("gauss_heard")
+	w._state().erase("gauss_last")
+	var gp := Vector2.ZERO
+	for q in w.GAUSS_STARTS:
+		w._gauss = {}
+		w._gauss_tick(0.0)
+		if w._gauss_spot_ok(w._gauss.p):
+			gp = w._gauss.p
+			break
+	ok(gp != Vector2.ZERO, "高斯：找得到一個不在入口旁邊的位置")
+	w.pos = gp + Vector2(-120, 0)
+	w.cam = w.pos
+	w._gauss_tick(0.05)
+	w._check_world(0.0)
+	ok(String(w._near.get("kind", "")) == "gauss", "高斯：靠近 → 可以聊聊")
+	await wait(0.2)
+	ok(w._card.visible and w._card_btn.text == "聊聊", "高斯：下方卡片顯示「聊聊」")
+	var seen := {}
+	for n in 6:
+		w._interact()
+		var talk = w._overlay
+		ok(talk != null and talk.has_method("say"), "高斯：第 %d 次聊天打開對話框" % (n + 1))
+		if talk == null:
+			return
+		if n == 0:
+			ok(String(talk.lines[0].text).contains("我是高斯"), "高斯：第一次見面先自我介紹")
+			await wait(0.3)
+			await shot("gauss_talk")
+		var story := String(w._state().gauss_last)
+		ok(not seen.has(story), "高斯：還沒聽過的故事先說（第 %d 個：%s）" % [n + 1, story])
+		seen[story] = true
+		var guard := 0
+		while is_instance_valid(talk) and not talk.is_queued_for_deletion() and guard < 40:
+			talk._next()
+			talk._next()
+			guard += 1
+		await wait(0.05)
+		ok(not is_instance_valid(w._overlay), "高斯：說完最後一句，對話框關掉")
+	ok(seen.size() == 6 and (w._state().gauss_heard as Array).size() == 6, "高斯：六個故事都聽過了")
+	var last := String(w._state().gauss_last)
+	w._interact()
+	ok(String(w._state().gauss_last) != last, "高斯：全部聽過之後，不會連續說同一個")
+	w.close_overlay()
+	# 每一句都放得進對話框（最多三行）
+	var lab: Label = null
+	var probe = w.NpcTalk.open(w, [{"who": "高斯", "mood": "talk", "text": "測試"}])
+	await wait(0.1)
+	lab = probe._label
+	var font := lab.get_theme_font("font")
+	var fs := lab.get_theme_font_size("font_size")
+	var worst := 0
+	for k in w.GaussNpc.TALKS:
+		for ln in w.GaussNpc.TALKS[k]:
+			var lines := int(ceil(font.get_string_size(String(ln[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x / lab.size.x))
+			worst = maxi(worst, lines)
+	ok(worst <= 3, "高斯：每一句最多三行（最長 %d 行）" % worst)
+	probe.close()
 
 
 func _initialize() -> void:

@@ -4,7 +4,7 @@ extends "res://data/maps/world_base.gd"
 ##   ・走到地區入口（大門）會跳出卡片，Enter／點按鈕進入
 ##   ・不想跑圖：左上「單元列表」直接選單元進入
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
-##   ・Q 版高斯（npc_gauss.gd）在地圖上到處亂晃，光靈走近會停下來揮手（還沒有對話）
+##   ・Q 版高斯（npc_gauss.gd）在地圖上到處亂晃，光靈走近會停下來揮手；跟他聊聊會隨機說一個小故事（npc_talk.gd 的對話框）
 ## 左岸「秋晨之地」是高一上四區（晨光、楓紅、麥田），晨昏之橋過去是右岸「星夜之地」高一下五區（星空、螢火蟲、極光）。
 ## 每個地區的地形都藏著那個單元的數學（不寫算式）：
 ##   數之原野＝方格麥田與數線柵欄　倍增峽谷＝每往下一層、落差加倍的岩層　圓規湖＝正圓的湖、切線棧道、大圓規
@@ -20,6 +20,7 @@ const MapLayer := preload("res://data/maps/map_layer.gd")
 const MathLabel := preload("res://data/ui/math_text.gd")
 const Center := preload("res://data/core/review_center.gd")
 const GaussNpc := preload("res://data/maps/npc_gauss.gd")
+const NpcTalk := preload("res://data/ui/npc_talk.gd")
 
 const WORLD := Vector2(7200, 4400)
 const BASE_ZOOM := 0.62           # 平常的鏡頭（拉高視角，一次看到比較大的範圍）
@@ -106,7 +107,7 @@ const DICE_NPC := Vector2(4560, 2860)
 ## 高斯：在地圖上到處亂晃的 NPC（畫法在 npc_gauss.gd）
 const GAUSS_S := 40.0                 # 頭的大小（整個人大約 3.2 倍高，比光靈高一點）
 const GAUSS_SPEED := 130.0
-const GAUSS_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(3150, 3500)]
+const GAUSS_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(2000, 3000)]
 
 var _fade: ColorRect
 var face := Vector2(1, 0)
@@ -597,13 +598,17 @@ func _gauss_pick() -> void:
 	if p.distance_to(far) < 400.0:
 		far = _gauss_far(p)
 		_gauss.far = far
+	# 一直挑不到（卡在樹叢之間的小空地）：改走短一點、方向不拘，先走出來
+	var stuck := int(_gauss.get("miss", 0)) >= 2
 	for i in 16:
-		var a := (far - p).angle() + randf_range(-0.9, 0.9) if randf() < 0.75 else randf() * TAU
-		var q := p + Vector2.from_angle(a) * randf_range(200.0, 600.0)
-		if _free(q) and _gauss_path_ok(p, q):
+		var a := (far - p).angle() + randf_range(-0.9, 0.9) if randf() < 0.75 and not stuck else randf() * TAU
+		var q := p + Vector2.from_angle(a) * (randf_range(80.0, 260.0) if stuck else randf_range(200.0, 600.0))
+		if _free(q) and _gauss_spot_ok(q) and _gauss_path_ok(p, q):
 			_gauss.goal = q
 			_gauss.walk_t = 0.0
+			_gauss.miss = 0
 			return
+	_gauss.miss = int(_gauss.get("miss", 0)) + 1
 	_gauss.far = _gauss_far(p)
 	_gauss.wait = 1.0
 
@@ -650,6 +655,30 @@ func _gauss_tick(delta: float) -> void:
 	_gauss.step = fmod(maxf(0.0, float(_gauss.step)) + delta * 9.0, TAU * 100.0)
 	if absf(to.x) > 4.0:
 		_gauss.left = to.x < 0.0
+
+
+## 跟高斯聊天：隨機一個故事（還沒聽過的先說），存檔記得聽過哪些
+func _talk_gauss() -> void:
+	var st := _state()
+	var heard: Array = st.get("gauss_heard", [])
+	var story := GaussNpc.pick_story(heard, String(st.get("gauss_last", "")))
+	var lines := GaussNpc.talk_lines(story, heard.is_empty())
+	if not heard.has(story):
+		heard.append(story)
+	st["gauss_heard"] = heard
+	st["gauss_last"] = story
+	_overlay = NpcTalk.open(self, lines, func(): _overlay = null)
+
+
+## 這裡適合停下來嗎：不要停在入口、小屋門口這些地方（光靈靠近時他會停住，會擋到）
+func _gauss_spot_ok(q: Vector2) -> bool:
+	for z in ZONES:
+		if q.distance_to(z.gate) < 220.0:
+			return false
+	for b in [[HOUSE, 300.0], [STELE, 220.0], [DICE_NPC, 220.0], [EXIT_SIGN, 240.0], [CHEST, 160.0]]:
+		if q.distance_to(b[0]) < float(b[1]):
+			return false
+	return true
 
 
 # ================= 存檔 =================
@@ -772,6 +801,10 @@ func _update_card() -> void:
 			_card_title.text = "擲骰子的攤販"
 			_card_sub.text = "「猜對機率就送你獎品！」" if not _has("eggs", "dice") else "「你已經是機率高手啦！」"
 			_card_btn.text = "聊聊"
+		"gauss":
+			_card_title.text = "高斯"
+			_card_sub.text = "數學王子 · 散步中"
+			_card_btn.text = "聊聊"
 		"chest":
 			_card_title.text = "數字石的寶箱"
 			_card_sub.text = "四顆石頭都亮了，寶箱打開了！"
@@ -798,6 +831,8 @@ func _interact() -> void:
 				mm._set_grade("高二")
 		"zone":
 			_open_zone(int(_near.i))
+		"gauss":
+			_talk_gauss()
 		"stele":
 			_open_stele()
 		"chest":
@@ -1185,8 +1220,10 @@ func _check_world(delta: float) -> void:
 					Game.of(self).play("bonk", 1.0, -6.0)      # 只有聲音，不要整個畫面閃紅（不是扣血）
 					_show_toast("石頭暗下去了……要照什麼順序踩呢？")
 				break
-	# 靠近什麼
+	# 靠近什麼（高斯放最前面：和入口、小屋重疊時，那些優先）
 	_near = {}
+	if not _gauss.is_empty() and pos.distance_to(_gauss.p) < 150.0:
+		_near = {"kind": "gauss"}
 	for i in ZONES.size():
 		if pos.distance_to(ZONES[i].gate) < 110.0:
 			_near = {"kind": "zone", "i": i}
