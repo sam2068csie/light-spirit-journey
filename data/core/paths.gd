@@ -122,6 +122,7 @@ const MAP := {
 	"name_tip.gd": "res://data/ui/name_tip.gd",
 	"notifier.gd": "res://data/core/notifier.gd",
 	"npc_gauss.gd": "res://data/maps/npc_gauss.gd",
+	"npc_ramanujan.gd": "res://data/maps/npc_ramanujan.gd",
 	"npc_talk.gd": "res://data/ui/npc_talk.gd",
 	"num1_bank.gd": "res://data/levels/num/num1_bank.gd",
 	"num2_bank.gd": "res://data/levels/num/num2_bank.gd",
