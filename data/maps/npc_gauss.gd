@@ -18,14 +18,15 @@ const LAPEL_HI := Color("8c3a50")
 const SHIRT := Color("fbf8ef")
 const SHIRT_SH := Color("ddd6c4")
 const EYE := Color("2a2440")
-const IRIS := Color("4f7fd6")
 const SHOE := Color("4a3426")
+const FW := 0.8                 # 臉是長橢圓：半寬 0.8、半高 1.1（乘頭的大小 s）
+const FH := 1.1
 
 
 static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal") -> void:
 	var bob := sin(t * 2.2) * s * 0.025                 # 呼吸
 	var body_h := s * 0.95
-	var head := p + Vector2(0, -body_h - s * 0.82 + bob)
+	var head := p + Vector2(0, -body_h - s * 0.92 + bob)
 	var blink := fposmod(t, 3.7) < 0.12 and mood == "normal"
 	# 影子
 	_ell(ci, p + Vector2(0, s * 0.04), s * 0.78, s * 0.16, Color(0, 0, 0, 0.28))
@@ -37,12 +38,12 @@ static func draw(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "normal
 	_collar(ci, p + Vector2(0, bob * 0.5), head, s, body_h)
 	# 要畫在頭前面的手：思考時摸下巴、說話時舉起食指
 	if mood == "think":
-		var chin := head + Vector2(s * 0.32, s * 0.86)
+		var chin := head + Vector2(s * 0.3, s * 0.98)
 		_ell(ci, chin + Vector2(s * 0.04, s * 0.06), s * 0.13, s * 0.1, LAPEL)
 		UITheme.dot(ci, chin, s * 0.11, SKIN)
 		ci.draw_line(chin, chin + Vector2(-s * 0.12, -s * 0.08), SKIN, maxf(2.0, s * 0.08), true)
 	elif mood == "talk":
-		var up := head + Vector2(s * 1.22, s * 0.18 + sin(t * 6.0) * s * 0.04)
+		var up := head + Vector2(s * 1.18, s * 0.62)
 		UITheme.dot(ci, up, s * 0.11, SKIN)
 		ci.draw_line(up, up + Vector2(0, -s * 0.24), SKIN, maxf(2.0, s * 0.09), true)
 		UITheme.dot(ci, up + Vector2(0, -s * 0.24), maxf(1.0, s * 0.045), SKIN)
@@ -82,7 +83,7 @@ static func _body(ci: CanvasItem, p: Vector2, s: float, h: float, t: float, mood
 			_arm(ci, Vector2(p.x - s * 0.38, arm_y), Vector2(p.x - s * 0.52, p.y - s * 0.34), s)
 		"talk":
 			# 舉起食指：「我想到了！」
-			_arm(ci, Vector2(p.x + s * 0.38, arm_y), Vector2(p.x + s * 0.9, top - s * 0.1), s)
+			_arm(ci, Vector2(p.x + s * 0.38, arm_y), Vector2(p.x + s * 1.18, top - s * 0.3), s)
 			_arm(ci, Vector2(p.x - s * 0.38, arm_y), Vector2(p.x - s * 0.52, p.y - s * 0.34), s)
 		_:
 			for sx in [-1.0, 1.0]:
@@ -96,7 +97,7 @@ static func _collar(ci: CanvasItem, p: Vector2, head: Vector2, s: float, h: floa
 		var pts := PackedVector2Array([
 			Vector2(p.x + sx * s * 0.06, neck_y + s * 0.08),
 			Vector2(p.x + sx * s * 0.42, neck_y + s * 0.02),
-			Vector2(p.x + sx * s * 0.5, head.y + s * 0.66),
+			Vector2(p.x + sx * s * 0.48, head.y + s * 0.8),
 			Vector2(p.x + sx * s * 0.2, neck_y - s * 0.05)])
 		ci.draw_colored_polygon(pts, SHIRT)
 		ci.draw_polyline(PackedVector2Array([pts[1], pts[2], pts[3]]), SHIRT_SH, maxf(1.0, s * 0.03), true)
@@ -116,66 +117,76 @@ static func _head(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, 
 	# 耳朵旁蓬鬆的白髮（後面一層）
 	for sx in [-1.0, 1.0]:
 		for k in 3:
-			UITheme.dot(ci, c + Vector2(sx * s * (0.9 + 0.06 * k), -s * (0.1 - 0.17 * k)), s * (0.24 - 0.03 * k), HAIR_SH)
-	# 臉
-	UITheme.dot(ci, c, s, SKIN)
-	_ell(ci, c + Vector2(0, s * 0.52), s * 0.7, s * 0.32, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.35))
-	# 白色落腮鬚：沿著兩頰往下到下巴旁
+			UITheme.dot(ci, c + Vector2(sx * s * (FW + 0.08 + 0.05 * k), -s * (0.12 - 0.17 * k)), s * (0.23 - 0.03 * k), HAIR_SH)
+	# 臉：長橢圓
+	_ell(ci, c, s * FW, s * FH, SKIN)
+	_ell(ci, c + Vector2(0, s * 0.62), s * FW * 0.72, s * 0.36, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.3))
+	# 白色落腮鬚：沿著兩頰往下，到下巴旁就停（下巴是乾淨的）
 	for sx in [-1.0, 1.0]:
 		var pts := PackedVector2Array()
 		for k in 11:
-			var a := lerpf(-0.2, 0.82, k / 10.0)
-			pts.append(c + Vector2(sx * cos(a) * s * 1.01, sin(a) * s * 1.0))
+			var a := lerpf(-0.2, 0.86, k / 10.0)
+			pts.append(c + Vector2(sx * cos(a) * s * FW * 1.02, sin(a) * s * FH))
 		for k in range(10, -1, -1):
-			var a := lerpf(-0.2, 0.72, k / 10.0)
-			var th := 0.84 - 0.06 * sin(k / 10.0 * PI)          # 中間厚、兩頭尖
-			pts.append(c + Vector2(sx * cos(a) * s * th, sin(a) * s * th + s * 0.04))
+			var a := lerpf(-0.2, 0.76, k / 10.0)
+			var th := 0.8 - 0.06 * sin(k / 10.0 * PI)          # 中間厚、兩頭尖
+			pts.append(c + Vector2(sx * cos(a) * s * FW * th, sin(a) * s * FH * th + s * 0.04))
 		ci.draw_colored_polygon(pts, HAIR)
 	# 前面的蓬鬆白髮（耳朵上）
 	for sx in [-1.0, 1.0]:
 		for k in 3:
-			UITheme.dot(ci, c + Vector2(sx * s * (0.86 + 0.05 * k), -s * (0.16 - 0.15 * k)), s * (0.19 - 0.025 * k), HAIR)
-	# 腮紅
+			UITheme.dot(ci, c + Vector2(sx * s * (FW + 0.04 + 0.05 * k), -s * (0.2 - 0.15 * k)), s * (0.18 - 0.025 * k), HAIR)
+	# 淡淡的腮紅
 	for sx in [-1.0, 1.0]:
-		_ell(ci, c + Vector2(sx * s * 0.5, s * 0.3), s * 0.14, s * 0.09, Color(1.0, 0.55, 0.55, 0.45))
+		_ell(ci, c + Vector2(sx * s * 0.4, s * 0.4), s * 0.11, s * 0.07, Color(1.0, 0.55, 0.55, 0.3))
 	_face(ci, c, s, t, mood, blink)
 	_cap(ci, c, s, t)
 
 
 static func _face(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, blink: bool) -> void:
-	var lw := maxf(1.5, s * 0.07)
-	# 白色短眉毛
+	var lw := maxf(1.4, s * 0.06)
+	var line := Color(0.55, 0.36, 0.3, 0.55)
+	# 白色濃眉，外側微微往下
 	for sx in [-1.0, 1.0]:
-		var bc := c + Vector2(sx * s * 0.34, -s * 0.24 - (s * 0.05 if mood == "think" else 0.0))
-		ci.draw_line(bc + Vector2(-s * 0.12, s * 0.02 * sx), bc + Vector2(s * 0.12, -s * 0.02 * sx), HAIR_SH, maxf(2.0, s * 0.09), true)
-	# 眼睛
+		var bc := c + Vector2(sx * s * 0.3, -s * 0.22 - (s * 0.05 if mood == "think" else 0.0))
+		ci.draw_line(bc + Vector2(-sx * s * 0.11, -s * 0.01), bc + Vector2(sx * s * 0.12, s * 0.03), HAIR_SH, maxf(2.2, s * 0.1), true)
+	# 眼睛：小小的、深藍色，上眼皮微微下垂（不要水汪汪的大眼）
 	for sx in [-1.0, 1.0]:
-		var e := c + Vector2(sx * s * 0.33, -s * 0.02)
+		var e := c + Vector2(sx * s * 0.28, -s * 0.04)
 		if mood == "happy":
-			ci.draw_arc(e + Vector2(0, s * 0.06), s * 0.13, PI * 1.15, PI * 1.85, 10, EYE, lw, true)
+			ci.draw_arc(e + Vector2(0, s * 0.05), s * 0.1, PI * 1.15, PI * 1.85, 10, EYE, lw, true)
 		elif blink:
-			ci.draw_line(e + Vector2(-s * 0.12, 0), e + Vector2(s * 0.12, 0), EYE, lw, true)
+			ci.draw_line(e + Vector2(-s * 0.08, 0), e + Vector2(s * 0.08, 0), EYE, lw, true)
 		else:
-			var look := Vector2(s * 0.03, -s * 0.06) if mood == "think" else Vector2.ZERO
-			_ell(ci, e, s * 0.13, s * 0.17, EYE)
-			_ell(ci, e + look + Vector2(0, s * 0.04), s * 0.09, s * 0.1, IRIS)
-			_ell(ci, e + look + Vector2(0, s * 0.05), s * 0.05, s * 0.06, EYE)
-			UITheme.dot(ci, e + look + Vector2(-s * 0.04, -s * 0.06), s * 0.045, Color.WHITE)
-			UITheme.dot(ci, e + look + Vector2(s * 0.05, s * 0.07), s * 0.022, Color(1, 1, 1, 0.8))
-	# 鼻子
-	_ell(ci, c + Vector2(0, s * 0.18), s * 0.09, s * 0.07, Color("eaa58c"))
-	# 嘴巴
-	var m := c + Vector2(0, s * 0.42)
+			var look := Vector2(s * 0.02, -s * 0.04) if mood == "think" else Vector2.ZERO
+			_ell(ci, e + look, s * 0.065, s * 0.08, Color("2c3866"))
+			UITheme.dot(ci, e + look + Vector2(-s * 0.02, -s * 0.03), maxf(0.8, s * 0.018), Color(1, 1, 1, 0.85))
+			# 上眼皮
+			ci.draw_arc(e + Vector2(0, s * 0.03), s * 0.1, PI * 1.12, PI * 1.88, 10, line, maxf(1.0, s * 0.035), true)
+		# 眼袋細紋
+		ci.draw_arc(e + Vector2(0, s * 0.02), s * 0.1, PI * 0.2, PI * 0.8, 8, Color(0.55, 0.36, 0.3, 0.3), maxf(1.0, s * 0.025), true)
+	# 鼻子：比較長、鼻頭紅潤
+	ci.draw_line(c + Vector2(s * 0.02, s * 0.02), c + Vector2(s * 0.05, s * 0.22), line, maxf(1.0, s * 0.035), true)
+	_ell(ci, c + Vector2(s * 0.01, s * 0.26), s * 0.09, s * 0.07, Color("eaa58c"))
+	# 法令紋
+	for sx in [-1.0, 1.0]:
+		ci.draw_arc(c + Vector2(sx * s * 0.08, s * 0.44), s * 0.16, (PI * 0.95) if sx < 0 else (PI * -0.05), (PI * 1.35) if sx < 0 else (PI * -0.35), 6, Color(0.55, 0.36, 0.3, 0.3), maxf(1.0, s * 0.025), true)
+	# 嘴巴：抿著嘴、一邊微微上揚的笑
+	var m := c + Vector2(0, s * 0.55)
 	match mood:
 		"happy":
-			ci.draw_colored_polygon(PackedVector2Array([m + Vector2(-s * 0.14, -s * 0.02), m + Vector2(s * 0.14, -s * 0.02), m + Vector2(s * 0.07, s * 0.1), m + Vector2(-s * 0.07, s * 0.1)]), Color("b8485a"))
+			ci.draw_colored_polygon(PackedVector2Array([m + Vector2(-s * 0.13, -s * 0.03), m + Vector2(s * 0.13, -s * 0.03), m + Vector2(s * 0.06, s * 0.08), m + Vector2(-s * 0.06, s * 0.08)]), Color("b8485a"))
 		"talk":
-			var o := 0.03 + 0.06 * absf(sin(t * 9.0))
-			_ell(ci, m + Vector2(0, s * 0.02), s * 0.08, s * o, Color("b8485a"))
+			var o := 0.025 + 0.05 * absf(sin(t * 9.0))
+			_ell(ci, m + Vector2(0, s * 0.01), s * 0.07, s * o, Color("b8485a"))
 		"think":
-			ci.draw_line(m + Vector2(-s * 0.08, s * 0.02), m + Vector2(s * 0.08, -s * 0.01), EYE, maxf(1.2, s * 0.05), true)
+			ci.draw_line(m + Vector2(-s * 0.08, s * 0.01), m + Vector2(s * 0.07, -s * 0.01), EYE, maxf(1.2, s * 0.045), true)
 		_:
-			ci.draw_arc(m + Vector2(0, -s * 0.06), s * 0.11, 0.35, PI - 0.35, 10, EYE, maxf(1.2, s * 0.05), true)
+			var pts := PackedVector2Array()
+			for k in 9:
+				var x := lerpf(-1.0, 1.0, k / 8.0)
+				pts.append(m + Vector2(x * s * 0.12, s * 0.03 * (1.0 - x * x) - x * s * 0.025))
+			ci.draw_polyline(pts, EYE, maxf(1.2, s * 0.045), true)
 
 
 ## 黑色絨布軟帽：軟軟地蓋住頭頂（沒有硬帽緣），往左上方鼓起、微微歪
@@ -185,7 +196,7 @@ static func _cap(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 	for k in 17:
 		var a := PI + PI * k / 16.0
 		var lean := 1.0 + 0.22 * clampf(-cos(a), 0.0, 1.0)
-		top_arc.append(c + Vector2(cos(a) * s * 1.05 - s * 0.05, -s * 0.42 + sin(a) * s * 0.8 * lean))
+		top_arc.append(c + Vector2(cos(a) * s * 0.98 - s * 0.05, -s * 0.5 + sin(a) * s * 0.82 * lean))
 	var cap := PackedVector2Array(top_arc)
 	var right: Vector2 = top_arc[top_arc.size() - 1]
 	var left: Vector2 = top_arc[0]
@@ -194,8 +205,8 @@ static func _cap(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
 		cap.append(right.lerp(left, u) + Vector2(0, s * 0.1 * sin(u * PI)))
 	ci.draw_colored_polygon(cap, CAP)
 	# 絨布的光澤和一條折痕
-	_ell(ci, c + Vector2(-s * 0.36, -s * 1.04), s * 0.3, s * 0.1, CAP_HI)
-	ci.draw_arc(c + Vector2(s * 0.12, -s * 0.54), s * 0.6, PI * 1.12, PI * 1.6, 12, Color(0, 0, 0, 0.4), maxf(1.0, s * 0.04), true)
+	_ell(ci, c + Vector2(-s * 0.34, -s * 1.12), s * 0.28, s * 0.1, CAP_HI)
+	ci.draw_arc(c + Vector2(s * 0.12, -s * 0.62), s * 0.56, PI * 1.12, PI * 1.6, 12, Color(0, 0, 0, 0.4), maxf(1.0, s * 0.04), true)
 
 
 static func _ell(ci: CanvasItem, c: Vector2, rx: float, ry: float, col: Color) -> void:
