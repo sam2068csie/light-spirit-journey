@@ -121,6 +121,7 @@ const MAP := {
 	"math_text.gd": "res://data/ui/math_text.gd",
 	"name_tip.gd": "res://data/ui/name_tip.gd",
 	"notifier.gd": "res://data/core/notifier.gd",
+	"npc_archimedes.gd": "res://data/maps/npc_archimedes.gd",
 	"npc_euler.gd": "res://data/maps/npc_euler.gd",
 	"npc_gauss.gd": "res://data/maps/npc_gauss.gd",
 	"npc_newton.gd": "res://data/maps/npc_newton.gd",
