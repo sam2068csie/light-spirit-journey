@@ -10,7 +10,8 @@ extends "res://data/maps/world_base.gd"
 ##   ・開放的島一開始是暗的、灰灰冷冷的（世界之光還沒點亮），聖地越點越亮；全部點亮才恢復原本的色彩和島上的動態
 ##   ・靠近碼頭跳出靠岸卡片，「上岸」進入原本的單元地圖；從單元地圖返回，光舟停在那座島的碼頭旁
 ##   ・海上的彩蛋：沉船（對數）、漩渦（弧度）、瓶中信（向量的長度）；還有背著小島的海龜
-##   ・Q 版歐拉（npc_euler.gd）划著掛燈籠的小船到處晃；光舟靠近會停下來揮手，聊聊會隨機說一個小故事（npc_talk.gd）
+##   ・Q 版歐拉（npc_euler.gd）划著掛燈籠的小船、阿基米德（npc_archimedes.gd）泡在浴缸裡漂，在海上到處晃；
+##     光舟靠近會停下來揮手，聊聊會隨機說一個小故事（npc_talk.gd）
 ## 存檔：Game.world11 {pos: [x, y], visited: [], eggs: [], ret: 上岸時記下的單元, v2: 地圖放大後的座標}
 const Center := preload("res://data/core/review_center.gd")
 const TM := preload("res://data/maps/trig_map.gd")     # 月輪島：照單元地圖的形狀放大（圓環＋正弦海岸＋羅盤礁）
@@ -18,6 +19,7 @@ const EM := preload("res://data/maps/exp_map.gd")     # 指數島、對數島：
 const GW := preload("res://data/maps/g10_world.gd")   # 共用的幾何工具（圓滑、外擴、切環）
 const MapLayer := preload("res://data/maps/map_layer.gd")
 const EulerNpc := preload("res://data/maps/npc_euler.gd")
+const ArchimedesNpc := preload("res://data/maps/npc_archimedes.gd")
 const NpcTalk := preload("res://data/ui/npc_talk.gd")
 
 const WORLD := Vector2(7200, 4400)
@@ -48,10 +50,12 @@ const WHIRL := Vector2(4980, 2300)       # 彩蛋：漩渦（弧度）
 const BOTTLE := Vector2(2960, 1720)      # 彩蛋：瓶中信（向量的長度）
 const TURTLE_C := Vector2(3720, 2250)    # 背著小島的海龜繞著海中央慢慢游
 const TURTLE_R := Vector2(560, 330)
-## 歐拉的小划船：在海上到處晃（和高一地圖的散步 NPC 同一套做法，只是走的是海面）
-const EULER_S := 36.0
-const EULER_SPEED := 170.0
-const EULER_STARTS := [Vector2(2200, 2000), Vector2(3000, 2750), Vector2(4500, 1900), Vector2(1700, 2650)]
+## 海上的數學家：在海上到處晃（和高一地圖的散步 NPC 同一套做法，只是走的是海面）
+##   spd 速度、hop 一段移動的距離（最短, 最長）：歐拉划船快、阿基米德的浴缸慢慢漂
+const SEA_NPCS := [{"id": "euler", "script": EulerNpc, "spd": 170.0, "hop": Vector2(300, 900)},
+	{"id": "archimedes", "script": ArchimedesNpc, "spd": 55.0, "hop": Vector2(200, 550)}]
+const SEA_NPC_S := 36.0
+const SEA_NPC_STARTS := [Vector2(2200, 2000), Vector2(3000, 2750), Vector2(4500, 1900), Vector2(1700, 2650)]
 
 var vel := Vector2.ZERO
 var heading := 0.0
@@ -63,7 +67,7 @@ var _open := {}
 var _seen_open := ""
 var debug_open := false       # 截圖用：霧全部散開
 var _wake: Array = []
-var _euler := {}              # 歐拉：p 位置、goal 這一段划到哪、far 大方向、wait 停多久、mood、row 划槳（< 0 停著）、left 面向左、near_t、walk_t、miss
+var _snpcs: Array = []        # 海上的數學家（欄位說明在「海上的數學家 NPC」那一段）
 var _card: PanelContainer
 var _card_no: Label
 var _card_title: Label
@@ -518,29 +522,34 @@ func _turtle_pos() -> Vector2:
 	return TURTLE_C + Vector2(cos(a) * TURTLE_R.x, sin(a) * TURTLE_R.y)
 
 
-# ================= 歐拉：划著小船到處晃 =================
-## 每次划一段（300～900）就停下來發呆、想事情，再挑下一段；每一段大致朝一個「大方向」（碼頭外、沉船、瓶中信、海中央……）。
-## 只划在 _free 的海面上（不進霧、不撞島、不撞海龜），船身比較長，左右兩端也要在海上。
-## 光舟靠近：停下來轉成正面、對著光舟揮手，待久了就笑。存檔 world11["npc"]["euler"] = {heard: [], last: ""}
+# ================= 海上的數學家 NPC（歐拉划小船、阿基米德泡在浴缸裡漂） =================
+## 每位一段一段地移動（歐拉划得快、走得遠；阿基米德慢慢漂），停下來發呆、想事情，再挑下一段；
+## 每一段大致朝一個「大方向」（碼頭外、沉船、瓶中信、海中央……）。只在 _free 的海面上（不進霧、不撞島、不撞海龜），
+## 船（浴缸）比較寬，左右兩端也要在海上；海龜游過來會先讓開。
+## 光舟靠近：停下來轉成正面、對著光舟揮手，待久了就笑。存檔 world11["npc"][id] = {heard: [], last: ""}
+## _snpcs 每一位：id、script、spd 速度、hop 一段的距離、p、goal、far、wait、mood、row（歐拉划槳；< 0 停著）、left、near_t、walk_t、miss、toff
 
-## 船（含船頭船尾）放得下嗎
-func _euler_ok(q: Vector2) -> bool:
+## 船（浴缸）放得下嗎
+func _sn_ok(q: Vector2) -> bool:
 	return _free(q) and _free(q + Vector2(70, 0)) and _free(q - Vector2(70, 0))
 
 
-## 適合停下來嗎：不要停在碼頭、港口、彩蛋旁邊（光舟靠近時他會停住，會擋到）
-func _euler_spot_ok(q: Vector2) -> bool:
+## 適合停下來嗎：不要停在碼頭、港口、彩蛋旁邊（光舟靠近時他會停住，會擋到），也不要和另一位擠在一起
+func _sn_spot_ok(q: Vector2, me: Dictionary = {}) -> bool:
 	for d in _docks:
 		if q.distance_to(d) < 320.0:
 			return false
 	for b in [[HARBOR, 780.0], [WRECK, 320.0], [WHIRL, 300.0], [BOTTLE, 240.0]]:
 		if q.distance_to(b[0]) < float(b[1]):
 			return false
+	for o in _snpcs:
+		if o.id != me.get("id", "") and (q.distance_to(o.goal) < 300.0 or q.distance_to(o.p) < 300.0):
+			return false
 	return true
 
 
 ## 大方向：離現在的位置夠遠的一個地點
-func _euler_far(from: Vector2) -> Vector2:
+func _sn_far(from: Vector2) -> Vector2:
 	var spots: Array = [SEA_C + Vector2(0, -420), SEA_C + Vector2(0, 420), WRECK + Vector2(0, 300), BOTTLE + Vector2(300, 0),
 		WHIRL + Vector2(0, -320), SPAWN + Vector2(600, 0)]
 	for i in _docks.size():
@@ -549,136 +558,165 @@ func _euler_far(from: Vector2) -> Vector2:
 	return spots[randi() % spots.size()] if not spots.is_empty() else from
 
 
-func _euler_init() -> void:
-	var start: Vector2 = EULER_STARTS[randi() % EULER_STARTS.size()]
-	var p := start
-	for r in range(0, 1600, 40):
-		var found := false
-		for k in 16:
-			var q := start + Vector2.from_angle(k * TAU / 16.0) * float(r)
-			if _euler_ok(q):
-				p = q
-				found = true
+func _sn_init() -> void:
+	_snpcs = []
+	var starts: Array = SEA_NPC_STARTS.duplicate()
+	starts.shuffle()
+	for i in SEA_NPCS.size():
+		var spec: Dictionary = SEA_NPCS[i]
+		var start: Vector2 = starts[i % starts.size()]
+		var p := start
+		for r in range(0, 1600, 40):
+			var found := false
+			for k in 16:
+				var q := start + Vector2.from_angle(k * TAU / 16.0) * float(r)
+				if _sn_ok(q):
+					p = q
+					found = true
+					break
+			if found:
 				break
-		if found:
-			break
-	_euler = {"p": p, "goal": p, "far": _euler_far(p), "wait": randf_range(0.5, 2.0), "mood": "normal", "row": -1.0,
-		"left": false, "near_t": 0.0, "walk_t": 0.0, "miss": 0}
+		_snpcs.append({"id": spec.id, "script": spec.script, "spd": spec.spd, "hop": spec.hop, "p": p, "goal": p, "far": _sn_far(p),
+			"wait": randf_range(0.5, 2.0), "mood": "normal", "row": -1.0, "left": false, "near_t": 0.0, "walk_t": 0.0, "miss": 0,
+			"toff": 1.3 + i * 2.2})
 
 
-func _euler_path_ok(a: Vector2, b: Vector2) -> bool:
+func _sn_path_ok(a: Vector2, b: Vector2) -> bool:
 	var n := maxi(1, int(a.distance_to(b) / 50.0))
 	for i in range(1, n + 1):
-		if not _euler_ok(a.lerp(b, float(i) / n)):
+		if not _sn_ok(a.lerp(b, float(i) / n)):
 			return false
 	return true
 
 
-func _euler_pick() -> void:
-	var p: Vector2 = _euler.p
-	var far: Vector2 = _euler.far
+func _sn_pick(n: Dictionary) -> void:
+	var p: Vector2 = n.p
+	var far: Vector2 = n.far
 	if p.distance_to(far) < 500.0:
-		far = _euler_far(p)
-		_euler.far = far
-	var stuck := int(_euler.miss) >= 2
+		far = _sn_far(p)
+		n.far = far
+	var stuck := int(n.miss) >= 2
+	var hop: Vector2 = n.hop
 	for i in 16:
 		var a := (far - p).angle() + randf_range(-0.8, 0.8) if randf() < 0.75 and not stuck else randf() * TAU
-		var q := p + Vector2.from_angle(a) * (randf_range(120.0, 350.0) if stuck else randf_range(300.0, 900.0))
-		if _euler_ok(q) and _euler_spot_ok(q) and _euler_path_ok(p, q):
-			_euler.goal = q
-			_euler.walk_t = 0.0
-			_euler.miss = 0
+		var q := p + Vector2.from_angle(a) * (randf_range(120.0, 350.0) if stuck else randf_range(hop.x, hop.y))
+		if _sn_ok(q) and _sn_spot_ok(q, n) and _sn_path_ok(p, q):
+			n.goal = q
+			n.walk_t = 0.0
+			n.miss = 0
 			return
-	_euler.miss = int(_euler.miss) + 1
-	_euler.far = _euler_far(p)
-	_euler.wait = 1.0
+	n.miss = int(n.miss) + 1
+	n.far = _sn_far(p)
+	n.wait = 1.0
 
 
-func _euler_tick(delta: float) -> void:
-	if _euler.is_empty():
-		_euler_init()
-	var p: Vector2 = _euler.p
+func _sn_tick(delta: float) -> void:
+	if _snpcs.is_empty():
+		_sn_init()
+	for n in _snpcs:
+		_sn_step(n, delta)
+
+
+func _sn_step(n: Dictionary, delta: float) -> void:
+	var p: Vector2 = n.p
+	var spd := float(n.spd)
 	# 光舟靠近：停下來，轉成正面對著光舟；先揮手，待久了就笑
 	var d := p.distance_to(pos)
-	if d < 320.0 or (float(_euler.near_t) > 0.0 and d < 420.0):
-		_euler.near_t = float(_euler.near_t) + delta
-		_euler.row = -1.0
-		_euler.left = pos.x < p.x
-		_euler.mood = "talk" if float(_euler.near_t) < 2.5 else "happy"
-		_euler.wait = maxf(float(_euler.wait), 1.2)
+	if d < 320.0 or (float(n.near_t) > 0.0 and d < 420.0):
+		n.near_t = float(n.near_t) + delta
+		n.row = -1.0
+		n.left = pos.x < p.x
+		n.mood = "talk" if float(n.near_t) < 2.5 else "happy"
+		n.wait = maxf(float(n.wait), 1.2)
 		return
-	if float(_euler.near_t) > 0.0:
-		_euler.near_t = 0.0
-		_euler.mood = "normal"
-	# 海龜游過來了：先划開讓牠過去（停著的時候也一樣，不然會被海龜壓過去）
+	if float(n.near_t) > 0.0:
+		n.near_t = 0.0
+		n.mood = "normal"
+	# 海龜游過來了：先讓開（停著的時候也一樣，不然會被海龜壓過去）
 	var tp := _turtle_pos()
 	if p.distance_to(tp) < 250.0:
 		var away := (p - tp).normalized()
 		for k in 5:
 			var dir := away.rotated((k - 2) * 0.5)
-			var np2 := p + dir * EULER_SPEED * 1.4 * delta
+			var np2 := p + dir * maxf(spd, 120.0) * 1.4 * delta
 			if _free(np2):
-				_euler.p = np2
-				_euler.row = fmod(maxf(0.0, float(_euler.row)) + delta * 6.0, TAU * 100.0)
-				_euler.left = dir.x < 0.0
-				_euler.goal = np2
-				_euler.wait = maxf(float(_euler.wait), 0.6)
+				n.p = np2
+				n.row = fmod(maxf(0.0, float(n.row)) + delta * 6.0, TAU * 100.0)
+				n.left = dir.x < 0.0
+				n.goal = np2
+				n.wait = maxf(float(n.wait), 0.6)
 				return
-	if float(_euler.wait) > 0.0:
-		_euler.wait = float(_euler.wait) - delta
-		_euler.row = -1.0
-		if float(_euler.wait) <= 0.0:
-			_euler.mood = "normal"
-			_euler_pick()
+	if float(n.wait) > 0.0:
+		n.wait = float(n.wait) - delta
+		n.row = -1.0
+		if float(n.wait) <= 0.0:
+			n.mood = "normal"
+			_sn_pick(n)
 		return
-	var goal: Vector2 = _euler.goal
+	var goal: Vector2 = n.goal
 	var to := goal - p
-	_euler.walk_t = float(_euler.walk_t) + delta
-	if to.length() < 10.0 or float(_euler.walk_t) > 10.0:
-		_euler.wait = randf_range(2.0, 5.0)
+	n.walk_t = float(n.walk_t) + delta
+	if to.length() < 10.0 or float(n.walk_t) > 14.0:
+		n.wait = randf_range(2.0, 5.0)
 		var k := randf()
-		_euler.mood = "think" if k < 0.4 else ("happy" if k < 0.55 else "normal")
-		_euler.row = -1.0
+		n.mood = "think" if k < 0.4 else ("happy" if k < 0.5 else "normal")
+		n.row = -1.0
 		return
-	var np := p + to.normalized() * minf(to.length(), EULER_SPEED * delta)
-	if not _euler_ok(np):
-		_euler.wait = 1.0                  # 海龜游過來擋住了：等一下再挑路
-		_euler.row = -1.0
+	var np := p + to.normalized() * minf(to.length(), spd * delta)
+	if not _sn_ok(np):
+		n.wait = 1.0                  # 海龜游過來擋住了：等一下再挑路
+		n.row = -1.0
 		return
-	_euler.p = np
-	_euler.row = fmod(maxf(0.0, float(_euler.row)) + delta * 4.5, TAU * 100.0)
+	n.p = np
+	n.row = fmod(maxf(0.0, float(n.row)) + delta * 4.5, TAU * 100.0)
 	if absf(to.x) > 4.0:
-		_euler.left = to.x < 0.0
+		n.left = to.x < 0.0
 
 
-func _euler_draw(L, v: Rect2) -> void:
-	var ep: Vector2 = _euler.p
+func _sn(id: String) -> Dictionary:
+	for n in _snpcs:
+		if n.id == id:
+			return n
+	return {}
+
+
+func _sn_draw(L, v: Rect2, n: Dictionary) -> void:
+	var ep: Vector2 = n.p
 	if not v.grow(200.0).has_point(ep):
 		return
 	var ci: CanvasItem = L if L is CanvasItem else L.ci
 	if not (L is CanvasItem):
 		L.flush()
-	var xf := Transform2D(0.0, Vector2(-1.0 if bool(_euler.left) else 1.0, 1.0), 0.0, ep)
+	var xf := Transform2D(0.0, Vector2(-1.0 if bool(n.left) else 1.0, 1.0), 0.0, ep)
 	ci.draw_set_transform_matrix(xf)
-	if float(_euler.row) >= 0.0:
-		EulerNpc.draw_boat_side(ci, Vector2.ZERO, EULER_S, t + 1.3, float(_euler.row), xf)
-	else:
-		EulerNpc.draw_boat(ci, Vector2.ZERO, EULER_S, t + 1.3, String(_euler.mood), -1.0, xf)
+	var tt := t + float(n.toff)
+	match String(n.id):
+		"euler":
+			# 移動中畫側面划船、停下來畫正面
+			if float(n.row) >= 0.0:
+				EulerNpc.draw_boat_side(ci, Vector2.ZERO, SEA_NPC_S, tt, float(n.row), xf)
+			else:
+				EulerNpc.draw_boat(ci, Vector2.ZERO, SEA_NPC_S, tt, String(n.mood), -1.0, xf)
+		"archimedes":
+			# 浴缸是圓的，漂著漂著只有正面；漂的時候泡得很舒服（normal）
+			ArchimedesNpc.draw_sea(ci, Vector2.ZERO, SEA_NPC_S, tt, String(n.mood) if float(n.row) < 0.0 else "normal", xf)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
-## 跟歐拉聊天：隨機一個故事（還沒聽過的先說）
-func _talk_euler() -> void:
+## 跟海上的數學家聊天：隨機一個故事（還沒聽過的先說）
+func _talk_sea(i: int) -> void:
+	var n: Dictionary = _snpcs[i]
+	var sc = n.script
 	var st := _state()
 	if not st.has("npc"):
 		st["npc"] = {}
-	var rec: Dictionary = st.npc.get("euler", {})
+	var rec: Dictionary = st.npc.get(n.id, {})
 	var heard: Array = rec.get("heard", [])
-	var story := NpcTalk.pick_story(EulerNpc, heard, String(rec.get("last", "")))
-	var lines := NpcTalk.story_lines(EulerNpc, story, heard.is_empty())
+	var story := NpcTalk.pick_story(sc, heard, String(rec.get("last", "")))
+	var lines := NpcTalk.story_lines(sc, story, heard.is_empty())
 	if not heard.has(story):
 		heard.append(story)
-	st.npc["euler"] = {"heard": heard, "last": story}
+	st.npc[n.id] = {"heard": heard, "last": story}
 	_overlay = NpcTalk.open(self, lines, func(): _overlay = null)
 
 
@@ -826,12 +864,13 @@ func _update_card() -> void:
 			_card_bar.visible = false
 			_card_btn.text = "調查"
 			_card_btn.disabled = false
-		"euler":
+		"npc":
+			var sc = _snpcs[int(_near.i)].script
 			_card.add_theme_stylebox_override("panel", UITheme.box(Color(0.06, 0.08, 0.18, 0.95), 16, Color("f5c84c"), 2, 14))
 			_card_no.visible = false
-			_card_title.text = EulerNpc.NAME
+			_card_title.text = sc.NAME
 			_card_title.add_theme_color_override("font_color", Color("ffe7a3"))
-			_card_sub.text = EulerNpc.TITLE
+			_card_sub.text = sc.TITLE
 			_card_bar.visible = false
 			_card_btn.text = "聊聊"
 			_card_btn.disabled = false
@@ -858,8 +897,8 @@ func _interact() -> void:
 				_land(int(_near.i))
 		"wreck", "whirl", "bottle":
 			_open_egg(k)
-		"euler":
-			_talk_euler()
+		"npc":
+			_talk_sea(int(_near.i))
 		"harbor":
 			var mm := get_parent()
 			while mm != null and not mm.has_method("_set_grade"):
@@ -1114,7 +1153,7 @@ func _process(delta: float) -> void:
 			zoom = lerpf(zoom, zt, 1.0 - exp(-3.5 * delta))
 		cam = cam.lerp(_cam_target(), 1.0 - exp(-6.0 * delta))
 	if is_visible_in_tree():
-		_euler_tick(delta)
+		_sn_tick(delta)
 	_check_world()
 	if _toast_t > 0.0:
 		_toast_t -= delta
@@ -1143,9 +1182,13 @@ func _prewarm() -> void:
 
 func _check_world() -> void:
 	_near = {}
-	# 歐拉放最前面：和碼頭、彩蛋重疊時，那些優先
-	if not _euler.is_empty() and pos.distance_to(_euler.p) < 240.0:
-		_near = {"kind": "euler"}
+	# 海上的數學家放最前面：和碼頭、彩蛋重疊時，那些優先；兩位都靠近時選比較近的
+	var best := 240.0
+	for i in _snpcs.size():
+		var dn := pos.distance_to(_snpcs[i].p)
+		if dn < best:
+			best = dn
+			_near = {"kind": "npc", "i": i}
 	for i in ISLANDS.size():
 		var isl: Dictionary = ISLANDS[i]
 		if pos.distance_to(_docks[i]) < 150.0:
@@ -2638,13 +2681,16 @@ func _p_fx(L) -> void:
 		_ring_fx(L, p, rr * float(w.s), Color(1, 1, 1, 0.32 * a))
 		if nk > 0.2:
 			_dot(L, p, 6.0 * a + 2.0, Color(0.5, 1.0, 0.9, 0.6 * a * nk), 16)
-	# 歐拉的船和光舟：y 比較小（比較遠）的先畫
-	var euler_back: bool = not _euler.is_empty() and float(_euler.p.y) <= pos.y
-	if euler_back:
-		_euler_draw(L, v)
+	# 海上的數學家和光舟：y 比較小（比較遠）的先畫
+	var order := _snpcs.duplicate()
+	order.sort_custom(func(a, b): return float(a.p.y) < float(b.p.y))
+	for n in order:
+		if float(n.p.y) <= pos.y:
+			_sn_draw(L, v, n)
 	_draw_boat(L)
-	if not _euler.is_empty() and not euler_back:
-		_euler_draw(L, v)
+	for n in order:
+		if float(n.p.y) > pos.y:
+			_sn_draw(L, v, n)
 	# 靠近的碼頭：浮標亮起來
 	if String(_near.get("kind", "")) == "dock":
 		var i := int(_near.i)
