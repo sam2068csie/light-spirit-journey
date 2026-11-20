@@ -88,7 +88,7 @@ func _forge_step() -> void:
 			_vp().arrows_on(String(st.ref), _vtap_event)
 		"vpick":
 			vpick_ok = false
-			_vp().pts_on(float(st.get("snap", 1.0)), _vpick_event)
+			_vp().pts_on(float(st.get("snap", 1.0)), _vpick_event, st.get("skew", {}))
 		"vdrag":
 			vd_found = []
 			for p in st.get("seed", []):
@@ -176,13 +176,13 @@ func _vpick_event(p: Vector2) -> void:
 	if _vkind() != "vpick":
 		return
 	var st: Dictionary = steps[si]
-	if p.is_equal_approx(_v2(st.target)):
+	if p.distance_to(_v2(st.target)) < 1e-3:
 		_vec_finish(si)
 		return
 	_vp().fx_x(p)
 	var msg := String(st.nudge)
 	for tr in st.get("traps", []):
-		if p.is_equal_approx(Vector2(float(tr[0]), float(tr[1]))):
+		if p.distance_to(Vector2(float(tr[0]), float(tr[1]))) < 1e-3:
 			msg = String(tr[2])
 	_vwrong(st, msg)
 
@@ -474,7 +474,7 @@ func _custom_reveal(msg: String) -> void:
 ## 滑桿做完：寫了 "keep": true 的箭頭、多邊形留在畫布上
 func _slide_done(st: Dictionary) -> void:
 	for ln in st.get("lines", []):
-		if bool(ln.get("keep", false)) and String(ln.get("k", "")) in ["arrow", "poly", "tag", "balloon"]:
+		if bool(ln.get("keep", st.get("keep", false))) and String(ln.get("k", "")) in ["arrow", "poly", "tag", "balloon"]:
 			var sh := _vp().eval_line(ln, slide_vals)
 			if not sh.is_empty():
 				_vp().kept.append(sh)

@@ -210,6 +210,11 @@ const MISTAKE_INFO := {
 	"vec_indep":       {"name": "不共線時係數唯一", "level": 2},
 	"vec_divide":      {"name": "分點公式（係數交叉）", "level": 1},
 	"vec_divapp":      {"name": "分點的應用（角平分線、內切圓、垂足、面積比）", "level": 2},
+	"vec_collinear":   {"name": "三點共線（係數和 = 1）", "level": 1},
+	"vec_intersect":   {"name": "兩線交點、分線段的比", "level": 2},
+	"vec_region":      {"name": "斜坐標的區域與面積", "level": 2},
+	"vec_coord":       {"name": "坐標表示、單位向量、角平分向量", "level": 1},
+	"vec_weight":      {"name": "加權平均、合力與最小值", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

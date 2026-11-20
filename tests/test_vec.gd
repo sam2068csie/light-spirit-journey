@@ -8,6 +8,7 @@ extends "test_base.gd"
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
+const Bank2 := preload("res://data/levels/vec2/vec2_bank.gd")
 
 var lv
 
@@ -27,11 +28,22 @@ func _initialize() -> void:
 	await _check_place()
 	await _check_path()
 	await _check_weigh()
+	# V2：斜格子播種、加權拉力
+	g.goto("level_vec2_field.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_sow()
+	await _check_pull()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots():
+	for s in Bank.slots() + Bank2.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -201,3 +213,37 @@ func _check_weigh() -> void:
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 2, "B 掛 3、C 掛 1：平衡")
+
+
+func _check_sow() -> void:
+	await _start("sow", 0)
+	lv._on_answer(int(lv.cur_q.correct))
+	await frames(3)
+	ok(lv.si == 1 and String(lv.steps[1].kind) == "vpick" and lv.steps[1].has("skew"), "菱形田：第二步是斜格子播種")
+	var st: Dictionary = lv.steps[1]
+	var tgt := Vector2(float(st.target[0]), float(st.target[1]))
+	# 點在目標旁邊一點點：會吸附到斜格子的交點
+	_press(_px(tgt) + Vector2(4, -3))
+	await frames(2)
+	ok(lv.si == 2, "點在斜格子交點附近就吸附、種對了（現在第 %d 步）" % lv.si)
+	var e0: int = lv.energy
+	var st2: Dictionary = lv.steps[2]
+	var wrong := Vector2(float(st2.target[0]), float(st2.target[1])) + Vector2(1.5, 0)
+	_press(_px(wrong))
+	await frames(2)
+	ok(lv.si == 2 and lv.energy == e0 - 1, "種錯地方：扣一顆心、還在這一步")
+
+
+func _check_pull() -> void:
+	await _start("bands", 0)
+	var st: Dictionary = lv.steps[0]
+	ok(String(st.kind) == "vplace" and st.sandbox.has("pull"), "三條橡皮筋：拖 P 的沙盒有拉力")
+	_press(_px(Vector2(-1, 2)))
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0, "合力不是 0 的地方不算")
+	_press(_px(Vector2(float(st.ans[0]), float(st.ans[1]))))
+	ok(_pl().place_lit(_pl().place_p), "拖到平衡點燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "平衡就過")

@@ -43,11 +43,15 @@ const STORY := {
 	],
 	"V1": [
 		{"text": "風向台的旗子揚起來了。一樣的風，不管從哪裡吹起都一樣。兩陣風首尾接起來，就是合起來的風。", "cam": "site", "site": 0, "zoom": 1.8, "light": 0},
-		{"text": "繩橋上的珠子也穿好了——靠近誰，誰的係數就大！沿著箭桿往前走吧～", "who": "光靈", "cam": "site", "site": 0, "zoom": 1.4, "spirit": 0},
+		{"text": "繩橋上的珠子也穿好了——靠近誰，誰的係數就大！沿著箭頭往前走吧～", "who": "光靈", "cam": "site", "site": 1, "zoom": 1.4, "spirit": 1},
+	],
+	"V2": [
+		{"text": "斜紋麥田的稻子長出來了。每一塊田都有斜斜的地址：沿 AB 方向走 x 格、沿 AC 方向走 y 格。", "cam": "site", "site": 1, "zoom": 1.8, "light": 1},
+		{"text": "x + y = 1 就在直線 BC 上！田埂上的烽台也亮了，坐標一個一個寫好囉～", "who": "光靈", "cam": "site", "site": 1, "zoom": 1.4, "spirit": 1},
 	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:

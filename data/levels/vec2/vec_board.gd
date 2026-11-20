@@ -92,9 +92,39 @@ func arrows_on(ref: String, cb: Callable) -> void:
 	_input_on("arrows", cb)
 
 
-func pts_on(sn: float, cb: Callable) -> void:
+var pick_skew: Dictionary = {}   # 斜格子點選：{o, a, b, div}
+var hover_p := Vector2(INF, INF)
+
+
+func pts_on(sn: float, cb: Callable, skew := {}) -> void:
 	snap_v = sn if sn > 0.0 else 1.0
+	pick_skew = skew
+	hover_p = Vector2(INF, INF)
 	_input_on("pts", cb)
+
+
+## 點選的位置吸附到格子點（有 pick_skew 時吸附到斜格子的交點）
+func _snap_pick(w: Vector2) -> Vector2:
+	if pick_skew.is_empty():
+		return Vector2(snappedf(w.x, snap_v), snappedf(w.y, snap_v))
+	var uv := skew_uv(w)
+	var dv := float(pick_skew.get("div", 1))
+	uv = Vector2(roundf(uv.x * dv) / dv, roundf(uv.y * dv) / dv)
+	return skew_pt(uv)
+
+
+## 斜坐標 ↔ 畫布坐標
+func skew_uv(w: Vector2) -> Vector2:
+	var o := _v(pick_skew.o)
+	var a := _v(pick_skew.a)
+	var b := _v(pick_skew.b)
+	var d := w - o
+	var det := a.x * b.y - a.y * b.x
+	return Vector2((d.x * b.y - d.y * b.x) / det, (a.x * d.y - a.y * d.x) / det)
+
+
+func skew_pt(uv: Vector2) -> Vector2:
+	return _v(pick_skew.o) + _v(pick_skew.a) * uv.x + _v(pick_skew.b) * uv.y
 
 
 var drag_free := true             # false：只能拖題目給的那一支（不能自己畫）
@@ -220,9 +250,11 @@ func _gui_input(e: InputEvent) -> void:
 					_cb.call(id)
 				accept_event()
 		"pts":
+			if e is InputEventMouseMotion:
+				hover_p = _snap_pick(from_px(e.position))
 			if press:
-				var w := from_px(e.position)
-				var p := Vector2(snappedf(w.x, snap_v), snappedf(w.y, snap_v))
+				var p := _snap_pick(from_px(e.position))
+				hover_p = p
 				if _cb.is_valid():
 					_cb.call(p)
 				accept_event()
@@ -341,7 +373,7 @@ func _shape_by_id(id: String) -> Dictionary:
 
 func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 	var kk := String(ln.get("k", "line"))
-	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite"]:
+	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant"]:
 		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
 			return {}
 		var out := ln.duplicate(true)
@@ -542,6 +574,54 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 			if String(sh.get("s", "")) != "":
 				_label(font, c, String(sh.s), [12, -8], col)
 			return
+		"beam":
+			# 光束：從 a 往 b 的方向一直射到畫布邊緣（出現的時候慢慢射出去）
+			var a := _to(_v(sh.a))
+			var d := (_to(_v(sh.b)) - a).normalized()
+			var far := a + d * (size.length() * float(sh.get("len", 1.0)))
+			var k := _anim_k(sh) if sh.has("at") else 1.0
+			var e := a.lerp(far, k)
+			var col := _col(String(sh.get("c", "gold")))
+			draw_line(a, e, Color(col.r, col.g, col.b, 0.16), 10.0, true)
+			draw_line(a, e, Color(col.r, col.g, col.b, 0.85), 2.2, true)
+			return
+		"ruler":
+			# 刻度尺：a 到 b 分成 n 格，前 m 格亮起來
+			var a := _to(_v(sh.a))
+			var b := _to(_v(sh.b))
+			var n := maxi(1, int(sh.get("n", 2)))
+			var m := int(sh.get("m", 0))
+			var col := _col(String(sh.get("c", "gold")))
+			var nr := (b - a).normalized().orthogonal() * 6.0
+			for i in n:
+				var p0 := a.lerp(b, float(i) / n)
+				var p1 := a.lerp(b, float(i + 1) / n)
+				var c := col if i < m else Color(1, 1, 1, 0.55)
+				draw_line(p0 + nr * 0.6, p1 + nr * 0.6, c, 3.0, true)
+			for i in n + 1:
+				var p := a.lerp(b, float(i) / n)
+				draw_line(p - nr + nr * 0.6, p + nr + nr * 0.6, Color(1, 1, 1, 0.8), 1.5, true)
+			return
+		"plant":
+			# 種子：grow 長出稻子、edge 卡在田埂上、dead 長不出來
+			var p := _to(_v(sh.p))
+			var stt := String(sh.get("state", "grow"))
+			var k := _anim_k(sh) if sh.has("at") else 1.0
+			if stt == "grow":
+				for j in 5:
+					var ang := -PI / 2.0 + (j - 2) * 0.28
+					var tip := p + Vector2.from_angle(ang) * 18.0 * k
+					draw_line(p, tip, Color(0.6, 0.85, 0.35), 2.0, true)
+					UITheme.dot(self, tip, 2.4 * k, Color(1.0, 0.85, 0.45))
+			elif stt == "edge":
+				UITheme.dot(self, p, 5.0, Color(0.85, 0.7, 0.45))
+				draw_arc(p, 9.0, 0.0, TAU, 20, Color(1, 1, 1, 0.5), 1.2, true)
+			else:
+				UITheme.dot(self, p, 4.5, Color(0.55, 0.4, 0.3))
+				draw_line(p + Vector2(-6, -6), p + Vector2(6, 6), Color(0.6, 0.3, 0.25), 2.0, true)
+			if String(sh.get("s", "")) != "":
+				_label(font, p, String(sh.s), [8, 12], Color(1, 0.9, 0.7))
+			return
 		"tag":
 			var p := _to(o + _v(sh.p))
 			var col := _col(String(sh.get("c", "text")))
@@ -555,6 +635,14 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 ## 作答模式畫在最上面：拖的箭頭、拖的點、秤桿、鋪的路
 func _draw_modes(font: Font) -> void:
 	match mode:
+		"pts":
+			if is_finite(hover_p.x):
+				var sp := _to(hover_p)
+				UITheme.dot(self, sp, 9.0, Color(1, 0.86, 0.42, 0.25))
+				UITheme.dot(self, sp, 4.5, Color(1, 0.86, 0.42, 0.9))
+				if not pick_skew.is_empty():
+					var uv := skew_uv(hover_p)
+					_label(font, sp, "(%s, %s)" % [_fr_s(uv.x), _fr_s(uv.y)], [10, -10], Color(1, 0.86, 0.42))
 		"drag":
 			if drag_start != "":
 				var sp := _to(named[drag_start])
@@ -577,6 +665,19 @@ func _draw_modes(font: Font) -> void:
 				var closed := poly.duplicate()
 				closed.append(poly[0])
 				_pl(closed, lc, 2.0 if lit else 1.4, not lit)
+			if is_finite(place_p.x) and place_cfg.has("pull"):
+				# 加權拉力：從 P 拉出 w\vec{PQ} 的橡皮筋，再加起來的合力（金色）
+				var tot := Vector2.ZERO
+				var cols := [UITheme.CYAN, UITheme.PINK, UITheme.LIME, UITheme.VIOLET]
+				var k := 0
+				for q in place_cfg.pull:
+					var v := (Vector2(float(q[0]), float(q[1])) - place_p) * float(q[2])
+					tot += v
+					var qc: Color = cols[k % cols.size()]
+					_arrow_px(_to(place_p), _to(place_p + v), Color(qc.r, qc.g, qc.b, 0.55), 2.0)
+					k += 1
+				if tot.length() > 1e-6:
+					_arrow_px(_to(place_p), _to(place_p + tot), UITheme.ACCENT, 4.0, 0.6)
 			if is_finite(place_p.x):
 				var sp := _to(place_p)
 				UITheme.dot(self, sp, 10.0, Color(1, 0.86, 0.42, 0.25))
@@ -707,3 +808,16 @@ func _draw_vfx(font: Font) -> void:
 				draw_line(p + Vector2(-8, 8), p + Vector2(8, -8), xc, 3.0, true)
 				keep.append(f)
 	vfx = keep
+
+
+
+## 斜坐標的讀數：整數、分數（分母到 12）
+static func _fr_s(v: float) -> String:
+	for d in range(1, 13):
+		var n := v * d
+		if absf(n - roundf(n)) < 1e-6:
+			var ni := int(roundf(n))
+			if d == 1:
+				return str(ni).replace("-", "−")
+			return "%s%d/%d" % ["−" if ni < 0 else "", absi(ni), d]
+	return ("%.2f" % v).replace("-", "−")

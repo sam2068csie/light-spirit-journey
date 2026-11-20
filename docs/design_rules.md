@@ -265,9 +265,10 @@
 
 - **八關**，每關 2 章，一章最多 12 題（含速算）（2026/11/20）。講義的 15 個重點照順序併成 8 關，大部分的章對應一個重點。同題型的講義題合成一題的變化。
 - 3-2 重點七「平面上的比例」（黃金比例、紙張、透視）做成地圖彩蛋，不放進關卡（2026/11/20）。
-- V1 風向台做好了（2026/11/20，設計稿 `docs/vec2_v1_design.md`）。單元先用 preview，八關做完再 open。
+- V1 風向台（2026/11/20，設計稿 `docs/vec2_v1_design.md`）、V2 斜紋麥田（2026/11/21，`docs/vec2_v2_design.md`）做好了。單元先用 preview，八關做完再 open。
 - 向量一律寫 `\vec{AB}`、`\vec{a}`（箭頭只有上半撇 ⇀；兩撇的完整箭頭是射線，不能用）。線段長照舊 `\ol{AB}`。
-- 箭頭畫布（`data/levels/vec2/vec_board.gd`）和在圖上作答的步驟（`vec_level.gd`：vtap、vpick、vdrag、vpath、vplace、vweigh）各關共用。
+- 箭頭畫布（`data/levels/vec2/vec_board.gd`）和在圖上作答的步驟（`vec_level.gd`：vtap、vpick（可吸附斜格子）、vdrag、vpath、vplace（可加權拉力）、vweigh）各關共用。點區域用直線與圓的 region（bloom 長稻子）。
+- 坐標裡的負號一律用 −（題庫組字串時用 `_fv`、`_n`，不要直接 `%d`）。
 
 ---
 
