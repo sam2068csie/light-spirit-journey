@@ -1,0 +1,249 @@
+extends "res://data/maps/unit_map_base.gd"
+## 高二「平面向量」的世界地圖：箭羽高原（光潮群島的 3 號島，g11_sea.gd）
+##   ・整座高原是一支往東北的箭：西南角是箭羽，東北角是箭頭
+##   ・高原上的田沿著兩個方向排成平行四邊形（斜方格）
+##   ・八座聖地沿著箭桿從箭尾走到箭頭：V1 風向台 → … → V8（ALL_SITES）。只顯示 units.gd 裡已經有的關卡
+##   ・箭頭上立著終焉之塔（八座聖地蓋好後開放）
+##   ・操作、點亮、劇情都在共用底層 unit_map_base.gd；劇情的 key 都加上 "vec2/"
+## 劇情文字寫在下面的 STORY，可以直接修改。
+
+const UNIT := "vec2"
+const PREFIX := "vec2/"
+
+## 高原的輪廓：往東北的箭頭（逆時針）
+const MESA := [Vector2(70, 560), Vector2(150, 470), Vector2(120, 400), Vector2(230, 430), Vector2(330, 380),
+	Vector2(560, 300), Vector2(800, 210), Vector2(860, 120), Vector2(1100, 70), Vector2(1020, 300), Vector2(930, 270),
+	Vector2(700, 380), Vector2(470, 470), Vector2(330, 530), Vector2(300, 610), Vector2(200, 560)]
+## 斜方格的兩個方向
+const DIR_A := Vector2(44, -16)
+const DIR_B := Vector2(14, 30)
+
+## 八座聖地：沿著箭桿從箭尾到箭頭（p 是位置，lab 是名牌的位置）
+const ALL_SITES := [
+	{"id": "V1", "p": Vector2(250, 500), "lab": Vector2(0, 76)},
+	{"id": "V2", "p": Vector2(360, 440), "lab": Vector2(0, -92)},
+	{"id": "V3", "p": Vector2(470, 400), "lab": Vector2(0, 76)},
+	{"id": "V4", "p": Vector2(580, 350), "lab": Vector2(0, -92)},
+	{"id": "V5", "p": Vector2(690, 310), "lab": Vector2(0, 76)},
+	{"id": "V6", "p": Vector2(790, 270), "lab": Vector2(0, -92)},
+	{"id": "V7", "p": Vector2(880, 230), "lab": Vector2(0, 76)},
+	{"id": "V8", "p": Vector2(960, 170), "lab": Vector2(0, -92)},
+]
+const R := 52.0
+
+## 終焉之塔：箭頭的尖端
+const TOWER_P := Vector2(1040, 110)
+
+const STORY := {
+	"prologue": [
+		{"text": "光潮群島的東北邊，有一座像箭一樣的高原——「箭羽高原」。", "cam": "wide"},
+		{"text": "高原上的田沿著兩個方向排成斜斜的格子，風一吹，芒草像箭羽一樣倒向同一邊。", "cam": "isle0", "zoom": 1.3},
+		{"text": "可是風向台的旗子都垂下來了，沒有風，風箏飛不起來……", "cam": "wide"},
+		{"text": "一支箭頭就是一陣風耶！往哪吹、吹多大，都畫在箭頭上。我們把風找回來吧！", "who": "光靈", "cam": "site", "site": 0, "zoom": 1.7, "spirit": 0, "appear": true},
+	],
+	"V1": [
+		{"text": "風向台的旗子揚起來了。一樣的風，不管從哪裡吹起都一樣。兩陣風首尾接起來，就是合起來的風。", "cam": "site", "site": 0, "zoom": 1.8, "light": 0},
+		{"text": "繩橋上的珠子也穿好了——靠近誰，誰的係數就大！沿著箭桿往前走吧～", "who": "光靈", "cam": "site", "site": 0, "zoom": 1.4, "spirit": 0},
+	],
+}
+
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "epilogue": "終章．平面向量"}
+
+
+static func sites() -> Array:
+	var ids := Units.level_ids(UNIT)
+	return ALL_SITES.filter(func(s): return ids.has(String(s.id)))
+
+
+func _init() -> void:
+	m_sites = sites()
+	m_story = STORY
+	m_titles = STORY_TITLES
+	m_prefix = PREFIX
+	m_unit = UNIT
+	m_tower = TOWER_P
+
+
+static func site_point(i: int) -> Vector2:
+	return Vector2(sites()[i].p)
+
+
+func _site_p(i: int) -> Vector2:
+	return site_point(i)
+
+func _label_p(i: int) -> Vector2:
+	return site_point(i) + Vector2(m_sites[i].lab)
+
+func _hover_p(i: int) -> Vector2:
+	return site_point(i) + Vector2(0, -56)
+
+func _region(p: Vector2) -> int:
+	for i in m_sites.size():
+		if p.distance_to(site_point(i)) < R:
+			return i
+	return -1
+
+func _isle_target(k: int) -> Vector2:
+	return Vector2(300, 470) if k == 0 else Vector2(820, 240)
+
+
+func _rand_point(i: int) -> Vector2:
+	var a := randf() * TAU
+	return site_point(i) + Vector2(cos(a), sin(a) * 0.5) * randf_range(4.0, R - 12.0)
+
+
+## 旅程路線：沿著箭桿
+func _route(i: int) -> PackedVector2Array:
+	var a := site_point(i)
+	var b := site_point(i + 1)
+	return PackedVector2Array([a, a.lerp(b, 0.5) + Vector2(0, 10), b])
+
+
+# ================= 繪圖 =================
+
+const LAND := Color("1f3a40")
+const HIGH := Color("27494e")
+const FIELD := Color("2f5a52")
+const TRAIL := Color(0.6, 0.9, 1.0, 0.3)
+
+
+func _draw_land(layer: CanvasItem) -> void:
+	_tgt = layer
+	var L := layer
+	var mesa := PackedVector2Array(MESA)
+	var c0 := Vector2(560, 340)
+	var big := PackedVector2Array()
+	for p in mesa:
+		big.append(p + (p - c0).normalized() * 14.0)
+	L.draw_colored_polygon(big, Color(0.4, 0.85, 1.0, 0.05))
+	L.draw_colored_polygon(mesa, LAND)
+	var inner := PackedVector2Array()
+	for p in mesa:
+		inner.append(c0 + (p - c0) * 0.95)
+	L.draw_colored_polygon(inner, HIGH)
+	# 斜方格的田：沿著 DIR_A、DIR_B 排成平行四邊形，只畫在高原裡面
+	var o := Vector2(120, 520)
+	for i in range(0, 24):
+		for j in range(-9, 3):
+			if (i + j) % 3 == 0:
+				continue
+			var p0 := o + DIR_A * i + DIR_B * j
+			var cell := PackedVector2Array([p0 + Vector2(2, 1), p0 + DIR_A - Vector2(2, 0), p0 + DIR_A + DIR_B - Vector2(2, 1), p0 + DIR_B + Vector2(2, 0)])
+			var ok := true
+			for q in cell:
+				if not Geometry2D.is_point_in_polygon(q, inner):
+					ok = false
+			if ok:
+				L.draw_colored_polygon(cell, Color(FIELD.r, FIELD.g, FIELD.b, 0.55 + 0.15 * ((i * 7 + j) % 3) / 2.0))
+	var closed := mesa.duplicate()
+	closed.append(mesa[0])
+	L.draw_polyline(closed, Color(0.5, 0.9, 1.0, 0.3), 3.0, true)
+	# 塔的平台
+	UITheme.dot(L, TOWER_P + Vector2(0, 10), 46.0, Color(0.5, 0.9, 1.0, 0.06))
+	UITheme.dot(L, TOWER_P + Vector2(0, 8), 34.0, Color("2c5258"))
+	# 箭桿上的小路
+	for i in m_sites.size() - 1:
+		var pts := _route(i)
+		L.draw_polyline(pts, Color(0, 0, 0, 0.25), 12.0, true)
+		L.draw_polyline(pts, TRAIL, 6.0, true)
+	# 還沒蓋好的聖地：淡淡的小路往箭頭延伸
+	var last := site_point(m_sites.size() - 1) if not m_sites.is_empty() else Vector2(250, 500)
+	var rest := PackedVector2Array([last])
+	for s in ALL_SITES:
+		if Vector2(s.p).x > last.x + 1.0:
+			rest.append(Vector2(s.p))
+	rest.append(TOWER_P)
+	L.draw_polyline(rest, Color(0.6, 0.9, 1.0, 0.1), 4.0, true)
+	for i in m_sites.size():
+		_draw_region_fill(L, i)
+	_draw_details(L)
+	_tgt = self
+
+
+func _draw_region_fill(L: CanvasItem, i: int) -> void:
+	var gl: float = glow[i]
+	var c: Color = Center.level_info(m_sites[i].id).color
+	var p := site_point(i)
+	var pts := PackedVector2Array()
+	for k in 33:
+		var a := TAU * k / 32.0
+		pts.append(p + Vector2(cos(a) * R, sin(a) * R * 0.5))
+	L.draw_colored_polygon(pts, Color(0.15, 0.25, 0.28, 0.6).lerp(Color(c.r, c.g, c.b, 0.3), gl))
+
+
+func _draw_region_ring(i: int) -> void:
+	var gl: float = glow[i]
+	if gl <= 0.01:
+		return
+	var c: Color = Center.level_info(m_sites[i].id).color
+	var pulse := 0.85 + 0.15 * sin(t * 2.0 + i)
+	var p := site_point(i)
+	var pts := PackedVector2Array()
+	for k in 49:
+		var a := TAU * k / 48.0
+		pts.append(p + Vector2(cos(a) * R, sin(a) * R * 0.5))
+	_tgt.draw_polyline(pts, Color(c.r, c.g, c.b, 0.25 * gl * pulse), 7.0)
+	_tgt.draw_polyline(pts, Color(c.r, c.g, c.b, 0.9 * gl).lightened(0.3), 2.0, true)
+
+
+## 高原上的芒草（像箭羽）
+func _make_details() -> Array:
+	var out := []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 73
+	var mesa := PackedVector2Array(MESA)
+	for k in 70:
+		var p := Vector2(rng.randf_range(80, 1090), rng.randf_range(80, 600))
+		if not Geometry2D.is_point_in_polygon(p, mesa) or p.distance_to(TOWER_P) < 50.0:
+			continue
+		var near := false
+		for j in m_sites.size():
+			if p.distance_to(site_point(j)) < R + 20.0 or p.distance_to(_label_p(j)) < 46.0:
+				near = true
+		if not near:
+			out.append({"p": p, "si": 0, "k": k})
+	return out
+
+
+func _fx_under() -> void:
+	# 風：一道一道往東北吹的光
+	for k in 5:
+		var ph := fposmod(t * 0.18 + k * 0.2, 1.0)
+		var a := Vector2(120, 560).lerp(Vector2(1060, 90), ph) + Vector2(0, 40.0 * sin(k * 2.1))
+		var d := Vector2(30, -12)
+		_tgt.draw_line(a, a + d, Color(0.7, 0.95, 1.0, 0.3 * sin(ph * PI)), 2.0, true)
+
+
+## 聖地的地標：V1 是插著風向旗的石台，旗子點亮後會飄起來
+func _draw_landmark(i: int) -> void:
+	var col: Color = Center.level_info(m_sites[i].id).color
+	var gl: float = glow[i]
+	var p := site_point(i) + Vector2(0, -4)
+	var Tg := _tgt
+	var base := Color("3e5a66").lerp(col.darkened(0.15), clampf(0.15 + 0.75 * gl, 0.0, 1.0))
+	var lit_c := Color(col.r, col.g, col.b, 0.25 + 0.75 * gl) if gl > 0.05 else base.lightened(0.25)
+	var sh := PackedVector2Array()
+	for k in 25:
+		var ang := TAU * k / 24.0
+		sh.append(p + Vector2(cos(ang) * 24.0, sin(ang) * 5.0 + 2.0))
+	Tg.draw_colored_polygon(sh, Color(0, 0, 0, 0.25))
+	if i == sel and not playing:
+		var pts := PackedVector2Array()
+		for k in 33:
+			var ang := TAU * k / 32.0
+			pts.append(site_point(i) + Vector2(cos(ang) * 44.0, sin(ang) * 14.0))
+		Tg.draw_polyline(pts, Color(0.6, 0.95, 1.0, 0.5 + 0.3 * sin(t * 4.0)), 2.0, true)
+	if gl > 0.05:
+		UITheme.dot(Tg, p + Vector2(0, -24), 40.0, Color(col.r, col.g, col.b, 0.07 * gl))
+	# 石台
+	Tg.draw_rect(Rect2(p + Vector2(-18, -10), Vector2(36, 10)), base.lightened(0.1))
+	# 旗桿和旗子：亮了就迎風飄
+	Tg.draw_line(p + Vector2(0, -10), p + Vector2(0, -50), base.lightened(0.3), 2.5)
+	var flap := (6.0 * sin(t * 5.0)) if gl > 0.5 else 0.0
+	var fl := PackedVector2Array([p + Vector2(0, -50), p + Vector2(26, -44 + flap * 0.3), p + Vector2(0, -36)]) if gl > 0.5 \
+		else PackedVector2Array([p + Vector2(0, -50), p + Vector2(6, -32), p + Vector2(0, -34)])
+	Tg.draw_colored_polygon(fl, lit_c)
+
+
+func _draw_names(font: Font) -> void:
+	UITheme.text_ol(_tgt, font, Vector2(60, 96), "箭羽高原", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(30), Color(0.6, 0.92, 1.0, 0.88), 6)

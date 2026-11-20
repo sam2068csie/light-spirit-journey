@@ -16,20 +16,24 @@ def div(p, q, m, n):                                       # \ol{pr} : \ol{rq} =
 def dist(p, q): return math.hypot(q[0] - p[0], q[1] - p[1])
 
 # ======== 第一章 ========
-# 1 同一陣風：和 \vec{a} 相等的箭頭（起點不同、向量一樣）
-for a, arrows, same, P, end in [
-        ((3, 1), {"p": ((1, -3), (4, -2)), "q": ((2, 3), (-1, 2)), "r": ((-6, -4), (0, -2)), "s": ((5, 0), (6, 3)), "t": ((-4, 0), (-1, 1))},
-         {"p", "t"}, (-3, -3), (0, -2)),
-        ((-2, 3), {"p": ((3, -2), (1, 1)), "q": ((-5, -3), (-3, -6)), "r": ((4, 1), (2, 4)), "s": ((-6, 0), (-3, 2)), "t": ((0, -4), (-4, 2))},
-         {"p", "r"}, (2, -5), (0, -2))]:
-    got = {k for k, (s, e) in arrows.items() if sub(s, e) == a}
+# 1 同一陣風：和 \vec{a} 相等的箭頭（起點不同、向量一樣），位置和 vec1_bank.gd 一樣
+for a, ref, arrows, same, P in [
+        ((3, 1), ((-7, 1), (-4, 2)), {"p": ((-3, -1), (0, 0)), "q": ((7, 3), (4, 2)), "r": ((-8, -3), (-2, -1)), "s": ((5, -3), (6, 0)), "t": ((1, -3), (4, -2))},
+         {"p", "t"}, (-2, 2)),
+        ((-2, 3), ((-6, -3), (-8, 0)), {"p": ((1, -2), (-1, 1)), "q": ((5, 0), (7, -3)), "r": ((8, -1), (6, 2)), "s": ((1, 1), (4, 3)), "t": ((-2, -3), (-6, 3))},
+         {"p", "r"}, (3, -3))]:
+    assert sub(*ref) == a
+    got = {k for k, (s_, e) in arrows.items() if sub(s_, e) == a}
     assert got == same, got
-    wrong = sorted(sub(s, e) for k, (s, e) in arrows.items() if k not in same)
+    wrong = sorted(sub(s_, e) for k, (s_, e) in arrows.items() if k not in same)
     # 錯的箭頭：反向、兩倍、長度一樣但方向不同，各一支
-    assert sorted([mul(-1, a), mul(2, a), next(w for w in wrong if w not in (mul(-1, a), mul(2, a)))]) == wrong
     rot = next(w for w in wrong if w not in (mul(-1, a), mul(2, a)))
+    assert sorted([mul(-1, a), mul(2, a), rot]) == wrong
     assert rot[0] ** 2 + rot[1] ** 2 == a[0] ** 2 + a[1] ** 2 and cross(rot, a) != 0
-    assert add(P, a) == end
+    end = add(P, a)
+    assert all(abs(c) <= 9 for c in end) and abs(end[1]) <= 4          # 終點在畫布裡
+    for k, (s_, e) in arrows.items():                                     # 終點不和別的箭頭的頭尾重疊
+        assert end != s_ and end != e
 
 # 2 數箭頭：平行四邊形 4 點 → 12 支、8 種；加上中心 O → 20 支、12 種；每一種最多兩支
 def classes(pts):
@@ -56,14 +60,14 @@ def hco(seg, base):
     d = cross(a, b)
     return (F(cross(w, b) / d).limit_denominator(12), F(cross(a, w) / d).limit_denominator(12))
 AB_AF = ("AB", "AF"); AC_AE = ("AC", "AE")
-cards1 = [("AD", (2, 2), True), ("AC", (2, -1), False), ("CE", (-1, 1), True), ("BE", (2, 0), False)]
+cards1 = [("AD", (2, 2), True), ("AC", (1, 2), False), ("CE", (-1, 1), True), ("BE", (-2, 0), False)]
 for seg, claim, ok in cards1:
     assert (hco(seg, AB_AF) == claim) == ok, seg
 assert hco("AC", AB_AF) == (2, 1) and hco("BE", AB_AF) == (0, 2)       # ✕ 卡正確的路
-cards2 = [("AD", (F(2, 3), F(2, 3)), True), ("EC", (-1, 1), False), ("BE", (F(-2, 3), F(4, 3)), True), ("CF", (F(-2, 3), F(4, 3)), False)]
+cards2 = [("AD", (F(2, 3), F(2, 3)), True), ("BD", (1, 0), False), ("FC", (F(4, 3), F(-2, 3)), True), ("AB", (F(2, 3), F(1, 3)), False)]
 for seg, claim, ok in cards2:
     assert (hco(seg, AC_AE) == claim) == ok, seg
-assert hco("EC", AC_AE) == (1, -1) and hco("CF", AC_AE) == (F(-4, 3), F(2, 3))
+assert hco("BD", AC_AE) == (0, 1) and hco("AB", AC_AE) == (F(2, 3), F(-1, 3))
 # ✕ 卡照錯的式子走，終點不在任何一個頂點上也沒關係，只要不是目標點
 for seg, claim, ok in cards1:
     if not ok:
@@ -84,7 +88,7 @@ conds2 = [("\\vec{AD} = \\vec{BC}", lambda A, B, C, D, E: sub(A, D) == sub(B, C)
           ("\\vec{EA} + \\vec{EB} = \\vec{EC} + \\vec{ED}", lambda A, B, C, D, E: add(sub(E, A), sub(E, B)) == add(sub(E, C), sub(E, D)), "x"),
           ("\\vec{BD} = \\vec{BA} + \\vec{BC}", lambda A, B, C, D, E: sub(B, D) == add(sub(B, A), sub(B, C)), "o"),
           ("\\vec{AB} − \\vec{AD} = \\vec{DB}", lambda A, B, C, D, E: add(sub(A, B), mul(-1, sub(A, D))) == sub(D, B), "x")]
-for conds, (A, B, C) in [(conds1, ((-5, -2), (0, -2), (2, 2))), (conds2, ((-4, -1), (1, -3), (3, 1)))]:
+for conds, (A, B, C) in [(conds1, ((-5, -2), (0, -2), (2, 2))), (conds2, ((-3, 0), (1, -2), (3, 0)))]:
     for name, cond, ans in conds:
         for E in [(0, 0), (-5, 4), (6, -6)]:                 # E 放哪裡都一樣
             lit = sandbox(cond, A, B, C, E)
@@ -104,7 +108,7 @@ for conds, (A, B, C) in [(conds1, ((-5, -2), (0, -2), (2, 2))), (conds2, ((-4, -
 
 # 6 伸縮弓：\vec{OX} = k\vec{a} 射得到哪些氣球
 for a, balloons in [((2, 1), {"P": ((4, 2), F(2)), "Q": ((-3, F(-3, 2)), F(-3, 2)), "R": ((3, 2), None)}),
-                    ((1, -2), {"P": ((3, -6), F(3)), "Q": ((-1, 2), F(-1)), "R": ((2, -3), None)})]:
+                    ((2, -1), {"P": ((-4, 2), F(-2)), "Q": ((3, F(-3, 2)), F(3, 2)), "R": ((-3, 2), None)})]:
     for name, (pos, k) in balloons.items():
         if k is None:
             assert cross(a, pos) != 0

@@ -202,6 +202,14 @@ const MISTAKE_INFO := {
 	"elog_lead":       {"name": "最高位數字（尾數）", "level": 2},
 	"elog_inv":        {"name": "由位數反推、反求 n", "level": 3},
 	"elog_napp":       {"name": "位數的應用", "level": 3},
+	# 平面向量（V1～）
+	"vec_equal":       {"name": "相等向量（長度、方向都一樣）", "level": 1},
+	"vec_add":         {"name": "加法與減法（首尾相接、終點減起點）", "level": 1},
+	"vec_lincomb":     {"name": "用兩個向量表示（線性組合）", "level": 1},
+	"vec_parallel":    {"name": "係數積、平行與平行四邊形的判定", "level": 2},
+	"vec_indep":       {"name": "不共線時係數唯一", "level": 2},
+	"vec_divide":      {"name": "分點公式（係數交叉）", "level": 1},
+	"vec_divapp":      {"name": "分點的應用（角平分線、內切圓、垂足、面積比）", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

@@ -64,6 +64,8 @@ static func paint(ci: CanvasItem, theme: String, sz: Vector2, t: float) -> void:
 			_startrail(ci, sz, t)
 		"meadow":
 			_meadow(ci, sz, t)
+		"plateau":
+			_plateau(ci, sz, t)
 
 
 static func h(i: int, k: float = 0.0) -> float:
@@ -1239,3 +1241,51 @@ static func _meadow(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var sway := 2.5 * sin(t * 1.6 + u * 6.0) * v
 		ci.draw_line(p, p + Vector2(sway, -ht), Color(0.95, 0.78, 0.42, 0.22 + 0.1 * v), 1.3)
 		UITheme.dot(ci, p + Vector2(sway, -ht), 1.4 + v, Color(1.0, 0.85, 0.5, 0.25))
+
+
+## 箭羽高原（平面向量）：藍綠色的黃昏、高原的稜線、斜方格的田、往右上吹的風、遠處的風箏和風向旗
+static func _plateau(ci: CanvasItem, sz: Vector2, t: float) -> void:
+	var w := sz.x
+	var hh := sz.y
+	var hz := hh * 0.46
+	_grad(ci, sz, Color("13283a"), Color("08101c"))
+	_glow(ci, sz, hz, Color(0.5, 0.9, 1.0), 0.08)
+	_stars(ci, Vector2(w, hz * 0.8), t, 14, 0.8, Color(0.85, 0.95, 1.0), 401)
+	_ridge(ci, Vector2(w, hz + 2.0), hz - 22.0, 16.0, 0.01, 2.3, Color(0.09, 0.17, 0.22, 0.95))
+	_ridge(ci, Vector2(w, hz + 2.0), hz - 8.0, 8.0, 0.02, 0.7, Color(0.07, 0.13, 0.17, 0.98))
+	# 遠處的風向旗（剪影），旗子往右飄
+	for i in 3:
+		var bx := w * (0.2 + 0.3 * i) + 18.0 * h(i, 402)
+		var by := hz - 6.0 - 5.0 * h(i, 403)
+		ci.draw_line(Vector2(bx, by), Vector2(bx, by - 34.0), Color(0.25, 0.4, 0.48, 0.5), 2.0)
+		var fl := 3.0 * sin(t * 4.0 + i)
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(bx, by - 34.0), Vector2(bx + 18.0, by - 30.0 + fl), Vector2(bx, by - 25.0)]),
+			Color(0.45, 0.85, 0.95, 0.35))
+	# 地面：斜方格的田（兩組方向的田埂）
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(0, hz), Vector2(w, hz), Vector2(w, hh), Vector2(0, hh)]), Color(0.06, 0.1, 0.12, 0.96))
+	for i in 12:
+		var x0 := w * (i / 11.0)
+		ci.draw_line(Vector2(x0 - w * 0.25, hh), Vector2(x0 + 30.0, hz), Color(0.5, 0.9, 1.0, 0.05), 1.2)
+	for j in 5:
+		var v := (j + 1) / 6.0
+		var y := hz + (hh - hz) * v * v
+		ci.draw_line(Vector2(0, y + 8.0 * v), Vector2(w, y - 8.0 * v), Color(0.5, 0.9, 1.0, 0.06), 1.2)
+	# 芒草：像箭羽一樣倒向右邊
+	for i in 60:
+		var u := h(i, 404)
+		var v := 0.15 + 0.85 * h(i, 405)
+		var p := Vector2(u * w, hz + (hh - hz) * v * v)
+		var ht := 5.0 + 11.0 * v
+		var sway := 3.0 + 2.0 * sin(t * 1.8 + u * 6.0)
+		ci.draw_line(p, p + Vector2(sway * v, -ht), Color(0.7, 0.9, 0.85, 0.16 + 0.1 * v), 1.2)
+	# 風：一道一道往右上吹
+	for k in 6:
+		var ph := fposmod(t * 0.12 + k * 0.17, 1.0)
+		var p := Vector2(-60.0 + (w + 120.0) * ph, hz * (0.2 + 0.55 * h(k, 406)) - 30.0 * ph)
+		ci.draw_line(p, p + Vector2(36, -9), Color(0.75, 0.95, 1.0, 0.22 * sin(ph * PI)), 2.0)
+	# 遠處的兩隻風箏
+	for k in 2:
+		var c := Vector2(w * (0.3 + 0.45 * k), hz * (0.3 + 0.12 * k)) + Vector2(6.0 * sin(t * 0.7 + k), 4.0 * sin(t * 1.1 + k))
+		ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -7), c + Vector2(5, 0), c + Vector2(0, 9), c + Vector2(-5, 0)]),
+			Color(1.0, 0.8, 0.45, 0.35) if k == 0 else Color(0.5, 0.9, 1.0, 0.35))
+		ci.draw_line(c + Vector2(0, 9), c + Vector2(-20, hz * 0.5), Color(1, 1, 1, 0.08), 1.0)
