@@ -199,10 +199,98 @@ func _check_npc_talk(w, id: String) -> void:
 	probe.close()
 
 
+## 歐拉在高二的海上划船：一直在海上（船頭船尾都是）、會划遠；光舟靠近就停下來揮手；聊聊說完六個故事
+func _check_euler() -> void:
+	var w = await _world("高二")
+	ok(w != null and w.has_method("_euler_tick"), "高二：海上有歐拉")
+	w.pos = Vector2(760, 2240)                 # 光舟停在港口，不要打擾他
+	w._euler = {}
+	w._euler_tick(0.0)
+	var start: Vector2 = w._euler.p
+	ok(w._euler_ok(start), "歐拉：一開始在海上")
+	var bad := 0
+	var far := 0.0
+	var rowed := false
+	var stopped := false
+	for i in 6000:                             # 模擬 5 分鐘（海龜也跟著游）
+		w.t += 0.05
+		w._euler_tick(0.05)
+		if not w._euler_ok(w._euler.p):
+			bad += 1
+		far = maxf(far, (w._euler.p as Vector2).distance_to(start))
+		rowed = rowed or float(w._euler.row) >= 0.0
+		stopped = stopped or float(w._euler.wait) > 0.0
+	ok(bad == 0, "歐拉：一直在海上（%d 次不在）" % bad)
+	ok(rowed and stopped, "歐拉：會划、也會停下來")
+	ok(far > 1500.0, "歐拉：會划到遠的地方（最遠 %.0f）" % far)
+	# 找一個不在碼頭、彩蛋旁邊的海面，把他放過去，光舟靠近
+	var gp := Vector2.ZERO
+	for q in w.EULER_STARTS:
+		if w._euler_ok(q) and w._euler_spot_ok(q):
+			gp = q
+			break
+	ok(gp != Vector2.ZERO, "歐拉：找得到不在碼頭旁邊的海面")
+	w._euler.p = gp
+	w._euler.goal = gp
+	w.pos = gp + Vector2(-200, 0)
+	w.cam = w.pos
+	w._euler_tick(0.05)
+	ok(String(w._euler.mood) == "talk" and float(w._euler.row) < 0.0 and bool(w._euler.left), "歐拉：光舟靠近 → 停下來、轉向光舟揮手")
+	w._check_world()
+	ok(String(w._near.get("kind", "")) == "euler", "歐拉：靠近 → 可以聊聊")
+	await wait(0.2)
+	ok(w._card.visible and w._card_btn.text == "聊聊" and w._card_title.text == "歐拉", "歐拉：下方卡片顯示名字和「聊聊」")
+	w._state().erase("npc")
+	var seen := {}
+	for k in 6:
+		w._interact()
+		var talk = w._overlay
+		ok(talk != null and talk.has_method("say"), "歐拉：第 %d 次聊天打開對話框" % (k + 1))
+		if talk == null:
+			return
+		if k == 0:
+			ok(String(talk.lines[0].text).contains("我是歐拉"), "歐拉：第一次見面先自我介紹")
+			await wait(0.6)
+			await shot("npc_talk_euler")
+		var story := String(w._state().npc.euler.last)
+		ok(not seen.has(story), "歐拉：還沒聽過的故事先說（第 %d 個：%s）" % [k + 1, story])
+		seen[story] = true
+		var guard := 0
+		while is_instance_valid(talk) and not talk.is_queued_for_deletion() and guard < 40:
+			talk._next()
+			talk._next()
+			guard += 1
+		await wait(0.05)
+		ok(not is_instance_valid(w._overlay), "歐拉：說完最後一句，對話框關掉")
+	ok(seen.size() == 6, "歐拉：六個故事都聽過了")
+	# 每一句都放得進對話框（最多三行）
+	var probe = w.NpcTalk.open(w, [{"who": "歐拉", "npc": w.EulerNpc, "mood": "talk", "text": "測試"}])
+	await wait(0.1)
+	var lab: Label = probe._label
+	var font := lab.get_theme_font("font")
+	var fs := lab.get_theme_font_size("font_size")
+	var worst := 0
+	for key in w.EulerNpc.TALKS:
+		for ln in w.EulerNpc.TALKS[key]:
+			worst = maxi(worst, int(ceil(font.get_string_size(String(ln[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x / lab.size.x)))
+	ok(worst <= 3, "歐拉：每一句最多三行（最長 %d 行）" % worst)
+	probe.close()
+	# 划船中的樣子（側面）
+	w._euler.p = gp
+	w._euler.goal = gp + Vector2(600, 0)
+	w._euler.wait = 0.0
+	w._euler.near_t = 0.0
+	w.pos = gp + Vector2(-460, 0)
+	w.cam = w.pos
+	await wait(1.0)
+	await shot("sea_euler_row")
+
+
 func _initialize() -> void:
 	await setup()
 	g.power_save = false
 	await _check("高二", "trig", "trig", Vector2(1500, 900), Vector2(5000, 3800))
 	await _check("高一", "poly", "h1poly", Vector2(2760, 2600), Vector2(6000, 600))
 	await _check_npcs()
+	await _check_euler()
 	finish("WORLD")
