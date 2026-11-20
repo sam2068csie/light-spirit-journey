@@ -88,13 +88,13 @@ func _check_npcs() -> void:
 	w.pos = Vector2(6800, 600)                 # 光靈站遠一點，不要打擾他們
 	w._npcs = []
 	w._npc_tick(0.0)
-	ok(w._npcs.size() == 2 and w._npc("gauss").size() > 0 and w._npc("ramanujan").size() > 0, "高斯和拉馬努金都在")
+	ok(w._npcs.size() == 3 and w._npc("gauss").size() > 0 and w._npc("ramanujan").size() > 0 and w._npc("newton").size() > 0, "高斯、拉馬努金、牛頓都在")
 	var start := {}
 	for n in w._npcs:
 		start[n.id] = n.p
 		ok(w._free(n.p), "%s：一開始站在能走的地方" % n.script.NAME)
 	var bad := 0
-	var far := {"gauss": 0.0, "ramanujan": 0.0}
+	var far := {"gauss": 0.0, "ramanujan": 0.0, "newton": 0.0}
 	var walked := {}
 	var close := 0
 	for i in 6000:                             # 模擬 5 分鐘
@@ -105,12 +105,14 @@ func _check_npcs() -> void:
 			far[n.id] = maxf(far[n.id], (n.p as Vector2).distance_to(start[n.id]))
 			if float(n.step) >= 0.0:
 				walked[n.id] = true
-		if (w._npcs[0].p as Vector2).distance_to(w._npcs[1].p) < 60.0:
-			close += 1
+		for a in w._npcs.size():
+			for b in range(a + 1, w._npcs.size()):
+				if (w._npcs[a].p as Vector2).distance_to(w._npcs[b].p) < 60.0:
+					close += 1
 	ok(bad == 0, "NPC：一直走在能走的地方（%d 次不在）" % bad)
-	ok(walked.size() == 2, "NPC：兩位都會走")
-	ok(far.gauss > 900.0 and far.ramanujan > 900.0, "NPC：都會晃到遠的地方（高斯 %.0f、拉馬努金 %.0f）" % [far.gauss, far.ramanujan])
-	ok(close < 300, "NPC：兩位不會一直擠在一起（%d 幀）" % close)
+	ok(walked.size() == 3, "NPC：三位都會走")
+	ok(far.gauss > 900.0 and far.ramanujan > 900.0 and far.newton > 900.0, "NPC：都會晃到遠的地方（高斯 %.0f、拉馬努金 %.0f、牛頓 %.0f）" % [far.gauss, far.ramanujan, far.newton])
+	ok(close < 450, "NPC：不會一直擠在一起（%d 幀）" % close)
 	var g: Dictionary = w._npc("gauss")
 	var gp: Vector2 = g.p
 	w.pos = gp + Vector2(-150, 0)
@@ -123,7 +125,7 @@ func _check_npcs() -> void:
 	for i in 200:
 		w._npc_tick(0.05)
 	ok(String(g.mood) != "talk", "高斯：光靈走開 → 繼續晃")
-	for id in ["gauss", "ramanujan"]:
+	for id in ["gauss", "ramanujan", "newton"]:
 		await _check_npc_talk(w, id)
 
 

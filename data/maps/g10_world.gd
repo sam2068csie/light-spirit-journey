@@ -4,7 +4,7 @@ extends "res://data/maps/world_base.gd"
 ##   ・走到地區入口（大門）會跳出卡片，Enter／點按鈕進入
 ##   ・不想跑圖：左上「單元列表」直接選單元進入
 ##   ・地圖裡藏了小解謎（彩蛋），獎勵星塵
-##   ・Q 版高斯、拉馬努金（npc_gauss.gd、npc_ramanujan.gd）在地圖上到處亂晃，光靈走近會停下來揮手；跟他們聊聊會隨機說一個小故事（npc_talk.gd 的對話框）
+##   ・Q 版高斯、拉馬努金、牛頓（npc_gauss.gd、npc_ramanujan.gd、npc_newton.gd）在地圖上到處亂晃，光靈走近會停下來揮手；跟他們聊聊會隨機說一個小故事（npc_talk.gd 的對話框）
 ## 左岸「秋晨之地」是高一上四區（晨光、楓紅、麥田），晨昏之橋過去是右岸「星夜之地」高一下五區（星空、螢火蟲、極光）。
 ## 每個地區的地形都藏著那個單元的數學（不寫算式）：
 ##   數之原野＝方格麥田與數線柵欄　倍增峽谷＝每往下一層、落差加倍的岩層　圓規湖＝正圓的湖、切線棧道、大圓規
@@ -21,6 +21,7 @@ const MathLabel := preload("res://data/ui/math_text.gd")
 const Center := preload("res://data/core/review_center.gd")
 const GaussNpc := preload("res://data/maps/npc_gauss.gd")
 const RamanujanNpc := preload("res://data/maps/npc_ramanujan.gd")
+const NewtonNpc := preload("res://data/maps/npc_newton.gd")
 const NpcTalk := preload("res://data/ui/npc_talk.gd")
 
 const WORLD := Vector2(7200, 4400)
@@ -106,7 +107,7 @@ const STELE_O := Vector2(1300, 556)   # 1×1 石板的左上角
 ## 彩蛋三：橋東邊的骰子攤車
 const DICE_NPC := Vector2(4560, 2860)
 ## 散步的數學家：在地圖上到處亂晃的 NPC（畫法和台詞在各自的 npc_*.gd）
-const NPCS := [{"id": "gauss", "script": GaussNpc}, {"id": "ramanujan", "script": RamanujanNpc}]
+const NPCS := [{"id": "gauss", "script": GaussNpc}, {"id": "ramanujan", "script": RamanujanNpc}, {"id": "newton", "script": NewtonNpc}]
 const NPC_S := 40.0                   # 頭的大小（整個人大約 3.2 倍高，比光靈高一點）
 const NPC_SPEED := 130.0
 const NPC_STARTS := [Vector2(1500, 3560), Vector2(2300, 3300), Vector2(1900, 2050), Vector2(2000, 3000)]
@@ -551,7 +552,7 @@ func _in_cloud(p: Vector2) -> int:
 	return -1
 
 
-# ================= 散步的數學家 NPC（高斯、拉馬努金） =================
+# ================= 散步的數學家 NPC（高斯、拉馬努金、牛頓） =================
 ## 每位走一小段（200～600）就停下來（發呆、摸下巴想事情、笑一笑），再挑下一段。
 ## 每一段大致朝著一個「大方向」（小屋、開放的地區入口、石碑、橋……）走，到了再換，所以整張地圖都會晃到。
 ## 只走 _free 的地方：不進雲、不下水、不穿過樹和建築。光靈走近：停下來、轉向光靈揮手，待久了就笑。
