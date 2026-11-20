@@ -101,7 +101,7 @@ const UNITS := [
 		{"id": "L7", "name": "正負羅盤", "topic": "對數不等式", "file": "level_07_compass.gd", "bank": "level07_bank.gd", "color": UITheme.GOOD},
 		{"id": "L8", "name": "位數望遠鏡", "topic": "首數、尾數與應用", "file": "level_08_telescope.gd", "bank": "level08_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	# 平面向量：規劃中（docs/vec2_plan.md，2026/11/20 草案 v2：一個重點一關，V1～V15，地圖是光潮群島的箭羽高原）
+	# 平面向量：規劃中（docs/vec2_plan.md，2026/11/20 草案 v3：八關 V1～V8，每關 2 章，地圖是光潮群島的箭羽高原）
 	{"id": "vec2", "term": "高二上", "title": "平面向量", "exam": "", "color": UITheme.CYAN, "open": false,
 	 "world": "", "map": "", "tower": "", "tower_name": "", "concepts": "", "levels": []},
 	# ======================= 高二下 =======================
