@@ -33,21 +33,44 @@ var _more_y := 0.0
 
 ## NPC 的頭像：圓框裡畫半身（頭和肩膀）
 class Portrait extends Control:
+	## 圓框裡的半身像：圓形底色當遮罩（clip_children），人畫在子節點 Figure 上，超出圓圈的部分（身體下緣、影子、手）切掉。
+	##   不能只用 clip_contents：那是切成方形，圓圈下面的兩個角會露出身體（2026/11/20 使用者回報）
 	var mood := "talk"
 	var npc = null             # 那位 NPC 的腳本；null：只畫圓框（光靈的頭像疊在上面）
 	var t := 0.0
+	var _fig: Control
+	var _ring: Control
+
+	func _ready() -> void:
+		clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+		_fig = Control.new()
+		_fig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_fig.draw.connect(_draw_figure)
+		add_child(_fig)
+		_ring = Control.new()
+		_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ring.draw.connect(func(): _ring.draw_arc(size / 2.0, size.x / 2.0 - 2.0, 0, TAU, 64, Color("c98a3e"), 4.0, true))
+		add_child(_ring)
+		for n in [_fig, _ring]:
+			n.size = size
+
 	func _process(delta: float) -> void:
 		t += delta
 		queue_redraw()
+		_fig.queue_redraw()
+		_ring.queue_redraw()
+
 	func _draw() -> void:
+		draw_circle(size / 2.0, size.x / 2.0, Color("f3e6c8") if npc != null else Color("2a2f5a"))
+
+	## 半身像：頭放大到框的一半多，腳底落在框的下緣
+	func _draw_figure() -> void:
+		if npc == null:
+			return
 		var c := size / 2.0
 		var r := size.x / 2.0
-		draw_circle(c, r, Color("f3e6c8") if npc != null else Color("2a2f5a"))
-		# 半身像：頭放大到框的一半多，腳底落在框的下緣（再下面被 clip_contents 切掉）
 		var s := r * 0.6
-		if npc != null:
-			npc.draw(self, c + Vector2(0, -r * 0.12 + s * 1.87), s, t, mood)
-		draw_arc(c, r - 2.0, 0, TAU, 64, Color("c98a3e"), 4.0, true)
+		npc.draw(_fig, c + Vector2(0, -r * 0.12 + s * 1.87), s, t, mood)
 
 
 ## 挑一個故事：還沒聽過的先說（隨機）；全部聽過了，就從頭再隨機，但不要跟上一次一樣
@@ -103,7 +126,6 @@ func _ready() -> void:
 	add_child(box)
 	# 頭像（左邊，一半凸出對話框上緣）
 	_portrait = Portrait.new()
-	_portrait.clip_contents = true
 	_portrait.size = Vector2(PORTRAIT, PORTRAIT)
 	_portrait.position = box.position + Vector2(22, -PORTRAIT * 0.42)
 	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
