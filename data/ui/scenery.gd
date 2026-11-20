@@ -1288,4 +1288,4 @@ static func _plateau(ci: CanvasItem, sz: Vector2, t: float) -> void:
 		var c := Vector2(w * (0.3 + 0.45 * k), hz * (0.3 + 0.12 * k)) + Vector2(6.0 * sin(t * 0.7 + k), 4.0 * sin(t * 1.1 + k))
 		ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -7), c + Vector2(5, 0), c + Vector2(0, 9), c + Vector2(-5, 0)]),
 			Color(1.0, 0.8, 0.45, 0.35) if k == 0 else Color(0.5, 0.9, 1.0, 0.35))
-		ci.draw_line(c + Vector2(0, 9), c + Vector2(-20, hz * 0.5), Color(1, 1, 1, 0.08), 1.0)
+		ci.draw_line(c + Vector2(0, 9), c + Vector2(-10, 40), Color(1, 1, 1, 0.06), 1.0)
