@@ -384,38 +384,37 @@ static func _body_side(ci: CanvasItem, p: Vector2, s: float) -> void:
 		UITheme.dot(ci, Vector2(p.x + s * 0.32 + k * s * 0.03, top + s * 0.46 + k * s * 0.13), maxf(1.0, s * 0.035), Color("c9a85a"))
 
 
-## 側面的頭（面向右、四分之三側臉）：五官往右靠，鼻子凸出臉的輪廓一點；布帽往後，布尾垂在後腦勺
+## 側面的頭（面向右）：Q 版的轉頭只要把五官整組往右挪一點、遠的那隻眼睛小一點就好，臉還是圓的
+##   （2026/11/20 使用者：之前的版本畫了大耳朵、鼻子凸出臉的輪廓，「超醜」→ 不要寫實的側臉）
 static func _head_side(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
-	_ell(ci, c + Vector2(-s * 0.56, -s * 0.08), s * 0.16, s * 0.2, HAIR)               # 後腦勺露出一點頭髮
+	_ell(ci, c + Vector2(-s * 0.74, -s * 0.06), s * 0.13, s * 0.17, HAIR)               # 後腦勺露出一點頭髮
 	_ell(ci, c, s * FW, s * FH, SKIN)
-	_ell(ci, c + Vector2(-s * 0.5, s * 0.1), s * 0.13, s * 0.17, SKIN_SH)               # 看得到的那隻耳朵
-	_ell(ci, c + Vector2(-s * 0.5, s * 0.1), s * 0.07, s * 0.1, SKIN)
-	_ell(ci, c + Vector2(s * 0.1, s * 0.62), s * FW * 0.55, s * 0.24, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.18))
-	_cap(ci, c + Vector2(-s * 0.08, 0), s, -1.0)
+	_ell(ci, c + Vector2(s * 0.08, s * 0.62), s * FW * 0.58, s * 0.25, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.18))
+	_cap(ci, c + Vector2(-s * 0.04, 0), s, -1.0)
+	var sh := s * 0.17                                                                     # 五官往右挪多少
+	for x in [-0.44, 0.44]:
+		_ell(ci, c + Vector2(x * s + sh * (1.3 if x > 0.0 else 0.6), s * 0.34), s * (0.11 if x > 0.0 else 0.13), s * 0.08, Color(0.95, 0.5, 0.5, 0.3))
 	var blink := fposmod(t + 2.1, 3.4) < 0.12
 	var lw := maxf(1.4, s * 0.06)
 	for k in 2:
-		var near := k == 0
-		var e := c + Vector2(s * (0.02 if near else 0.44), s * 0.03)
-		var bc := e + Vector2(0, -s * 0.23)
-		ci.draw_arc(bc + Vector2(0, s * 0.1), s * (0.12 if near else 0.09), PI * 1.25, PI * 1.75, 8, BROW, maxf(2.0, s * 0.065), true)
+		var far := k == 1
+		var e := c + Vector2((s * 0.29 if far else -s * 0.31) + sh, s * 0.03)
+		var k_sz := 0.85 if far else 1.0                                                  # 遠的那隻小一點
+		ci.draw_arc(e + Vector2(0, -s * 0.1), s * 0.13 * k_sz, PI * 1.25, PI * 1.75, 8, BROW, maxf(2.0, s * 0.07), true)
 		if blink:
-			ci.draw_line(e + Vector2(-s * 0.07, 0), e + Vector2(s * 0.07, 0), EYE, lw, true)
+			ci.draw_line(e + Vector2(-s * 0.08, 0), e + Vector2(s * 0.08, 0), EYE, lw, true)
 		else:
-			# 遠的那隻是他的右眼：瞇瞇的
-			_ell(ci, e + Vector2(0, 0.0 if near else s * 0.015), s * (0.08 if near else 0.06), s * (0.095 if near else 0.055), EYE)
-			if near:
-				UITheme.dot(ci, e + Vector2(s * 0.01, -s * 0.03), maxf(1.0, s * 0.025), Color(1, 1, 1, 0.9))
-	# 鼻子：圓圓大大的，凸出臉的輪廓（側面才看得出臉朝哪邊）
-	_ell(ci, c + Vector2(s * 0.84, s * 0.25), s * 0.17, s * 0.13, SKIN_SH)
-	_ell(ci, c + Vector2(s * 0.82, s * 0.23), s * 0.15, s * 0.11, SKIN)
-	ci.draw_arc(c + Vector2(s * 0.82, s * 0.26), s * 0.1, PI * 0.2, PI * 0.8, 8, LINE, maxf(1.0, s * 0.03), true)
-	for x in [-0.08, 0.62]:
-		_ell(ci, c + Vector2(s * x, s * 0.34), s * 0.11, s * 0.07, Color(0.95, 0.5, 0.5, 0.3))
+			_ell(ci, e, s * 0.08 * k_sz, s * 0.095 * k_sz, EYE)
+			UITheme.dot(ci, e + Vector2(-s * 0.025, -s * 0.03), maxf(1.0, s * 0.025), Color(1, 1, 1, 0.9))
+			ci.draw_arc(e + Vector2(0, s * 0.04), s * 0.11 * k_sz, PI * 1.15, PI * 1.85, 10, EYE, maxf(1.2, s * 0.04), true)
+	# 鼻子、嘴巴：和正面一樣的畫法，跟著往右挪
+	ci.draw_line(c + Vector2(s * 0.03 + sh * 1.2, s * 0.04), c + Vector2(s * 0.06 + sh * 1.2, s * 0.2), LINE, maxf(1.0, s * 0.03), true)
+	_ell(ci, c + Vector2(s * 0.01 + sh * 1.3, s * 0.27), s * 0.12, s * 0.09, SKIN_SH)
+	_ell(ci, c + Vector2(-s * 0.02 + sh * 1.3, s * 0.25), s * 0.07, s * 0.05, SKIN_HI)
 	var pts := PackedVector2Array()
-	for k in 7:
-		var u := lerpf(-1.0, 1.0, k / 6.0)
-		pts.append(c + Vector2(s * (0.38 + u * 0.12), s * (0.54 + 0.04 * (1.0 - u * u))))
+	for k in 9:
+		var x := lerpf(-1.0, 1.0, k / 8.0)
+		pts.append(c + Vector2(sh * 1.1 + x * s * 0.14, s * 0.53 + s * 0.05 * (1.0 - x * x)))
 	ci.draw_polyline(pts, Color("a5524a"), maxf(1.4, s * 0.05), true)
 
 
