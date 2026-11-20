@@ -1,38 +1,38 @@
 extends "res://data/maps/unit_map_base.gd"
 ## 高二「平面向量」的世界地圖：箭羽高原（光潮群島的 3 號島，g11_sea.gd）
-##   ・整座高原是一支往東北的箭：西南角是箭羽，東北角是箭頭
-##   ・高原上的田沿著兩個方向排成平行四邊形（斜方格）
-##   ・八座聖地沿著箭桿從箭尾走到箭頭：V1 風向台 → … → V8（ALL_SITES）。只顯示 units.gd 裡已經有的關卡
-##   ・箭頭上立著終焉之塔（八座聖地蓋好後開放）
+##   ・圓圓的台地，上面的田沿著兩個方向排成平行四邊形（斜方格）
+##   ・主路是 8 支「首尾相接」的箭頭：每座聖地是一支箭頭的起點，下一座聖地在它的箭頭尖端（2026/11/21 使用者選的 A 案）
+##     V1 風向台 → … → V8（ALL_SITES），最後一支箭頭指到終焉之塔。只顯示 units.gd 裡已經有的關卡，還沒蓋好的路淡淡的
+##   ・一支金色的虛線箭頭從起點直接指到塔：全部箭頭加起來的「合向量」（八座聖地都點亮才亮起來）
 ##   ・操作、點亮、劇情都在共用底層 unit_map_base.gd；劇情的 key 都加上 "vec2/"
 ## 劇情文字寫在下面的 STORY，可以直接修改。
 
 const UNIT := "vec2"
 const PREFIX := "vec2/"
 
-## 高原的輪廓：往東北的箭頭（逆時針）
-const MESA := [Vector2(70, 560), Vector2(150, 470), Vector2(120, 400), Vector2(230, 430), Vector2(330, 380),
-	Vector2(560, 300), Vector2(800, 210), Vector2(860, 120), Vector2(1100, 70), Vector2(1020, 300), Vector2(930, 270),
-	Vector2(700, 380), Vector2(470, 470), Vector2(330, 530), Vector2(300, 610), Vector2(200, 560)]
-## 斜方格的兩個方向
-const DIR_A := Vector2(44, -16)
-const DIR_B := Vector2(14, 30)
+## 高原的輪廓：圓圓的台地（和光潮群島海圖上的 3 號島一樣），用 island_poly() 產生
+const ISLE_C := Vector2(590, 372)
+const ISLE_R := Vector2(540, 272)
+## 斜方格田的兩個方向
+const DIR_A := Vector2(70, -22)
+const DIR_B := Vector2(26, 58)
 
-## 八座聖地：沿著箭桿從箭尾到箭頭（p 是位置，lab 是名牌的位置）
+## 八座聖地：每一座是一支箭頭的起點，箭頭一支接一支（首尾相接），最後一支的箭頭尖端是終焉之塔
+## （p 是位置，lab 是名牌的位置）
 const ALL_SITES := [
-	{"id": "V1", "p": Vector2(250, 500), "lab": Vector2(0, 76)},
-	{"id": "V2", "p": Vector2(360, 440), "lab": Vector2(0, -92)},
-	{"id": "V3", "p": Vector2(470, 400), "lab": Vector2(0, 76)},
-	{"id": "V4", "p": Vector2(580, 350), "lab": Vector2(0, -92)},
-	{"id": "V5", "p": Vector2(690, 310), "lab": Vector2(0, 76)},
-	{"id": "V6", "p": Vector2(790, 270), "lab": Vector2(0, -92)},
-	{"id": "V7", "p": Vector2(880, 230), "lab": Vector2(0, 76)},
-	{"id": "V8", "p": Vector2(960, 170), "lab": Vector2(0, -92)},
+	{"id": "V1", "p": Vector2(150, 500), "lab": Vector2(0, 64)},
+	{"id": "V2", "p": Vector2(290, 440), "lab": Vector2(0, 64)},
+	{"id": "V3", "p": Vector2(320, 320), "lab": Vector2(0, -88)},
+	{"id": "V4", "p": Vector2(450, 352), "lab": Vector2(0, 64)},
+	{"id": "V5", "p": Vector2(540, 240), "lab": Vector2(0, -88)},
+	{"id": "V6", "p": Vector2(670, 312), "lab": Vector2(0, 64)},
+	{"id": "V7", "p": Vector2(760, 214), "lab": Vector2(0, -88)},
+	{"id": "V8", "p": Vector2(880, 266), "lab": Vector2(0, 64)},
 ]
-const R := 52.0
+const R := 44.0
 
-## 終焉之塔：箭頭的尖端
-const TOWER_P := Vector2(1040, 110)
+## 終焉之塔：最後一支箭頭的尖端
+const TOWER_P := Vector2(965, 205)
 
 const STORY := {
 	"prologue": [
@@ -92,72 +92,125 @@ func _rand_point(i: int) -> Vector2:
 	return site_point(i) + Vector2(cos(a), sin(a) * 0.5) * randf_range(4.0, R - 12.0)
 
 
-## 旅程路線：沿著箭桿
+## 旅程路線：沿著那一支箭頭走
 func _route(i: int) -> PackedVector2Array:
-	var a := site_point(i)
-	var b := site_point(i + 1)
-	return PackedVector2Array([a, a.lerp(b, 0.5) + Vector2(0, 10), b])
+	return PackedVector2Array([site_point(i), site_point(i + 1)])
+
+
+## 第 k 支箭頭的起點、終點（k = 0～7；最後一支指到塔）
+static func arrow_ends(k: int) -> Array:
+	var a: Vector2 = ALL_SITES[k].p
+	var b: Vector2 = ALL_SITES[k + 1].p if k + 1 < ALL_SITES.size() else TOWER_P
+	return [a, b]
+
+
+## 台地的輪廓（固定的亂數，每次都一樣）
+static func island_poly() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := 64
+	for i in n:
+		var a := TAU * i / n
+		var r := 1.0 + 0.05 * sin(3.0 * a + 5.0) + 0.03 * sin(7.0 * a + 10.0) + 0.015 * sin(13.0 * a + 2.0)
+		out.append(ISLE_C + Vector2(cos(a) * ISLE_R.x, sin(a) * ISLE_R.y) * r)
+	return out
 
 
 # ================= 繪圖 =================
 
-const LAND := Color("1f3a40")
-const HIGH := Color("27494e")
-const FIELD := Color("2f5a52")
-const TRAIL := Color(0.6, 0.9, 1.0, 0.3)
+const LAND := Color("26584f")
+const CLIFF := Color("1a3a3c")
+const CLIFF2 := Color("1f4a48")
+const CROPS := [Color("d8b45a"), Color("8fa24e"), Color("a990c8"), Color("c48a4a"), Color("6aa0b0")]
+const ROAD_A := Color("78d7ff")
+const ROAD_B := Color("ff96c8")
+const GOLD := Color("ffdc8c")
 
 
 func _draw_land(layer: CanvasItem) -> void:
 	_tgt = layer
 	var L := layer
-	var mesa := PackedVector2Array(MESA)
-	var c0 := Vector2(560, 340)
-	var big := PackedVector2Array()
-	for p in mesa:
-		big.append(p + (p - c0).normalized() * 14.0)
-	L.draw_colored_polygon(big, Color(0.4, 0.85, 1.0, 0.05))
-	L.draw_colored_polygon(mesa, LAND)
+	var isle := island_poly()
+	# 崖壁：往下錯開兩層，比較暗
+	L.draw_colored_polygon(_shift(isle, Vector2(0, 16)), CLIFF)
+	L.draw_colored_polygon(_shift(isle, Vector2(0, 8)), CLIFF2)
+	L.draw_colored_polygon(isle, LAND)
+	# 斜方格的田：沿著 DIR_A、DIR_B 排成平行四邊形，切在台地裡面
 	var inner := PackedVector2Array()
-	for p in mesa:
-		inner.append(c0 + (p - c0) * 0.95)
-	L.draw_colored_polygon(inner, HIGH)
-	# 斜方格的田：沿著 DIR_A、DIR_B 排成平行四邊形，只畫在高原裡面
-	var o := Vector2(120, 520)
-	for i in range(0, 24):
-		for j in range(-9, 3):
-			if (i + j) % 3 == 0:
+	for p in isle:
+		inner.append(ISLE_C + (p - ISLE_C) * 0.95)
+	for i in range(-10, 11):
+		for j in range(-6, 7):
+			if posmod(i * 7 + j * 3, 5) == 0:
 				continue
-			var p0 := o + DIR_A * i + DIR_B * j
-			var cell := PackedVector2Array([p0 + Vector2(2, 1), p0 + DIR_A - Vector2(2, 0), p0 + DIR_A + DIR_B - Vector2(2, 1), p0 + DIR_B + Vector2(2, 0)])
-			var ok := true
+			var o := ISLE_C + DIR_A * i + DIR_B * j
+			var cell := PackedVector2Array([o, o + DIR_A, o + DIR_A + DIR_B, o + DIR_B])
+			var ctr := o + (DIR_A + DIR_B) / 2.0
+			var sh := PackedVector2Array()
 			for q in cell:
-				if not Geometry2D.is_point_in_polygon(q, inner):
-					ok = false
-			if ok:
-				L.draw_colored_polygon(cell, Color(FIELD.r, FIELD.g, FIELD.b, 0.55 + 0.15 * ((i * 7 + j) % 3) / 2.0))
-	var closed := mesa.duplicate()
-	closed.append(mesa[0])
-	L.draw_polyline(closed, Color(0.5, 0.9, 1.0, 0.3), 3.0, true)
+				sh.append(ctr + (q - ctr) * 0.86)
+			for pc in Geometry2D.intersect_polygons(sh, inner):
+				var c: Color = CROPS[posmod(i * 2 + j * 3, CROPS.size())]
+				L.draw_colored_polygon(pc, Color(c.r, c.g, c.b, 0.13))
+	var closed := isle.duplicate()
+	closed.append(isle[0])
+	L.draw_polyline(closed, Color(0.45, 0.85, 0.85, 0.75), 2.5, true)
 	# 塔的平台
-	UITheme.dot(L, TOWER_P + Vector2(0, 10), 46.0, Color(0.5, 0.9, 1.0, 0.06))
-	UITheme.dot(L, TOWER_P + Vector2(0, 8), 34.0, Color("2c5258"))
-	# 箭桿上的小路
-	for i in m_sites.size() - 1:
-		var pts := _route(i)
-		L.draw_polyline(pts, Color(0, 0, 0, 0.25), 12.0, true)
-		L.draw_polyline(pts, TRAIL, 6.0, true)
-	# 還沒蓋好的聖地：淡淡的小路往箭頭延伸
-	var last := site_point(m_sites.size() - 1) if not m_sites.is_empty() else Vector2(250, 500)
-	var rest := PackedVector2Array([last])
-	for s in ALL_SITES:
-		if Vector2(s.p).x > last.x + 1.0:
-			rest.append(Vector2(s.p))
-	rest.append(TOWER_P)
-	L.draw_polyline(rest, Color(0.6, 0.9, 1.0, 0.1), 4.0, true)
+	UITheme.dot(L, TOWER_P + Vector2(0, 6), 40.0, Color(0.5, 0.9, 1.0, 0.07))
+	UITheme.dot(L, TOWER_P + Vector2(0, 4), 28.0, Color("2f6a63"))
 	for i in m_sites.size():
 		_draw_region_fill(L, i)
 	_draw_details(L)
 	_tgt = self
+
+
+static func _shift(poly: PackedVector2Array, d: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in poly:
+		out.append(p + d)
+	return out
+
+
+## 一支箭頭（寬的發光路面＋三角形的頭）。lit：0～1 亮的程度
+func _road_arrow(a: Vector2, b: Vector2, col: Color, lit: float) -> void:
+	var d := b - a
+	var L := d.length()
+	if L < 1.0:
+		return
+	var u := d / L
+	var n := Vector2(-u.y, u.x)
+	var hl := 24.0
+	var base := b - u * hl
+	var a0 := a + u * 10.0
+	var c := Color(col.r, col.g, col.b, 0.25 + 0.75 * lit)
+	if lit > 0.05:
+		_tgt.draw_line(a0, base, Color(col.r, col.g, col.b, 0.18 * lit), 22.0, true)
+	_tgt.draw_line(a0, base + u * 2.0, Color(0, 0, 0, 0.25), 11.0, true)
+	_tgt.draw_line(a0, base + u * 2.0, c, 8.0, true)
+	_tgt.draw_colored_polygon(PackedVector2Array([b, base + n * 13.0, base - n * 13.0]), c)
+	# 路面上一顆一顆往前流的光點
+	if lit > 0.5:
+		for k in 3:
+			var ph := fposmod(t * 0.35 + k / 3.0, 1.0)
+			UITheme.dot(_tgt, a0.lerp(base, ph), 2.6, Color(1, 1, 1, 0.7 * sin(ph * PI)))
+
+
+## 合向量：起點到塔的金色虛線箭頭
+func _resultant(lit: float) -> void:
+	var a: Vector2 = ALL_SITES[0].p
+	var b := TOWER_P
+	var d := b - a
+	var L := d.length()
+	var u := d / L
+	var n := Vector2(-u.y, u.x)
+	var hl := 26.0
+	var col := Color(GOLD.r, GOLD.g, GOLD.b, 0.22 + 0.6 * lit)
+	var s := 12.0
+	while s < L - hl:
+		var e := minf(s + 14.0, L - hl)
+		_tgt.draw_line(a + u * s, a + u * e, col, 3.5, true)
+		s += 28.0
+	var base := b - u * hl
+	_tgt.draw_colored_polygon(PackedVector2Array([b - u * 6.0, base + n * 11.0, base - n * 11.0]), col)
 
 
 func _draw_region_fill(L: CanvasItem, i: int) -> void:
@@ -191,8 +244,8 @@ func _make_details() -> Array:
 	var out := []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 73
-	var mesa := PackedVector2Array(MESA)
-	for k in 70:
+	var mesa := island_poly()
+	for k in 36:
 		var p := Vector2(rng.randf_range(80, 1090), rng.randf_range(80, 600))
 		if not Geometry2D.is_point_in_polygon(p, mesa) or p.distance_to(TOWER_P) < 50.0:
 			continue
@@ -205,13 +258,24 @@ func _make_details() -> Array:
 	return out
 
 
+## 首尾相接的箭頭路、合向量（畫在聖地的地標底下）
 func _fx_under() -> void:
-	# 風：一道一道往東北吹的光
-	for k in 5:
-		var ph := fposmod(t * 0.18 + k * 0.2, 1.0)
-		var a := Vector2(120, 560).lerp(Vector2(1060, 90), ph) + Vector2(0, 40.0 * sin(k * 2.1))
-		var d := Vector2(30, -12)
-		_tgt.draw_line(a, a + d, Color(0.7, 0.95, 1.0, 0.3 * sin(ph * PI)), 2.0, true)
+	var all_done := m_sites.size() == ALL_SITES.size() and not done.has(false)
+	_resultant(1.0 if all_done else 0.0)
+	for k in ALL_SITES.size():
+		var e := arrow_ends(k)
+		var lit := 0.0
+		if k < m_sites.size():
+			lit = clampf(0.7 + 0.3 * glow[k], 0.0, 1.0)
+		_road_arrow(e[0], e[1], ROAD_A if k % 2 == 0 else ROAD_B, lit)
+	# 還沒蓋好的聖地：箭頭接點上一個淡淡的圈
+	for k in range(m_sites.size(), ALL_SITES.size()):
+		var p: Vector2 = ALL_SITES[k].p
+		var pts := PackedVector2Array()
+		for q in 25:
+			var ang := TAU * q / 24.0
+			pts.append(p + Vector2(cos(ang) * 22.0, sin(ang) * 8.0))
+		_tgt.draw_polyline(pts, Color(1, 1, 1, 0.18), 1.5, true)
 
 
 ## 聖地的地標：V1 是插著風向旗的石台，旗子點亮後會飄起來
@@ -247,3 +311,8 @@ func _draw_landmark(i: int) -> void:
 
 func _draw_names(font: Font) -> void:
 	UITheme.text_ol(_tgt, font, Vector2(60, 96), "箭羽高原", HORIZONTAL_ALIGNMENT_LEFT, -1, UITheme.fs(30), Color(0.6, 0.92, 1.0, 0.88), 6)
+
+
+## 旅程路線就是首尾相接的箭頭（_fx_under 畫了），不用再畫一條虛線
+func _draw_path() -> void:
+	pass
