@@ -5,7 +5,8 @@ extends RefCounted
 ##   招牌道具：一支羽毛筆（他一輩子寫了非常多論文）
 ##   在海上坐一艘掛著燈籠的小划船（和光舟分得開：沒有帆、船尾一根燈籠桿、小旗子上寫 e）
 ##   EulerNpc.draw(ci, 腳底的位置, 頭的大小, 時間, 表情, 步伐, 呼叫的人設好的畫布變換)：站著（對話框的頭像）
-##   EulerNpc.draw_boat(ci, 水面上船的位置, 頭的大小, 時間, 表情, 划槳, 畫布變換)：坐在船上
+##   EulerNpc.draw_boat(ci, 水面上船的位置, 頭的大小, 時間, 表情, 划槳, 畫布變換)：坐在船上（正面：停著、聊天）
+##   EulerNpc.draw_boat_side(ci, 水面上船的位置, 頭的大小, 時間, 划槳, 畫布變換)：側面划船（移動中，船頭朝右；往左時整個翻）
 ##   表情：normal（會眨眼）、happy（眼睛彎彎、張嘴笑）、think（拿羽毛筆點下巴、眼睛往上看）、talk（嘴巴一開一合、揮手）
 ##   划槳（row）：弧度，一直加上去；< 0 是停著（槳放在船邊）
 const UITheme := preload("res://data/ui/game_theme.gd")
@@ -70,28 +71,7 @@ static func draw_boat(ci: CanvasItem, p: Vector2, s: float, t: float, mood := "n
 	# 船的內側（看得到一點點船底）
 	_ell(ci, rim, w * 0.94, s * 0.24, WOOD_SH)
 	# 船尾的燈籠桿和寫著 e 的小旗子（在人的後面）
-	var pole := rim + Vector2(-w * 0.8, 0)
-	var ptop := pole + Vector2(-s * 0.15, -s * 2.6)
-	ci.draw_line(pole, ptop, WOOD_SH, maxf(2.0, s * 0.07), true)
-	var flag := PackedVector2Array([ptop + Vector2(0, s * 0.05), ptop + Vector2(s * 0.62, s * 0.18 + sin(t * 5.0) * s * 0.05), ptop + Vector2(0, s * 0.42)])
-	ci.draw_colored_polygon(flag, Color("f5c84c"))
-	if s >= 22.0:
-		# 小旗子上的 e：船整個左右翻（往左划）時，字不要變成鏡像
-		var xf := _base * Transform2D(0.0, ptop + Vector2(s * 0.24, s * 0.22))
-		if _base.determinant() < 0.0:
-			xf = xf * Transform2D.FLIP_X
-		ci.draw_set_transform_matrix(xf)
-		var fs := int(s * 0.32)
-		ci.draw_string(UITheme.bold_font(), Vector2(-s * 0.3, fs * 0.36), "e", HORIZONTAL_ALIGNMENT_CENTER, s * 0.6, fs, Color("7a4d28"))
-		ci.draw_set_transform_matrix(_base)
-	var lamp := ptop + Vector2(s * 0.05, s * 0.62)
-	ci.draw_line(ptop + Vector2(0, s * 0.42), lamp + Vector2(0, -s * 0.12), Color("5a3a22"), maxf(1.0, s * 0.03), true)
-	var glow := 0.75 + 0.25 * sin(t * 3.0)
-	UITheme.dot(ci, lamp, s * 0.55, Color(1.0, 0.85, 0.5, 0.18 * glow))
-	UITheme.dot(ci, lamp, s * 0.3, Color(1.0, 0.85, 0.5, 0.3 * glow))
-	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.11, -s * 0.14), Vector2(s * 0.22, s * 0.28)), Color("ffe7a3"))
-	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.13, -s * 0.18), Vector2(s * 0.26, s * 0.06)), Color("5a3a22"))
-	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.13, s * 0.13), Vector2(s * 0.26, s * 0.05)), Color("5a3a22"))
+	_lantern(ci, rim + Vector2(-w * 0.8, 0), s, t)
 	# 人（坐著：腳底放在船身裡面，腰以下會被船身擋住）
 	_figure(ci, rim + Vector2(0, s * 0.42), s, t, mood, row, bob)
 	# 船身（正面）：上緣一條亮邊，下面圓圓的
@@ -232,40 +212,7 @@ static func _head(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, 
 	# 臉：圓圓的，下巴豐滿
 	_ell(ci, c, s * FW, s * FH, SKIN)
 	_ell(ci, c + Vector2(0, s * 0.62), s * FW * 0.6, s * 0.26, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.18))
-	# 布帽（2026/11/20 改）：只包住頭頂，下緣是一圈捲起來的布邊，停在額頭上面（眉毛、眼睛整個露出來）；
-	#   上面的布比頭寬一點、一圈一圈斜斜地纏上去，右邊垂一條布尾到耳朵旁。
-	#   不要畫成從臉上蓋下來的大橢圓：眼睛會「被遮住又沒遮住」，整頂看起來像包子
-	var cap := PackedVector2Array()
-	for k in 17:                                           # 下緣：額頭中間最高、兩邊往下到太陽穴
-		var x := lerpf(-1.0, 1.0, k / 16.0)
-		cap.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
-	for k in 21:                                           # 上面：從右邊繞過頭頂到左邊，比頭寬、比頭高
-		var a := TAU - PI * k / 20.0
-		cap.append(c + Vector2(s * 0.03 + cos(a) * s * 0.98, -s * 0.5 + sin(a) * s * 0.66))
-	ci.draw_colored_polygon(GW_shift(cap, Vector2(s * 0.04, s * 0.04)), WRAP_SH)
-	ci.draw_colored_polygon(cap, WRAP)
-	# 纏上去的布：幾條斜斜的弧線（左下往右上）
-	for k in 3:
-		var o := c + Vector2(s * (0.5 - k * 0.32), s * (0.2 - k * 0.06))
-		ci.draw_arc(o, s, PI * 1.25, PI * 1.45, 12, WRAP_LINE, maxf(1.0, s * 0.032), true)
-	# 捲起來的布邊：沿著下緣一條比較深的帶子，上面幾道短短的斜紋
-	var band := PackedVector2Array()
-	for k in 17:
-		var x := lerpf(-1.0, 1.0, k / 16.0)
-		band.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
-	for k in range(16, -1, -1):
-		var x := lerpf(-1.0, 1.0, k / 16.0)
-		band.append(c + Vector2(x * s * 0.94, -s * 0.58 + x * x * s * 0.24))
-	ci.draw_colored_polygon(band, WRAP_SH)
-	for k in 7:
-		var x := lerpf(-0.8, 0.8, k / 6.0)
-		var y := -s * 0.5 + x * x * s * 0.25
-		ci.draw_line(c + Vector2(x * s * 0.93 - s * 0.04, y + s * 0.07), c + Vector2(x * s * 0.93 + s * 0.05, y - s * 0.07), WRAP_LINE, maxf(1.0, s * 0.03), true)
-	# 布尾：從右邊垂到耳朵旁
-	var tail := PackedVector2Array([c + Vector2(s * 0.8, -s * 0.36), c + Vector2(s * 1.02, -s * 0.42),
-		c + Vector2(s * 1.12, s * 0.12), c + Vector2(s * 0.96, s * 0.2)])
-	ci.draw_colored_polygon(tail, WRAP_SH)
-	ci.draw_polyline(PackedVector2Array([tail[1], tail[2]]), WRAP_LINE, maxf(1.0, s * 0.03), true)
+	_cap(ci, c, s, 1.0)
 	# 腮紅
 	for sx in [-1.0, 1.0]:
 		_ell(ci, c + Vector2(sx * s * 0.44, s * 0.34), s * 0.13, s * 0.08, Color(0.95, 0.5, 0.5, 0.3))
@@ -312,6 +259,164 @@ static func _face(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, 
 				var x := lerpf(-1.0, 1.0, k / 8.0)
 				pts.append(m + Vector2(x * s * 0.15, s * 0.05 * (1.0 - x * x)))
 			ci.draw_polyline(pts, lip, maxf(1.4, s * 0.05), true)
+
+
+## 布帽（2026/11/20 改）：只包住頭頂，下緣是一圈捲起來的布邊，停在額頭上面（眉毛、眼睛整個露出來）；
+##   上面的布比頭寬一點、一圈一圈斜斜地纏上去，垂一條布尾到耳朵旁（tail：1 右邊、-1 左邊；側面時垂在後腦勺那邊）。
+##   不要畫成從臉上蓋下來的大橢圓：眼睛會「被遮住又沒遮住」，整頂看起來像包子
+static func _cap(ci: CanvasItem, c: Vector2, s: float, tail: float) -> void:
+	var cap := PackedVector2Array()
+	for k in 17:                                           # 下緣：額頭中間最高、兩邊往下到太陽穴
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		cap.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
+	for k in 21:                                           # 上面：從右邊繞過頭頂到左邊，比頭寬、比頭高
+		var a := TAU - PI * k / 20.0
+		cap.append(c + Vector2(s * 0.03 + cos(a) * s * 0.98, -s * 0.5 + sin(a) * s * 0.66))
+	ci.draw_colored_polygon(GW_shift(cap, Vector2(s * 0.04, s * 0.04)), WRAP_SH)
+	ci.draw_colored_polygon(cap, WRAP)
+	# 纏上去的布：幾條斜斜的弧線（左下往右上）
+	for k in 3:
+		var o := c + Vector2(s * (0.5 - k * 0.32), s * (0.2 - k * 0.06))
+		ci.draw_arc(o, s, PI * 1.25, PI * 1.45, 12, WRAP_LINE, maxf(1.0, s * 0.032), true)
+	# 捲起來的布邊：沿著下緣一條比較深的帶子，上面幾道短短的斜紋
+	var band := PackedVector2Array()
+	for k in 17:
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		band.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
+	for k in range(16, -1, -1):
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		band.append(c + Vector2(x * s * 0.94, -s * 0.58 + x * x * s * 0.24))
+	ci.draw_colored_polygon(band, WRAP_SH)
+	for k in 7:
+		var x := lerpf(-0.8, 0.8, k / 6.0)
+		var y := -s * 0.5 + x * x * s * 0.25
+		ci.draw_line(c + Vector2(x * s * 0.93 - s * 0.04, y + s * 0.07), c + Vector2(x * s * 0.93 + s * 0.05, y - s * 0.07), WRAP_LINE, maxf(1.0, s * 0.03), true)
+	# 布尾
+	var tl := PackedVector2Array([c + Vector2(tail * s * 0.8, -s * 0.36), c + Vector2(tail * s * 1.02, -s * 0.42),
+		c + Vector2(tail * s * 1.12, s * 0.12), c + Vector2(tail * s * 0.96, s * 0.2)])
+	ci.draw_colored_polygon(tl, WRAP_SH)
+	ci.draw_polyline(PackedVector2Array([tl[1], tl[2]]), WRAP_LINE, maxf(1.0, s * 0.03), true)
+
+# ───────────────────────── 側面划船（移動中） ─────────────────────────
+## 移動中用側面：船頭朝右（往左划時呼叫的人把整個左右翻），他側身朝前划；停下來、光靈靠近時用正面的 draw_boat
+## （真的划船是背對前進方向坐的；這裡讓他面向前方，玩家比較看得懂他要去哪裡）
+static func draw_boat_side(ci: CanvasItem, p: Vector2, s: float, t: float, row: float, base := Transform2D.IDENTITY) -> void:
+	_base = base
+	var bob := sin(t * 2.3) * s * 0.04
+	var L := s * 2.1                  # 船身半長
+	var rim := p + Vector2(0, -s * 0.12 + bob)
+	var r := maxf(row, 0.0)
+	_ell(ci, p + Vector2(0, s * 0.3), L * 1.1, s * 0.24, Color(0, 0, 0, 0.18))
+	# 船尾拖出去的水紋（往後飄）
+	for k in 3:
+		var ph := fposmod(t * 0.7 + k / 3.0, 1.0)
+		var wx := p + Vector2(-L * (0.95 + ph * 0.8), s * (0.36 + 0.06 * sin(k * 2.0)))
+		ci.draw_line(wx, wx + Vector2(-s * 0.5, 0), Color(1, 1, 1, 0.45 * (1.0 - ph)), maxf(1.0, s * 0.04), true)
+	# 船的內側
+	_ell(ci, rim + Vector2(0, -s * 0.02), L * 0.9, s * 0.16, WOOD_SH)
+	# 船尾的燈籠桿（在人的後面）
+	_lantern(ci, rim + Vector2(-L * 0.8, 0), s, t)
+	# 人：遠的那隻手和槳、身體、頭、近的那隻手
+	var foot := rim + Vector2(s * 0.05, s * 0.5)
+	var top := foot.y - s * 0.95
+	var pull := sin(r) * s * 0.3                         # 手前後拉
+	var hand_far := Vector2(foot.x + s * 0.42 + pull, top + s * 0.5)
+	var hand_near := Vector2(foot.x + s * 0.48 + pull, top + s * 0.56)
+	var blade_far := rim + Vector2(-s * 0.4 - pull * 2.2, s * 0.46 - cos(r) * s * 0.1)
+	ci.draw_line(hand_far, blade_far, WOOD_SH.darkened(0.2), maxf(1.4, s * 0.05), true)
+	_arm(ci, Vector2(foot.x + s * 0.06, top + s * 0.26), hand_far, s)
+	_body_side(ci, foot, s)
+	_head_side(ci, foot + Vector2(0, -s * 0.95 - s * 0.82 + bob * 0.5), s, t)
+	# 船身（側面）：船頭翹起來
+	var hull := PackedVector2Array([rim + Vector2(-L, -s * 0.04), rim + Vector2(-L * 0.5, s * 0.02), rim + Vector2(0, s * 0.03),
+		rim + Vector2(L * 0.55, 0), rim + Vector2(L * 0.88, -s * 0.12), rim + Vector2(L * 1.08, -s * 0.34),
+		rim + Vector2(L * 0.88, s * 0.18), rim + Vector2(L * 0.45, s * 0.46), rim + Vector2(0, s * 0.54),
+		rim + Vector2(-L * 0.5, s * 0.48), rim + Vector2(-L * 0.94, s * 0.28)])
+	ci.draw_colored_polygon(hull, WOOD)
+	for k in 2:
+		var y := s * (0.2 + k * 0.16)
+		ci.draw_line(rim + Vector2(-L * (0.92 - k * 0.06), y), rim + Vector2(L * (0.84 - k * 0.12), y - s * 0.02), WOOD_SH, maxf(1.0, s * 0.035), true)
+	ci.draw_polyline(hull.slice(0, 6), WOOD_HI, maxf(2.0, s * 0.08), true)
+	# 近的那支槳和那隻手（蓋在船身前面）
+	var blade := rim + Vector2(-s * 0.2 - pull * 2.4, s * 0.62 - cos(r) * s * 0.12)
+	ci.draw_line(hand_near, blade, WOOD_SH, maxf(1.6, s * 0.06), true)
+	_ell(ci, blade, s * 0.2, s * 0.07, WOOD)
+	if cos(r) > 0.7:
+		UITheme.dot(ci, blade + Vector2(-s * 0.2, -s * 0.06), s * 0.06, Color(1, 1, 1, 0.7))     # 水花
+	_arm(ci, Vector2(foot.x + s * 0.02, top + s * 0.3), hand_near, s)
+
+
+## 船尾的燈籠桿、寫著 e 的小旗子、燈籠（正面和側面共用）
+static func _lantern(ci: CanvasItem, pole: Vector2, s: float, t: float) -> void:
+	var ptop := pole + Vector2(-s * 0.15, -s * 2.6)
+	ci.draw_line(pole, ptop, WOOD_SH, maxf(2.0, s * 0.07), true)
+	var flag := PackedVector2Array([ptop + Vector2(0, s * 0.05), ptop + Vector2(s * 0.62, s * 0.18 + sin(t * 5.0) * s * 0.05), ptop + Vector2(0, s * 0.42)])
+	ci.draw_colored_polygon(flag, Color("f5c84c"))
+	if s >= 22.0:
+		# 小旗子上的 e：船整個左右翻（往左划）時，字不要變成鏡像
+		var xf := _base * Transform2D(0.0, ptop + Vector2(s * 0.24, s * 0.22))
+		if _base.determinant() < 0.0:
+			xf = xf * Transform2D.FLIP_X
+		ci.draw_set_transform_matrix(xf)
+		var fs := int(s * 0.32)
+		ci.draw_string(UITheme.bold_font(), Vector2(-s * 0.3, fs * 0.36), "e", HORIZONTAL_ALIGNMENT_CENTER, s * 0.6, fs, Color("7a4d28"))
+		ci.draw_set_transform_matrix(_base)
+	var lamp := ptop + Vector2(s * 0.05, s * 0.62)
+	ci.draw_line(ptop + Vector2(0, s * 0.42), lamp + Vector2(0, -s * 0.12), Color("5a3a22"), maxf(1.0, s * 0.03), true)
+	var glow := 0.75 + 0.25 * sin(t * 3.0)
+	UITheme.dot(ci, lamp, s * 0.55, Color(1.0, 0.85, 0.5, 0.18 * glow))
+	UITheme.dot(ci, lamp, s * 0.3, Color(1.0, 0.85, 0.5, 0.3 * glow))
+	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.11, -s * 0.14), Vector2(s * 0.22, s * 0.28)), Color("ffe7a3"))
+	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.13, -s * 0.18), Vector2(s * 0.26, s * 0.06)), Color("5a3a22"))
+	ci.draw_rect(Rect2(lamp + Vector2(-s * 0.13, s * 0.13), Vector2(s * 0.26, s * 0.05)), Color("5a3a22"))
+
+
+## 側面的身體（面向右）：外套、前面的白領巾和鈕扣在右邊
+static func _body_side(ci: CanvasItem, p: Vector2, s: float) -> void:
+	var top := p.y - s * 0.95
+	var coat := PackedVector2Array([Vector2(p.x - s * 0.34, top + s * 0.06), Vector2(p.x + s * 0.3, top + s * 0.04),
+		Vector2(p.x + s * 0.46, p.y - s * 0.1), Vector2(p.x - s * 0.48, p.y - s * 0.1)])
+	ci.draw_colored_polygon(coat, COAT)
+	ci.draw_colored_polygon(PackedVector2Array([coat[0], coat[0] + Vector2(s * 0.3, -s * 0.02), coat[3] + Vector2(s * 0.34, 0), coat[3]]), COAT_SH)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(p.x + s * 0.08, top), Vector2(p.x + s * 0.3, top + s * 0.02),
+		Vector2(p.x + s * 0.3, top + s * 0.36), Vector2(p.x + s * 0.14, top + s * 0.36)]), CRAVAT)
+	for k in 3:
+		UITheme.dot(ci, Vector2(p.x + s * 0.32 + k * s * 0.03, top + s * 0.46 + k * s * 0.13), maxf(1.0, s * 0.035), Color("c9a85a"))
+
+
+## 側面的頭（面向右、四分之三側臉）：五官往右靠，鼻子凸出臉的輪廓一點；布帽往後，布尾垂在後腦勺
+static func _head_side(ci: CanvasItem, c: Vector2, s: float, t: float) -> void:
+	_ell(ci, c + Vector2(-s * 0.56, -s * 0.08), s * 0.16, s * 0.2, HAIR)               # 後腦勺露出一點頭髮
+	_ell(ci, c, s * FW, s * FH, SKIN)
+	_ell(ci, c + Vector2(-s * 0.5, s * 0.1), s * 0.13, s * 0.17, SKIN_SH)               # 看得到的那隻耳朵
+	_ell(ci, c + Vector2(-s * 0.5, s * 0.1), s * 0.07, s * 0.1, SKIN)
+	_ell(ci, c + Vector2(s * 0.1, s * 0.62), s * FW * 0.55, s * 0.24, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.18))
+	_cap(ci, c + Vector2(-s * 0.08, 0), s, -1.0)
+	var blink := fposmod(t + 2.1, 3.4) < 0.12
+	var lw := maxf(1.4, s * 0.06)
+	for k in 2:
+		var near := k == 0
+		var e := c + Vector2(s * (0.02 if near else 0.44), s * 0.03)
+		var bc := e + Vector2(0, -s * 0.23)
+		ci.draw_arc(bc + Vector2(0, s * 0.1), s * (0.12 if near else 0.09), PI * 1.25, PI * 1.75, 8, BROW, maxf(2.0, s * 0.065), true)
+		if blink:
+			ci.draw_line(e + Vector2(-s * 0.07, 0), e + Vector2(s * 0.07, 0), EYE, lw, true)
+		else:
+			# 遠的那隻是他的右眼：瞇瞇的
+			_ell(ci, e + Vector2(0, 0.0 if near else s * 0.015), s * (0.08 if near else 0.06), s * (0.095 if near else 0.055), EYE)
+			if near:
+				UITheme.dot(ci, e + Vector2(s * 0.01, -s * 0.03), maxf(1.0, s * 0.025), Color(1, 1, 1, 0.9))
+	# 鼻子：圓圓大大的，凸出臉的輪廓（側面才看得出臉朝哪邊）
+	_ell(ci, c + Vector2(s * 0.84, s * 0.25), s * 0.17, s * 0.13, SKIN_SH)
+	_ell(ci, c + Vector2(s * 0.82, s * 0.23), s * 0.15, s * 0.11, SKIN)
+	ci.draw_arc(c + Vector2(s * 0.82, s * 0.26), s * 0.1, PI * 0.2, PI * 0.8, 8, LINE, maxf(1.0, s * 0.03), true)
+	for x in [-0.08, 0.62]:
+		_ell(ci, c + Vector2(s * x, s * 0.34), s * 0.11, s * 0.07, Color(0.95, 0.5, 0.5, 0.3))
+	var pts := PackedVector2Array()
+	for k in 7:
+		var u := lerpf(-1.0, 1.0, k / 6.0)
+		pts.append(c + Vector2(s * (0.38 + u * 0.12), s * (0.54 + 0.04 * (1.0 - u * u))))
+	ci.draw_polyline(pts, Color("a5524a"), maxf(1.4, s * 0.05), true)
 
 
 static func GW_shift(pts: PackedVector2Array, d: Vector2) -> PackedVector2Array:
