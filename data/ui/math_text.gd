@@ -206,7 +206,7 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				out[k]["rm"] = true
 			continue
 		# 線段的上橫線：\ol{AB}、弧：\arc{AB}、向量：\vec{AB}、\vec{a}（用根號的機制，只畫上面那條槓、弧線或箭頭，不畫勾）
-		#   向量是「字上方一支往右的箭頭」，和線段（只有橫線）、弧不一樣；射線另外用自己的標記，不要拿 \vec 代替
+		#   向量是「字上方一支往右、只有上半撇的箭頭」（⇀），和線段（只有橫線）、弧、射線（完整箭頭）都不一樣
 		if c == "\\" and (s.substr(i, 4) == "\\ol{" or s.substr(i, 5) == "\\arc{" or s.substr(i, 5) == "\\vec{"):
 			var kind := "ol"
 			if s.substr(i, 5) == "\\arc{":
@@ -1264,15 +1264,14 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			ci.draw_line(Vector2(o.pos.x + off.x + sz * 0.04, oy), Vector2(x_end - sz * 0.02, oy), o.color, olw, true)
 			continue
 		if o.get("idx", "") == "vec":
-			# 向量符號：字的上方一支往右的箭頭（線比線段的橫線高一點，留位置給箭頭的兩撇）
+			# 向量符號：字的上方一支往右、箭頭只有上半撇的鉤（⇀）。兩撇都畫的完整箭頭是射線符號，不能用（2026/11/20 使用者指正）
 			var vw := maxf(1.0, sz * 0.06)
 			var vx0: float = o.pos.x + off.x + sz * 0.02
 			var vx1: float = maxf(x_end - sz * 0.01, vx0 + sz * 0.42)   # 單一個字母（\vec{a}）也要看得出是箭頭
 			var vy := top - sz * 0.06
-			var hl := sz * 0.15
+			var hl := sz * 0.2
 			ci.draw_line(Vector2(vx0, vy), Vector2(vx1, vy), o.color, vw, true)
-			ci.draw_polyline(PackedVector2Array([Vector2(vx1 - hl, vy - hl * 0.6), Vector2(vx1, vy),
-				Vector2(vx1 - hl, vy + hl * 0.6)]), o.color, vw, true)
+			ci.draw_line(Vector2(vx1 - hl, vy - hl * 0.55), Vector2(vx1, vy), o.color, vw, true)
 			continue
 		if o.get("idx", "") == "arc":
 			# 弧的符號：字的上方一條向上拱的弧線（兩端稍微低一點）
