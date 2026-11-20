@@ -205,15 +205,20 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 			for k in range(r0, out.size()):
 				out[k]["rm"] = true
 			continue
-		# 線段的上橫線：\ol{AB}、弧：\arc{AB}（用根號的機制，只畫上面那條槓或弧線、不畫勾）
-		if c == "\\" and (s.substr(i, 4) == "\\ol{" or s.substr(i, 5) == "\\arc{"):
-			var is_arc := s.substr(i, 5) == "\\arc{"
+		# 線段的上橫線：\ol{AB}、弧：\arc{AB}、向量：\vec{AB}、\vec{a}（用根號的機制，只畫上面那條槓、弧線或箭頭，不畫勾）
+		#   向量是「字上方一支往右的箭頭」，和線段（只有橫線）、弧不一樣；射線另外用自己的標記，不要拿 \vec 代替
+		if c == "\\" and (s.substr(i, 4) == "\\ol{" or s.substr(i, 5) == "\\arc{" or s.substr(i, 5) == "\\vec{"):
+			var kind := "ol"
+			if s.substr(i, 5) == "\\arc{":
+				kind = "arc"
+			elif s.substr(i, 5) == "\\vec{":
+				kind = "vec"
 			var oid := out.size()
 			out.append({"ch": "", "scale": scale, "dy": dy, "color": colors.back(), "glue": glue, "rad": oid, "rads": rads,
-				"idx": "arc" if is_arc else "ol"})
+				"idx": kind})
 			var inner_o := rads.duplicate()
 			inner_o.append(oid)
-			i = _parse_into(s, i + (5 if is_arc else 4), scale, dy, colors, out, true, true, inner_o)
+			i = _parse_into(s, i + (4 if kind == "ol" else 5), scale, dy, colors, out, true, true, inner_o)
 			continue
 		# 根號：√{…}，裡面的字都記得自己在哪個根號底下
 		if (c == "√" or c == "∛" or c == "∜") and i + 1 < s.length() and s[i + 1] == "{":
@@ -1257,6 +1262,17 @@ static func draw_radicals(ci: CanvasItem, glyphs: Array, off: Vector2) -> void:
 			var olw := maxf(1.0, sz * 0.06)
 			var oy := top - sz * 0.02
 			ci.draw_line(Vector2(o.pos.x + off.x + sz * 0.04, oy), Vector2(x_end - sz * 0.02, oy), o.color, olw, true)
+			continue
+		if o.get("idx", "") == "vec":
+			# 向量符號：字的上方一支往右的箭頭（線比線段的橫線高一點，留位置給箭頭的兩撇）
+			var vw := maxf(1.0, sz * 0.06)
+			var vx0: float = o.pos.x + off.x + sz * 0.02
+			var vx1: float = maxf(x_end - sz * 0.01, vx0 + sz * 0.42)   # 單一個字母（\vec{a}）也要看得出是箭頭
+			var vy := top - sz * 0.06
+			var hl := sz * 0.15
+			ci.draw_line(Vector2(vx0, vy), Vector2(vx1, vy), o.color, vw, true)
+			ci.draw_polyline(PackedVector2Array([Vector2(vx1 - hl, vy - hl * 0.6), Vector2(vx1, vy),
+				Vector2(vx1 - hl, vy + hl * 0.6)]), o.color, vw, true)
 			continue
 		if o.get("idx", "") == "arc":
 			# 弧的符號：字的上方一條向上拱的弧線（兩端稍微低一點）
