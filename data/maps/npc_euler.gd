@@ -228,31 +228,43 @@ static func _head(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, 
 	for sx in [-1.0, 1.0]:
 		_ell(ci, c + Vector2(sx * s * FW * 0.98, s * 0.1), s * 0.13, s * 0.17, SKIN_SH)
 		_ell(ci, c + Vector2(sx * s * FW * 0.97, s * 0.1), s * 0.07, s * 0.1, SKIN)
-		_ell(ci, c + Vector2(sx * s * FW * 0.92, -s * 0.24), s * 0.12, s * 0.16, HAIR)
+		_ell(ci, c + Vector2(sx * s * FW * 0.95, -s * 0.12), s * 0.11, s * 0.15, HAIR)
 	# 臉：圓圓的，下巴豐滿
 	_ell(ci, c, s * FW, s * FH, SKIN)
 	_ell(ci, c + Vector2(0, s * 0.62), s * FW * 0.6, s * 0.26, Color(SKIN_SH.r, SKIN_SH.g, SKIN_SH.b, 0.18))
-	# 布帽：圓鼓鼓地包住頭頂，前面一道折起來的邊，右上角垂下一小段布尾
-	_ell(ci, c + Vector2(s * 0.04, -s * 0.6), s * 1.0, s * 0.66, WRAP_SH)
-	_ell(ci, c + Vector2(0, -s * 0.64), s * 0.97, s * 0.64, WRAP)
-	_ell(ci, c + Vector2(-s * 0.18, -s * 1.0), s * 0.5, s * 0.3, WRAP)                    # 頭頂鼓起來的一團布
-	var band := PackedVector2Array()
-	for k in 13:
-		var x := lerpf(-1.0, 1.0, k / 12.0)
-		band.append(c + Vector2(x * s * FW * 1.08, -s * 0.46 + x * x * s * 0.12))
-	for k in range(12, -1, -1):
-		var x := lerpf(-1.0, 1.0, k / 12.0)
-		band.append(c + Vector2(x * s * FW * 1.04, -s * 0.7 + x * x * s * 0.1))
-	ci.draw_colored_polygon(band, WRAP_SH)
-	ci.draw_polyline(band.slice(0, 13), WRAP_LINE, maxf(1.0, s * 0.03), true)
-	# 布的折痕：斜斜的幾條弧線
+	# 布帽（2026/11/20 改）：只包住頭頂，下緣是一圈捲起來的布邊，停在額頭上面（眉毛、眼睛整個露出來）；
+	#   上面的布比頭寬一點、一圈一圈斜斜地纏上去，右邊垂一條布尾到耳朵旁。
+	#   不要畫成從臉上蓋下來的大橢圓：眼睛會「被遮住又沒遮住」，整頂看起來像包子
+	var cap := PackedVector2Array()
+	for k in 17:                                           # 下緣：額頭中間最高、兩邊往下到太陽穴
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		cap.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
+	for k in 21:                                           # 上面：從右邊繞過頭頂到左邊，比頭寬、比頭高
+		var a := TAU - PI * k / 20.0
+		cap.append(c + Vector2(s * 0.03 + cos(a) * s * 0.98, -s * 0.5 + sin(a) * s * 0.66))
+	ci.draw_colored_polygon(GW_shift(cap, Vector2(s * 0.04, s * 0.04)), WRAP_SH)
+	ci.draw_colored_polygon(cap, WRAP)
+	# 纏上去的布：幾條斜斜的弧線（左下往右上）
 	for k in 3:
-		var o := c + Vector2(-s * 0.5 + k * s * 0.38, -s * 0.94 + absf(k - 1.0) * s * 0.1)
-		ci.draw_arc(o, s * 0.32, PI * 1.05, PI * 1.55, 10, WRAP_LINE, maxf(1.0, s * 0.03), true)
-	# 布尾
-	var tail := PackedVector2Array([c + Vector2(s * 0.72, -s * 0.7), c + Vector2(s * 0.98, -s * 0.58),
-		c + Vector2(s * 1.06, -s * 0.2), c + Vector2(s * 0.9, -s * 0.26)])
-	ci.draw_colored_polygon(tail, WRAP)
+		var o := c + Vector2(s * (0.5 - k * 0.32), s * (0.2 - k * 0.06))
+		ci.draw_arc(o, s, PI * 1.25, PI * 1.45, 12, WRAP_LINE, maxf(1.0, s * 0.032), true)
+	# 捲起來的布邊：沿著下緣一條比較深的帶子，上面幾道短短的斜紋
+	var band := PackedVector2Array()
+	for k in 17:
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		band.append(c + Vector2(x * s * 0.92, -s * 0.42 + x * x * s * 0.26))
+	for k in range(16, -1, -1):
+		var x := lerpf(-1.0, 1.0, k / 16.0)
+		band.append(c + Vector2(x * s * 0.94, -s * 0.58 + x * x * s * 0.24))
+	ci.draw_colored_polygon(band, WRAP_SH)
+	for k in 7:
+		var x := lerpf(-0.8, 0.8, k / 6.0)
+		var y := -s * 0.5 + x * x * s * 0.25
+		ci.draw_line(c + Vector2(x * s * 0.93 - s * 0.04, y + s * 0.07), c + Vector2(x * s * 0.93 + s * 0.05, y - s * 0.07), WRAP_LINE, maxf(1.0, s * 0.03), true)
+	# 布尾：從右邊垂到耳朵旁
+	var tail := PackedVector2Array([c + Vector2(s * 0.8, -s * 0.36), c + Vector2(s * 1.02, -s * 0.42),
+		c + Vector2(s * 1.12, s * 0.12), c + Vector2(s * 0.96, s * 0.2)])
+	ci.draw_colored_polygon(tail, WRAP_SH)
 	ci.draw_polyline(PackedVector2Array([tail[1], tail[2]]), WRAP_LINE, maxf(1.0, s * 0.03), true)
 	# 腮紅
 	for sx in [-1.0, 1.0]:
@@ -300,6 +312,13 @@ static func _face(ci: CanvasItem, c: Vector2, s: float, t: float, mood: String, 
 				var x := lerpf(-1.0, 1.0, k / 8.0)
 				pts.append(m + Vector2(x * s * 0.15, s * 0.05 * (1.0 - x * x)))
 			ci.draw_polyline(pts, lip, maxf(1.4, s * 0.05), true)
+
+
+static func GW_shift(pts: PackedVector2Array, d: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for q in pts:
+		out.append(q + d)
+	return out
 
 
 static func _ell(ci: CanvasItem, c: Vector2, rx: float, ry: float, col: Color) -> void:
