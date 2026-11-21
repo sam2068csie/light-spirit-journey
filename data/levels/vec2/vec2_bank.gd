@@ -242,8 +242,8 @@ static func _xy_line() -> Dictionary:
 
 ## 3 兩道光束（A14、A16、A18）
 static func _beams() -> Dictionary:
-	var B := Vector2(6, 0)
-	var C := Vector2(2, 5)
+	var B := Vector2(8, 0)
+	var C := Vector2(2.5, 4.5)
 	var A := Vector2.ZERO
 	var base := func() -> Array:
 		var s := [_poly([A, B, C], "dim")]
@@ -258,7 +258,7 @@ static func _beams() -> Dictionary:
 	sa += _dots({"D": D, "E": E, "Q": Q}, "dim", {"D": [-4, 18], "E": [-18, -4], "Q": [8, 4]})
 	sa += [_seg(D, E, "faint"), _seg(A, Q, "faint"), _beam(A, Q, 1, "cyan"), _beam(D, E, 3, "pink")] + _lamp(Pa, 4)
 	var va := {"eq": "\\ol{AD} : \\ol{DB} = 1 : 2，\\ol{AE} = \\ol{EC}，\\ol{BQ} : \\ol{QC} = 1 : 2\n\\ol{DE} 交 \\ol{AQ} 於 P，\\vec{AP} = x\\vec{AB} + y\\vec{AC}，求 (x, y)",
-		"plane": _plane([-1, 8], [-0.9, 5.6], sa),
+		"plane": _plane([-1, 9.5], [-0.9, 5.2], sa),
 		"steps": [
 			_f("光束一", "P 在 AQ 上", "x : y = [0] : [1]", ["2", "1"], "P 在 AQ 上：\\vec{AQ} = \\frac{2}{3}\\vec{AB} + \\frac{1}{3}\\vec{AC}，x : y = 2 : 1",
 				"\\vec{AQ} 的兩個係數是多少？", T_INT, "prop"),
@@ -278,9 +278,9 @@ static func _beams() -> Dictionary:
 		var Ee := C * float(cfg.e[0]) / float(cfg.e[1])
 		var P := _at(B, C, B1._frv(cfg.xy[0]), B1._frv(cfg.xy[1]))
 		var sb: Array = base.call()
-		sb += _dots({"D": Dd, "E": Ee}, "dim", {"D": [-4, 18], "E": [-18, -4]})
+		sb += _dots({"D": Dd, "E": Ee}, "dim", {"D": [8, 16], "E": [-18, -4]})
 		sb += [_seg(C, Dd, "faint"), _seg(B, Ee, "faint"), _beam(C, Dd, 1, "cyan"), _beam(B, Ee, 2, "pink")] + _lamp(P, 3)
-		vbc.append({"eq": cfg.eq, "plane": _plane([-1, 8], [-0.9, 5.6], sb),
+		vbc.append({"eq": cfg.eq, "plane": _plane([-1, 9.5], [-0.9, 5.2], sb),
 			"steps": [
 				_f("光束一", "P 在 CD 上，係數和 = 1", "[0]x + y = 1", [cfg.c1],
 					"\\vec{AB} = %d\\vec{AD} ⇒ \\vec{AP} = %dx\\vec{AD} + y\\vec{AC}，%dx + y = 1" % [cfg.d, cfg.d, cfg.d],
@@ -299,8 +299,8 @@ static func _beams() -> Dictionary:
 ## 4 光束分線段（A15、A19）
 static func _cut() -> Dictionary:
 	var A := Vector2.ZERO
-	var B := Vector2(6, 0)
-	var C := Vector2(2, 5)
+	var B := Vector2(8, 0)
+	var C := Vector2(2.5, 4.5)
 	var D := B.lerp(C, 0.25)
 	var E := B * (2.0 / 3.0)
 	var F := D * (8.0 / 11.0)
@@ -311,7 +311,7 @@ static func _cut() -> Dictionary:
 		_seg(C, E, "pink", {"at": 2, "w": 2.5}), {"k": "circle", "o": _p(F), "r": 0.2, "c": "gold", "fill": "gold", "alpha": 0.5, "at": 2},
 		_dot(F, "F", "gold", {"at": 2, "off": [6, -10]}), _ruler(A, D, 11, 8, 3, {"c": "gold"})]
 	var va := {"eq": "\\ol{BD} : \\ol{DC} = 1 : 3，\\ol{BE} : \\ol{EA} = 1 : 2\n\\ol{CE} 交 \\ol{AD} 於 F，求 \\ol{AF} : \\ol{FD}",
-		"plane": _plane([-1, 8], [-0.9, 5.6], sa),
+		"plane": _plane([-1, 9.5], [-0.9, 5.2], sa),
 		"steps": [
 			_f("設 t", "\\vec{AF} = t\\vec{AD}", "\\vec{AF} = [0]t\\vec{AB} + [1]t\\vec{AC}", ["3/4", "1/4"],
 				"\\vec{AD} = \\frac{3}{4}\\vec{AB} + \\frac{1}{4}\\vec{AC} ⇒ \\vec{AF} = \\frac{3}{4}t\\vec{AB} + \\frac{1}{4}t\\vec{AC}", "\\ol{BD} : \\ol{DC} = 1 : 3，係數交叉。", T_INT),
@@ -351,8 +351,8 @@ static func _cut() -> Dictionary:
 ## 5 稻草人的影子比（A17）
 static func _shadow() -> Dictionary:
 	var A := Vector2.ZERO
-	var B := Vector2(6, 0)
-	var C := Vector2(2, 5)
+	var B := Vector2(8, 0)
+	var C := Vector2(2.5, 4.5)
 	var vars := []
 	for cfg in [
 			{"am": [2, 1], "an": [1, 1], "c": ["3/2", "2"], "xy": ["1/2", "1/4"],
@@ -388,11 +388,11 @@ static func _shadow() -> Dictionary:
 			var seg := String(cd[3])
 			steps.append(_j(["審判一", "審判二", "審判三"][k - 3], String(cd[0]), bool(cd[1]), String(cd[2]),
 				"%s %s" % [cd[0], "○" if cd[1] else "✕"], T_INT))
-			shapes.append(_ruler(pts[seg[0]], pts[seg[1]], int(cd[4]), int(cd[5]), k + 1, {"c": "lime" if cd[1] else "pink", "until": k + 2}))
+			shapes.append(_ruler(pts[seg[0]], pts[seg[1]], int(cd[4]), int(cd[5]), k, {"c": "lime" if cd[1] else "pink", "until": k + 1}))
 		for i in range(2, steps.size()):
 			steps[i]["big"] = true
 		vars.append({"eq": "\\ol{AM} : \\ol{MB} = %d : %d，\\ol{AN} : \\ol{NC} = %d : %d，\\ol{BN} 交 \\ol{CM} 於 P\n直線 AP 交 \\ol{BC} 於 D，下面哪些正確？" % [cfg.am[0], cfg.am[1], cfg.an[0], cfg.an[1]],
-			"plane": _plane([-1, 8], [-0.9, 5.6], shapes), "steps": steps})
+			"plane": _plane([-1, 9.5], [-0.9, 5.2], shapes), "steps": steps})
 	return {"id": "shadow", "chapter": 1, "type": "forge", "title": "稻草人的影子比",
 		"story": "兩根竹竿交叉，把田切成好幾段。",
 		"insight": "先求 \\vec{AP} = x\\vec{AB} + y\\vec{AC}，所有的比都從係數讀\n\\vec{AD}：係數和 = 1（把 \\vec{AP} 放大），\\ol{AP} : \\ol{PD} 就是 (x + y) : (1 − x − y)。",
@@ -489,7 +489,7 @@ static func _sow() -> Dictionary:
 			_poly([Vector2.ZERO, b, C, D], "dim"), _poly([b, C, D], "lime", {"fill": "lime", "alpha": 0.12}),
 			_ar(Vector2.ZERO, a, "cyan", "\\vec{OA}", {"ls": -1, "w": 3.0}), _ar(Vector2.ZERO, b, "pink", "\\vec{OB}", {"w": 2.5})]
 		shapes += _dots({"O": Vector2.ZERO, "B": b, "C": C, "D": D}, "text", {"O": [-14, 14], "B": [-14, -6], "C": [6, -6], "D": [6, 14]})
-		shapes.append(_tag(a, "A", "cyan", {"off": [-4, 18]}))
+		shapes.append(_tag(a, "A", "cyan", {"off": [-2, -8]}))
 		var skew := {"o": [0, 0], "a": _p(a), "b": _p(b), "div": cfg.div}
 		var steps := [_c("條件", "△BCD 內部（u 沿 \\vec{OA}、v 沿 \\vec{OB}）", cfg.cond, 0,
 			"\\ol{BD} 的方程式是 \\frac{u}{%d} + v = 1，內部在它的 C 那一側。" % m,
@@ -549,7 +549,7 @@ static func _area() -> Dictionary:
 	var vars := []
 	for cfg in [{"B": Vector2(5, 0), "C": Vector2(1.4, 4.8), "tri": 12, "xr": [-1, 2], "yr": [0, 2], "sides": "\\ol{AB} = 5、\\ol{BC} = 6、\\ol{CA} = 5",
 				"nt": "等腰：底 \\ol{BC} = 6，高 = √(25 − 9)。"},
-			{"B": Vector2(3, 0), "C": Vector2(0, 4), "tri": 6, "xr": [0, 2], "yr": [-1, 3], "sides": "\\ol{AB} = 3、\\ol{AC} = 4、∠A = 90°",
+			{"B": Vector2(4, 0), "C": Vector2(0, 3), "tri": 6, "xr": [0, 3], "yr": [-1, 1], "sides": "\\ol{AB} = 4、\\ol{AC} = 3、∠A = 90°",
 				"nt": "直角三角形：兩股相乘除以 2。"}]:
 		var B: Vector2 = cfg.B
 		var C: Vector2 = cfg.C
@@ -629,8 +629,8 @@ static func _address() -> Dictionary:
 ## 12 拼出看不見的箭頭（A25）
 static func _hidden() -> Dictionary:
 	var vars := []
-	for cfg in [{"PA": Vector2(2, -1), "PQ": Vector2(1, 1), "k": 2, "eq": "Q 是 \\ol{AC} 中點，P 是 \\ol{BC} 中點", "x": [-4, 5], "y": [-4, 4]},
-			{"PA": Vector2(1, -2), "PQ": Vector2(1, 0), "k": 3, "eq": "Q 是 \\ol{AC} 中點，P 在 \\ol{BC} 上，\\ol{BP} = 2\\ol{CP}", "x": [-4, 4], "y": [-5, 3]}]:
+	for cfg in [{"PA": Vector2(2, -1), "PQ": Vector2(1, 1), "k": 2, "eq": "Q 是 \\ol{AC} 中點，P 是 \\ol{BC} 中點", "x": [-3, 3], "y": [-3.6, 3.6]},
+			{"PA": Vector2(1, -2), "PQ": Vector2(1, 0), "k": 3, "eq": "Q 是 \\ol{AC} 中點，P 在 \\ol{BC} 上，\\ol{BP} = 2\\ol{CP}", "x": [-3, 2.5], "y": [-4.6, 3]}]:
 		var P := Vector2.ZERO
 		var A: Vector2 = cfg.PA
 		var Q: Vector2 = cfg.PQ
@@ -640,11 +640,11 @@ static func _hidden() -> Dictionary:
 		var shapes := [_ar(P, A, "cyan", "\\vec{PA}", {"w": 2.5}), _ar(P, Q, "pink", "\\vec{PQ}", {"w": 2.5})]
 		shapes += _dots({"P": P, "A": A, "Q": Q}, "text", {"P": [-16, 4], "A": [8, 4], "Q": [8, -6]})
 		shapes += [_dot(C, "C", "gold", {"at": 1, "off": [8, -6]}), _seg(A, C, "dim", {"at": 1}),
-			_dot(B, "B", "gold", {"at": 3, "off": [8, 4]}), _ar(B, C, "gold", "\\vec{BC}", {"at": 3, "ls": -1}), _seg(A, B, "dim", {"at": 3})]
+			_dot(B, "B", "gold", {"at": 3, "off": [8, 4]}), _ar(B, C, "gold", "\\vec{BC}", {"at": 3, "ls": -1, "lt": 0.3}), _seg(A, B, "dim", {"at": 3})]
 		var PC := C - P
 		var BC := C - B
 		vars.append({"eq": "%s\n\\vec{PA} = %s、\\vec{PQ} = %s，求 \\vec{BC}" % [cfg.eq, _pt(A), _pt(Q)],
-			"plane": _axes(cfg.x, cfg.y, shapes),
+			"plane": _plane(cfg.x, cfg.y, shapes),
 			"steps": [
 				{"kind": "vpath", "name": "鋪到 C", "q": "只用 \\vec{PA}、\\vec{PQ} 從 P 鋪到 C", "from": [0, 0], "to": _p(C),
 				 "tiles": [{"s": "\\vec{PA}", "v": _p(A)}, {"s": "\\vec{PQ}", "v": _p(Q)}], "sol": [[0, -1], [1, 1], [1, 1]], "tag": T_CRD,
@@ -702,7 +702,10 @@ static func _bands() -> Dictionary:
 		var w: Array = cfg.w
 		var P: Vector2 = cfg.P
 		var shapes := [_poly(pts, "faint")]
-		shapes += _dots({"A": pts[0], "B": pts[1], "C": pts[2]}, "text", {"A": [-14, -6], "B": [8, 14], "C": [8, -6]})
+		for i in 3:
+			shapes.append(_seg(P, pts[i], "faint", {"at": 1}))
+		shapes += _dots({"A": pts[0], "B": pts[1], "C": pts[2]}, "text", {"A": [8, -6] if pts[0].x > 0 else [-14, -6], "B": [8, 14], "C": [8, -6]})
+		shapes.append(_dot(P, "P", "gold", {"at": 1, "off": [8, 16]}))
 		var pull := []
 		for i in 3:
 			pull.append([pts[i].x, pts[i].y, w[i]])
@@ -726,7 +729,8 @@ static func _bands() -> Dictionary:
 static func _collapse() -> Dictionary:
 	var A := Vector2(2, 0)
 	var B := Vector2(0, 1)
-	var sa := [_dot(A, "A", "text", {"off": [8, 16]}), _dot(B, "B", "text", {"off": [-16, -4]})]
+	var sa := [_seg(A + (A - B) * 1.5, Vector2(-4, 3) + (B - A) * 1.5, "faint", {"dash": true, "at": 1}),
+		_dot(A, "A", "text", {"off": [8, 16]}), _dot(B, "B", "text", {"off": [-16, -4]}), _dot(Vector2(-4, 3), "C", "pink", {"at": 1, "off": [8, -6]})]
 	var va := {"eq": "A(2, 0)、B(0, 1)、C(k, 3)，有一點 P 不能寫成 x\\vec{AB} + y\\vec{AC}\n求 k",
 		"plane": _axes([-9, 7], [-2, 4.5], sa),
 		"steps": [
@@ -749,7 +753,8 @@ static func _collapse() -> Dictionary:
 			_dot(Vector2(3, 0), "", "lime", {"at": 3}), _dot(Vector2(0, 6), "", "lime", {"at": 3}), _dot(Vector2(2, 2), "", "lime", {"at": 3}),
 			_seg(Vector2(4.5, -3), Vector2(-1, 8), "lime", {"at": 3, "dash": true}),
 			_dot(Vector2(-3, 0), "", "violet", {"at": 3}), _dot(Vector2(0, 2), "", "violet", {"at": 3}), _dot(Vector2(6, 6), "", "violet", {"at": 3}),
-			_seg(Vector2(-4, -2.0 / 3.0), Vector2(8, 22.0 / 3.0), "violet", {"at": 3, "dash": true})]),
+			_seg(Vector2(-4, -2.0 / 3.0), Vector2(8, 22.0 / 3.0), "violet", {"at": 3, "dash": true}),
+			_tag(Vector2(3, 0), "t = 1", "lime", {"at": 3, "off": [8, 18]}), _tag(Vector2(-3, 0), "t = 3", "violet", {"at": 3, "off": [-14, 18]})]),
 		"steps": [
 			{"kind": "slide", "name": "拖時間", "q": "拖 t，數一數共線幾次", "tag": T_COL, "free": true,
 			 "params": [{"n": "t", "min": 0, "max": 4, "step": 0.25, "v": 0}],
@@ -774,7 +779,7 @@ static func _collapse() -> Dictionary:
 static func _midpts() -> Dictionary:
 	var vars := []
 	for cfg in [{"A": Vector2(1, 5), "B": Vector2(-1, 1), "C": Vector2(5, 1), "x": [-3, 7], "y": [-1, 6.2]},
-			{"A": Vector2(0, 6), "B": Vector2(-4, 0), "C": Vector2(6, 2), "x": [-6, 8], "y": [-1, 7.2]}]:
+			{"A": Vector2(0, 6), "B": Vector2(-4, 0), "C": Vector2(6, 2), "x": [-6, 8], "y": [-1, 7.8]}]:
 		var A: Vector2 = cfg.A
 		var B: Vector2 = cfg.B
 		var C: Vector2 = cfg.C

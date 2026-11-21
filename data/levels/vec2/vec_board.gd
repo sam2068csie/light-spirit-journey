@@ -1092,7 +1092,6 @@ func _draw_pole(font: Font, o: Vector2, f: Vector2, a: Vector2) -> void:
 		UITheme.dot(self, cp, 14.0 + 2.0 * sin(t * 5.0), Color(1, 0.86, 0.42, 0.22))
 		_pl(PackedVector2Array([cp + a1, cp + a1 + a2, cp + a2]), UITheme.ACCENT, 2.0, false)
 	UITheme.dot(self, _to(f), 5.0, UITheme.ACCENT)
-	_label(font, _to(f), "F", [8, 14], UITheme.ACCENT)
 
 
 ## 展開田：rows × cols 的格子，每一格是一項乘積（出現時一格一格亮起來）

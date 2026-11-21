@@ -103,7 +103,7 @@ static func _guess(o: Vector2, r: float, base: Vector2, side: float, name: Strin
 	var st := {"kind": "vplace", "name": "先猜", "q": "拖指針，猜 %s 是幾度" % name, "goal": "guess", "tag": T_ANG, "big": true,
 		"sandbox": {"label": "", "ring": {"o": _p(o), "r": r, "step": 5, "a0": a0}, "arrow": {"o": _p(o), "c": "gold"},
 			"protractor": {"o": _p(o), "r": r, "a0": a0, "side": side}, "lit": [],
-			"read": "%s ≈ {%s}°" % [name, ex], "start": _p(o + base.normalized() * r)},
+			"read": "%s ≈ {round(%s)}°" % [name, ex], "start": _p(o + base.normalized() * r)},
 		"ans": _p(o + base.normalized().rotated(deg_to_rad(side * 90.0)) * r),
 		"nudge": "放哪裡都可以，先猜猜看。", "line": "先猜：%s ≈ {guess}°" % name}
 	st.merge(extra, true)
@@ -151,12 +151,16 @@ static func _diag() -> Dictionary:
 		var a := Vector2(cfg.la, 0)
 		var b := Vector2.from_angle(deg_to_rad(cfg.th)) * float(cfg.lb)
 		var O := Vector2.ZERO
+		# 兩條對角線的標籤分開放：\vec{a} + \vec{b} 靠近尖端，另一條靠近 \vec{a} 的尖端、朝外
+		var nm := Vector2(-(a - b).y, (a - b).x).normalized()
+		if nm.dot(a + b - b) < 0.0:
+			nm = -nm
 		var shapes := [_poly([O, a, a + b, b], "faint"), _ar(O, a, "cyan", "\\vec{a}", {"ls": -1}), _ar(O, b, "pink", "\\vec{b}"),
 			_arc(O, 0, cfg.th, "%d°" % int(cfg.th)),
 			_expand(cfg.ep, ["\\vec{a}", "\\vec{b}"], ["\\vec{a}", "\\vec{b}"], [["|\\vec{a}|^{2}", "\\vec{a} · \\vec{b}"], ["\\vec{a} · \\vec{b}", "|\\vec{b}|^{2}"]],
 				[[1, 1 if cfg.th < 90.0 else -1], [1 if cfg.th < 90.0 else -1, 1]], 0),
-			_ar(O, a + b, "gold", cfg.p[1], {"at": 2, "lt": 0.6}), _seg(b, a, "lime", {"at": 3, "w": 3.0}),
-			{"k": "label", "p": _p((a + b) / 2.0 + Vector2(0.5, -0.35)), "s": cfg.m[1], "c": "lime", "at": 3}]
+			_ar(O, a + b, "gold", cfg.p[1], {"at": 2, "lt": 0.8}), _seg(b, a, "lime", {"at": 3, "w": 3.0}),
+			{"k": "label", "p": _p(b.lerp(a, 0.78) + nm * 0.45), "s": cfg.m[1], "c": "lime", "at": 3}]
 		vars.append({"eq": "|\\vec{a}| = %s，|\\vec{b}| = %s，夾角 %d°\n以 \\vec{a}、\\vec{b} 為兩邊的平行四邊形，兩條對角線各多長？" % [B1._n(cfg.la), B1._n(cfg.lb), int(cfg.th)],
 			"plane": _plane(cfg.x, cfg.y, shapes),
 			"steps": [
@@ -339,12 +343,12 @@ static func _center() -> Dictionary:
 	sa += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-4, -12], "B": [-16, 14], "C": [8, 4]})
 	sa += [_dot(O, "O", "dim", {"off": [-16, 12]}), _ar(O, A, "cyan", "", {"w": 2.0}), _ar(O, B, "pink", "", {"w": 2.0}), _ar(O, C, "lime", "", {"w": 2.0}),
 		_arc(O, 90, 210, "120°", {"at": 1}), _arc(O, 0, 90, "90°", {"at": 1, "r": 34}), _arc(O, 210, 360, "150°", {"at": 1, "r": 18}),
-		_expand(Vector2(-15.6, 4.4), ["\\vec{OA}", "\\vec{OB}", "\\vec{OC}"], ["\\vec{OA}", "\\vec{OB}", "\\vec{OC}"],
-			[["16", "−8", "0"], ["−8", "16", "−8√3"], ["0", "−8√3", "16"]], [[1, -1, 0], [-1, 1, -1], [0, -1, 1]], 1, {"cw": 74, "ch": 38}),
+		_expand(Vector2(-21.6, 4.4), ["\\vec{OA}", "\\vec{OB}", "\\vec{OC}"], ["\\vec{OA}", "\\vec{OB}", "\\vec{OC}"],
+			[["16", "−8", "0"], ["−8", "16", "−8√3"], ["0", "−8√3", "16"]], [[1, -1, 0], [-1, 1, -1], [0, -1, 1]], 1, {"cw": 66, "ch": 36}),
 		B1._walk([O, A, A + B, A + B + C], 3, "gold", true),
 		_ar(O, A + B + C, "gold", "", {"at": 3, "w": 4.0})]
 	vars.append({"eq": "△ABC 中，∠A = 75°，∠B = 45°，O 是外心\n外接圓半徑 4，求 |\\vec{OA} + \\vec{OB} + \\vec{OC}|",
-		"plane": _plane([-16.0, 5.2], [-4.8, 4.8], sa),
+		"plane": _plane([-22.0, 5.2], [-4.8, 4.8], sa),
 		"steps": [
 			_f("圓心角", "圓心角 = 2 × 圓周角", "∠BOC = [0]°，∠COA = [1]°，∠AOB = [2]°", ["150", "90", "120"],
 				"∠BOC = 2∠A = 150°、∠COA = 2∠B = 90°、∠AOB = 2∠C = 120°", "∠C = 180° − 75° − 45° = 60°。", T_LEN),
@@ -603,7 +607,7 @@ static func _right_axes() -> Dictionary:
 		var pn := B1._lin(str(cfg.p[0]), "a", str(cfg.p[1]), "b")
 		var qn := B1._lin(str(cfg.q[0]), "a", str(cfg.q[1]), "b")
 		var shapes := [_ar(O, a, "cyan", "\\vec{a}", {"ls": -1, "at": 1}), _ar(O, b, "pink", "\\vec{b}", {"at": 1}), _right(O, a, b, {"at": 1}),
-			_ar(O, pv, "lime", pn, {"at": 2, "lt": 0.75}), _ar(O, qv, "gold", qn, {"at": 2, "lt": 0.75}), _arc(O, _deg(qv), _deg(pv), "θ", {"at": 3})]
+			_ar(O, pv, "lime", pn, {"at": 2, "lt": 0.75, "ls": -1}), _ar(O, qv, "gold", qn, {"at": 2, "lt": 0.75}), _arc(O, _deg(qv), _deg(pv), "θ", {"at": 3})]
 		var pq: Array = cfg.pq
 		vars.append({"eq": "|\\vec{a}| = %s，|\\vec{b}| = %s，\\vec{a} ⊥ \\vec{b}\n%s 和 %s 的夾角是 θ，求 cos θ" % [B1._n(cfg.la), B1._n(cfg.lb), pn, qn],
 			"plane": _axes(cfg.x, cfg.y, shapes),

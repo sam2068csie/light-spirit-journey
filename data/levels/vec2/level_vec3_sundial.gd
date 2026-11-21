@@ -68,6 +68,11 @@ static func gen_problems(kind: String, n: int) -> Array:
 			var b := Vector2i(randi_range(-4, 4), randi_range(-3, 3))
 			if a == Vector2i.ZERO or b == Vector2i.ZERO or a.x * b.y - a.y * b.x == 0:
 				continue
+			# 太短或夾角太小，兩支箭頭會疊在一起看不清楚
+			if a.length_squared() < 5 or b.length_squared() < 5:
+				continue
+			if absf(a.x * b.y - a.y * b.x) < 0.4 * Vector2(a).length() * Vector2(b).length():
+				continue
 			var d := a.x * b.x + a.y * b.y
 			var got := 0 if d > 0 else (1 if d == 0 else 2)
 			if got != want:

@@ -205,11 +205,11 @@ static func _judge() -> Dictionary:
 	var a1 := Vector2(4, 0)
 	var b1 := Vector2(2, 3)
 	st1.append({"kind": "vplace", "name": "反例", "q": "拖 \\vec{c}，找一個反例", "tag": T_DOT, "goal": "lit", "ans": [2, -1],
-		"sandbox": {"label": "", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{c}"}, "shadow": {"o": [0, 0], "g": _p(a1)},
+		"sandbox": {"label": "", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{c}", "ls": -1}, "shadow": {"o": [0, 0], "g": _p(a1)},
 			"lit": "abs(4 * x - 8) < 0.01 and (abs(x - 2) > 0.01 or abs(y - 3) > 0.01)", "start": [1, -2],
 			"read": "\\vec{a} · \\vec{c} = {4 * x}"},
 		"nudge": "\\vec{a} · \\vec{b} = 8：讓 \\vec{c} 的影子也落在 x = 2。", "line": "反例：\\vec{c} 和 \\vec{b} 在同一道陽光上，內積一樣，\\vec{c} ≠ \\vec{b}"})
-	s1 += [_ar(O, a1, "cyan", "\\vec{a}", {"ls": -1, "at": 1, "until": 3}), _ar(O, b1, "pink", "\\vec{b}", {"at": 1, "until": 3}),
+	s1 += [_ar(O, a1, "cyan", "\\vec{a}", {"ls": -1, "lt": 0.85, "at": 1, "until": 3}), _ar(O, b1, "pink", "\\vec{b}", {"at": 1, "until": 3}),
 		_shadow(O, b1, a1, {"at": 1, "until": 3})]
 	st1.append(_j("審判三", "(\\vec{b} · \\vec{c})\\vec{a} − (\\vec{c} · \\vec{a})\\vec{b} ⊥ \\vec{c}", true,
 		"和 \\vec{c} 內積：(\\vec{b} · \\vec{c})(\\vec{a} · \\vec{c}) − (\\vec{c} · \\vec{a})(\\vec{b} · \\vec{c}) = 0。", "和 \\vec{c} 的內積是 0 ⇒ 垂直", T_DOT))
@@ -218,11 +218,11 @@ static func _judge() -> Dictionary:
 	var c1 := Vector2(4, 0)
 	var a1b := Vector2(2, 3)
 	st1.append({"kind": "vplace", "name": "反例", "q": "拖 \\vec{b}，影子和 \\vec{a} 一樣", "tag": T_PROJ, "goal": "lit", "ans": [2, -1],
-		"sandbox": {"label": "", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{b}"}, "shadow": {"o": [0, 0], "g": _p(c1)},
+		"sandbox": {"label": "", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{b}", "ls": -1}, "shadow": {"o": [0, 0], "g": _p(c1)},
 			"lit": "abs(x - 2) < 0.01 and abs(y - 3) > 0.01", "start": [-1, -2]},
 		"nudge": "\\vec{a} 的影子落在 x = 2：讓 \\vec{b} 的頭也在那一道陽光上。",
 		"line": "\\vec{a}、\\vec{b} 的頭在同一道陽光上：\\vec{a} − \\vec{b} 和 \\vec{c} 垂直"})
-	s1 += [_ar(O, c1, "cyan", "\\vec{c}", {"ls": -1, "at": 4}), _ar(O, a1b, "pink", "\\vec{a}", {"at": 4}),
+	s1 += [_ar(O, c1, "cyan", "\\vec{c}", {"ls": -1, "lt": 0.85, "at": 4}), _ar(O, a1b, "pink", "\\vec{a}", {"at": 4}),
 		_shadow(O, a1b, c1, {"at": 4}), _line(a1b, a1b + Vector2(0, 1), "gold", {"dash": true, "at": 6})]
 	for st in st1:
 		st["big"] = true
@@ -469,11 +469,11 @@ static func _basis() -> Dictionary:
 			_f("分解", "\\vec{AE} 換成基底", "\\vec{AE} = [0]\\vec{AB} + [1]\\vec{AC}", ["3", "1/2"], "(6, 2) = 3(2, 0) + \\frac{1}{2}(0, 4)：(x, y) = (3, \\frac{1}{2})", "x 分量：6 = 2x，y 分量：2 = 4y。", T_BAS),
 		]})
 	# 變化 D（A46）：平行四邊形的對角線、等腰梯形
-	var Pq := [Vector2(-9, -1), Vector2(-4, -1), Vector2(-2.97394, 1.81907), Vector2(-7.97394, 1.81907)]
-	var Ad := Vector2.ZERO
-	var Bd := Vector2(8, 0)
-	var Cd := Vector2(6, 2.0 * sqrt(3.0))
-	var Dd := Vector2(2, 2.0 * sqrt(3.0))
+	var Pq := [Vector2(3.5, -1), Vector2(8.5, -1), Vector2(9.52606, 1.81907), Vector2(4.52606, 1.81907)]
+	var Ad := Vector2(3.5, 0)
+	var Bd := Vector2(11.5, 0)
+	var Cd := Vector2(9.5, 2.0 * sqrt(3.0))
+	var Dd := Vector2(5.5, 2.0 * sqrt(3.0))
 	var Md := (Bd + Cd) / 2.0
 	var Nd := (Cd + Dd) / 2.0
 	var sd := [_poly(Pq, "dim", {"until": 1}), _seg(Pq[0], Pq[2], "gold", {"until": 1}), _seg(Pq[1], Pq[3], "pink", {"until": 1})]
@@ -493,7 +493,7 @@ static func _basis() -> Dictionary:
 		{"k": "label", "p": _p(Pq[0].lerp(Pq[1], 0.5) + Vector2(0, -0.45)), "s": "5", "c": "dim", "until": 1},
 		{"k": "label", "p": _p(Pq[0].lerp(Pq[3], 0.5) + Vector2(-0.4, 0)), "s": "3", "c": "dim", "until": 1}]
 	vars.append({"eq": "① 平行四邊形 ABCD，求 \\vec{AC} · \\vec{BD}\n② 等腰梯形 ABCD，M、N 是 \\ol{BC}、\\ol{CD} 中點，求 \\vec{AC} · \\vec{MN}",
-		"plane": _plane([-10.0, 9.5], [-1.8, 7.6], sd),
+		"plane": _plane([-10.0, 12.5], [-1.8, 7.6], sd),
 		"steps": [
 			_f("①", "\\vec{AC} · \\vec{BD}", "(\\vec{AD} + \\vec{AB}) · (\\vec{AD} − \\vec{AB}) = [0]", ["-16"],
 				"\\vec{AC} · \\vec{BD} = |\\vec{AD}|^{2} − |\\vec{AB}|^{2} = 9 − 25 = −16（不用知道夾角）", "中間兩格 k 和 −k 抵消。", T_BAS),
@@ -562,7 +562,7 @@ static func _circle() -> Dictionary:
 		var lstr := "%sx %s %sy = %d" % [_n(float(L[0])), "+" if int(L[1]) > 0 else "−", _n(absf(float(L[1]))), L[2]]
 		var shapes := [{"k": "line", "abc": [L[0], L[1], -int(L[2])], "c": "cyan", "s": "L"}]
 		shapes += _dots({"A": A, "B": B}, "text", {"A": [8, -8], "B": [8, -8]})
-		shapes += [{"k": "circle", "o": _p(M), "r": 5, "c": "gold", "w": 2.0, "at": 1}, _dot(M, "M", "dim", {"at": 1, "off": [-16, 14]}),
+		shapes += [{"k": "circle", "o": _p(M), "r": 5, "c": "gold", "w": 2.0, "at": 1}, _dot(M, "M", "dim", {"at": 1, "off": [-16, -8]}),
 			_seg(M, foot, "dim", {"dash": true, "at": 3}), _right(foot, nrm, Vector2(-nrm.y, nrm.x), {"at": 3}),
 			_seg(far, foot, "gold", {"at": 4, "w": 2.5}), _dot(far, "P", "gold", {"at": 4, "off": [-16, 14]})]
 		vars.append({"eq": "A%s、B%s，動點 P 滿足 \\vec{PA} · \\vec{PB} = %d\n求 P 到直線 L：%s 的最大距離" % [_pt(A), _pt(B), cfg.k, lstr],
@@ -591,9 +591,9 @@ static func _circle() -> Dictionary:
 static func _coord() -> Dictionary:
 	var vars := []
 	for cfg in [{"a": Vector2(3, 4), "b": Vector2(2, 1), "cells": [["6", "0"], ["0", "4"]], "sg": [[1, 0], [0, 1]], "dot": 10, "sh": "2",
-				"rows": ["3\\vec{i}", "4\\vec{j}"], "cols": ["2\\vec{i}", "\\vec{j}"], "x": [-8.5, 5.5], "y": [-1.8, 5.2], "ep": Vector2(-8.2, 4.8)},
+				"rows": ["3\\vec{i}", "4\\vec{j}"], "cols": ["2\\vec{i}", "\\vec{j}"], "x": [-10.0, 5.5], "y": [-1.8, 5.2], "ep": Vector2(-9.8, 4.8)},
 			{"a": Vector2(4, -3), "b": Vector2(-1, 3), "cells": [["−4", "0"], ["0", "−9"]], "sg": [[-1, 0], [0, -1]], "dot": -13, "sh": "-13/5",
-				"rows": ["4\\vec{i}", "−3\\vec{j}"], "cols": ["−\\vec{i}", "3\\vec{j}"], "x": [-9.5, 5.5], "y": [-4.0, 3.8], "ep": Vector2(-10.6, 3.4)}]:
+				"rows": ["4\\vec{i}", "−3\\vec{j}"], "cols": ["−\\vec{i}", "3\\vec{j}"], "x": [-12.0, 5.5], "y": [-4.0, 3.8], "ep": Vector2(-12.0, 3.4)}]:
 		var a: Vector2 = cfg.a
 		var b: Vector2 = cfg.b
 		var shapes := [_ar(Vector2.ZERO, a, "cyan", "\\vec{a}", {"ls": -1}), _ar(Vector2.ZERO, b, "pink", "\\vec{b}"),
@@ -634,7 +634,7 @@ static func _perp_t() -> Dictionary:
 		var tt: float = cfg.t
 		var ans := u + v * tt
 		var shapes := [_ar(Vector2.ZERO, u, "dim", "\\vec{u}", {"ls": -1, "w": 2.0}), _ar(Vector2.ZERO, v, "dim", "\\vec{v}", {"w": 2.0}),
-			_ar(Vector2.ZERO, w, "gold", "\\vec{u} %s \\vec{v}" % ("+" if s > 0 else "−"), {"w": 3.0}),
+			_ar(Vector2.ZERO, w, "gold", "\\vec{u} %s \\vec{v}" % ("+" if s > 0 else "−"), {"w": 3.0, "ls": 1 if s > 0 else -1}),
 			_ar(Vector2.ZERO, ans, "cyan", "\\vec{u} + t\\vec{v}", {"at": 3}), _right(Vector2.ZERO, w, ans, {"at": 3})]
 		var line_arrow := {"k": "arrow", "a": [0, 0], "b": ["%s + t * %s" % [_e(u.x), str(v.x)], "t * %s" % str(v.y)], "c": "cyan", "w": 3.0}
 		vars.append({"eq": "|\\vec{u}| = %s，|\\vec{v}| = %s，\\vec{u} · \\vec{v} = %s\n%s，求 t" % [_n(lu), _n(lv), _n(float(cfg.uv)), cfg.eq2],
@@ -644,7 +644,7 @@ static func _perp_t() -> Dictionary:
 				 "params": [{"n": "t", "min": cfg.rng[0], "max": cfg.rng[1], "step": 0.5, "v": 1}],
 				 "lines": [line_arrow], "eq": "t = {t}", "line": "先猜：t = {t}", "nudge": "拉動滑桿，看藍色箭頭什麼時候和金色的垂直。", "big": true},
 				_f("展開田", "內積 = 0，展開", "[0] + [1]t = 0", cfg.c,
-					"|\\vec{u}|^{2} + (%s + t)\\vec{u} · \\vec{v} + %st|\\vec{v}|^{2} = 0 ⇒ %s %s %st = 0" % [str(s), "" if s > 0 else "−", cfg.c[0],
+					"|\\vec{u}|^{2} + %s\\vec{u} · \\vec{v} %s t|\\vec{v}|^{2} = 0 ⇒ %s %s %st = 0" % ["(1 + t)" if s > 0 else "(t − 1)", "+" if s > 0 else "−", cfg.c[0],
 						"+" if int(cfg.c[1]) > 0 else "−", str(absi(int(cfg.c[1])))],
 					"|\\vec{u}|^{2} = %s，|\\vec{v}|^{2} = %s，t 的項：t\\vec{u} · \\vec{v} 和 %st|\\vec{v}|^{2}。" % [_n(lu * lu), _n(lv * lv), "" if s > 0 else "−"], T_PERP, "prop"),
 				_f("t", "解 t", "t = [0]", [_ans(tt)], "t = %s：兩支箭頭垂直（直角記號亮起來）" % _fv(tt), "%s %s %st = 0。" % [cfg.c[0], "+" if int(cfg.c[1]) > 0 else "−", str(absi(int(cfg.c[1])))], T_PERP),
@@ -845,7 +845,7 @@ static func _same_ray() -> Dictionary:
 		_dot(A, "A", "text", {"off": [8, -4]}), _shadow(O, A, B), _line(A, A + Vector2(0, 1), "gold", {"dash": true, "at": 1})]
 	var st1 := [
 		{"kind": "vplace", "name": "找 C", "q": "拖 C，找 3 個讓燈亮的位置", "tag": T_PROJ, "goal": "trace", "need": 3,
-		 "sandbox": {"label": "C", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{OC}"}, "lit": "abs(4 * x - 4) < 0.01", "trace": true, "start": [3, 2],
+		 "sandbox": {"label": "C", "arrow": {"o": [0, 0], "c": "lime", "s": "\\vec{OC}", "ls": -1}, "lit": "abs(4 * x - 4) < 0.01", "trace": true, "start": [3, 2],
 			"read": "\\vec{OB} · \\vec{OC} = {4 * x}"},
 		 "ans": [1, -1], "trace_ans": [[1, -1], [1, 2], [1, 1]], "nudge": "\\vec{OA} · \\vec{OB} = 4：C 的影子要和 A 的一樣長。",
 		 "line": "燈亮的 C 排成一條線：A 的那一道陽光（垂直 \\vec{OB}）", "big": true},

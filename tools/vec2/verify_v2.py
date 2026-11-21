@@ -125,7 +125,7 @@ assert region(3, -1) == (True, False, False)
 assert region(F(1, 3), F(1, 3)) == (True, True, True)
 
 # 9 區域的面積：一小格平行四邊形 = 2△ABC
-for sides, area, xr, yr, total in [((5, 5, 6), 12, (-1, 2), (0, 2), 144), ((3, 4, 5), 6, (0, 2), (-1, 3), 96)]:
+for sides, area, xr, yr, total in [((5, 5, 6), 12, (-1, 2), (0, 2), 144), ((4, 3, 5), 6, (0, 3), (-1, 1), 72)]:
     a, b, c = sides
     s = F(a + b + c, 2)
     assert s * (s - a) * (s - b) * (s - c) == area * area

@@ -160,7 +160,7 @@ static func _same() -> Dictionary:
 				{"kind": "vpick", "name": "從 P 出發", "q": "從 P 畫出 \\vec{a}：點終點", "target": _p(P + a), "snap": 1,
 				 "traps": [[P.x - a.x, P.y - a.y, "這是反方向：−\\vec{a}。"]], "tag": T_EQ,
 				 "nudge": "數一數 \\vec{a} 橫的走幾格、直的走幾格。",
-				 "line": "從 P 出發的 \\vec{a} 指到 (%s, %s)：向量可以平移" % [_n(P.x + a.x), _n(P.y + a.y)]},
+				 "line": "從 P 出發也是 \\vec{a}：向量可以平移"},
 			]})
 	return {"id": "same", "chapter": 1, "type": "forge", "title": "同一陣風",
 		"story": "一支箭頭就是一陣風：往哪吹、吹多大。",
@@ -210,8 +210,8 @@ static func _dex() -> Dictionary:
 				{"kind": "vdrag", "name": "找一樣的", "q": "點兩點畫箭頭，再拖去找", "need": pairs.size(), "pairs": pairs,
 				 "seed": [["AB", "DC"]], "done_btn": true, "tag": T_EQ,
 				 "nudge": "反方向的箭頭也找找看。" + ("中心 O 也可以當起點。" if with_o else ""),
-				 "line": "一樣的有 %d 對（\\vec{AB} = \\vec{DC}、\\vec{BA} = \\vec{CD}、\\vec{AD} = \\vec{BC}、\\vec{DA} = \\vec{CB}%s）" % [
-					pairs.size(), "，還有 \\vec{AO} = \\vec{OC} 這種" if with_o else ""]},
+				 "line": ("一樣的有 8 對，像 \\vec{AB} = \\vec{DC}、\\vec{AO} = \\vec{OC}" if with_o else
+					"一樣的有 4 對：\\vec{AB} = \\vec{DC}、\\vec{AD} = \\vec{BC} 和反方向")},
 				_f("幾種", "不同的向量有幾個？", "[0] − [1] = [2]", [str(total), str(pairs.size()), str(total - pairs.size())],
 					"%d − %d = %d 個不同的向量" % [total, pairs.size(), total - pairs.size()],
 					"每一對一樣的只能算一次。", T_EQ),
@@ -549,11 +549,11 @@ static func _locks() -> Dictionary:
 	var Cp := Vector2(2, 0.5)
 	var shapes := [_ar(A, B, "cyan", "\\vec{AB}", {"ls": -1, "w": 2.0}), _ar(A, C, "pink", "\\vec{AC}", {"w": 2.0})]
 	shapes += _dots({"A": A, "B": B, "C": C}, "dim", {"A": [-16, 14], "B": [8, 4], "C": [8, -6]})
-	shapes += [_seg(B * -1.8, B * 1.8, "faint", {"dash": true, "at": 1, "until": 2}),
+	shapes += [_seg(B * -0.8, B * 1.5, "faint", {"dash": true, "at": 1, "until": 2}),
 		_tag(Cp, "C'", "lime", {"at": 1, "until": 2, "off": [4, 22]}),
 		_ar(B, A, "lime", "", {"at": 1, "until": 2, "dash": true})]
 	var slide := {"kind": "slide", "name": "回家", "q": "讓光點回到 A", "tag": T_IND,
-		"params": [{"n": "s", "min": -1, "max": 1, "step": 0.5, "v": 1}, {"n": "t", "min": -1, "max": 1, "step": 0.5, "v": 1}],
+		"params": [{"n": "s", "min": -0.5, "max": 1, "step": 0.5, "v": 1}, {"n": "t", "min": -0.5, "max": 1, "step": 0.5, "v": 1}],
 		"lines": [{"k": "arrow", "a": [0, 0], "b": ["4 * s", "s"], "c": "cyan", "w": 3.0},
 			{"k": "arrow", "a": ["4 * s", "s"], "b": ["4 * s + t", "s + 3 * t"], "c": "pink", "w": 3.0},
 			{"k": "dot", "p": ["4 * s + t", "s + 3 * t"], "c": "gold", "s": ""}],
@@ -569,12 +569,12 @@ static func _locks() -> Dictionary:
 		"insight": "A、B、C 不共線：x\\vec{AB} + y\\vec{AC} = \\vec{0} ⇒ x = y = 0\n有別的向量（像 \\vec{CB}）先拆成 \\vec{AB}、\\vec{AC}，再比係數。",
 		"variants": [
 			{"eq": "A、B、C 不共線\n(x − 2y + 1)\\vec{AB} + (x + y − 5)\\vec{AC} = \\vec{0}，求 (x, y)",
-			 "plane": _plane([-8, 8], [-4.4, 4.4], shapes),
+			 "plane": _plane([-4.4, 7.2], [-2.5, 4.4], shapes),
 			 "steps": [slide, zero,
 				SB.with_pre(_f("解", "解聯立", "(x, y) = ([0], [1])", ["3", "2"],
 					"(x, y) = (3, 2)", "兩式相減消掉 x。", T_IND), "x − 2y + 1 = 0、x + y − 5 = 0")]},
 			{"eq": "A、B、C 不共線\nx\\vec{AB} + (y − 1)\\vec{CB} + (x + 4)\\vec{AC} = \\vec{0}，求 (x, y)",
-			 "plane": _plane([-8, 8], [-4.4, 4.4], shapes),
+			 "plane": _plane([-4.4, 7.2], [-2.5, 4.4], shapes),
 			 "steps": [slide,
 				_c("拆開", "\\vec{CB} = \\vec{AB} − \\vec{AC}，整理", ["(x + y − 1)\\vec{AB} + (x − y + 5)\\vec{AC}",
 					"(x − y + 1)\\vec{AB} + (x + y + 3)\\vec{AC}", "(x + y − 1)\\vec{AB} + (x + y + 3)\\vec{AC}"], 0,
@@ -736,7 +736,7 @@ static func _fold() -> Dictionary:
 		var e1 := _ang_expr(A, B, "")
 		var e2 := _ang_expr(A, C, "")
 		vars.append({"eq": "\\ol{AB} = %d、\\ol{AC} = %d、\\ol{BC} = %d，AD 平分 ∠A\n\\vec{AD} = x\\vec{AB} + y\\vec{AC}，求 (x, y)" % [cfg.c, cfg.b, cfg.a],
-			"plane": _plane([-1.2, cfg.a + 1.2], [-0.9, A.y + 0.7], shapes),
+			"plane": _plane([-1.2, maxf(cfg.a, Bp.x) + 1.2], [minf(-0.9, Bp.y - 0.6), A.y + 0.7], shapes),
 			"steps": [
 				{"kind": "slide", "name": "對折", "q": "拖 D，讓兩個角一樣大", "tag": T_DAPP,
 				 "params": [{"n": "t", "min": 0, "max": cfg.a, "step": 0.5, "v": cfg.a - 1.0}],
