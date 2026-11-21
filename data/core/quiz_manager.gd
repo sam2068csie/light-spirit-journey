@@ -225,6 +225,13 @@ const MISTAKE_INFO := {
 	"vec_centroid":    {"name": "重心的向量性質", "level": 1},
 	"vec_centers":     {"name": "外心、內心、垂心", "level": 2},
 	"vec_area":        {"name": "係數、權重與面積比", "level": 2},
+	"vec_param":       {"name": "直線的參數式", "level": 2},
+	"vec_normal":      {"name": "法向量與方向向量", "level": 2},
+	"vec_ldist":       {"name": "點到直線的距離", "level": 2},
+	"vec_lproj":       {"name": "向量在直線上的正射影", "level": 2},
+	"vec_langle":      {"name": "兩直線的夾角", "level": 2},
+	"vec_reflect":     {"name": "對稱點與反射", "level": 2},
+	"vec_turn":        {"name": "轉 90° 的頂點", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

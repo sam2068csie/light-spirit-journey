@@ -21,6 +21,7 @@ extends "res://data/levels/num/num_level.gd"
 ##   vplace 的 goal 也可以是 "trace"（"need": 4）：沙盒寫 "trace": true，找到 need 個燈亮的位置（光點）就過
 ##   choice 加 "sandbox": {…}：判斷的時候可以隨便拖那個點看燈（不扣分）。"ribbon": [[x, y], …]：答對後彩帶圍成那個四邊形
 ##   slide（滑桿，見 line_level.gd）：lines 裡也可以放 arrow、poly、balloon、tag、walk（座標寫算式）；"keep": true 做完留在畫布上
+##   slide 也可以寫 "goals": [{…}, {…}]（V6）：調到任何一個都對，"others"、"other_lines"：後面第 other_at 步（預設 1）的答案、推導句換成沒調到的那一個
 ## 圖層寫法見 vec_board.gd。速算的題目可以帶 "plane"：每一題換一張圖。
 
 const VecBoard := preload("res://data/levels/vec2/vec_board.gd")
@@ -554,6 +555,27 @@ func _custom_reveal(msg: String) -> void:
 
 
 ## 滑桿做完：寫了 "keep": true 的箭頭、多邊形留在畫布上
+## 多個答案的滑桿（V6）："goals": [{…}, {…}]：調到任何一個都對。"others": 下一步的答案（沒調到的那一個），"other_lines": 下一步的推導句
+func _slide_submit() -> void:
+	var st: Dictionary = steps[si]
+	if st.has("goals"):
+		for i in (st.goals as Array).size():
+			var g: Dictionary = st.goals[i]
+			var hit := true
+			for k in g.keys():
+				if absf(float(slide_vals.get(k, INF)) - float(g[k])) > 1e-6:
+					hit = false
+			if hit:
+				st["goal"] = g
+				var oi: int = si + int(st.get("other_at", 1))
+				if st.has("others") and oi < steps.size():
+					steps[oi]["answers"] = [String(st.others[i])]
+					if st.has("other_lines"):
+						steps[oi]["line"] = String(st.other_lines[i])
+				break
+	super()
+
+
 func _slide_done(st: Dictionary) -> void:
 	for ln in st.get("lines", []):
 		if bool(ln.get("keep", st.get("keep", false))) and String(ln.get("k", "")) in ["arrow", "poly", "tag", "balloon"]:

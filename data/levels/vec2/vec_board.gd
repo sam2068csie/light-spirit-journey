@@ -34,6 +34,11 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##       {"k": "fire", "p": [x, y], "c": "gold", "s": "G", "off": [dx, dy]}  營火（V5 四心），s 是旁邊的字母
 ##            cfg.read_at = "tl"／"tr"／"bl"／"br"：讀數放在哪個角落（預設左上；右上會放在燈的下面）
 ##       {"k": "split", "p": [x, y], "tri": [A, B, C]}  三分花圃的圖層版
+##       {"k": "kite", "p": [x, y], "c": "gold", "s": "P"}  一隻風箏（V6，滑桿的 lines 裡跟著 t 飛；光點另外放一個 "trail": true 的點）
+##       {"k": "sweep", "p0": [x, y], "d": [x, y], "t0": 數字或 null, "t1": 數字或 null, "ref": [A, B] 或 "ray": [S, 方向], "dur": 1.6}
+##            航跡（V6）：光點照 p0 + t·d 從 t0 飛到 t1，null 那一頭飛出畫布畫箭頭；不在 ref 線段（ray 射線）上的光點是紅色
+##       {"k": "beads", "a": [x, y], "b": [x, y], "n": 16}  格子點的珠子（V6）：等距的 n 顆，一顆一顆亮起來
+##            cfg.mirror = {o, u, len}：鏡岩（V6）：鏡子是 o 到拖的點的直線，入射光沿 u 打到 o，反射光跟著畫（燈亮時金色）
 ##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
 ##            guess：再畫一支淡淡的指針在先猜的角度（guess_deg）
 ##       weigh_on(cfg)        秤桿（vweigh）：畫面上的砝碼由 level 改 weigh.wb、weigh.wc
@@ -712,6 +717,36 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 				var from := guess_deg if bool(sh.get("guess", false)) and is_finite(guess_deg) else dg
 				_protractor_hand(font, sh, lerpf(from, dg, k * k * (3.0 - 2.0 * k)), UITheme.ACCENT, 3.5)
 			return
+		"kite":
+			# 風箏（V6）：跟著滑桿的 t 飛，"s" 是旁邊的字母
+			var kp := _to(_v(sh.p))
+			var kc := _col(String(sh.get("c", "gold")))
+			_kite(kp + Vector2(0, -6), 0.15 * sin(t * 2.0), kc.lightened(0.15))
+			if String(sh.get("s", "")) != "":
+				_label(font, kp, String(sh.s), sh.get("off", [12, 10]), kc)
+			return
+		"sweep":
+			_draw_sweep(sh)
+			return
+		"beads":
+			# 格子點的珠子（V6）：a 到 b 等距的 n 顆，一顆一顆亮起來
+			var a := _v(sh.a)
+			var b := _v(sh.b)
+			var n := maxi(2, int(sh.get("n", 2)))
+			var key := "beads" + str(sh.a) + str(sh.b)
+			if not _anim0.has(key):
+				_anim0[key] = t
+			var age := t - float(_anim0[key])
+			var per := float(sh.get("per", 0.12))
+			for i in n:
+				var q := _to(a.lerp(b, float(i) / (n - 1)))
+				var k := clampf((age - per * i) / 0.25, 0.0, 1.0)
+				if k <= 0.0:
+					UITheme.dot(self, q, 3.0, Color(1, 1, 1, 0.25))
+					continue
+				UITheme.dot(self, q, 9.0 * k, Color(1, 0.86, 0.42, 0.22))
+				UITheme.dot(self, q, 4.0, UITheme.ACCENT)
+			return
 		"tag":
 			var p := _to(o + _v(sh.p))
 			var col := _col(String(sh.get("c", "text")))
@@ -777,6 +812,8 @@ func _draw_modes(font: Font) -> void:
 				_draw_protractor(font, _v(pr.o), float(pr.r), float(pr.get("a0", 0.0)), float(pr.get("side", 1.0)))
 			if is_finite(place_p.x) and place_cfg.has("split"):
 				_draw_split(font, place_p, place_cfg.split)
+			if is_finite(place_p.x) and place_cfg.has("mirror"):
+				_draw_mirror(font, place_cfg.mirror, place_p, place_lit(place_p))
 			if is_finite(place_p.x) and place_cfg.has("ropes"):
 				for q in place_cfg.ropes:
 					var qv := _v(q)
@@ -837,6 +874,100 @@ func _draw_modes(font: Font) -> void:
 				p = q
 			if is_finite(path_from.x):
 				_kite(_to(p) + Vector2(0, -8), 0.0, UITheme.ACCENT, 0.8)
+
+
+## 航跡（V6）：光點照參數式 p0 + t·d 從 t0 飛到 t1（null = 一直飛到畫布外，畫箭頭）
+##   ref = [A, B]：不在線段 AB 上的光點是紅色；ray = [S, 方向]：不在這條射線上的是紅色
+func _draw_sweep(sh: Dictionary) -> void:
+	var p0 := _v(sh.p0)
+	var d := _v(sh.d)
+	if d.length() < 1e-9:
+		return
+	var wr := _world().grow(0.6)
+	# 飛出畫布的 t（無限的那一頭）
+	var t_lo := -1e9
+	var t_hi := 1e9
+	for ax in 2:
+		var dv := d[ax]
+		if absf(dv) < 1e-9:
+			continue
+		var ta := (wr.position[ax] - p0[ax]) / dv
+		var tb := (wr.end[ax] - p0[ax]) / dv
+		t_lo = maxf(t_lo, minf(ta, tb))
+		t_hi = minf(t_hi, maxf(ta, tb))
+	var inf0: bool = sh.get("t0") == null
+	var inf1: bool = sh.get("t1") == null
+	var t0 := t_lo if inf0 else float(sh.t0)
+	var t1 := t_hi if inf1 else float(sh.t1)
+	var key := "sweep" + str(sh.p0) + str(sh.d) + str(sh.get("t0")) + str(sh.get("t1"))
+	if not _anim0.has(key):
+		_anim0[key] = t
+	var k := clampf((t - float(_anim0[key])) / float(sh.get("dur", 1.6)), 0.0, 1.0)
+	var px := d.length() * _scale()
+	var n := maxi(2, int(absf(t1 - t0) * px / 11.0))
+	var good_c := _col(String(sh.get("c", "gold")))
+	var shown := int(floor(n * k))
+	for i in shown + 1:
+		var q := p0 + d * lerpf(t0, t1, float(i) / n)
+		var c := good_c if _sweep_ok(sh, q) else UITheme.BAD
+		var sp := _to(q)
+		UITheme.dot(self, sp, 6.5, Color(c.r, c.g, c.b, 0.2))
+		UITheme.dot(self, sp, 3.2, c)
+	# 有限的端點畫一個圈，無限的那一頭畫箭頭
+	if not inf0:
+		draw_arc(_to(p0 + d * t0), 7.0, 0.0, TAU, 20, Color(1, 1, 1, 0.75), 2.0, true)
+	if k >= 1.0:
+		if not inf1:
+			draw_arc(_to(p0 + d * t1), 7.0, 0.0, TAU, 20, Color(1, 1, 1, 0.75), 2.0, true)
+		for e in [[t1, inf1, 1.0], [t0, inf0, -1.0]]:
+			if not bool(e[1]):
+				continue
+			var dirv := d.normalized() * float(e[2])
+			var q := p0 + d * float(e[0]) - dirv * 0.5
+			var tip := _to(q)
+			var back := _to(q - dirv * 0.7)
+			var u := (tip - back).normalized()
+			var nn := u.orthogonal() * 7.0
+			var c := good_c if _sweep_ok(sh, q) else UITheme.BAD
+			draw_colored_polygon(PackedVector2Array([tip + u * 5.0, back + nn, back - nn]), c)
+
+
+func _sweep_ok(sh: Dictionary, q: Vector2) -> bool:
+	if sh.has("ref"):
+		var a := _v(sh.ref[0])
+		var b := _v(sh.ref[1])
+		var ab := b - a
+		if absf(ab.cross(q - a)) > 1e-6 * maxf(1.0, ab.length()):
+			return false
+		var s := ab.dot(q - a) / ab.length_squared()
+		return s >= -1e-6 and s <= 1.0 + 1e-6
+	if sh.has("ray"):
+		var a := _v(sh.ray[0])
+		var dv := _v(sh.ray[1])
+		if absf(dv.cross(q - a)) > 1e-6 * maxf(1.0, dv.length()):
+			return false
+		return dv.dot(q - a) >= -1e-6
+	return true
+
+
+## 鏡岩（V6）：鏡子是 o 到拖的點的直線，入射光沿 u 打到 o，反射光跟著鏡子轉
+func _draw_mirror(font: Font, cfg: Dictionary, tp: Vector2, lit: bool) -> void:
+	var o := _v(cfg.o)
+	var u := _v(cfg.u).normalized()
+	var m := tp - o
+	if m.length() < 1e-6:
+		return
+	m = m.normalized()
+	var ln := float(cfg.get("len", 4.0))
+	var a := _to(o - m * ln)
+	var b := _to(o + m * ln)
+	draw_line(a, b, Color(0.75, 0.85, 0.95, 0.25), 9.0, true)
+	draw_line(a, b, Color(0.85, 0.92, 1.0, 0.95), 3.0, true)
+	var r := m * 2.0 * u.dot(m) - u
+	_arrow_px(_to(o - u * ln), _to(o), Color(1, 1, 1, 0.85), 2.5)
+	var rc := UITheme.ACCENT if lit else Color(1, 0.6, 0.55, 0.9)
+	_arrow_px(_to(o), _to(o + r * ln), rc, 3.0, 0.5 if lit else 0.0)
+	_label(font, _to(o - u * ln * 0.55), "\\vec{u}", [10, -10], Color(1, 1, 1, 0.85))
 
 
 ## 拖點的燈：右上角，條件成立時亮起來

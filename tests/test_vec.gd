@@ -8,6 +8,7 @@ extends "test_base.gd"
 ##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
 ##   ・V4：量角器先猜（guess）、合起來的箭（sum）
 ##   ・V5：繩子＋半格吸附（外心）、竿子（內心）、三分花圃（split）
+##   ・V6：鏡岩（mirror）、多個答案的滑桿（goals）、風箏滑桿的光點（trail）
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
@@ -15,6 +16,7 @@ const Bank2 := preload("res://data/levels/vec2/vec2_bank.gd")
 const Bank3 := preload("res://data/levels/vec2/vec3_bank.gd")
 const Bank4 := preload("res://data/levels/vec2/vec4_bank.gd")
 const Bank5 := preload("res://data/levels/vec2/vec5_bank.gd")
+const Bank6 := preload("res://data/levels/vec2/vec6_bank.gd")
 
 var lv
 
@@ -80,11 +82,23 @@ func _initialize() -> void:
 	lv.journey_mode = true
 	await _check_fires()
 	await _check_split()
+	# V6：鏡岩、多個答案的滑桿、風箏滑桿
+	g.goto("level_vec6_kite.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_mirror()
+	await _check_goals()
+	await _check_kite()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots() + Bank6.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -432,3 +446,51 @@ func _check_split() -> void:
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 2, "1 : 2 : 3 的位置就過")
+
+
+func _check_mirror() -> void:
+	await _start("kmirror", 0)
+	ok(lv.steps[0].sandbox.has("mirror"), "鏡岩：拖 T 轉鏡子")
+	_press(_px(Vector2(3, 1)))
+	ok(not _pl().place_lit(_pl().place_p), "鏡子 (3, 1)：反射光沒有沿 \\vec{v}，燈不亮")
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0, "燈不亮不算")
+	_press(_px(Vector2(4, 2)))
+	ok(_pl().place_lit(_pl().place_p), "鏡子 (4, 2)（和 (2, 1) 同方向）：燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "燈亮就過")
+
+
+func _check_goals() -> void:
+	await _start("krot", 0)
+	ok(lv.steps[0].has("goals"), "轉動的航道：滑桿有兩個答案")
+	lv.slide_vals["a"] = 1.0
+	lv._refresh_slide()
+	lv._slide_submit()
+	await frames(2)
+	ok(lv.si == 0, "a = 1 不是 45°，不算")
+	lv.slide_vals["a"] = -2.0
+	lv._refresh_slide()
+	lv._slide_submit()
+	await frames(3)
+	ok(lv.si >= 1, "a = −2 也是 45°，算對")
+	ok(String(lv.steps[2].answers[0]) == "1/2", "調到 −2，最後一步的答案換成另一個 \\frac{1}{2}（%s）" % str(lv.steps[2].answers))
+
+
+func _check_kite() -> void:
+	await _start("kfly", 0)
+	lv.test_answer(lv.steps[0])
+	lv._custom_go()
+	await frames(3)
+	for i in 2:
+		lv.slot_vals = Array(lv.steps[lv.si].answers).map(func(a): return String(a).replace("-", "−"))
+		lv._refresh_fill()
+		lv._fill_submit()
+		await wait(0.6)
+	ok(lv.si == 3 and String(lv.steps[3].kind) == "slide", "風箏起飛：最後一步是 t 滑桿（%d）" % lv.si)
+	for v in [0.0, 1.0, 2.0, 3.0]:
+		lv.slide_vals["t"] = v
+		lv._refresh_slide()
+	ok(_pl().trail_pts.size() >= 4, "拖 t，風箏走過的地方留下光點（%d 個）" % _pl().trail_pts.size())

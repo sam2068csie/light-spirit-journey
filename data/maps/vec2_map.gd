@@ -61,9 +61,13 @@ const STORY := {
 		{"text": "營地的四座營火點起來了。拉得平衡的、一樣遠的、一樣高的、三條高交會的，各有各的位置。", "cam": "site", "site": 4, "zoom": 1.8, "light": 4},
 		{"text": "花圃分成三塊，權重就是對面那一塊的面積！營火好溫暖～", "who": "光靈", "cam": "site", "site": 4, "zoom": 1.4, "spirit": 4},
 	],
+	"V6": [
+		{"text": "風箏沿著航道飛起來了。t 是時間：從起點出發、照著方向走，就知道風箏什麼時候在哪裡。", "cam": "site", "site": 5, "zoom": 1.8, "light": 5},
+		{"text": "每一條航道都有兩支箭頭：一支指著往哪走，一支站在上面插旗！光打到鏡岩也反射回來了～", "who": "光靈", "cam": "site", "site": 5, "zoom": 1.4, "spirit": 5},
+	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "V5": "第五幕．四心營火", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "V5": "第五幕．四心營火", "V6": "第六幕．風箏航道", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:
@@ -335,6 +339,21 @@ func _draw_landmark(i: int) -> void:
 			Tg.draw_line(fp + Vector2(-4, 1), fp + Vector2(4, -1), base.lightened(0.2), 2.0)
 			var hh := (12.0 + 3.0 * sin(t * 6.0 + k)) if gl > 0.5 else 4.0
 			Tg.draw_colored_polygon(PackedVector2Array([fp + Vector2(-4, 0), fp + Vector2(0, -hh), fp + Vector2(4, 0)]), lit_c)
+		return
+	if String(m_sites[i].id) == "V6":
+		# 鏡岩和風箏：亮了之後風箏沿著虛線航道飛，光打到鏡岩反射
+		var rk := PackedVector2Array([p + Vector2(8, -10), p + Vector2(12, -44), p + Vector2(22, -40), p + Vector2(20, -10)])
+		Tg.draw_colored_polygon(rk, base.lightened(0.25))
+		Tg.draw_line(p + Vector2(12, -44), p + Vector2(20, -10), Color(0.85, 0.92, 1.0, 0.35 + 0.5 * gl), 2.0)
+		var fly := fmod(t * 0.35, 1.0) if gl > 0.5 else 0.0
+		var kp := p + Vector2(-20, -16).lerp(Vector2(4, -46), fly)
+		if gl > 0.5:
+			for k in 6:
+				UITheme.dot(Tg, p + Vector2(-20, -16).lerp(Vector2(4, -46), k / 5.0), 1.6, Color(col.r, col.g, col.b, 0.55))
+		var up := Vector2(0, -1)
+		var rt := Vector2(1, 0)
+		Tg.draw_colored_polygon(PackedVector2Array([kp + up * 9.0, kp + rt * 6.0, kp - up * 11.0, kp - rt * 6.0]), lit_c)
+		Tg.draw_line(kp - up * 11.0, kp - up * 11.0 + Vector2(-4, 10), base.lightened(0.3), 1.2)
 		return
 	if String(m_sites[i].id) == "V4":
 		# 箭靶：亮了之後靶心插著一支箭

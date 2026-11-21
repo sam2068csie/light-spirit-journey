@@ -101,7 +101,7 @@ const UNITS := [
 		{"id": "L7", "name": "正負羅盤", "topic": "對數不等式", "file": "level_07_compass.gd", "bank": "level07_bank.gd", "color": UITheme.GOOD},
 		{"id": "L8", "name": "位數望遠鏡", "topic": "首數、尾數與應用", "file": "level_08_telescope.gd", "bank": "level08_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	# 平面向量：V1～V5 做好了，其他六關建造中（docs/vec2_plan.md：八關 V1～V8，每關 2 章，地圖是光潮群島的箭羽高原）
+	# 平面向量：V1～V6 做好了，其他兩關建造中（docs/vec2_plan.md：八關 V1～V8，每關 2 章，地圖是光潮群島的箭羽高原）
 	# 先用 preview（開發者的「一鍵開放全部關卡」才進得去），八關做完再 open = true
 	{"id": "vec2", "term": "高二上", "title": "平面向量", "exam": "", "color": UITheme.CYAN, "open": false, "preview": true,
 	 "world": "光靈的旅程：箭羽高原", "map": "vec2_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_vec2.gd",
@@ -111,6 +111,7 @@ const UNITS := [
 		{"id": "V3", "name": "日晷影場", "topic": "內積與正射影", "file": "level_vec3_sundial.gd", "bank": "vec3_bank.gd", "color": UITheme.ORANGE},
 		{"id": "V4", "name": "長弓靶場", "topic": "求長度與夾角", "file": "level_vec4_bow.gd", "bank": "vec4_bank.gd", "color": UITheme.PINK},
 		{"id": "V5", "name": "四心營火", "topic": "三角形的四心與面積比", "file": "level_vec5_camp.gd", "bank": "vec5_bank.gd", "color": UITheme.GOLD},
+		{"id": "V6", "name": "風箏航道", "topic": "直線的參數式與法向量", "file": "level_vec6_kite.gd", "bank": "vec6_bank.gd", "color": UITheme.LIME},
 	 ]},
 	# ======================= 高二下 =======================
 	{"id": "vec3", "term": "高二下", "title": "空間向量", "exam": "", "color": UITheme.VIOLET, "open": false,
