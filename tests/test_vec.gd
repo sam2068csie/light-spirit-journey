@@ -7,12 +7,14 @@ extends "test_base.gd"
 ##   ・vweigh：掛砝碼，平衡才過
 ##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
 ##   ・V4：量角器先猜（guess）、合起來的箭（sum）
+##   ・V5：繩子＋半格吸附（外心）、竿子（內心）、三分花圃（split）
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
 const Bank2 := preload("res://data/levels/vec2/vec2_bank.gd")
 const Bank3 := preload("res://data/levels/vec2/vec3_bank.gd")
 const Bank4 := preload("res://data/levels/vec2/vec4_bank.gd")
+const Bank5 := preload("res://data/levels/vec2/vec5_bank.gd")
 
 var lv
 
@@ -67,11 +69,22 @@ func _initialize() -> void:
 	lv.journey_mode = true
 	await _check_guess()
 	await _check_sum()
+	# V5：四座營火、三分花圃
+	g.goto("level_vec5_camp.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_fires()
+	await _check_split()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -374,3 +387,48 @@ func _check_sum() -> void:
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 1, "最短就過")
+
+
+func _check_fires() -> void:
+	await _start("fires", 0)
+	lv.test_answer(lv.steps[0])
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1 and lv.steps[1].sandbox.has("ropes"), "四座營火：第二步拉三條繩子找外心")
+	_press(_px(Vector2(4.4, 6.1)))
+	ok(_pl().place_p.is_equal_approx(Vector2(4.5, 6)), "外心吸附到半格（%s）" % str(_pl().place_p))
+	ok(_pl().place_lit(_pl().place_p), "三條繩子一樣長，燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 2, "找到外心就過")
+	_press(_px(Vector2(2, 2)))
+	ok(not _pl().place_lit(_pl().place_p), "(2, 2) 到斜邊的竿子比較長，燈不亮")
+	_press(_px(Vector2(3, 3)))
+	ok(_pl().place_lit(_pl().place_p), "(3, 3) 三根竿子一樣長")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 3, "找到內心就過")
+	var e0: int = lv.energy
+	_press(_px(Vector2(3, 4)))
+	await frames(2)
+	ok(lv.si == 3 and lv.energy == e0 - 1, "垂心點到重心：扣一顆心")
+	_press(_px(Vector2(0, 0)))
+	await frames(3)
+	ok(lv.si == 4, "垂心是直角頂點 A")
+
+
+func _check_split() -> void:
+	await _start("garden", 0)
+	ok(lv.steps[0].sandbox.has("split"), "三分花圃：拖 P 分三塊")
+	_press(_px(Vector2(1, 3)))
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0, "三塊不一樣大不算")
+	_press(_px(Vector2(2, 2)))
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "三塊一樣大（重心）就過")
+	_press(_px(Vector2(2, 3)))
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 2, "1 : 2 : 3 的位置就過")

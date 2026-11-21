@@ -27,6 +27,12 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##            cfg.trace = true：燈亮的位置留下光點（trace_pts）；cfg.read：左上角的讀數（{…} 裡是 x、y 的算式）
 ##            cfg.protractor = {o, r, a0, side}：量角器（V4）：a0 是底邊的方向（度），side = 1 往逆時針量、−1 往順時針
 ##            cfg.sum = {o}：從 o 畫一支金色箭頭到拖的點（首尾相接的和，V4）
+##            cfg.ropes = [[x, y], …]：從拖的點拉繩子到那幾點，標長度（V5 外心）
+##            cfg.feet = [[a, b, c], …]：從拖的點往直線 ax + by + c = 0 畫垂直的竿子，標長度（V5 內心）
+##            cfg.split = [A, B, C]：拖的點把三角形分成三塊，塗三種顏色（V5 面積比）
+##            cfg.snap = 0.5：吸附到半格
+##       {"k": "fire", "p": [x, y], "c": "gold"}  營火（V5 四心）
+##       {"k": "split", "p": [x, y], "tri": [A, B, C]}  三分花圃的圖層版
 ##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
 ##            guess：再畫一支淡淡的指針在先猜的角度（guess_deg）
 ##       weigh_on(cfg)        秤桿（vweigh）：畫面上的砝碼由 level 改 weigh.wb、weigh.wc
@@ -183,7 +189,8 @@ func place_snap(w: Vector2) -> Vector2:
 		var stp := float(on.get("step", 1.0))
 		var k := roundf((w - o).dot(d) / d.length_squared() / stp) * stp
 		return o + d * k
-	var p := Vector2(roundf(w.x), roundf(w.y))
+	var sn := float(place_cfg.get("snap", 1.0))
+	var p := Vector2(snappedf(w.x, sn), snappedf(w.y, sn))
 	var wr := _world()
 	p.x = clampf(p.x, ceilf(wr.position.x), floorf(wr.end.x))
 	p.y = clampf(p.y, ceilf(wr.position.y + 0.3), floorf(wr.end.y))
@@ -428,7 +435,7 @@ func _shape_by_id(id: String) -> Dictionary:
 
 func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 	var kk := String(ln.get("k", "line"))
-	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right"]:
+	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right", "fire"]:
 		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
 			return {}
 		var out := ln.duplicate(true)
@@ -683,6 +690,12 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 		"expand":
 			_draw_expand(font, sh)
 			return
+		"fire":
+			_draw_fire(_to(_v(sh.p)), _col(String(sh.get("c", "gold"))), _anim_k(sh) if sh.has("at") else 1.0)
+			return
+		"split":
+			_draw_split(font, _v(sh.p), sh.tri)
+			return
 		"protractor":
 			_draw_protractor(font, _v(sh.o), float(sh.r), float(sh.get("a0", 0.0)), float(sh.get("side", 1.0)))
 			var dg := float(sh.get("deg", -1.0))
@@ -756,6 +769,21 @@ func _draw_modes(font: Font) -> void:
 			if place_cfg.has("protractor"):
 				var pr: Dictionary = place_cfg.protractor
 				_draw_protractor(font, _v(pr.o), float(pr.r), float(pr.get("a0", 0.0)), float(pr.get("side", 1.0)))
+			if is_finite(place_p.x) and place_cfg.has("split"):
+				_draw_split(font, place_p, place_cfg.split)
+			if is_finite(place_p.x) and place_cfg.has("ropes"):
+				for q in place_cfg.ropes:
+					var qv := _v(q)
+					draw_line(_to(place_p), _to(qv), Color(0.95, 0.8, 0.55, 0.85), 2.0, true)
+					_label(font, _to(place_p.lerp(qv, 0.5)), ("%.2f" % place_p.distance_to(qv)).rstrip("0").rstrip("."), [6, -6], Color(0.95, 0.85, 0.6))
+			if is_finite(place_p.x) and place_cfg.has("feet"):
+				for ln in place_cfg.feet:
+					var nv := Vector2(float(ln[0]), float(ln[1]))
+					var dd := (nv.dot(place_p) + float(ln[2])) / nv.length_squared()
+					var ft := place_p - nv * dd
+					_pl(PackedVector2Array([_to(place_p), _to(ft)]), UITheme.CYAN, 2.0, true)
+					UITheme.dot(self, _to(ft), 3.5, UITheme.CYAN)
+					_label(font, _to(place_p.lerp(ft, 0.5)), ("%.2f" % place_p.distance_to(ft)).rstrip("0").rstrip("."), [6, -6], UITheme.CYAN)
 			if is_finite(place_p.x) and place_cfg.has("sum"):
 				var so := _v(place_cfg.sum.o)
 				_arrow_px(_to(so), _to(place_p), UITheme.ACCENT, 4.0, 0.5)
@@ -926,6 +954,38 @@ func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) 
 	super(font, sp, s, off, c, center)
 
 
+## 營火：一團會跳動的火（k：點起來的進度）
+func _draw_fire(p: Vector2, col: Color, k := 1.0) -> void:
+	var h := 18.0 * k
+	UITheme.dot(self, p + Vector2(0, -6), 18.0 * k, Color(col.r, col.g, col.b, 0.16))
+	draw_line(p + Vector2(-9, 4), p + Vector2(9, -1), Color(0.5, 0.35, 0.25), 3.0, true)
+	draw_line(p + Vector2(-9, -1), p + Vector2(9, 4), Color(0.45, 0.3, 0.22), 3.0, true)
+	if h < 1.0:
+		return
+	for j in 3:
+		var sc := 1.0 - 0.28 * j
+		var wob := sin(t * 7.0 + j * 1.7) * 2.0
+		var tip := p + Vector2(wob, -h * sc - 2.0)
+		var c := col.lightened(0.25 * j)
+		draw_colored_polygon(PackedVector2Array([p + Vector2(-7 * sc, 0), tip, p + Vector2(7 * sc, 0), p + Vector2(0, 2)]), Color(c.r, c.g, c.b, 0.85))
+
+
+## 三分花圃：P 把三角形分成 △PBC、△PCA、△PAB 三塊
+func _draw_split(font: Font, P: Vector2, tri: Array) -> void:
+	var A := _v(tri[0])
+	var B := _v(tri[1])
+	var C := _v(tri[2])
+	var cols := [UITheme.CYAN, UITheme.PINK, UITheme.LIME]
+	var parts := [[P, B, C], [P, C, A], [P, A, B]]
+	for i in 3:
+		var pp: Array = parts[i]
+		var poly := PackedVector2Array([_to(pp[0]), _to(pp[1]), _to(pp[2])])
+		var c: Color = cols[i]
+		if absf((pp[1] - pp[0]).cross(pp[2] - pp[0])) > 1e-6:
+			draw_colored_polygon(poly, Color(c.r, c.g, c.b, 0.2))
+		draw_line(_to(P), _to(pp[1]), Color(1, 1, 1, 0.45), 1.4, true)
+
+
 ## 量角器：從底邊（a0 度）往 side 那一邊量 0°～180°，每 10° 一個刻度
 func _draw_protractor(font: Font, o: Vector2, r: float, a0: float, side: float) -> void:
 	var pts := PackedVector2Array()
@@ -1026,7 +1086,7 @@ func _draw_pole(font: Font, o: Vector2, f: Vector2, a: Vector2) -> void:
 func _draw_expand(font: Font, sh: Dictionary) -> void:
 	var tl := _to(_v(sh.p))
 	var cw := float(sh.get("cw", 86.0))
-	var chh := float(sh.get("ch", 42.0))
+	var chh := float(sh.get("ch", 46.0))
 	var hw := float(sh.get("hw", 68.0))
 	var rows: Array = sh.rows
 	var cols: Array = sh.cols

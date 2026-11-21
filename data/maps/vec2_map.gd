@@ -57,9 +57,13 @@ const STORY := {
 		{"text": "靶心插上箭了。兩支箭合起來飛多遠，要看它們張開多大的角。反過來，量出長度也能算出角度。", "cam": "site", "site": 3, "zoom": 1.8, "light": 3},
 		{"text": "長度的平方就是自己和自己的內積！先用量角器猜，再算算看差幾度～", "who": "光靈", "cam": "site", "site": 3, "zoom": 1.4, "spirit": 3},
 	],
+	"V5": [
+		{"text": "營地的四座營火點起來了。拉得平衡的、一樣遠的、一樣高的、三條高交會的，各有各的位置。", "cam": "site", "site": 4, "zoom": 1.8, "light": 4},
+		{"text": "花圃分成三塊，權重就是對面那一塊的面積！營火好溫暖～", "who": "光靈", "cam": "site", "site": 4, "zoom": 1.4, "spirit": 4},
+	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "V5": "第五幕．四心營火", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:
@@ -323,6 +327,14 @@ func _draw_landmark(i: int) -> void:
 		if gl > 0.5:
 			Tg.draw_line(p + Vector2(0, -12), p + Vector2(18, -9), Color(0.1, 0.1, 0.15, 0.55), 3.0)
 		Tg.draw_colored_polygon(PackedVector2Array([p + Vector2(-2, -12), p + Vector2(-2, -40), p + Vector2(12, -12)]), lit_c)
+		return
+	if String(m_sites[i].id) == "V5":
+		# 營火：四個小火苗，亮了就跳動
+		for k in 4:
+			var fp := p + Vector2(-13 + k * 9, -10 - (k % 2) * 4)
+			Tg.draw_line(fp + Vector2(-4, 1), fp + Vector2(4, -1), base.lightened(0.2), 2.0)
+			var hh := (12.0 + 3.0 * sin(t * 6.0 + k)) if gl > 0.5 else 4.0
+			Tg.draw_colored_polygon(PackedVector2Array([fp + Vector2(-4, 0), fp + Vector2(0, -hh), fp + Vector2(4, 0)]), lit_c)
 		return
 	if String(m_sites[i].id) == "V4":
 		# 箭靶：亮了之後靶心插著一支箭
