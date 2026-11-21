@@ -99,7 +99,7 @@ static func gen_problems(kind: String, n: int) -> Array:
 				continue
 			seen[key] = true
 			out.append({"eq": "%s，%s" % [BankV6._lstr(a, b, c), _vs(v)], "q": "箭頭和直線", "choices": ["平行", "垂直", "都不是"], "correct": want,
-				"tag": BankV6.T_NRM, "nudge": "法向量是 (a, b)：箭頭和法向量垂直 ⇒ 和直線平行；和法向量平行 ⇒ 和直線垂直。"})
+				"tag": BankV6.T_NRM, "nudge": "法向量是 (a, b)：箭頭和法向量垂直 ⇒ 和直線平行，和法向量平行 ⇒ 和直線垂直。"})
 			continue
 		# angle：第二條直線的法向量
 		var m: Vector2i
@@ -131,6 +131,6 @@ static func gen_problems(kind: String, n: int) -> Array:
 		if seen.has(key2):
 			continue
 		seen[key2] = true
-		out.append({"eq": "%s\n%s" % [BankV6._lk(a, b, c), BankV6._lk(m.x, m.y, c2)], "q": "兩直線的夾角", "choices": ["平行", "垂直", "夾 45°", "都不是"], "correct": want,
+		out.append({"eq": "%s，%s" % [BankV6._lk(a, b, c), BankV6._lk(m.x, m.y, c2)], "q": "兩直線的夾角", "choices": ["平行", "垂直", "夾 45°", "都不是"], "correct": want,
 			"tag": BankV6.T_ANG, "nudge": "看兩支法向量：倍數 ⇒ 平行，內積 0 ⇒ 垂直，cos^{2} θ = \\frac{1}{2} ⇒ 45°。"})
 	return out

@@ -214,7 +214,7 @@ static func _slots() -> Array:
 		_fly(), _seg_cards(), _seg_judge(), _beads(), _flag(), _dirnorm(), _meet(), _dist(), _walk_k(), _turn(),
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "航道速算", "time": 120.0,
 		 "story": "看直線和箭頭：平行、垂直，還是都不是？",
-		 "insight": "ax + by + c = 0：法向量 (a, b)、方向向量 (b, −a)\n箭頭和 (a, b) 平行 ⇒ 垂直直線；和 (a, b) 垂直 ⇒ 平行直線。",
+		 "insight": "ax + by + c = 0：法向量 (a, b)、方向向量 (b, −a)\n箭頭和 (a, b) 平行 ⇒ 垂直直線，和 (a, b) 垂直 ⇒ 平行直線。",
 		 "variants": [{"gen": "para", "count": 8}]},
 		_extreme(), _rope(), _mirror(), _lproj(), _lfoot(), _cross(), _pcross(), _slope(), _rotate(),
 		{"id": "speed2", "chapter": 2, "type": "speed", "title": "交角速算", "time": 120.0,
@@ -335,10 +335,10 @@ static func _seg_judge() -> Dictionary:
 	var s2 := [_seg(A2, B2, "cyan", {"w": 3.0})]
 	s2 += B1._dots({"A": A2, "B": B2}, "text", {"A": [8, 14], "B": [-14, -8]})
 	s2 += [_seg(A2, A2 + Vector2(-3, 0), "gold", {"at": 1, "until": 2, "dash": true}), _seg(A2 + Vector2(-3, 0), B2, "gold", {"at": 1, "until": 2, "dash": true}),
-		_ar(A2, B2, "cyan", "(−3, 4)", {"at": 2, "until": 3, "w": 3.5, "ls": -1}), _ar(A2, A2 + Vector2(4, 3), "pink", "(4, 3)", {"at": 2, "until": 3}),
+		_ar(A2, B2, "cyan", "(−3, 4)", {"at": 2, "until": 3, "w": 3.5, "ls": 1}), _ar(A2, A2 + Vector2(4, 3), "pink", "(4, 3)", {"at": 2, "until": 3}),
 		_right(A2, e, Vector2(4, 3), {"at": 2, "until": 3}),
 		_sweep(Q0, e, 0, -1, 3, {"until": 4, "ref": [_p(A2), _p(B2)]}), _dot(X2, "", "pink", {"at": 3, "until": 4}), _tag(X2, "t = −1", "pink", {"at": 3, "until": 4, "off": [10, 4]}),
-		_walk([A2, M2], 4), _dot(M2, "", "gold", {"at": 4}), _tag(M2, "t = \\frac{1}{2}", "gold", {"at": 4, "off": [-40, -6]})]
+		_walk([A2, M2], 4), _dot(M2, "", "gold", {"at": 4}), _tag(M2, "t = \\frac{1}{2}", "gold", {"at": 4, "off": [-58, 8]})]
 	var st2 := [
 		_j("審判一", "直線 AB 的斜率是 −\\frac{4}{3}", true, "方向向量 (−3, 4)：往左 3、往上 4。", "斜率 −\\frac{4}{3} ○", T_PAR),
 		_j("審判二", "(4, 3) 是直線 AB 的法向量", true, "(4, 3) · (−3, 4) = 0：和方向向量垂直。", "(4, 3) ⊥ (−3, 4)：法向量 ○", T_NRM),
@@ -408,7 +408,7 @@ static func _flag() -> Dictionary:
 			]})
 	return {"id": "kflag", "chapter": 1, "type": "forge", "title": "插旗的航道",
 		"story": "航道上插一面旗子，旗子和航道垂直。",
-		"insight": "和 \\vec{n} = (a, b) 垂直的直線：ax + by = c\n(a, b) 是法向量；c 用直線上的一點代進去。",
+		"insight": "和 \\vec{n} = (a, b) 垂直的直線：ax + by = c\n(a, b) 是法向量，c 用直線上的一點代進去。",
 		"variants": vars}
 
 
@@ -443,9 +443,9 @@ static func _dirnorm() -> Dictionary:
 	# 變化 C（B8）
 	var S := Vector2(2, 1)
 	var sc := [_L(2, 5, -9, "cyan", "L"), _dot(S, "", "gold", {"at": 2}), _tag(S, "t = 0", "gold", {"at": 2, "off": [-30, -10]}),
-		_walk([S, S + Vector2(5, -2)], 2), _ar(Vector2(-2, 2.6), Vector2(0, 7.6), "pink", "(2, 5)", {"at": 1}), _right(Vector2(-2, 2.6), Vector2(2, 5), Vector2(5, -2), {"at": 1})]
+		_walk([S, S + Vector2(5, -2)], 2), _ar(Vector2(-3, 3), Vector2(-2, 5.5), "pink", "(2, 5)", {"at": 1, "ls": -1}), _right(Vector2(-3, 3), Vector2(2, 5), Vector2(5, -2), {"at": 1})]
 	vars.append({"eq": "L：2x + 5y − 9 = 0 的參數式\n寫成 x = 2 + at，y = b − 2t，求 a、b",
-		"plane": _axes([-5.0, 10.0], [-2.0, 4.0], sc),
+		"plane": _axes([-6.0, 11.0], [-2.5, 6.0], sc),
 		"steps": [
 			_f("a", "方向向量 ⊥ 法向量", "a = [0]", ["5"], "(a, −2) · (2, 5) = 2a − 10 = 0 ⇒ a = 5", "方向向量 (a, −2) 和法向量 (2, 5) 垂直。", T_NRM),
 			_f("b", "t = 0 的點在 L 上", "b = [0]", ["1"], "t = 0：(2, b) 代進 L：4 + 5b = 9 ⇒ b = 1", "t = 0 時 x = 2、y = b。", T_PAR),
@@ -504,19 +504,19 @@ static func _dist() -> Dictionary:
 		var shapes := [_Lpd(Q, d, "cyan", "L"), _dot(P, "P", "gold", {"off": [-16, -6]}), _dot(Q, "", "text"),
 			_ar(Q, Q + d * 0.5, "cyan", "", {"w": 2.0}), _ar(Q, Q + n * 0.5, "pink", "", {"at": 1}), _right(Q, d, n, {"at": 1}),
 			_seg(P, Fo, "gold", {"at": 3, "w": 3.0}), _right(Fo, -d, P - Fo, {"at": 3}),
-			{"k": "label", "p": _p((P + Fo) / 2.0), "s": "\\frac{%d}{5}" % int(num), "c": "gold", "math": true, "off": [16, 0], "at": 3}]
+			{"k": "label", "p": _p((P + Fo) / 2.0), "s": "\\frac{%d}{5}" % int(num), "c": "gold", "math": true, "off": [-22, -8], "at": 3}]
 		vars.append({"eq": "P%s 到 L：%s 的距離" % [_pt(P), _par(Q, d)],
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				_f("法向量", "和方向向量垂直", "\\vec{n} = ([0], [1])", [_ans(n.x), _ans(n.y)], "方向向量 %s，法向量 %s" % [_pt(d), _pt(n)], "(a, b) 和 %s 垂直：交換、變一個號。" % _pt(d), T_NRM, "prop"),
 				_f("一般式", "代 t = 0 的點", "%s = [0]" % _lin2(n.x, n.y, 0.0), [_ans(k)], "代 %s：%s" % [_pt(Q), _lk(n.x, n.y, k)], "L 過 %s。" % _pt(Q), T_NRM),
 				_f("距離", "點到直線的距離", "距離 = [0]", ["%d/5" % int(num)],
-					"\\frac{|%s|}{\\sqrt{%s^{2} + %s^{2}}} = \\frac{%d}{5}" % [_lin2(n.x, n.y, -k).replace("x", "(%s)" % _num(P.x)).replace("y", "(%s)" % _num(P.y)), _num(absf(n.x)), _num(absf(n.y)), int(num)],
-					"\\frac{|ax_{0} + by_{0} − c|}{\\sqrt{a^{2} + b^{2}}}：分子加絕對值，分母是法向量的長。", T_DST),
+					"\\frac{|%s|}{√{%s^{2} + %s^{2}}} = \\frac{%d}{5}" % [_lin2(n.x, n.y, -k).replace("x", "(%s)" % _num(P.x)).replace("y", "(%s)" % _num(P.y)), _num(absf(n.x)), _num(absf(n.y)), int(num)],
+					"\\frac{|ax_{0} + by_{0} − c|}{√{a^{2} + b^{2}}}：分子加絕對值，分母是法向量的長。", T_DST),
 			]})
 	return {"id": "kdist", "chapter": 1, "type": "forge", "title": "燈塔到航道的距離",
 		"story": "燈塔 P 拉一條最短的繩子到航道。",
-		"insight": "參數式先換成 ax + by = c（法向量 ⊥ 方向向量）\nP 到直線的距離 = \\frac{|ax_{0} + by_{0} − c|}{\\sqrt{a^{2} + b^{2}}}。",
+		"insight": "參數式先換成 ax + by = c（法向量 ⊥ 方向向量）\nP 到直線的距離 = \\frac{|ax_{0} + by_{0} − c|}{√{a^{2} + b^{2}}}。",
 		"variants": vars}
 
 
@@ -538,8 +538,8 @@ static func _walk_k() -> Dictionary:
 		vars.append({"eq": "A%s 在 L：%s 上\nL 上和 A 距離 %s 的點？" % [_pt(A), lstr, cfg.dist],
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
-				_f("方向", "L 的方向向量", "\\vec{d} = ([0], [1])", [_ans(d.x), _ans(d.y)], "法向量 (%d, %d)，方向向量 %s" % [L[0], L[1], _pt(d)], "方向向量 (b, −a)。", T_NRM, "prop"),
-				_f("一步多長", "方向向量的長", "|\\vec{d}| = [0]", [cfg.len], "|\\vec{d}| = %s" % cfg.len, "\\sqrt{%s^{2} + %s^{2}}。" % [_num(absf(d.x)), _num(absf(d.y))], T_DST),
+				_f("方向", "L 的方向向量", "\\vec{d} = ([0], [1])", [_ans(d.x), _ans(d.y)], "法向量 %s，方向向量 %s" % [_pt(Vector2(L[0], L[1])), _pt(d)], "方向向量 (b, −a)。", T_NRM, "prop"),
+				_f("一步多長", "方向向量的長", "|\\vec{d}| = [0]", [cfg.len], "|\\vec{d}| = %s" % cfg.len, "√{%s^{2} + %s^{2}}。" % [_num(absf(d.x)), _num(absf(d.y))], T_DST),
 				{"kind": "fill", "name": "兩個點", "q": "往兩邊各走 %d 步" % k, "template": "([0], [1])、([2], [3])",
 				 "answers": [_ans(P1.x), _ans(P1.y), _ans(P2.x), _ans(P2.y)], "alts": [[_ans(P2.x), _ans(P2.y), _ans(P1.x), _ans(P1.y)]],
 				 "line": "A ± %s\\vec{d}：%s、%s" % ["" if k == 1 else str(k), _pt(P1), _pt(P2)], "nudge": "%s = %d|\\vec{d}|：另一個方向也可以。" % [cfg.dist, k],
@@ -614,6 +614,7 @@ static func _extreme() -> Dictionary:
 	var py := _ex(A.y, B.y - A.y)
 	var sa := [_seg(A, B, "cyan", {"w": 2.5})]
 	sa += B1._dots({"A": A, "B": B}, "text", {"A": [-14, -8], "B": [8, 14]})
+	sa += [_dot(B, "", "gold", {"at": 2}), _tag(B, "11", "gold", {"at": 2, "off": [10, -8]})]
 	var la := [{"k": "dot", "p": [px, py], "c": "gold", "s": "", "trail": true}, {"k": "kite", "p": [px, py], "c": "gold"}]
 	vars.append({"eq": "A(−3, 2)、B(2, −1)，P(x, y) 在線段 AB 上\n求 2x − 3y + 4 的最大值",
 		"plane": _axes([-5.5, 4.5], [-2.5, 3.5], sa),
@@ -631,6 +632,7 @@ static func _extreme() -> Dictionary:
 		{"k": "seg", "a": ["t", "1 - t"], "b": [3, 1], "c": "pink"}, {"k": "seg", "a": ["t", "1 - t"], "b": [-1, 3], "c": "pink"}]
 	var sb := [_L(1, 1, -1, "cyan", "x + y = 1")]
 	sb += B1._dots({"A": A2, "B": B2}, "text", {"A": [8, -6], "B": [-14, -8]})
+	sb += [_seg(Vector2(0, 1), A2, "pink", {"at": 2}), _seg(Vector2(0, 1), B2, "pink", {"at": 2}), _dot(Vector2(0, 1), "P", "gold", {"at": 2, "off": [-16, -6]})]
 	vars.append({"eq": "A(3, 1)、B(−1, 3)，P 在 x + y − 1 = 0 上\n\\ol{AP}^{2} + \\ol{BP}^{2} 最小時 P 在哪裡？",
 		"plane": _axes([-4.5, 6.0], [-2.2, 4.2], sb),
 		"steps": [
@@ -649,6 +651,7 @@ static func _extreme() -> Dictionary:
 		{"k": "arrow", "a": ["3 - 3 * t", "3 * t"], "b": [3, 0], "c": "cyan", "w": 2.0}, {"k": "arrow", "a": ["3 - 3 * t", "3 * t"], "b": [-1, 0], "c": "pink", "w": 2.0}]
 	var sc := [_L(1, 1, -3, "faint")]
 	sc += B1._dots({"A": A3, "B": B3v, "C": C3}, "text", {"A": [8, 14], "B": [-14, -6], "C": [-14, 14]})
+	sc += [_ar(Vector2(2, 1), A3, "cyan", "", {"at": 2, "w": 2.0}), _ar(Vector2(2, 1), C3, "pink", "", {"at": 2, "w": 2.0}), _dot(Vector2(2, 1), "P", "gold", {"at": 2, "off": [8, -8]})]
 	vars.append({"eq": "A(3, 0)、B(0, 3)、C(−1, 0)，P 在直線 AB 上\n求 \\vec{PA} · \\vec{PC} 的最小值",
 		"plane": _axes([-3.5, 5.5], [-1.4, 4.4], sc),
 		"steps": [
@@ -696,7 +699,7 @@ static func _rope() -> Dictionary:
 			]})
 	return {"id": "krope", "chapter": 2, "type": "forge", "title": "最短的繩子",
 		"story": "從 A 拉繩子碰一下航道，再拉到 B，最短多長？",
-		"insight": "垂足：A + k\\vec{n} 代進直線；對稱點 A' = A + 2k\\vec{n}\nA、B 同一側：\\ol{PA} + \\ol{PB} 的最小值是 \\ol{A'B}。",
+		"insight": "垂足：A + k\\vec{n} 代進直線，對稱點 A' = A + 2k\\vec{n}\nA、B 同一側：\\ol{PA} + \\ol{PB} 的最小值是 \\ol{A'B}。",
 		"variants": vars}
 
 
@@ -758,7 +761,7 @@ static func _lproj() -> Dictionary:
 		vars.append({"eq": "A%s、B%s，求 \\vec{AB} 在\n直線 %s 上的正射影" % [_pt(A), _pt(B), _lstr(L[0], L[1], L[2]) if int(L[2]) > 0 else _lk(L[0], L[1], -L[2])],
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
-				_f("方向", "L 的方向向量", "\\vec{d} = ([0], [1])", [_ans(d.x), _ans(d.y)], "法向量 (%d, %d)，方向向量 \\vec{d} = %s" % [L[0], L[1], _pt(d)], "方向向量 (b, −a)。", T_LPJ, "prop"),
+				_f("方向", "L 的方向向量", "\\vec{d} = ([0], [1])", [_ans(d.x), _ans(d.y)], "法向量 %s，方向向量 \\vec{d} = %s" % [_pt(Vector2(L[0], L[1])), _pt(d)], "方向向量 (b, −a)。", T_LPJ, "prop"),
 				_f("正射影", "\\vec{AB} 的影子", "正射影 = ([0], [1])", [_ans(pr.x), _ans(pr.y)],
 					"\\frac{\\vec{AB} · \\vec{d}}{|\\vec{d}|^{2}}\\vec{d} = \\frac{%s}{%s}%s = %s" % [_num(ab.dot(d)), _num(d.length_squared()), _pt(d), _pt(pr)],
 					"\\vec{AB} = %s，\\frac{\\vec{AB} · \\vec{d}}{|\\vec{d}|^{2}}\\vec{d}。" % _pt(ab), T_LPJ),
@@ -831,7 +834,7 @@ static func _cross() -> Dictionary:
 				_f("法向量", "兩條直線的法向量", "\\vec{m} = ([0], [1])，\\vec{n} = ([2], [3])", [_ans(m.x), _ans(m.y), _ans(n.x), _ans(n.y)],
 					"\\vec{m} = %s、\\vec{n} = %s：兩直線的夾角和兩支法向量的夾角一樣（或互補）" % [_pt(m), _pt(n)], "ax + by = c 的法向量 (a, b)。", T_ANG),
 				_f("cos θ", "銳角", "cos θ = [0]", [cfg.cos],
-					"cos θ = \\frac{|\\vec{m} · \\vec{n}|}{|\\vec{m}||\\vec{n}|} = \\frac{%s}{\\sqrt{%s}\\sqrt{%s}} = %s" % [_num(absf(m.dot(n))), _num(m.length_squared()), _num(n.length_squared()), _rad_frac(String(cfg.cos))],
+					"cos θ = \\frac{|\\vec{m} · \\vec{n}|}{|\\vec{m}||\\vec{n}|} = \\frac{%s}{√{%s}√{%s}} = %s" % [_num(absf(m.dot(n))), _num(m.length_squared()), _num(n.length_squared()), _rad_frac(String(cfg.cos))],
 					"題目問銳角：分子取絕對值。", T_ANG),
 			]})
 	return {"id": "kangle", "chapter": 2, "type": "forge", "title": "交叉的航道",
@@ -857,7 +860,7 @@ static func _pcross() -> Dictionary:
 		if absf(g2 - g1) > 90.0:
 			g2 = _deg(-d2)
 		var shapes := [_Lpd(P1, d1, "cyan", "L₁"), _Lpd(P2, d2, "pink", "L₂"), _dot(P1, "", "cyan"), _dot(P2, "", "pink"),
-			_tag(P1, "t = 0", "cyan", {"off": [-18, 18]}), _tag(P2, "s = 0", "pink", {"off": [10, 16]}),
+			_tag(P1, "t = 0", "cyan", {"off": [-18, 18]}), _tag(P2, "s = 0", "pink", {"off": [10, -10]}),
 			_walk(_steps(P1, d1, t), 1), _walk(_steps(P2, d2, s), 1, {"c": "lime"}), _dot(P, "P", "gold", {"at": 1, "off": [10, -8]}),
 			_arc(P, g1, g2, "θ", {"at": 3})]
 		vars.append({"eq": "L₁：%s，L₂：%s\n求交點 P 和夾角 θ 的 sin θ" % [_parp(P1, d1), _parp(P2, d2, "s")],
@@ -868,7 +871,7 @@ static func _pcross() -> Dictionary:
 					"x、y 各列一條，解 t、s。", T_PAR),
 				_f("cos θ", "方向向量的夾角", "cos θ = [0]", [cfg.cos],
 					"cos θ = \\frac{|%s · %s|}{|%s||%s|} = %s" % [_pt(d1), _pt(d2), _pt(d1), _pt(d2), _rad_frac(String(cfg.cos))], "方向向量 %s、%s，取絕對值。" % [_pt(d1), _pt(d2)], T_ANG),
-				_f("sin θ", "sin^{2} θ + cos^{2} θ = 1", "sin θ = [0]", [cfg.sin], "sin θ = \\sqrt{1 − cos^{2} θ} = %s" % _rad_frac(String(cfg.sin)), "sin^{2} θ = 1 − cos^{2} θ。", T_ANG),
+				_f("sin θ", "sin^{2} θ + cos^{2} θ = 1", "sin θ = [0]", [cfg.sin], "sin θ = √{1 − cos^{2} θ} = %s" % _rad_frac(String(cfg.sin)), "sin^{2} θ = 1 − cos^{2} θ。", T_ANG),
 			]})
 	return {"id": "kpangle", "chapter": 2, "type": "forge", "title": "參數式的交點和夾角",
 		"story": "兩隻風箏各飛各的航道，在哪裡相遇？",
@@ -907,7 +910,7 @@ static func _slope() -> Dictionary:
 				_f("L₂ 的方向", "斜率 m：(1, m)", "L₂ 的方向向量 (1, [0])", [str(m)], "斜率 %s：往右 1、往上 %s ⇒ (1, %s)" % [_num(m), _num(m), _num(m)], "斜率 = \\frac{往上}{往右}。", T_ANG),
 				_f("cos θ", "方向向量的夾角", "|cos θ| = [0]", [cfg.cos],
 					"|cos θ| = \\frac{|%s · %s|}{|%s||%s|} = %s" % [_pt(d1), _pt(d2), _pt(d1), _pt(d2), _rad_frac(String(cfg.cos))], "取絕對值。", T_ANG),
-				_f("sin θ", "sin^{2} θ + cos^{2} θ = 1", "sin θ = [0]", [cfg.sin], "sin θ = \\sqrt{1 − cos^{2} θ} = %s" % _rad_frac(String(cfg.sin)),
+				_f("sin θ", "sin^{2} θ + cos^{2} θ = 1", "sin θ = [0]", [cfg.sin], "sin θ = √{1 − cos^{2} θ} = %s" % _rad_frac(String(cfg.sin)),
 					"不是 cos θ：sin^{2} θ = 1 − cos^{2} θ。", T_ANG),
 			]})
 	return {"id": "kslope", "chapter": 2, "type": "forge", "title": "已知斜率的交角",
