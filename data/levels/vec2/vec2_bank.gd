@@ -754,7 +754,7 @@ static func _collapse() -> Dictionary:
 			_seg(Vector2(4.5, -3), Vector2(-1, 8), "lime", {"at": 3, "dash": true}),
 			_dot(Vector2(-3, 0), "", "violet", {"at": 3}), _dot(Vector2(0, 2), "", "violet", {"at": 3}), _dot(Vector2(6, 6), "", "violet", {"at": 3}),
 			_seg(Vector2(-4, -2.0 / 3.0), Vector2(8, 22.0 / 3.0), "violet", {"at": 3, "dash": true}),
-			_tag(Vector2(3, 0), "t = 1", "lime", {"at": 3, "off": [8, 18]}), _tag(Vector2(-3, 0), "t = 3", "violet", {"at": 3, "off": [-14, 18]})]),
+			_tag(Vector2(3, 0), "t = 1", "lime", {"at": 3, "off": [8, -8]}), _tag(Vector2(-3, 0), "t = 3", "violet", {"at": 3, "off": [-40, -8]})]),
 		"steps": [
 			{"kind": "slide", "name": "拖時間", "q": "拖 t，數一數共線幾次", "tag": T_COL, "free": true,
 			 "params": [{"n": "t", "min": 0, "max": 4, "step": 0.25, "v": 0}],
