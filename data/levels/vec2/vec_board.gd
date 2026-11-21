@@ -8,11 +8,23 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##            風箏沿著折線飛（arrows：每一段畫成箭頭）。bad：終點打紅叉、風箏打轉掉下來，target：虛線連到真正的目標
 ##       {"k": "balloon", "p": [x, y], "c": "pink", "pop": 第幾步之後破掉}
 ##       {"k": "tag", "p": [x, y], "s": "D", "c": "gold"}   只有名字的點（小一點）
+##       {"k": "shadow", "o": [x, y], "a": [x, y], "g": [x, y], "area": 長方形的高（0 不畫）, "ground": true, "s": 影子的標籤}
+##            影子（V3）：箭頭 o → a 在「過 o、方向 g」的地面上的正射影。陽光（虛線）從 a 垂直照到地面，
+##            影子和 g 同方向是金色、反方向是紫色；area：地面另一邊畫出影子 × 高的長方形（內積的面積）
+##       {"k": "expand", "p": [x, y]（左上角）, "rows": [列名], "cols": [行名], "cells": [[格子裡的字]], "sg": [[1 / −1 / 0]], "at": n}
+##            展開田（V3）：兩支向量各拆成幾項，每一格是一項的乘積：正的金色、負的紫色、0 變暗
+##       {"k": "right", "p", "u", "v"} 直角記號（滑桿的 lines 裡也可以放，搭配 "when"）
 ##   ・作答模式（level 呼叫）：
 ##       arrows_on(cb)        點箭頭（vtap）：點到有 id 的箭頭，cb.call(id)
 ##       pts_on(snap, cb)     點一個點（vpick）：吸附到格子點，cb.call(Vector2)
 ##       drag_on(named, fixed, cb)  拖箭頭平移（vdrag）：沒有 fixed 時先點兩個點畫一支，放開時頭尾都落在點上，cb.call({from, to})
 ##       place_on(cfg, cb)    拖一個點（vsandbox）：吸附到格子點，cb.call(Vector2)；cfg.lit 決定燈亮不亮
+##            cfg.lit 也可以是算式（x、y 是點的坐標，例如 "abs(x * 4) < 0.01"）
+##            cfg.ring = {o, r, step}：只能在圓上轉（箭頭長度不變），每 step 度吸附一次
+##            cfg.on = {o, d, step}：只能沿著直線 o + k·d 拖，k 每 step 吸附一次
+##            cfg.arrow = {o, c, s}：從 o 畫一支箭頭到拖的點；cfg.shadow = {o, g, area}：那支箭頭的影子
+##            cfg.pole = {o, a}：影子＋竿子（拖的點是影子的頭 F：o → F 是影子、F → a 是竿子，垂直時亮直角）
+##            cfg.trace = true：燈亮的位置留下光點（trace_pts）；cfg.read：左上角的讀數（{…} 裡是 x、y 的算式）
 ##       weigh_on(cfg)        秤桿（vweigh）：畫面上的砝碼由 level 改 weigh.wb、weigh.wc
 ##       path_on(from, to)    鋪路（vpath）：level 改 path_segs
 ##   ・看得到的後果：fx_merge（箭頭飛過去疊合）、fx_ribbon（彩帶圍成平行四邊形）、fx_walk（風箏飛一段路）
@@ -41,6 +53,7 @@ var path_from := Vector2(INF, INF)
 var path_to := Vector2(INF, INF)
 var path_segs: Array = []         # [Vector2…]
 var vfx: Array = []               # 這一關自己的後果動畫
+var trace_pts: Array = []         # 光點描圖留下的點
 
 
 func reset(d: Dictionary) -> void:
@@ -66,6 +79,7 @@ func _off_all() -> void:
 	path_from = Vector2(INF, INF)
 	path_to = Vector2(INF, INF)
 	path_segs = []
+	trace_pts = []
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -142,7 +156,31 @@ func drag_on(fixed: Array, cb: Callable) -> void:
 func place_on(cfg: Dictionary, cb: Callable) -> void:
 	place_cfg = cfg
 	place_p = _v(cfg.start) if cfg.has("start") else Vector2(INF, INF)
+	trace_pts = []
 	_input_on("place", cb)
+
+
+## 拖點的位置：吸附到格子點，或圓上（ring）、直線上（on）
+func place_snap(w: Vector2) -> Vector2:
+	if place_cfg.has("ring"):
+		var rg: Dictionary = place_cfg.ring
+		var o := _v(rg.o)
+		var stp := deg_to_rad(float(rg.get("step", 15.0)))
+		var ang := roundf((w - o).angle() / stp) * stp
+		var p := o + Vector2(cos(ang), sin(ang)) * float(rg.r)
+		return Vector2(snappedf(p.x, 1e-6), snappedf(p.y, 1e-6))
+	if place_cfg.has("on"):
+		var on: Dictionary = place_cfg.on
+		var o := _v(on.o)
+		var d := _v(on.d)
+		var stp := float(on.get("step", 1.0))
+		var k := roundf((w - o).dot(d) / d.length_squared() / stp) * stp
+		return o + d * k
+	var p := Vector2(roundf(w.x), roundf(w.y))
+	var wr := _world()
+	p.x = clampf(p.x, ceilf(wr.position.x), floorf(wr.end.x))
+	p.y = clampf(p.y, ceilf(wr.position.y + 0.3), floorf(wr.end.y))
+	return p
 
 
 func weigh_on(cfg: Dictionary) -> void:
@@ -191,6 +229,8 @@ func place_lit(p: Vector2) -> bool:
 	var lit = place_cfg.get("lit", [])
 	if lit is String and lit == "all":
 		return true
+	if lit is String:
+		return calc(lit, {"x": p.x, "y": p.y}) > 0.5
 	for q in lit:
 		if _v(q).is_equal_approx(p):
 			return true
@@ -230,6 +270,11 @@ func fx_x(p: Vector2) -> void:
 	vfx.append({"k": "x", "p": p, "t0": t})
 
 
+## 一道陽光照下去又淡掉（排隊點點錯的時候）
+func fx_ray(a: Vector2, b: Vector2) -> void:
+	vfx.append({"k": "ray", "a": a, "b": b, "t0": t})
+
+
 # ================= 輸入 =================
 
 func _gui_input(e: InputEvent) -> void:
@@ -260,13 +305,16 @@ func _gui_input(e: InputEvent) -> void:
 				accept_event()
 		"place":
 			if press or motion:
-				var w := from_px(e.position)
-				var p := Vector2(roundf(w.x), roundf(w.y))
-				var wr := _world()
-				p.x = clampf(p.x, ceilf(wr.position.x), floorf(wr.end.x))
-				p.y = clampf(p.y, ceilf(wr.position.y + 0.3), floorf(wr.end.y))
+				var p := place_snap(from_px(e.position))
 				if not p.is_equal_approx(place_p):
 					place_p = p
+					if bool(place_cfg.get("trace", false)) and place_lit(p):
+						var dup := false
+						for q in trace_pts:
+							if (q as Vector2).is_equal_approx(p):
+								dup = true
+						if not dup:
+							trace_pts.append(p)
 					if _cb.is_valid():
 						_cb.call(p)
 				accept_event()
@@ -373,11 +421,11 @@ func _shape_by_id(id: String) -> Dictionary:
 
 func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 	var kk := String(ln.get("k", "line"))
-	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant"]:
+	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right"]:
 		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
 			return {}
 		var out := ln.duplicate(true)
-		for key in ["p", "a", "b", "o"]:
+		for key in ["p", "a", "b", "o", "g", "u", "v"]:
 			if ln.has(key):
 				out[key] = [calc(str(ln[key][0]), vals), calc(str(ln[key][1]), vals)]
 		if ln.has("pts"):
@@ -622,6 +670,12 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 			if String(sh.get("s", "")) != "":
 				_label(font, p, String(sh.s), [8, 12], Color(1, 0.9, 0.7))
 			return
+		"shadow":
+			_draw_shadow(font, _v(sh.o), _v(sh.a), _v(sh.g), sh)
+			return
+		"expand":
+			_draw_expand(font, sh)
+			return
 		"tag":
 			var p := _to(o + _v(sh.p))
 			var col := _col(String(sh.get("c", "text")))
@@ -678,11 +732,31 @@ func _draw_modes(font: Font) -> void:
 					k += 1
 				if tot.length() > 1e-6:
 					_arrow_px(_to(place_p), _to(place_p + tot), UITheme.ACCENT, 4.0, 0.6)
-			if is_finite(place_p.x):
+			for q in trace_pts:
+				var tp := _to(q)
+				UITheme.dot(self, tp, 9.0 + 1.5 * sin(t * 3.0 + tp.x), Color(1, 0.86, 0.42, 0.22))
+				UITheme.dot(self, tp, 4.0, UITheme.ACCENT)
+			if is_finite(place_p.x) and place_cfg.has("shadow"):
+				var sd: Dictionary = place_cfg.shadow
+				_draw_shadow(font, _v(sd.o), place_p, _v(sd.g), sd)
+			if is_finite(place_p.x) and place_cfg.has("arrow"):
+				var ad: Dictionary = place_cfg.arrow
+				var ac := _col(String(ad.get("c", "pink")))
+				var sa := _to(_v(ad.o))
+				_arrow_px(sa, _to(place_p), ac, 3.0, 0.3)
+				_arrow_label(font, sa, _to(place_p), String(ad.get("s", "")), ac, float(ad.get("ls", 1.0)), 0.6)
+			if is_finite(place_p.x) and place_cfg.has("pole"):
+				_draw_pole(font, _v(place_cfg.pole.o), place_p, _v(place_cfg.pole.a))
+			if is_finite(place_p.x) and not place_cfg.has("arrow"):
 				var sp := _to(place_p)
 				UITheme.dot(self, sp, 10.0, Color(1, 0.86, 0.42, 0.25))
 				UITheme.dot(self, sp, 6.0, UITheme.ACCENT)
 				_label(font, sp, String(place_cfg.get("label", "D")), [9, -9], UITheme.ACCENT)
+			elif is_finite(place_p.x):
+				UITheme.dot(self, _to(place_p), 9.0, Color(1, 0.86, 0.42, 0.3))
+			if is_finite(place_p.x) and place_cfg.has("read"):
+				var txt := fill_eq(String(place_cfg.read), {"x": place_p.x, "y": place_p.y})
+				_label(font, Vector2(14, 24), txt, [0, 0], UITheme.ACCENT)
 			_draw_place_lamp(place_lit(place_p))
 		"weigh":
 			_draw_beam(font)
@@ -798,6 +872,13 @@ func _draw_vfx(font: Font) -> void:
 				var c := Color(UITheme.GOOD.r, UITheme.GOOD.g, UITheme.GOOD.b, a)
 				_arrow_px(_to(Vector2(f.a0).lerp(Vector2(f.a), k)), _to(Vector2(f.b0).lerp(Vector2(f.b), k)), c, 3.5, 0.6)
 				keep.append(f)
+			"ray":
+				if age > 1.6:
+					continue
+				var a := clampf(minf(age / 0.3, (1.6 - age) / 0.5), 0.0, 1.0)
+				_pl(PackedVector2Array([_to(Vector2(f.a)), _to(Vector2(f.b))]), Color(1, 0.55, 0.5, 0.9 * a), 2.0, true)
+				UITheme.dot(self, _to(Vector2(f.b)), 5.0, Color(1, 0.55, 0.5, a))
+				keep.append(f)
 			"x":
 				if age > 1.2:
 					continue
@@ -809,6 +890,99 @@ func _draw_vfx(font: Font) -> void:
 				keep.append(f)
 	vfx = keep
 
+
+
+## 影子：o → h 的箭頭在「過 o、方向 g」的地面上的正射影
+func _draw_shadow(font: Font, o: Vector2, h: Vector2, g: Vector2, sh: Dictionary) -> void:
+	var gl := g.length()
+	if gl < 1e-9:
+		return
+	var u := g / gl
+	var s := (h - o).dot(u)
+	var f := o + u * s
+	var zero := absf(s) < 1e-6
+	var col := UITheme.ACCENT if s > 0.0 else UITheme.VIOLET
+	if bool(sh.get("ground", false)):
+		var far := size.length() / maxf(_to(o).distance_to(_to(o + u)), 1.0)
+		draw_line(_to(o - u * far), _to(o + u * far), Color(0.85, 0.75, 0.55, 0.35), 2.0, true)
+	var ah := float(sh.get("area", 0.0))
+	if ah > 0.0 and not zero:
+		var side := -signf(u.cross(h - o))
+		if side == 0.0:
+			side = -1.0
+		var nrm := Vector2(-u.y, u.x) * side * ah
+		var poly := PackedVector2Array([_to(o), _to(f), _to(f + nrm), _to(o + nrm)])
+		draw_colored_polygon(poly, Color(col.r, col.g, col.b, 0.16))
+		var cl := poly.duplicate()
+		cl.append(poly[0])
+		draw_polyline(cl, Color(col.r, col.g, col.b, 0.55), 1.4, true)
+	if h.distance_to(f) > 1e-6:
+		_pl(PackedVector2Array([_to(h), _to(f)]), Color(1.0, 0.93, 0.7, 0.65), 1.5, true)
+		if not zero:
+			var cp := _to(f)
+			var a1 := (_to(f - u * signf(s)) - cp).normalized() * 11.0
+			var a2 := (_to(h) - cp).normalized() * 11.0
+			_pl(PackedVector2Array([cp + a1, cp + a1 + a2, cp + a2]), Color(1, 1, 1, 0.55), 1.2, false)
+	if zero:
+		UITheme.dot(self, _to(o), 8.0 + 2.0 * sin(t * 5.0), Color(1, 1, 1, 0.3))
+	else:
+		draw_line(_to(o), _to(f), Color(col.r, col.g, col.b, 0.28), 11.0, true)
+		draw_line(_to(o), _to(f), col, 5.0, true)
+	if String(sh.get("s", "")) != "" and not zero:
+		var side2 := signf(u.cross(h - o))
+		var nr := Vector2(-u.y, u.x) * (-side2 if side2 != 0.0 else -1.0)
+		var mid := _to(o.lerp(f, 0.5))
+		var off := (_to(o.lerp(f, 0.5) + nr) - mid).normalized() * 16.0
+		_label(font, mid + off, String(sh.s), [0, 0], col, true)
+
+
+## 影子＋竿子：o → f 是影子（\vec{u}），f → a 是竿子（\vec{v}）；竿子垂直地面時亮直角
+func _draw_pole(font: Font, o: Vector2, f: Vector2, a: Vector2) -> void:
+	var up := (a - f).normalized()
+	var ok := f.distance_to(o) > 1e-6 and absf((a - f).dot(f - o)) < 1e-6
+	var pc := UITheme.ACCENT if ok else Color(0.85, 0.85, 0.9, 0.8)
+	if f.distance_to(o) > 1e-6:
+		_arrow_px(_to(o), _to(f), UITheme.ACCENT, 3.5, 0.4)
+		_arrow_label(font, _to(o), _to(f), "\\vec{u}", UITheme.ACCENT, -1.0, 0.5)
+	if a.distance_to(f) > 1e-6:
+		_arrow_px(_to(f), _to(a), pc, 3.0, 0.6 if ok else 0.0)
+		_arrow_label(font, _to(f), _to(a), "\\vec{v}", pc, 1.0, 0.5)
+	if ok:
+		var cp := _to(f)
+		var a1 := (_to(o) - cp).normalized() * 13.0
+		var a2 := (_to(a) - cp).normalized() * 13.0
+		UITheme.dot(self, cp, 14.0 + 2.0 * sin(t * 5.0), Color(1, 0.86, 0.42, 0.22))
+		_pl(PackedVector2Array([cp + a1, cp + a1 + a2, cp + a2]), UITheme.ACCENT, 2.0, false)
+	UITheme.dot(self, _to(f), 5.0, UITheme.ACCENT)
+	_label(font, _to(f), "F", [8, 14], UITheme.ACCENT)
+
+
+## 展開田：rows × cols 的格子，每一格是一項乘積（出現時一格一格亮起來）
+func _draw_expand(font: Font, sh: Dictionary) -> void:
+	var tl := _to(_v(sh.p))
+	var cw := float(sh.get("cw", 86.0))
+	var chh := float(sh.get("ch", 42.0))
+	var hw := float(sh.get("hw", 68.0))
+	var rows: Array = sh.rows
+	var cols: Array = sh.cols
+	var k := _anim_k(sh) if sh.has("at") else 1.0
+	var n := rows.size() * cols.size()
+	var bg := Rect2(tl - Vector2(4, 4), Vector2(hw + cw * cols.size() + 8, chh * (rows.size() + 1) + 8))
+	draw_rect(bg, Color(0.05, 0.06, 0.13, 0.82))
+	for j in cols.size():
+		_label(font, tl + Vector2(hw + cw * (j + 0.5), chh * 0.5), String(cols[j]), [0, 0], UITheme.TEXT, true)
+	for i in rows.size():
+		_label(font, tl + Vector2(hw * 0.5, chh * (i + 1.5)), String(rows[i]), [0, 0], UITheme.TEXT, true)
+		for j in cols.size():
+			var idx := i * cols.size() + j
+			var a := clampf(k * n - idx, 0.0, 1.0)
+			var r := Rect2(tl + Vector2(hw + cw * j, chh * (i + 1)), Vector2(cw, chh)).grow(-2.0)
+			var sg := int(sh.sg[i][j])
+			var c := UITheme.ACCENT if sg > 0 else (UITheme.VIOLET if sg < 0 else Color(0.35, 0.35, 0.42))
+			draw_rect(r, Color(c.r, c.g, c.b, (0.22 if sg != 0 else 0.12) * a))
+			draw_rect(r, Color(c.r, c.g, c.b, 0.6 * a), false, 1.2)
+			if a > 0.5:
+				_label(font, r.get_center(), String(sh.cells[i][j]), [0, 0], c.lightened(0.2) if sg != 0 else Color(0.6, 0.6, 0.68), true)
 
 
 ## 斜坐標的讀數：整數、分數（分母到 12）

@@ -87,7 +87,7 @@ cards3 = {
     # 第 2 組
     "2OP=3OA−OB": (lambda O, A, B: lambda P: add(mul(2, vec(O, P)), mul(-3, vec(O, A)), vec(O, B)), True),
     "OP=OA+OB": (lambda O, A, B: lambda P: add(vec(O, P), mul(-1, vec(O, A)), mul(-1, vec(O, B))), False),
-    "AB=2PA−3PB": (lambda O, A, B: lambda P: add(vec(A, B), mul(-2, vec(P, A)), mul(3, vec(P, B))), True),
+    "AB=3PA−PB": (lambda O, A, B: lambda P: add(vec(A, B), mul(-3, vec(P, A)), vec(P, B)), True),
 }
 for name, (mk, ok) in cards3.items():
     bad = 0
@@ -214,7 +214,7 @@ for aa, cc, ac, want in [(4, 9, 3, (F(6, 7), F(1, 7))), (9, 4, -1, (F(1, 3), F(2
     assert 0 < xy[0] < 1 and 0 < xy[1] < 1                # 垂足在 BC 線段上
 
 # 8 日晷的圓：PA·PB = k ⇔ |PM|² = |MA|² + k
-for A, B, k, line, want in [((4, 0), (-4, 0), 9, (3, -4, 40), 13), ((1, 3), (1, -5), 9, (4, 3, 36), 12)]:
+for A, B, k, line, want in [((4, 0), (-4, 0), 9, (3, 4, 35), 12), ((1, 3), (1, -5), 9, (4, -3, 37), 11)]:
     M = mul(F(1, 2), add(A, B)); r2 = n2(vec(M, A)) + k
     assert r2 == 25
     pts = [(M[0] + x, M[1] + y) for x in range(-5, 6) for y in range(-5, 6) if x * x + y * y == 25]
@@ -224,6 +224,12 @@ for A, B, k, line, want in [((4, 0), (-4, 0), 9, (3, -4, 40), 13), ((1, 3), (1, 
     a_, b_, c_ = line
     dist = abs(a_ * M[0] + b_ * M[1] - c_) / math.hypot(a_, b_)
     assert dist == want - 5 and dist > 5                    # 直線在圓外，最大 = 距離 + 半徑
+
+# 3 畫布上 P 的位置（O(0, −3)、A(−2, 1)、B(1, 1)，直線 AB 是 y = 1）
+O, A, B = (F(0), F(-3)), (F(-2), F(1)), (F(1), F(1))
+for name, want in [("3OP=4OA−2OB", (F(-10, 3), F(-1, 3))), ("AB=2PA+3PB", (F(-4, 5), F(1))), ("3PB=OA−OB", (F(2), F(1))),
+                   ("2OP=3OA−OB", (F(-7, 2), F(1))), ("OP=OA+OB", (F(-1), F(5))), ("AB=3PA−PB", (F(-5), F(1)))]:
+    assert solve_P(cards3[name][0](O, A, B), O, A, B) == want, name
 
 # ======== 第二章 垂直、平行與正射影 ========
 # 10 坐標的內積：a·b = a1b1 + a2b2，b 在 a 上的影子長 = a·b / |a|

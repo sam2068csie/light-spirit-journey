@@ -5,10 +5,12 @@ extends "test_base.gd"
 ##   ・vplace：判斷的時候拖 D 看燈；把 D 拖到燈亮的地方
 ##   ・vpath：點磁磚鋪路，鋪錯不會過、鋪對會過
 ##   ・vweigh：掛砝碼，平衡才過
+##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
 const Bank2 := preload("res://data/levels/vec2/vec2_bank.gd")
+const Bank3 := preload("res://data/levels/vec2/vec3_bank.gd")
 
 var lv
 
@@ -39,11 +41,24 @@ func _initialize() -> void:
 	lv.journey_mode = true
 	await _check_sow()
 	await _check_pull()
+	# V3：轉箭頭、排隊點、光點描圓、竿子
+	g.goto("level_vec3_sundial.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_ring()
+	await _check_order()
+	await _check_trace()
+	await _check_pole()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -247,3 +262,72 @@ func _check_pull() -> void:
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 1, "平衡就過")
+
+
+func _check_ring() -> void:
+	await _start("turn", 0)
+	var st: Dictionary = lv.steps[0]
+	ok(String(st.kind) == "vplace" and st.sandbox.has("ring"), "轉動的影子：第一步是轉箭頭")
+	# 點在 (3, 3) 的方向：吸附到圓上 45°
+	_press(_px(Vector2(3, 3)))
+	var p: Vector2 = _pl().place_p
+	ok(absf(p.length() - 2.0) < 1e-4 and absf(p.x - p.y) < 1e-4, "點在斜上方：箭頭轉到 45°、長度不變（%s）" % str(p))
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0, "45° 的內積不是最大，不會過")
+	_press(_px(Vector2(5, 0.2)))
+	ok(_pl().place_lit(_pl().place_p), "轉到 0° 燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "內積最大就過")
+	_press(_px(Vector2(-0.1, -3)))
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 2, "轉到 270°：內積是 0 也算")
+
+
+func _check_order() -> void:
+	await _start("queue", 0)
+	lv._on_answer(int(lv.cur_q.correct))
+	await frames(3)
+	ok(lv.si == 1 and String(lv.steps[1].kind) == "vorder", "影子排隊：第二步是照順序點頂點")
+	var order: Array = lv.steps[1].order
+	var e0: int = lv.energy
+	_press(_px(Vector2(float(order[1][0]), float(order[1][1]))))
+	await frames(2)
+	ok(lv.vo_i == 0 and lv.energy == e0 - 1, "先點第二名：扣一顆心")
+	for o in order:
+		_press(_px(Vector2(float(o[0]), float(o[1]))))
+		await frames(2)
+	await wait(0.9)
+	ok(lv.si == 2, "照順序點完就過（現在第 %d 步）" % lv.si)
+
+
+func _check_trace() -> void:
+	await _start("dialcircle", 0)
+	var st: Dictionary = lv.steps[0]
+	ok(String(st.goal) == "trace", "日晷的圓：找光點")
+	_press(_px(Vector2(1, 1)))
+	_press(_px(Vector2(5, 0)), false)
+	_press(_px(Vector2(5, 0)))
+	_press(_px(Vector2(3, 4)))
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0 and _pl().trace_pts.size() == 2, "找到 2 個還不夠（%d）" % _pl().trace_pts.size())
+	for q in [Vector2(0, 5), Vector2(-4, -3)]:
+		_press(_px(q))
+		await frames(1)
+	await wait(0.8)
+	ok(lv.si == 1, "找到 4 個光點就過")
+
+
+func _check_pole() -> void:
+	await _start("pole", 0)
+	_press(_px(Vector2(2, 4)))
+	ok(not _pl().place_lit(_pl().place_p), "F 在 (2, 4)：竿子歪的")
+	_press(_px(Vector2(3.2, 5.7)))
+	ok(_pl().place_p.is_equal_approx(Vector2(3, 6)), "F 只能沿著 \\vec{b} 的直線吸附（%s）" % str(_pl().place_p))
+	ok(_pl().place_lit(_pl().place_p), "F 在 (3, 6)：竿子站直")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "竿子站直就過")

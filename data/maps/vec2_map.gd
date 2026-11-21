@@ -49,9 +49,13 @@ const STORY := {
 		{"text": "斜紋麥田的稻子長出來了。每一塊田都有斜斜的地址：沿 AB 方向走 x 格、沿 AC 方向走 y 格。", "cam": "site", "site": 1, "zoom": 1.8, "light": 1},
 		{"text": "x + y = 1 就在直線 BC 上！田埂上的烽台也亮了，坐標一個一個寫好囉～", "who": "光靈", "cam": "site", "site": 1, "zoom": 1.4, "spirit": 1},
 	],
+	"V3": [
+		{"text": "日晷的指針投下影子了。太陽從正上方照下來，箭頭落在地上的影子，量的是它朝那個方向走了多遠。", "cam": "site", "site": 2, "zoom": 1.8, "light": 2},
+		{"text": "影子乘上地面那支箭頭的長，就是內積！竿子站直的時候內積是 0～", "who": "光靈", "cam": "site", "site": 2, "zoom": 1.4, "spirit": 2},
+	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:
@@ -305,6 +309,17 @@ func _draw_landmark(i: int) -> void:
 		UITheme.dot(Tg, p + Vector2(0, -24), 40.0, Color(col.r, col.g, col.b, 0.07 * gl))
 	# 石台
 	Tg.draw_rect(Rect2(p + Vector2(-18, -10), Vector2(36, 10)), base.lightened(0.1))
+	if String(m_sites[i].id) == "V3":
+		# 日晷：斜斜的指針，亮了之後地上有一道影子
+		var dial := PackedVector2Array()
+		for k in 25:
+			var ang := TAU * k / 24.0
+			dial.append(p + Vector2(cos(ang) * 20.0, sin(ang) * 6.0 - 12.0))
+		Tg.draw_colored_polygon(dial, base.lightened(0.2))
+		if gl > 0.5:
+			Tg.draw_line(p + Vector2(0, -12), p + Vector2(18, -9), Color(0.1, 0.1, 0.15, 0.55), 3.0)
+		Tg.draw_colored_polygon(PackedVector2Array([p + Vector2(-2, -12), p + Vector2(-2, -40), p + Vector2(12, -12)]), lit_c)
+		return
 	# 旗桿和旗子：亮了就迎風飄
 	Tg.draw_line(p + Vector2(0, -10), p + Vector2(0, -50), base.lightened(0.3), 2.5)
 	var flap := (6.0 * sin(t * 5.0)) if gl > 0.5 else 0.0

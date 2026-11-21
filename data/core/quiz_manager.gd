@@ -215,6 +215,10 @@ const MISTAKE_INFO := {
 	"vec_region":      {"name": "斜坐標的區域與面積", "level": 2},
 	"vec_coord":       {"name": "坐標表示、單位向量、角平分向量", "level": 1},
 	"vec_weight":      {"name": "加權平均、合力與最小值", "level": 2},
+	"vec_dot":         {"name": "內積的意義、正負與性質", "level": 1},
+	"vec_dotbasis":    {"name": "化成基底展開、圖形中的內積", "level": 2},
+	"vec_perp":        {"name": "垂直、平行的條件", "level": 1},
+	"vec_proj":        {"name": "正射影與正射影長", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

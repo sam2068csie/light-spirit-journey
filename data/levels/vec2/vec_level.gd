@@ -15,12 +15,15 @@ extends "res://data/levels/num/num_level.gd"
 ##       拖一個點，條件成立時右上角的燈亮。goal：燈亮就對，或燈亮但不是平行四邊形（找反例）
 ##   {"kind": "vweigh", …, "b": [x, y], "c": [x, y], "p": [x, y], "ans": [B 掛幾個, C 掛幾個]}
 ##       秤桿：B、C 兩端掛砝碼，在 P 平衡（wb × \ol{BP} = wc × \ol{PC}）才算對
+##   {"kind": "vorder", …, "ground": [[x, y], [x, y]]（地面直線上的兩點）, "order": [[x, y, "C"], …]（由大到小）}
+##       排隊點（V3）：照順序點出各點。點對了，那一點的陽光照到地面、插上號碼牌；點到後面的點：陽光照下去又淡掉，扣一顆心
+##   vplace 的 goal 也可以是 "trace"（"need": 4）：沙盒寫 "trace": true，找到 need 個燈亮的位置（光點）就過
 ##   choice 加 "sandbox": {…}：判斷的時候可以隨便拖那個點看燈（不扣分）。"ribbon": [[x, y], …]：答對後彩帶圍成那個四邊形
 ##   slide（滑桿，見 line_level.gd）：lines 裡也可以放 arrow、poly、balloon、tag、walk（座標寫算式）；"keep": true 做完留在畫布上
 ## 圖層寫法見 vec_board.gd。速算的題目可以帶 "plane"：每一題換一張圖。
 
 const VecBoard := preload("res://data/levels/vec2/vec_board.gd")
-const VKINDS := ["vtap", "vpick", "vdrag", "vpath", "vplace", "vweigh"]
+const VKINDS := ["vtap", "vpick", "vdrag", "vpath", "vplace", "vweigh", "vorder"]
 
 var vt_found := {}
 var vd_found: Array = []
@@ -28,6 +31,7 @@ var vd_list: MathLabel
 var vpath_expr: MathLabel
 var vweigh_labels := {}
 var vpick_ok := false
+var vo_i := 0
 
 
 func scene_theme() -> String:
@@ -111,7 +115,7 @@ func _forge_step() -> void:
 			go_btn.disabled = false
 			go_btn.text = "確定"
 		"vplace":
-			_vp().place_on(st.sandbox, func(_p): pass)
+			_vp().place_on(st.sandbox, _vplace_moved)
 			go_btn.visible = true
 			go_btn.disabled = false
 			go_btn.text = "確定"
@@ -121,6 +125,9 @@ func _forge_step() -> void:
 			go_btn.visible = true
 			go_btn.disabled = false
 			go_btn.text = "確定"
+		"vorder":
+			vo_i = 0
+			_vp().pts_on(float(st.get("snap", 1.0)), _vorder_event)
 		"choice":
 			if st.has("sandbox"):
 				_vp().place_on(st.sandbox, func(_p): pass)
@@ -354,6 +361,13 @@ func _vplace_submit() -> void:
 	if not is_finite(p.x):
 		_hint("先把 %s 拖到方格上。" % String(st.sandbox.get("label", "D")), "info")
 		return
+	if String(st.get("goal", "lit")) == "trace":
+		var n := pl.trace_pts.size()
+		if n >= int(st.get("need", 4)):
+			_vec_finish(si)
+		else:
+			_vwrong(st, "還要再找 %d 個。%s" % [int(st.get("need", 4)) - n, String(st.nudge)])
+		return
 	var lit := pl.place_lit(p)
 	var ok := lit
 	if String(st.get("goal", "lit")) == "lit_not_para":
@@ -374,6 +388,58 @@ func _vplace_submit() -> void:
 		_vwrong(st, "燈沒有亮：條件不成立。")
 	else:
 		_vwrong(st, String(st.nudge))
+
+
+## 拖的時候：光點描圖數一數找到幾個
+func _vplace_moved(_p: Vector2) -> void:
+	if _vkind() != "vplace" or String(steps[si].get("goal", "")) != "trace":
+		return
+	var n := _vp().trace_pts.size()
+	var need := int(steps[si].get("need", 4))
+	if n > 0 and n < need:
+		task_label.text = "%s（%d / %d）" % [String(steps[si].q), n, need]
+	elif n >= need:
+		task_label.text = "%s（%d / %d）" % [String(steps[si].q), n, need]
+		get_tree().create_timer(0.5).timeout.connect(_vec_finish.bind(si))
+
+
+# ---------- 排隊點 ----------
+
+## 地面（直線 ground）上的垂足
+func _foot(st: Dictionary, p: Vector2) -> Vector2:
+	var a := _v2(st.ground[0])
+	var d := _v2(st.ground[1]) - a
+	return a + d * ((p - a).dot(d) / d.length_squared())
+
+
+func _vorder_event(p: Vector2) -> void:
+	if _vkind() != "vorder":
+		return
+	var st: Dictionary = steps[si]
+	var order: Array = st.order
+	var hit := -1
+	for i in order.size():
+		if p.distance_to(Vector2(float(order[i][0]), float(order[i][1]))) < 1e-3:
+			hit = i
+	if hit < 0:
+		_hint("點題目裡的頂點。", "info")
+		return
+	if hit < vo_i:
+		_hint("%s 已經排好了。" % String(order[hit][2]), "info")
+		return
+	var pl := _vp()
+	var q := Vector2(float(order[hit][0]), float(order[hit][1]))
+	var f := _foot(st, q)
+	if hit == vo_i:
+		vo_i += 1
+		pl.kept.append({"k": "seg", "a": [q.x, q.y], "b": [f.x, f.y], "c": "gold", "dash": true, "w": 1.5})
+		pl.kept.append({"k": "dot", "p": [f.x, f.y], "s": str(vo_i), "c": "gold", "off": [-4, 18]})
+		Game.of(self).play("blip", 1.0 + 0.08 * vo_i, -8.0)
+		if vo_i >= order.size():
+			get_tree().create_timer(0.6).timeout.connect(_vec_finish.bind(si))
+		return
+	pl.fx_ray(q, f)
+	_vwrong(st, String(st.nudge))
 
 
 # ---------- 秤桿 ----------
@@ -455,6 +521,10 @@ func _custom_go() -> void:
 		"vweigh":
 			_vweigh_submit()
 			return
+		"vorder":
+			if vo_i >= (steps[si].order as Array).size():
+				_vec_finish(si)
+			return
 	super()
 
 
@@ -503,6 +573,13 @@ func test_answer(st: Dictionary) -> bool:
 			return true
 		"vplace":
 			_vp().place_p = _v2(st.ans)
+			if String(st.get("goal", "")) == "trace":
+				_vp().trace_pts = []
+				for q in st.trace_ans:
+					_vp().trace_pts.append(_v2(q))
+			return true
+		"vorder":
+			vo_i = (st.order as Array).size()
 			return true
 		"vweigh":
 			_vp().weigh["wb"] = int(st.ans[0])
