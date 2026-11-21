@@ -31,7 +31,8 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##            cfg.feet = [[a, b, c], …]：從拖的點往直線 ax + by + c = 0 畫垂直的竿子，標長度（V5 內心）
 ##            cfg.split = [A, B, C]：拖的點把三角形分成三塊，塗三種顏色（V5 面積比）
 ##            cfg.snap = 0.5：吸附到半格
-##       {"k": "fire", "p": [x, y], "c": "gold"}  營火（V5 四心）
+##       {"k": "fire", "p": [x, y], "c": "gold", "s": "G", "off": [dx, dy]}  營火（V5 四心），s 是旁邊的字母
+##            cfg.read_at = "tl"／"tr"／"bl"／"br"：讀數放在哪個角落（預設左上；右上會放在燈的下面）
 ##       {"k": "split", "p": [x, y], "tri": [A, B, C]}  三分花圃的圖層版
 ##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
 ##            guess：再畫一支淡淡的指針在先猜的角度（guess_deg）
@@ -39,6 +40,8 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##       path_on(from, to)    鋪路（vpath）：level 改 path_segs
 ##   ・看得到的後果：fx_merge（箭頭飛過去疊合）、fx_ribbon（彩帶圍成平行四邊形）、fx_walk（風箏飛一段路）
 const UITheme := preload("res://data/ui/game_theme.gd")
+const InkV := preload("res://data/ui/ink_audit.gd")
+const MathV := preload("res://data/ui/math_text.gd")
 
 var mode := ""                    # 目前的作答模式
 var _cb := Callable()
@@ -691,7 +694,10 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 			_draw_expand(font, sh)
 			return
 		"fire":
-			_draw_fire(_to(_v(sh.p)), _col(String(sh.get("c", "gold"))), _anim_k(sh) if sh.has("at") else 1.0)
+			var fc := _col(String(sh.get("c", "gold")))
+			_draw_fire(_to(_v(sh.p)), fc, _anim_k(sh) if sh.has("at") else 1.0)
+			if String(sh.get("s", "")) != "":
+				_label(font, _to(_v(sh.p)), String(sh.s), sh.get("off", [12, 4]), fc)
 			return
 		"split":
 			_draw_split(font, _v(sh.p), sh.tri)
@@ -807,7 +813,14 @@ func _draw_modes(font: Font) -> void:
 				UITheme.dot(self, _to(place_p), 9.0, Color(1, 0.86, 0.42, 0.3))
 			if is_finite(place_p.x) and place_cfg.has("read"):
 				var txt := fill_eq(String(place_cfg.read), {"x": place_p.x, "y": place_p.y})
-				_label(font, Vector2(14, 24), txt, [0, 0], UITheme.ACCENT)
+				var fs := UITheme.fs(15)
+				var tw := InkV.math_box(font, 0.0, 0.0, txt, fs).size.x
+				var at := String(place_cfg.get("read_at", "tl"))
+				var rx := 14.0 if at.ends_with("l") else size.x - tw - 14.0
+				var ry := 24.0 if at.begins_with("t") else size.y - 14.0
+				if at == "tr":
+					ry = 70.0
+				_label(font, Vector2(rx, ry), txt, [0, 0], UITheme.ACCENT)
 			if not place_cfg.has("protractor"):
 				_draw_place_lamp(place_lit(place_p))
 		"weigh":
@@ -1095,9 +1108,9 @@ func _draw_expand(font: Font, sh: Dictionary) -> void:
 	var bg := Rect2(tl - Vector2(4, 4), Vector2(hw + cw * cols.size() + 8, chh * (rows.size() + 1) + 8))
 	draw_rect(bg, Color(0.05, 0.06, 0.13, 0.82))
 	for j in cols.size():
-		_label(font, tl + Vector2(hw + cw * (j + 0.5), chh * 0.5), String(cols[j]), [0, 0], UITheme.TEXT, true)
+		_cell_text(font, tl + Vector2(hw + cw * (j + 0.5), chh * 0.5), String(cols[j]), UITheme.TEXT)
 	for i in rows.size():
-		_label(font, tl + Vector2(hw * 0.5, chh * (i + 1.5)), String(rows[i]), [0, 0], UITheme.TEXT, true)
+		_cell_text(font, tl + Vector2(hw * 0.5, chh * (i + 1.5)), String(rows[i]), UITheme.TEXT)
 		for j in cols.size():
 			var idx := i * cols.size() + j
 			var a := clampf(k * n - idx, 0.0, 1.0)
@@ -1107,7 +1120,15 @@ func _draw_expand(font: Font, sh: Dictionary) -> void:
 			draw_rect(r, Color(c.r, c.g, c.b, (0.22 if sg != 0 else 0.12) * a))
 			draw_rect(r, Color(c.r, c.g, c.b, 0.6 * a), false, 1.2)
 			if a > 0.5:
-				_label(font, r.get_center(), String(sh.cells[i][j]), [0, 0], c.lightened(0.2) if sg != 0 else Color(0.6, 0.6, 0.68), true)
+				_cell_text(font, r.get_center(), String(sh.cells[i][j]), c.lightened(0.2) if sg != 0 else Color(0.6, 0.6, 0.68))
+
+
+## 展開田格子裡的字：置中畫在格子裡（不讓位、不加底色，格子本身就是底）
+func _cell_text(font: Font, c: Vector2, s: String, col: Color) -> void:
+	var fs := UITheme.fs(15)
+	var box := InkV.math_box(font, 0.0, 0.0, s, fs)
+	var base := c.y - (box.position.y + box.end.y) / 2.0
+	MathV.draw_on(self, font, c.x, base, s, fs, col)
 
 
 ## 斜坐標的讀數：整數、分數（分母到 12）

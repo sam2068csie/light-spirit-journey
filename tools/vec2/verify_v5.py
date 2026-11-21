@@ -31,6 +31,15 @@ A1, B1, D1 = (-2, 0), (2, 0), (0, 3)
 assert math.dist(A1, D1) == math.dist(B1, D1) and add(sub(A1, D1), mul(-1, sub(B1, D1))) == sub(A1, B1)
 # ✕ 卡：凸四邊形對角線交點 E，\vec{EA} + \vec{EB} + \vec{EC} + \vec{ED} 不一定是 \vec{0}
 Q = [(0, 0), (6, 0), (5, 4), (1, 3)]
+# 畫面上的四邊形（第 1 組第四張卡）：交點 E、四支箭的和
+Qs = [(-7.0, -2.6), (-2.5, -2.6), (-3.2, 1.0), (-6.4, 0.2)]
+def interf(p1, p2, p3, p4):
+    d1, d2 = sub(p1, p2), sub(p3, p4)
+    t = cross(sub(p1, p3), d2) / cross(d1, d2)
+    return add(p1, mul(t, d1))
+Es = interf(Qs[0], Qs[2], Qs[1], Qs[3])
+assert abs(Es[0] + 5.0599676) < 1e-6 and abs(Es[1] + 0.7620746) < 1e-6
+assert math.hypot(*add(*[sub(Es, q) for q in Qs])) > 1.4                 # 金色的和看得到
 # 對角線 AC、BD 的交點
 def inter(p1, p2, p3, p4):
     d1, d2 = sub(p1, p2), sub(p3, p4)
@@ -106,8 +115,8 @@ def tri(P, Q, R): return abs(cross(sub(P, Q), sub(P, R))) / 2
 s1, s2, s3 = tri(A, B, Ii), tri(B, C, Ii), tri(A, C, Ii)
 assert abs(s1 / s2 - 5 / 8) < 1e-9 and abs(s3 / s2 - 7 / 8) < 1e-9
 
-# 7 找營火：A(0, 0)、B(9, 0)、C(0, 12)（第 2 組 B(12, 0)、C(0, 9)）
-for B, C, G, O, I in [((9, 0), (0, 12), (3, 4), (F(9, 2), 6), (3, 3)), ((12, 0), (0, 9), (4, 3), (6, F(9, 2)), (3, 3))]:
+# 7 找營火：A(0, 0)、B(12, 0)、C(0, 9)（第 2 組左右翻過來：B(−12, 0)）
+for B, C, G, O, I in [((12, 0), (0, 9), (4, 3), (6, F(9, 2)), (3, 3)), ((-12, 0), (0, 9), (-4, 3), (-6, F(9, 2)), (-3, 3))]:
     A = (0, 0)
     assert wavg([1, 1, 1], [A, B, C]) == G
     assert dot(sub(O, A), sub(O, A)) == dot(sub(O, B), sub(O, B)) == dot(sub(O, C), sub(O, C))

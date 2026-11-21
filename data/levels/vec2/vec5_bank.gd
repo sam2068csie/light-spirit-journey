@@ -115,6 +115,23 @@ static func _split_read(A: Vector2, B: Vector2, C: Vector2) -> String:
 	return "△PBC : △PCA : △PAB = {%s} : {%s} : {%s}" % [_area_ex(B, C), _area_ex(C, A), _area_ex(A, B)]
 
 
+static func _gcd(a: int, b: int) -> int:
+	while b != 0:
+		var t := a % b
+		a = b
+		b = t
+	return absi(a)
+
+
+## 權重的寫法：係數 1 不寫（6P = A + 2B + 3C）
+static func _wsum(w: Array) -> String:
+	var out := []
+	for i in 3:
+		var c := str(w[i])
+		out.append(("" if c == "1" else c) + ["A", "B", "C"][i])
+	return " + ".join(out)
+
+
 static func _pull(pts: Array, w: Array) -> Array:
 	var out := []
 	for i in pts.size():
@@ -150,45 +167,64 @@ static func _slots() -> Array:
 
 # ======================= 第一章．四心營火 =======================
 
-## 1 重心營火（A64）
+## 1 重心營火（A64）：重心那一張放第一張（可以拖 G），其他卡的證據在判完之後才畫
 static func _centroid_cards() -> Dictionary:
+	var vars := []
+	# 第 1 組
 	var A := Vector2(0, 4)
 	var B := Vector2(-3, -2)
 	var C := Vector2(6, 1)
 	var G := Vector2(1, 1)
-	var base := func() -> Array:
-		var s := [_poly([A, B, C], "dim")]
-		s += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-4, -12], "B": [-16, 4], "C": [8, 4]})
-		return s
+	var mid := (A + B) / 2.0
+	var nrm := Vector2(2, -1)
+	var D := mid - nrm
+	var Q := [Vector2(-7, -2.6), Vector2(-2.5, -2.6), Vector2(-3.2, 1.0), Vector2(-6.4, 0.2)]
+	var s1 := [_poly([A, B, C], "dim", {"until": 3})]
+	s1 += [_dot(A, "A", "text", {"off": [-4, -12], "until": 3}), _dot(B, "B", "text", {"off": [-16, 4], "until": 3}), _dot(C, "C", "text", {"off": [8, 4], "until": 3})]
+	s1 += [_fire(G, "gold", 1, {"s": "G", "until": 3}),
+		_seg(mid + nrm * 1.6, mid - nrm * 1.6, "faint", {"dash": true, "at": 2, "until": 3}), _dot(D, "D", "pink", {"at": 2, "until": 3, "off": [-16, -4]}),
+		_ar(A, D, "cyan", "\\vec{AD}", {"at": 2, "until": 3, "ls": 1}), _ar(B, D, "pink", "\\vec{BD}", {"at": 2, "until": 3, "ls": -1}),
+		_ar(A, B, "gold", "\\vec{AB}", {"at": 2, "until": 3, "ls": -1, "lt": 0.6})]
+	# 第四張的證據：一般的凸四邊形，四支箭加起來不是 \vec{0}
+	var E := Vector2(-5.0599676, -0.7620746)
+	s1 += [_poly(Q, "dim", {"at": 3}), _seg(Q[0], Q[2], "faint", {"at": 3}), _seg(Q[1], Q[3], "faint", {"at": 3}), _dot(E, "E", "dim", {"at": 3, "off": [-4, 18]})]
+	s1 += _dots({"A": Q[0], "B": Q[1], "C": Q[2], "D": Q[3]}, "text", {"A": [-14, 12], "B": [6, 12], "C": [8, 4], "D": [-14, -6]}).map(func(d): d["at"] = 3; return d)
+	var tot := Vector2.ZERO
+	var cl := ["cyan", "pink", "lime", "violet"]
+	for i in 4:
+		s1.append(_ar(E, Q[i], cl[i], "", {"at": 4, "w": 2.0}))
+		tot += Q[i] - E
+	s1.append(_ar(E, E + tot, "gold", "", {"at": 4, "w": 3.5}))
 	var sbx := {"label": "G", "lit": [_p(G)], "pull": _pull([A, B, C], [1, 1, 1]), "start": [3, -1]}
-	var vars := []
-	# 第 1 組
-	var D := (A + B) / 2.0 + Vector2(2, -1) * -1.0
-	var s1: Array = base.call()
-	s1 += [_dot(D, "D", "pink", {"at": 2, "until": 3, "off": [-16, -4]}), _ar(A, D, "cyan", "", {"at": 2, "until": 3}), _ar(B, D, "pink", "", {"at": 2, "until": 3}),
-		_ar(A, B, "gold", "\\vec{AB}", {"at": 2, "until": 3, "ls": -1}), _seg((A + B) / 2.0 + Vector2(2, -1) * 2.0, (A + B) / 2.0 - Vector2(2, -1) * 2.0, "faint", {"dash": true, "at": 2, "until": 3}),
-		_fire(G, "gold", 3)]
 	var st1 := [
-		_j("審判一", "\\vec{AB} + \\vec{BC} + \\vec{CA} = \\vec{0}", true, "首尾相接，繞一圈回到 A。", "首尾相接回到起點：\\vec{0}", T_GC),
-		_j("審判二", "D 在 \\ol{AB} 的中垂線上 ⇒ \\vec{AD} − \\vec{BD} = \\vec{0}", false,
+		_j("審判一", "G 是重心 ⇒ \\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}", true, "三條繩子拉著 G，剛好拉平衡。", "重心：\\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}", T_GC),
+		_j("審判二", "\\vec{AB} + \\vec{BC} + \\vec{CA} = \\vec{0}", true, "首尾相接，繞一圈回到 A。", "首尾相接回到起點：\\vec{0}", T_GC),
+		_j("審判三", "D 在 \\ol{AB} 的中垂線上 ⇒ \\vec{AD} − \\vec{BD} = \\vec{0}", false,
 			"長度一樣，可是方向不一樣：\\vec{AD} − \\vec{BD} = \\vec{AD} + \\vec{DB} = \\vec{AB}。", "\\vec{AD} − \\vec{BD} = \\vec{AB} ≠ \\vec{0}", T_GC),
-		_j("審判三", "G 是重心 ⇒ \\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}", true, "三條繩子拉著 G，剛好拉平衡。", "重心：\\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}", T_GC),
 		_j("審判四", "凸四邊形 ABCD 的對角線交於 E ⇒ \\vec{EA} + \\vec{EB} + \\vec{EC} + \\vec{ED} = \\vec{0}", false,
-			"要兩條對角線互相平分（平行四邊形）才成立。", "一般的凸四邊形不成立", T_GC)]
-	st1[2]["sandbox"] = sbx
-	vars.append({"eq": "下面哪些一定成立？（重心那一張可以拖 G）", "plane": _plane([-6.5, 9.0], [-3.0, 5.0], s1), "steps": st1})
-	# 第 2 組
-	var M := (B + C) / 2.0
-	var s2: Array = base.call()
-	s2 += [_dot(G, "G", "gold", {"at": 3, "off": [8, -6]}), _fire(G, "gold", 3),
-		_dot(M, "M", "dim", {"at": 4, "off": [6, 14]}), _ar(A, B + C - A, "pink", "\\vec{AB} + \\vec{AC}", {"at": 4, "lt": 0.75}), _ar(A, M, "gold", "\\vec{AM}", {"at": 4, "ls": -1})]
+			"要兩條對角線互相平分（平行四邊形）才成立。", "一般的凸四邊形不成立（金色的和不是 \\vec{0}）", T_GC)]
+	st1[0]["sandbox"] = sbx
+	vars.append({"eq": "下面哪些一定成立？（第一張可以拖 G）", "plane": _plane([-7.5, 8.0], [-3.2, 5.0], s1), "steps": st1})
+	# 第 2 組：換一個小一點的三角形，\vec{AB} + \vec{AC} 才畫得進來
+	var A2 := Vector2(-1, 4)
+	var B2 := Vector2(-3, -1)
+	var C2 := Vector2(4, 0)
+	var G2 := Vector2(0, 1)
+	var M := (B2 + C2) / 2.0
+	var s2 := [_poly([A2, B2, C2], "dim")]
+	s2 += _dots({"A": A2, "B": B2, "C": C2}, "text", {"A": [-4, -12], "B": [-16, 4], "C": [8, 4]})
+	s2 += [_fire(G2, "gold", 1, {"s": "G", "off": [14, 2]}),
+		_seg(A2, B2 + C2 - A2, "faint", {"at": 4, "dash": true}), _poly([A2, B2, B2 + C2 - A2, C2], "faint", {"at": 4}),
+		_dot(M, "M", "dim", {"at": 4, "off": [10, 2]}),
+		_ar(A2, B2 + C2 - A2, "pink", "\\vec{AB} + \\vec{AC}", {"at": 4, "lt": 0.82, "ls": -1}), _ar(A2, M, "gold", "\\vec{AM}", {"at": 4, "ls": -1, "lt": 0.3, "w": 3.5})]
+	var sbx2 := {"label": "G", "lit": [_p(G2)], "pull": _pull([A2, B2, C2], [1, 1, 1]), "start": [2, 3]}
 	var st2 := [
-		_j("審判一", "\\vec{a} ⊥ \\vec{b} ⇒ \\vec{a} · \\vec{b} = 0", true, "垂直時 cos 90° = 0。", "垂直 ⇒ 內積是 0", T_GC),
-		_j("審判二", "D 在 \\ol{AB} 的中垂線上 ⇒ |\\vec{AD}| − |\\vec{BD}| = 0", true, "中垂線上的點到兩端一樣遠（這次是長度，不是向量）。", "|\\vec{AD}| = |\\vec{BD}|", T_GC),
-		_j("審判三", "G 是重心 ⇒ \\vec{AG} = \\frac{1}{3}(\\vec{AB} + \\vec{AC})", true, "\\vec{AG} = \\frac{2}{3}\\vec{AM}，\\vec{AM} = \\frac{1}{2}(\\vec{AB} + \\vec{AC})。", "\\vec{AG} = \\frac{1}{3}(\\vec{AB} + \\vec{AC})", T_GC),
+		_j("審判一", "G 是重心 ⇒ \\vec{AG} = \\frac{1}{3}(\\vec{AB} + \\vec{AC})", true, "\\vec{AG} = \\frac{2}{3}\\vec{AM}，\\vec{AM} = \\frac{1}{2}(\\vec{AB} + \\vec{AC})。", "\\vec{AG} = \\frac{1}{3}(\\vec{AB} + \\vec{AC})", T_GC),
+		_j("審判二", "\\vec{a} ⊥ \\vec{b} ⇒ \\vec{a} · \\vec{b} = 0", true, "垂直時 cos 90° = 0。", "垂直 ⇒ 內積是 0", T_GC),
+		_j("審判三", "D 在 \\ol{AB} 的中垂線上 ⇒ |\\vec{AD}| − |\\vec{BD}| = 0", true, "中垂線上的點到兩端一樣遠（這次是長度，不是向量）。", "|\\vec{AD}| = |\\vec{BD}|", T_GC),
 		_j("審判四", "M 是 \\ol{BC} 中點 ⇒ \\vec{AM} = \\vec{AB} + \\vec{AC}", false, "\\vec{AB} + \\vec{AC} 是平行四邊形的對角線，是 \\vec{AM} 的 2 倍。", "\\vec{AM} = \\frac{1}{2}(\\vec{AB} + \\vec{AC})", T_GC)]
-	st2[2]["sandbox"] = sbx
-	vars.append({"eq": "下面哪些一定成立？（重心那一張可以拖 G）", "plane": _plane([-6.5, 9.5], [-3.0, 5.6], s2), "steps": st2})
+	st2[0]["sandbox"] = sbx2
+	vars.append({"eq": "下面哪些一定成立？（第一張可以拖 G）", "plane": _plane([-6.5, 8.5], [-5.8, 5.0], s2), "steps": st2})
 	return {"id": "gcards", "chapter": 1, "type": "forge", "title": "重心營火",
 		"story": "三個人從頂點拉繩子，拉平衡的地方點營火。",
 		"insight": "重心：\\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}，\\vec{AG} = \\frac{1}{3}(\\vec{AB} + \\vec{AC})\n向量相減和長度相減不一樣：|\\vec{AD}| = |\\vec{BD}| 不代表 \\vec{AD} = \\vec{BD}。",
@@ -212,11 +248,11 @@ static func _cen_dot() -> Dictionary:
 		var shapes := [_poly([A, B, C], "dim")]
 		shapes += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-4, -12], "B": [-14, 14], "C": [6, 14]})
 		shapes += [_dot(X, nm, "pink", {"off": [-4, 18]}), _ruler(B, C, 3, 3, 0, {"c": "faint"}),
-			_fire(G, "gold", 1), _seg(A, (B + C) / 2.0, "faint", {"at": 1, "dash": true}), _ar(A, G, "gold", "", {"at": 1}), _ar(A, X, "pink", "", {"at": 2}),
-			_expand(Vector2(s * 1.12, s * 0.86), cfg.rows, ["\\frac{1}{3}\\vec{AB}", "\\frac{1}{3}\\vec{AC}"], cfg.cells, [[1, 1], [1, 1]], 2, {"hw": 72})]
+			_fire(G, "gold", 1, {"s": "G", "off": [12, -2]}), _seg(A, (B + C) / 2.0, "faint", {"at": 1, "dash": true}), _ar(A, G, "gold", "", {"at": 1}), _ar(A, X, "pink", "", {"at": 2}),
+			_expand(Vector2(s * 1.4, s * 0.86), cfg.rows, ["\\frac{1}{3}\\vec{AB}", "\\frac{1}{3}\\vec{AC}"], cfg.cells, [[1, 1], [1, 1]], 2, {"hw": 72})]
 		var q: Array = cfg.q
 		vars.append({"eq": "正三角形 ABC 邊長 %s，G 是重心\n%s 是 \\ol{BC} 的三等分點（靠近 %s），求 \\vec{A%s} · \\vec{AG}" % [B1._n(s), nm, "B" if nm == "D" else "C", nm],
-			"plane": _plane([-0.8, s * 2.15], [-0.6, s * 0.95], shapes),
+			"plane": _plane([-0.8, s * 2.85], [-0.6, s * 0.95], shapes),
 			"steps": [
 				_f("\\vec{AG}", "重心", "\\vec{AG} = [0]\\vec{AB} + [1]\\vec{AC}", ["1/3", "1/3"], "\\vec{AG} = \\frac{1}{3}\\vec{AB} + \\frac{1}{3}\\vec{AC}", "\\vec{AG} = \\frac{2}{3}\\vec{AM}，M 是 \\ol{BC} 中點。", T_GC),
 				_f("\\vec{A%s}" % nm, "三等分點", "\\vec{A%s} = [0]\\vec{AB} + [1]\\vec{AC}" % nm, q,
@@ -287,7 +323,7 @@ static func _small_g() -> Dictionary:
 		shapes += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-4, -12], "B": [-16, 4], "C": [8, 4]})
 		shapes += _dots({"P": P, "Q": Q, "R": R}, "pink", {"P": [-16, -4], "Q": [-4, 18], "R": [8, -4]})
 		shapes += [_poly([P, Q, R], "pink", {"at": 3, "fill": "pink", "alpha": 0.1}), _seg(P, G, "gold", {"at": 3}), _seg(Q, G, "gold", {"at": 3}), _seg(R, G, "gold", {"at": 3}),
-			_fire(G, "gold", 3)]
+			_fire(G, "gold", 3, {"s": "G", "off": [12, -2]})]
 		var t: Array = cfg.t
 		vars.append({"eq": "\\vec{AP} = %s\\vec{AB}，\\vec{BQ} = %s\\vec{BC}，\\vec{CR} = %s\\vec{CA}\n△PQR 的重心 G，\\vec{AG} = x\\vec{AB} + y\\vec{AC}，求 (x, y)" % t,
 			"plane": _plane([-6.0, 8.5], [-1.0, 6.0], shapes),
@@ -333,7 +369,7 @@ static func _seesaw() -> Dictionary:
 			"plane": _plane([-6.0, 7.0], [-1.0, 6.8], shapes),
 			"steps": [
 				{"kind": "slide", "name": "蹺蹺板", "q": "拖 P，讓 \\ol{AP} : \\ol{PC} = %s" % cfg.ratio, "tag": T_GC, "big": true,
-				 "params": [{"n": "s", "min": 0, "max": cfg.max, "step": cfg.step, "v": 0}], "lines": lines, "goal": {"s": s},
+				 "params": [{"n": "s", "min": 0, "max": cfg.max, "step": cfg.step, "v": cfg.step}], "lines": lines, "goal": {"s": s},
 				 "line": "\\ol{AP} : \\ol{PC} = %s：過 G 的直線打到 BC 上的 Q" % cfg.ratio, "nudge": "看 \\ol{AC} 上的刻度。"},
 				_f("以 C 為起點", "\\vec{CG} 換成 \\vec{CP}、\\vec{CB}", "\\vec{CG} = [0]\\vec{CP} + [1]\\vec{CB}", f2,
 					"\\vec{CG} = \\frac{1}{3}\\vec{CA} + \\frac{1}{3}\\vec{CB} = %s" % B1._lin(f2[0], "CP", f2[1], "CB"), "\\vec{CA} 是 \\vec{CP} 的幾倍？", T_GC),
@@ -383,17 +419,17 @@ static func _incenter_cards() -> Dictionary:
 				"bd":
 					var nb := int(ab)
 					var nc := int(ac)
-					var g := 2 if (nb % 2 == 0 and nc % 2 == 0) else 1
+					var g := _gcd(nb, nc)
 					shapes.append(_ruler(B, C, (nb + nc) / g, nb / g, k, {"until": k + 1}))
 				"ai":
 					var num := int(ab + ac)
 					var den := int(ab + ac + bc)
-					var g2 := 5 if num % 5 == 0 and den % 5 == 0 else 1
+					var g2 := _gcd(num, den)
 					shapes.append(_ruler(A, D, den / g2, num / g2, k, {"until": k + 1}))
 				"area":
 					shapes.append(_split(I, A, B, C, k, {"until": k + 1}))
 			steps.append(_j(["審判一", "審判二", "審判三", "審判四"][k - 1], String(cd[0]), cd[1], String(cd[2]), String(cd[0]) + ("" if cd[1] else " ✕"), T_CTR))
-		shapes += [{"k": "circle", "o": _p(I), "r": r, "c": "cyan", "at": 4}, _fire(I, "cyan", 4)]
+		shapes += [{"k": "circle", "o": _p(I), "r": r, "c": "cyan", "at": 4}, _fire(I, "cyan", 4, {"s": ""})]
 		vars.append({"eq": "△ABC 中，\\ol{AB} = %s，\\ol{BC} = %s，\\ol{AC} = %s，I 是內心\n\\ol{AI} 延長交 \\ol{BC} 於 D，下面哪些正確？" % [B1._n(ab), B1._n(bc), B1._n(ac)],
 			"plane": _plane([-1.5, ab + 1.5], [-0.8, C.y + 0.8], shapes), "steps": steps})
 	return {"id": "icards", "chapter": 1, "type": "forge", "title": "內心營火",
@@ -405,41 +441,44 @@ static func _incenter_cards() -> Dictionary:
 ## 7 點起四座營火（新）
 static func _four_fires() -> Dictionary:
 	var vars := []
-	for cfg in [{"B": Vector2(9, 0), "C": Vector2(0, 12), "G": Vector2(3, 4), "O": Vector2(4.5, 6), "bc": [4, 3, -36], "x": [-2.0, 11.5], "y": [-1.5, 13.0]},
-			{"B": Vector2(12, 0), "C": Vector2(0, 9), "G": Vector2(4, 3), "O": Vector2(6, 4.5), "bc": [3, 4, -36], "x": [-2.0, 14.5], "y": [-1.5, 10.5]}]:
+	for cfg in [{"B": Vector2(12, 0), "C": Vector2(0, 9), "G": Vector2(4, 3), "O": Vector2(6, 4.5), "I": Vector2(3, 3), "bc": [3, 4, -36], "x": [-2.0, 14.5], "y": [-1.2, 10.2]},
+			{"B": Vector2(-12, 0), "C": Vector2(0, 9), "G": Vector2(-4, 3), "O": Vector2(-6, 4.5), "I": Vector2(-3, 3), "bc": [-3, 4, -36], "x": [-14.5, 2.0], "y": [-1.2, 10.2]}]:
 		var A := Vector2.ZERO
 		var B: Vector2 = cfg.B
 		var C: Vector2 = cfg.C
 		var G: Vector2 = cfg.G
 		var O: Vector2 = cfg.O
-		var I := Vector2(3, 3)
+		var I: Vector2 = cfg.I
 		var bcl: Array = cfg.bc
 		var nrm := Vector2(float(bcl[0]), float(bcl[1])).normalized()
 		var footA := A + nrm * (-float(bcl[2]) / Vector2(float(bcl[0]), float(bcl[1])).length())
 		var shapes := [_poly([A, B, C], "text")]
-		shapes += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14, 14], "B": [6, 14], "C": [8, -4]})
-		shapes += [_fire(G, "gold", 1), _fire(O, "pink", 2), {"k": "circle", "o": _p(I), "r": 3, "c": "cyan", "at": 3}, _fire(I, "cyan", 3),
-			_seg(A, footA, "lime", {"at": 4, "dash": true}), _fire(A, "lime", 4)]
+		var sx := signf(B.x)
+		shapes += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14 if sx > 0 else 6, 16], "B": [-4, 16], "C": [8 if sx > 0 else -18, -4]})
+		shapes += [_fire(G, "gold", 1, {"s": "G", "off": [12, -2]}), _fire(O, "pink", 2, {"s": "O", "off": [12, -2]}),
+			{"k": "circle", "o": _p(I), "r": 3, "c": "cyan", "at": 3}, _fire(I, "cyan", 3, {"s": "I", "off": [-20 * sx, 6]}),
+			_seg(A, footA, "lime", {"at": 4, "dash": true}), _seg(B, A, "lime", {"at": 4, "w": 3.0}), _seg(C, A, "lime", {"at": 4, "w": 3.0}),
+			_fire(A, "lime", 4, {"s": "H", "off": [10 * sx, -14]})]
 		var ox := "(x * x + y * y)"
-		var dB := "((x - %s) * (x - %s) + (y - %s) * (y - %s))" % [_e(B.x), _e(B.x), _e(B.y), _e(B.y)]
+		var dB := "((x - (%s)) * (x - (%s)) + (y - %s) * (y - %s))" % [_e(B.x), _e(B.x), _e(B.y), _e(B.y)]
 		var dC := "((x - %s) * (x - %s) + (y - %s) * (y - %s))" % [_e(C.x), _e(C.x), _e(C.y), _e(C.y)]
-		var lbc := "abs(%s * x + %s * y + (%s)) / 5" % [str(bcl[0]), str(bcl[1]), str(bcl[2])]
+		var lbc := "abs((%s) * x + %s * y + (%s)) / 5" % [str(bcl[0]), str(bcl[1]), str(bcl[2])]
 		vars.append({"eq": "直角三角形營地 A(0, 0)、B%s、C%s\n四座營火（四心）各在哪裡？" % [_pt(B), _pt(C)],
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				{"kind": "vplace", "name": "重心", "q": "拖 G，讓三條繩子拉平衡", "tag": T_GC, "goal": "lit", "ans": _p(G), "big": true,
-				 "sandbox": {"label": "G", "lit": [_p(G)], "pull": _pull([A, B, C], [1, 1, 1]), "start": [1, 1]},
+				 "sandbox": {"label": "G", "lit": [_p(G)], "pull": _pull([A, B, C], [1, 1, 1]), "start": [1.0 * sx, 1]},
 				 "nudge": "金色的合力指向該去的地方。", "line": "重心 G%s" % _pt(G)},
 				{"kind": "vplace", "name": "外心", "q": "拖 O，讓三條繩子一樣長", "tag": T_CTR, "goal": "lit", "ans": _p(O), "big": true,
-				 "sandbox": {"label": "O", "snap": 0.5, "ropes": [_p(A), _p(B), _p(C)], "start": [2, 2],
+				 "sandbox": {"label": "O", "snap": 0.5, "ropes": [_p(A), _p(B), _p(C)], "start": [2.0 * sx, 2],
 					"lit": "abs(%s - %s) < 0.01 and abs(%s - %s) < 0.01" % [ox, dB, ox, dC]},
 				 "nudge": "外心可以在半格上。直角三角形的外心在哪一條邊上？", "line": "外心 O%s：斜邊的中點" % _pt(O)},
-				{"kind": "vplace", "name": "內心", "q": "拖 I，讓三根竿子一樣長", "tag": T_CTR, "goal": "lit", "ans": [3, 3], "big": true,
-				 "sandbox": {"label": "I", "feet": [[0, 1, 0], [1, 0, 0], bcl], "start": [5, 2],
-					"lit": "abs(x - y) < 0.01 and abs(y - %s) < 0.01" % lbc},
-				 "nudge": "到 x 軸、y 軸一樣遠：x = y。再看到斜邊的竿子。", "line": "內心 I(3, 3)：內切圓半徑 3"},
+				{"kind": "vplace", "name": "內心", "q": "拖 I，讓三根竿子一樣長", "tag": T_CTR, "goal": "lit", "ans": _p(I), "big": true,
+				 "sandbox": {"label": "I", "feet": [[0, 1, 0], [1, 0, 0], bcl], "start": [5.0 * sx, 2],
+					"lit": "abs(abs(x) - y) < 0.01 and abs(y - %s) < 0.01" % lbc},
+				 "nudge": "到 x 軸、y 軸一樣遠。再看到斜邊的竿子。", "line": "內心 I%s：內切圓半徑 3" % _pt(I)},
 				{"kind": "vpick", "name": "垂心", "q": "點出三條高的交點", "target": [0, 0], "snap": 1, "tag": T_CTR,
-				 "traps": [[G.x, G.y, "那是重心。垂心是三條高（從頂點垂直照到對邊）的交點。"], [3, 3, "那是內心。直角三角形的兩條高就是兩股。"]],
+				 "traps": [[G.x, G.y, "那是重心。垂心是三條高（從頂點垂直照到對邊）的交點。"], [I.x, I.y, "那是內心。直角三角形的兩條高就是兩股。"]],
 				 "nudge": "從 B 垂直照到 AC 的高是哪一條？從 C 呢？", "line": "垂心 H = A(0, 0)：直角三角形的垂心是直角頂點"},
 			]})
 	return {"id": "fires", "chapter": 1, "type": "forge", "title": "點起四座營火",
@@ -459,8 +498,8 @@ static func _center_cards() -> Dictionary:
 	var O := Vector2(1.5, 2)
 	var s1 := [_poly([A, B, C], "dim")]
 	s1 += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14, 14], "B": [6, 14], "C": [8, -4]})
-	s1 += [_fire(I, "cyan", 1), _ar(A, O, "pink", "\\vec{AO}", {"at": 2, "until": 4}), _shadow(A, O, C - A, {"at": 2, "until": 3}), _shadow(A, O, B - A, {"at": 3, "until": 4}),
-		_fire(O, "pink", 2), _fire(A, "lime", 4)]
+	s1 += [_fire(I, "cyan", 1, {"s": "I", "off": [-20, 4]}), _ar(A, O, "pink", "", {"at": 2, "until": 4}), _shadow(A, O, C - A, {"at": 2, "until": 3}), _shadow(A, O, B - A, {"at": 3, "until": 4}),
+		_fire(O, "pink", 2, {"s": "O", "off": [12, -2]}), _fire(A, "lime", 4, {"s": "H", "off": [14, -12]})]
 	var st1 := [
 		_j("審判一", "\\vec{AI} = \\frac{1}{3}\\vec{AB} + \\frac{1}{4}\\vec{AC}", true, "權重是對邊長：\\frac{4}{12}\\vec{AB} + \\frac{3}{12}\\vec{AC}。", "\\vec{AI} = \\frac{1}{3}\\vec{AB} + \\frac{1}{4}\\vec{AC}", T_CTR),
 		_j("審判二", "\\vec{AO} · \\vec{AC} = 8", true, "外心的影子落在 \\ol{AC} 的中點：\\vec{AO} · \\vec{AC} = \\frac{1}{2}|\\vec{AC}|^{2} = 8。", "\\vec{AO} · \\vec{AC} = \\frac{1}{2} × 16 = 8", T_CTR),
@@ -477,8 +516,11 @@ static func _center_cards() -> Dictionary:
 	var fC := Vector2(C2.x, 0)
 	var s2 := [_poly([A2, B2, C2], "dim")]
 	s2 += _dots({"A": A2, "B": B2, "C": C2}, "text", {"A": [-14, 14], "B": [6, 14], "C": [-4, -12]})
-	s2 += [_seg(B2, fB, "lime", {"at": 1, "dash": true}), _seg(C2, fC, "lime", {"at": 1, "dash": true}), _fire(H2, "lime", 1),
-		_ar(A2, O2, "pink", "", {"at": 3, "until": 4}), _shadow(A2, O2, B2 - A2, {"at": 3, "until": 4}), _shadow(A2, O2, C2 - A2, {"at": 3, "until": 4}), _fire(O2, "pink", 3)]
+	var fA := B2 + (C2 - B2) * ((A2 - B2).dot(C2 - B2) / (C2 - B2).length_squared())
+	s2 += [_seg(B2, fB, "lime", {"at": 1, "dash": true}), _seg(C2, fC, "lime", {"at": 1, "dash": true}), _seg(A2, fA, "lime", {"at": 1, "dash": true}),
+		_fire(H2, "lime", 1, {"s": "H", "off": [-20, 4]}),
+		_ar(A2, O2, "pink", "", {"at": 3, "until": 4}), _shadow(A2, O2, B2 - A2, {"at": 3, "until": 4}), _shadow(A2, O2, C2 - A2, {"at": 3, "until": 4}),
+		_fire(O2, "pink", 3, {"s": "O", "off": [12, -2]}), _ar(O2, H2, "gold", "\\vec{OH}", {"at": 4, "ls": -1})]
 	var st2 := [
 		_j("審判一", "\\vec{BH} · \\vec{AC} = \\vec{CH} · \\vec{AB}", true, "兩邊都是 0：\\vec{BH} ⊥ \\vec{AC}、\\vec{CH} ⊥ \\vec{AB}。", "兩邊都是 0", T_CTR),
 		_j("審判二", "\\vec{AH} · \\vec{AB} = \\vec{AC} · \\vec{AB}", true, "移到同一邊：(\\vec{AH} − \\vec{AC}) · \\vec{AB} = \\vec{CH} · \\vec{AB} = 0。", "\\vec{CH} · \\vec{AB} = 0", T_CTR),
@@ -503,9 +545,11 @@ static func _calc() -> Dictionary:
 	var H := B * (2.0 / 3.0) + C / 9.0
 	var sa := [_poly([A, B, C], "dim")]
 	sa += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14, 14], "B": [6, 14], "C": [8, -4]})
-	sa += [_ar(A, K, "pink", "", {"at": 2}), _shadow(A, K, B, {"at": 2}), _shadow(A, K, C, {"at": 2}), _fire(K, "pink", 2),
+	sa += [_ar(A, K, "pink", "", {"at": 2}), _shadow(A, K, B, {"at": 2}), _shadow(A, K, C, {"at": 2}), _fire(K, "pink", 2, {"s": "K", "off": [-20, -4]}),
 		_seg(K, D, "pink", {"at": 3, "dash": true}), _dot(D, "D", "pink", {"at": 3, "off": [8, -2]}),
-		_seg(A, H, "lime", {"at": 4, "dash": true}), _seg(B, H, "lime", {"at": 4, "dash": true}), _seg(C, H, "lime", {"at": 4, "dash": true}), _fire(H, "lime", 4)]
+		_seg(A, B + (C - B) * ((A - B).dot(C - B) / (C - B).length_squared()), "lime", {"at": 4, "dash": true}),
+		_seg(B, C * ((B).dot(C) / C.length_squared()), "lime", {"at": 4, "dash": true}), _seg(C, Vector2(C.x, 0), "lime", {"at": 4, "dash": true}),
+		_fire(H, "lime", 4, {"s": "H", "off": [12, 6]})]
 	vars.append({"eq": "△ABC 中，\\ol{AB} = 4，\\ol{AC} = 6，\\ol{BC} = 2√7，K 是外心、H 是垂心\n\\vec{AK} = α\\vec{AB} + β\\vec{AC}，\\vec{AH} = u\\vec{AB} + v\\vec{AC}，\\ol{AK} 交 \\ol{BC} 於 D",
 		"plane": _plane([-1.6, 7.6], [-0.9, 5.8], sa),
 		"steps": [
@@ -535,8 +579,8 @@ static func _calc() -> Dictionary:
 		"steps": [
 			_f("角平分線", "\\ol{BD} : \\ol{DC} = \\ol{AB} : \\ol{AC}", "\\vec{AD} = [0]\\vec{AB} + [1]\\vec{AC}", ["2/5", "3/5"], "\\ol{BD} : \\ol{DC} = 3 : 2 ⇒ \\vec{AD} = \\frac{2}{5}\\vec{AB} + \\frac{3}{5}\\vec{AC}", "係數交叉。", T_CTR),
 			_f("中垂線", "\\vec{AP} = k\\vec{AD}，\\vec{AP} · \\vec{AB} = 18", "\\vec{AP} = [0]\\vec{AB} + [1]\\vec{AC}", ["8/25", "12/25"],
-				"\\vec{AB} · \\vec{AC} = \\frac{27}{2}，\\vec{AD} · \\vec{AB} = \\frac{45}{2} ⇒ k = \\frac{4}{5}，\\vec{AP} = \\frac{8}{25}\\vec{AB} + \\frac{12}{25}\\vec{AC}",
-				"P 在中垂線上：影子落在 \\ol{AB} 中點，\\vec{AP} · \\vec{AB} = \\frac{1}{2} × 36。", T_CTR),
+				"\\vec{AD} · \\vec{AB} = \\frac{45}{2} ⇒ k = \\frac{4}{5}，\\vec{AP} = \\frac{8}{25}\\vec{AB} + \\frac{12}{25}\\vec{AC}",
+				"\\vec{AB} · \\vec{AC} = \\frac{27}{2}。P 在中垂線上：影子落在 \\ol{AB} 中點，\\vec{AP} · \\vec{AB} = \\frac{1}{2} × 36。", T_CTR),
 			_f("比", "B、P、E 共線", "\\ol{AE} : \\ol{EC} = [0] : [1]", ["12", "5"], "\\vec{AP} = \\frac{8}{25}\\vec{AB} + \\frac{12}{25}\\vec{AC}，E 在 AC 上：\\vec{AE} = \\frac{12}{17}\\vec{AC}，12 : 5",
 				"\\vec{AC} 換成 \\vec{AE}：係數和 = 1。", T_CTR, "prop"),
 		]})
@@ -546,8 +590,8 @@ static func _calc() -> Dictionary:
 	var Cc := Vector2(9, 1)
 	var sc := [_poly([Ac, Bc, Cc], "dim")]
 	sc += _dots({"A": Ac, "B": Bc, "C": Cc}, "text", {"A": [-14, 14], "B": [-14, -4], "C": [6, 14]})
-	sc += [_fire(Vector2(11.0 / 3.0, 3), "gold", 1), _fire(Vector2(3, 3), "cyan", 2), {"k": "circle", "o": [3, 3], "r": 2, "c": "cyan", "at": 2},
-		_dot(Vector2(5, 4), "", "pink", {"at": 3, "until": 4}), _fire(Ac, "lime", 3), _fire(Vector2(5, 4), "pink", 4)]
+	sc += [_fire(Vector2(11.0 / 3.0, 3), "gold", 1, {"s": "G", "off": [12, 6]}), _fire(Vector2(3, 3), "cyan", 2, {"s": "I", "off": [-20, -4]}), {"k": "circle", "o": [3, 3], "r": 2, "c": "cyan", "at": 2},
+		_fire(Ac, "lime", 3, {"s": "H", "off": [14, -12]}), _fire(Vector2(5, 4), "pink", 4, {"s": "O", "off": [12, -2]})]
 	var stc := [
 		_j("審判一", "重心是 (\\frac{11}{3}, 3)", true, "三個頂點的平均：(\\frac{1 + 1 + 9}{3}, \\frac{1 + 7 + 1}{3})。", "重心 (\\frac{11}{3}, 3)", T_GC),
 		_j("審判二", "內心是 (3, 3)", true, "直角三角形：內切圓半徑 = \\frac{6 + 8 − 10}{2} = 2，從 A 往兩股各走 2。", "內心 (3, 3)", T_CTR),
@@ -572,9 +616,9 @@ static func _split_garden() -> Dictionary:
 		var C: Vector2 = cfg.C
 		var shapes := [_poly([A, B, C], "text")]
 		shapes += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14, 14], "B": [6, 14], "C": [8, -4]})
-		shapes += [_fire(cfg.eq, "gold", 1, {"until": 2}), _split(cfg.P, A, B, C, 2), _dot(cfg.P, "P", "gold", {"at": 2, "off": [8, -6]})]
+		shapes += [_fire(cfg.eq, "gold", 1, {"until": 2, "s": "G", "off": [12, -2]}), _split(cfg.P, A, B, C, 2), _dot(cfg.P, "P", "gold", {"at": 2, "off": [8, -6]})]
 		var sbx := func(lit: Vector2) -> Dictionary:
-			return {"label": "P", "split": [_p(A), _p(B), _p(C)], "lit": [_p(lit)], "start": [1, 1], "read": _split_read(A, B, C)}
+			return {"label": "P", "split": [_p(A), _p(B), _p(C)], "lit": [_p(lit)], "start": [1, 1], "read": _split_read(A, B, C), "read_at": "br"}
 		var w: Array = cfg.w
 		vars.append({"eq": "花圃 A(0, 0)、B%s、C%s，從 P 拉線到三個頂點\n分成 △PBC、△PCA、△PAB 三塊" % [_pt(B), _pt(C)],
 			"plane": _axes(cfg.x, cfg.y, shapes),
@@ -584,7 +628,7 @@ static func _split_garden() -> Dictionary:
 				{"kind": "vplace", "name": cfg.r, "q": "拖 P，讓三塊是 %s" % cfg.r, "sandbox": sbx.call(cfg.P), "goal": "lit", "ans": _p(cfg.P), "tag": T_AREA, "big": true,
 				 "nudge": "△PAB 的高是 P 的 y 坐標，△PCA 的高是 P 的 x 坐標。", "line": "△PBC : △PCA : △PAB = %s：P%s" % [cfg.r, _pt(cfg.P)]},
 				_f("權重", "P 是三個頂點的加權平均", "[3]P = [0]A + [1]B + [2]C", w,
-					"%sP = %sA + %sB + %sC：權重就是對面那一塊的面積" % [w[3], w[0], w[1], w[2]], "A 的權重 = A 對面那一塊（△PBC）。", T_AREA, "prop"),
+					"%sP = %s：權重就是對面那一塊的面積" % [w[3], _wsum(w)], "A 的權重 = A 對面那一塊（△PBC）。", T_AREA, "prop"),
 			]})
 	return {"id": "garden", "chapter": 2, "type": "forge", "title": "三分花圃",
 		"story": "從 P 拉三條線，把花圃分成三塊。",
@@ -671,7 +715,7 @@ static func _pull_split() -> Dictionary:
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				{"kind": "vplace", "name": "拉平衡", "q": "拖 P，讓三條繩子拉平衡", "tag": T_AREA, "goal": "lit", "ans": _p(P), "big": true,
-				 "sandbox": {"label": "P", "lit": [_p(P)], "pull": _pull([A, B, C], w), "split": [_p(A), _p(B), _p(C)], "start": [3, 1], "read": _split_read(A, B, C)},
+				 "sandbox": {"label": "P", "lit": [_p(P)], "pull": _pull([A, B, C], w), "split": [_p(A), _p(B), _p(C)], "start": [3, 1], "read": _split_read(A, B, C), "read_at": "br"},
 				 "nudge": "金色的合力指向該去的地方。", "line": "P%s：三條繩子拉平衡" % _pt(P)},
 				_f("面積比", "看三塊花圃", "△PBC : △PCA : △PAB = [0] : [1] : [2]", [str(w[0]), str(w[1]), str(w[2])],
 					"△PBC : △PCA : △PAB = %d : %d : %d：就是權重" % w, "左上角的讀數約分。", T_AREA, "prop"),
@@ -699,7 +743,7 @@ static func _place_by_area() -> Dictionary:
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				_f("權重", "A 的權重是對面 △PBC", "[3]P = [0]A + [1]B + [2]C", w,
-					"%sP = %sA + %sB + %sC（A ↔ △PBC、B ↔ △PCA、C ↔ △PAB）" % [w[3], w[0], w[1], w[2]],
+					"%sP = %s（A ↔ △PBC、B ↔ △PCA、C ↔ △PAB）" % [w[3], _wsum(w)],
 					"題目的順序是 △PAB、△PBC、△PCA，要對到對面的頂點：△PAB 對 C。", T_AREA, "prop"),
 				_f("P", "加權平均", "P = ([0], [1])", cfg.P, "P = %s" % _pt(P), "x 坐標、y 坐標各自加權平均。", T_AREA),
 			]})
@@ -726,7 +770,7 @@ static func _reverse() -> Dictionary:
 			"plane": _plane([-1.2, 9.0], [-0.8, 5.8], shapes),
 			"steps": [
 				_f("權重", "對面的那一塊", "[3]P = [0]A + [1]B + [2]C", [str(r[0]), str(r[1]), str(r[2]), str(s)],
-					"%dP = %dA + %dB + %dC" % [s, r[0], r[1], r[2]], "A 的權重是 △PBC。", T_AREA, "prop"),
+					"%dP = %s" % [s, _wsum([str(r[0]), str(r[1]), str(r[2])])], "A 的權重是 △PBC。", T_AREA, "prop"),
 				_f("係數", "以 A 為起點", "\\vec{AP} = [0]\\vec{AB} + [1]\\vec{AC}", cfg.xy,
 					"\\vec{AP} = \\frac{%d}{%d}\\vec{AB} + \\frac{%d}{%d}\\vec{AC} = %s" % [r[1], s, r[2], s, B1._lin(cfg.xy[0], "AB", cfg.xy[1], "AC")],
 					"P − A = \\frac{%d(B − A) + %d(C − A)}{%d}。" % [r[1], r[2], s], T_AREA),
@@ -749,7 +793,8 @@ static func _center_areas() -> Dictionary:
 	base += _dots({"A": A, "B": B, "C": C}, "text", {"A": [-14, 14], "B": [6, 14], "C": [8, -4]})
 	var vars := []
 	var s1 := base.duplicate()
-	s1 += [_split(G, A, B, C, 1, {"until": 2}), _fire(G, "gold", 1), _split(I, A, B, C, 2, {"until": 4}), _fire(I, "cyan", 2), _split(O, A, B, C, 4), _fire(O, "pink", 4)]
+	s1 += [_split(G, A, B, C, 1, {"until": 2}), _fire(G, "gold", 1, {"s": "G", "off": [12, -4]}), _split(I, A, B, C, 2, {"until": 4}), _fire(I, "cyan", 2, {"s": "I", "off": [12, 8]}),
+		_split(O, A, B, C, 4), _fire(O, "pink", 4, {"s": "O", "off": [12, -2]})]
 	var st1 := [
 		_j("審判一", "G 是重心 ⇒ △GBC : △GCA : △GAB = 1 : 1 : 1", true, "\\vec{GA} + \\vec{GB} + \\vec{GC} = \\vec{0}：權重都是 1。", "重心：三塊一樣大", T_AREA),
 		_j("審判二", "I 是內心 ⇒ △IBC : △ICA : △IAB = \\ol{BC} : \\ol{CA} : \\ol{AB}", true, "三塊的高都是內切圓半徑，面積比 = 底的比。", "內心：面積比 = 三邊的比", T_AREA),
@@ -757,7 +802,8 @@ static func _center_areas() -> Dictionary:
 		_j("審判四", "直角三角形的外心 O ⇒ △OAB = △OAC", true, "O 是斜邊 \\ol{BC} 的中點：\\ol{AO} 是中線，平分面積。", "外心在斜邊中點：△OAB = △OAC", T_AREA)]
 	vars.append({"eq": "△ABC 中，A(0, 0)、B(6, 0)、C(0, 8)，四心把它分成三塊\n下面哪些正確？", "plane": _plane([-1.5, 9.5], [-0.8, 8.6], s1), "steps": st1})
 	var s2 := base.duplicate()
-	s2 += [_split(G, A, B, C, 1, {"until": 2}), _fire(G, "gold", 1), _split(I, A, B, C, 2, {"until": 3}), _fire(I, "cyan", 2), _split(O, A, B, C, 3, {"until": 4}), _fire(O, "pink", 3)]
+	s2 += [_split(G, A, B, C, 1, {"until": 2}), _fire(G, "gold", 1, {"s": "G", "off": [12, -4]}), _split(I, A, B, C, 2, {"until": 3}), _fire(I, "cyan", 2, {"s": "I", "off": [12, 8]}),
+		_split(O, A, B, C, 3, {"until": 4}), _fire(O, "pink", 3, {"s": "O", "off": [12, -2]})]
 	var st2 := [
 		_j("審判一", "G 是重心 ⇒ △GAB = \\frac{1}{3}△ABC", true, "重心的三塊一樣大。", "△GAB = \\frac{1}{3}△ABC", T_AREA),
 		_j("審判二", "I 是內心 ⇒ \\ol{BC}\\vec{IA} + \\ol{CA}\\vec{IB} + \\ol{AB}\\vec{IC} = \\vec{0}", true, "權重 = 對面那一塊 = 對邊長。", "內心的權重是對邊長", T_CTR),
