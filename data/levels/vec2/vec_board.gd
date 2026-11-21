@@ -20,11 +20,15 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##       drag_on(named, fixed, cb)  拖箭頭平移（vdrag）：沒有 fixed 時先點兩個點畫一支，放開時頭尾都落在點上，cb.call({from, to})
 ##       place_on(cfg, cb)    拖一個點（vsandbox）：吸附到格子點，cb.call(Vector2)；cfg.lit 決定燈亮不亮
 ##            cfg.lit 也可以是算式（x、y 是點的坐標，例如 "abs(x * 4) < 0.01"）
-##            cfg.ring = {o, r, step}：只能在圓上轉（箭頭長度不變），每 step 度吸附一次
+##            cfg.ring = {o, r, step, a0}：只能在圓上轉（箭頭長度不變），從 a0 度起每 step 度吸附一次
 ##            cfg.on = {o, d, step}：只能沿著直線 o + k·d 拖，k 每 step 吸附一次
 ##            cfg.arrow = {o, c, s}：從 o 畫一支箭頭到拖的點；cfg.shadow = {o, g, area}：那支箭頭的影子
 ##            cfg.pole = {o, a}：影子＋竿子（拖的點是影子的頭 F：o → F 是影子、F → a 是竿子，垂直時亮直角）
 ##            cfg.trace = true：燈亮的位置留下光點（trace_pts）；cfg.read：左上角的讀數（{…} 裡是 x、y 的算式）
+##            cfg.protractor = {o, r, a0, side}：量角器（V4）：a0 是底邊的方向（度），side = 1 往逆時針量、−1 往順時針
+##            cfg.sum = {o}：從 o 畫一支金色箭頭到拖的點（首尾相接的和，V4）
+##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
+##            guess：再畫一支淡淡的指針在先猜的角度（guess_deg）
 ##       weigh_on(cfg)        秤桿（vweigh）：畫面上的砝碼由 level 改 weigh.wb、weigh.wc
 ##       path_on(from, to)    鋪路（vpath）：level 改 path_segs
 ##   ・看得到的後果：fx_merge（箭頭飛過去疊合）、fx_ribbon（彩帶圍成平行四邊形）、fx_walk（風箏飛一段路）
@@ -54,6 +58,7 @@ var path_to := Vector2(INF, INF)
 var path_segs: Array = []         # [Vector2…]
 var vfx: Array = []               # 這一關自己的後果動畫
 var trace_pts: Array = []         # 光點描圖留下的點
+var guess_deg := NAN              # 量角器先猜的角度（這一題做完之前都留著）
 
 
 func reset(d: Dictionary) -> void:
@@ -62,6 +67,7 @@ func reset(d: Dictionary) -> void:
 	for k in d.get("named", {}).keys():
 		named[k] = _v(d.named[k])
 	vfx = []
+	guess_deg = NAN
 	_off_all()
 
 
@@ -166,7 +172,8 @@ func place_snap(w: Vector2) -> Vector2:
 		var rg: Dictionary = place_cfg.ring
 		var o := _v(rg.o)
 		var stp := deg_to_rad(float(rg.get("step", 15.0)))
-		var ang := roundf((w - o).angle() / stp) * stp
+		var a0 := deg_to_rad(float(rg.get("a0", 0.0)))
+		var ang := a0 + roundf(((w - o).angle() - a0) / stp) * stp
 		var p := o + Vector2(cos(ang), sin(ang)) * float(rg.r)
 		return Vector2(snappedf(p.x, 1e-6), snappedf(p.y, 1e-6))
 	if place_cfg.has("on"):
@@ -676,6 +683,16 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 		"expand":
 			_draw_expand(font, sh)
 			return
+		"protractor":
+			_draw_protractor(font, _v(sh.o), float(sh.r), float(sh.get("a0", 0.0)), float(sh.get("side", 1.0)))
+			var dg := float(sh.get("deg", -1.0))
+			if bool(sh.get("guess", false)) and is_finite(guess_deg):
+				_protractor_hand(font, sh, guess_deg, Color(1, 1, 1, 0.45), 2.0)
+			if dg >= 0.0:
+				var k := _anim_k(sh) if sh.has("at") else 1.0
+				var from := guess_deg if bool(sh.get("guess", false)) and is_finite(guess_deg) else dg
+				_protractor_hand(font, sh, lerpf(from, dg, k * k * (3.0 - 2.0 * k)), UITheme.ACCENT, 3.5)
+			return
 		"tag":
 			var p := _to(o + _v(sh.p))
 			var col := _col(String(sh.get("c", "text")))
@@ -736,6 +753,12 @@ func _draw_modes(font: Font) -> void:
 				var tp := _to(q)
 				UITheme.dot(self, tp, 9.0 + 1.5 * sin(t * 3.0 + tp.x), Color(1, 0.86, 0.42, 0.22))
 				UITheme.dot(self, tp, 4.0, UITheme.ACCENT)
+			if place_cfg.has("protractor"):
+				var pr: Dictionary = place_cfg.protractor
+				_draw_protractor(font, _v(pr.o), float(pr.r), float(pr.get("a0", 0.0)), float(pr.get("side", 1.0)))
+			if is_finite(place_p.x) and place_cfg.has("sum"):
+				var so := _v(place_cfg.sum.o)
+				_arrow_px(_to(so), _to(place_p), UITheme.ACCENT, 4.0, 0.5)
 			if is_finite(place_p.x) and place_cfg.has("shadow"):
 				var sd: Dictionary = place_cfg.shadow
 				_draw_shadow(font, _v(sd.o), place_p, _v(sd.g), sd)
@@ -757,7 +780,8 @@ func _draw_modes(font: Font) -> void:
 			if is_finite(place_p.x) and place_cfg.has("read"):
 				var txt := fill_eq(String(place_cfg.read), {"x": place_p.x, "y": place_p.y})
 				_label(font, Vector2(14, 24), txt, [0, 0], UITheme.ACCENT)
-			_draw_place_lamp(place_lit(place_p))
+			if not place_cfg.has("protractor"):
+				_draw_place_lamp(place_lit(place_p))
 		"weigh":
 			_draw_beam(font)
 		"path":
@@ -890,6 +914,47 @@ func _draw_vfx(font: Font) -> void:
 				keep.append(f)
 	vfx = keep
 
+
+
+## 有根號的標籤（√13、2√3）用數學排版畫（一般的字會把根號畫壞）
+func _label(font: Font, sp: Vector2, s: String, off, c: Color, center := false) -> void:
+	if s.contains("√") and not s.contains("\\"):
+		if not Rect2(Vector2.ZERO, size).grow(2.0).has_point(sp):
+			return
+		_math_label(font, sp, s, off, c, center, UITheme.fs(15))
+		return
+	super(font, sp, s, off, c, center)
+
+
+## 量角器：從底邊（a0 度）往 side 那一邊量 0°～180°，每 10° 一個刻度
+func _draw_protractor(font: Font, o: Vector2, r: float, a0: float, side: float) -> void:
+	var pts := PackedVector2Array()
+	for k in 37:
+		var ang := deg_to_rad(a0 + side * 5.0 * k)
+		pts.append(_to(o + Vector2(cos(ang), sin(ang)) * r))
+	var fill := pts.duplicate()
+	fill.append(_to(o))
+	draw_colored_polygon(fill, Color(0.95, 0.85, 0.55, 0.07))
+	draw_polyline(pts, Color(0.95, 0.85, 0.55, 0.55), 1.6, true)
+	var b0 := deg_to_rad(a0)
+	draw_line(_to(o - Vector2(cos(b0), sin(b0)) * r), _to(o + Vector2(cos(b0), sin(b0)) * r), Color(0.95, 0.85, 0.55, 0.4), 1.4, true)
+	for k in 19:
+		var ang := deg_to_rad(a0 + side * 10.0 * k)
+		var u := Vector2(cos(ang), sin(ang))
+		var big := k % 3 == 0
+		var p0 := _to(o + u * r)
+		var p1 := p0 + (_to(o) - p0).normalized() * (9.0 if big else 5.0)
+		draw_line(p0, p1, Color(0.95, 0.85, 0.55, 0.7 if big else 0.4), 1.2, true)
+
+
+## 量角器的指針和讀數
+func _protractor_hand(font: Font, sh: Dictionary, deg: float, col: Color, w: float) -> void:
+	var o := _v(sh.o)
+	var r := float(sh.r)
+	var ang := deg_to_rad(float(sh.get("a0", 0.0)) + float(sh.get("side", 1.0)) * deg)
+	var u := Vector2(cos(ang), sin(ang))
+	_arrow_px(_to(o), _to(o + u * r * 0.95), col, w, 0.3 if w > 3.0 else 0.0)
+	_label(font, _to(o + u * r * 1.12), "%d°" % int(roundf(deg)), [0, 0], col, true)
 
 
 ## 影子：o → h 的箭頭在「過 o、方向 g」的地面上的正射影

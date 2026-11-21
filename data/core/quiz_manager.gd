@@ -219,6 +219,9 @@ const MISTAKE_INFO := {
 	"vec_dotbasis":    {"name": "化成基底展開、圖形中的內積", "level": 2},
 	"vec_perp":        {"name": "垂直、平行的條件", "level": 1},
 	"vec_proj":        {"name": "正射影與正射影長", "level": 2},
+	"vec_len":         {"name": "長度平方展開", "level": 1},
+	"vec_lenmin":      {"name": "長度的範圍與最小值", "level": 2},
+	"vec_angle":       {"name": "求夾角、夾角的條件", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

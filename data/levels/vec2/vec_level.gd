@@ -17,6 +17,7 @@ extends "res://data/levels/num/num_level.gd"
 ##       秤桿：B、C 兩端掛砝碼，在 P 平衡（wb × \ol{BP} = wc × \ol{PC}）才算對
 ##   {"kind": "vorder", …, "ground": [[x, y], [x, y]]（地面直線上的兩點）, "order": [[x, y, "C"], …]（由大到小）}
 ##       排隊點（V3）：照順序點出各點。點對了，那一點的陽光照到地面、插上號碼牌；點到後面的點：陽光照下去又淡掉，扣一顆心
+##   vplace 的 goal 也可以是 "guess"（量角器先猜：放哪裡都算，line 裡的 {guess} 換成猜的角度，畫布記下 guess_deg）
 ##   vplace 的 goal 也可以是 "trace"（"need": 4）：沙盒寫 "trace": true，找到 need 個燈亮的位置（光點）就過
 ##   choice 加 "sandbox": {…}：判斷的時候可以隨便拖那個點看燈（不扣分）。"ribbon": [[x, y], …]：答對後彩帶圍成那個四邊形
 ##   slide（滑桿，見 line_level.gd）：lines 裡也可以放 arrow、poly、balloon、tag、walk（座標寫算式）；"keep": true 做完留在畫布上
@@ -360,6 +361,17 @@ func _vplace_submit() -> void:
 	var p := pl.place_p
 	if not is_finite(p.x):
 		_hint("先把 %s 拖到方格上。" % String(st.sandbox.get("label", "D")), "info")
+		return
+	if String(st.get("goal", "lit")) == "guess":
+		var pr: Dictionary = st.sandbox.protractor
+		var b0 := deg_to_rad(float(pr.get("a0", 0.0)))
+		var d := rad_to_deg((p - _v2(pr.o)).angle_to(Vector2(cos(b0), sin(b0))))
+		var g := absf(d)
+		pl.guess_deg = g
+		if not st.has("line0"):
+			st["line0"] = String(st.line)
+		st["line"] = String(st.line0).replace("{guess}", str(int(roundf(g))))
+		_vec_finish(si)
 		return
 	if String(st.get("goal", "lit")) == "trace":
 		var n := pl.trace_pts.size()

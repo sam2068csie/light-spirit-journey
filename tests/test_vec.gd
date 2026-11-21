@@ -6,11 +6,13 @@ extends "test_base.gd"
 ##   ・vpath：點磁磚鋪路，鋪錯不會過、鋪對會過
 ##   ・vweigh：掛砝碼，平衡才過
 ##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
+##   ・V4：量角器先猜（guess）、合起來的箭（sum）
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
 const Bank2 := preload("res://data/levels/vec2/vec2_bank.gd")
 const Bank3 := preload("res://data/levels/vec2/vec3_bank.gd")
+const Bank4 := preload("res://data/levels/vec2/vec4_bank.gd")
 
 var lv
 
@@ -54,11 +56,22 @@ func _initialize() -> void:
 	await _check_order()
 	await _check_trace()
 	await _check_pole()
+	# V4：量角器、合起來的箭
+	g.goto("level_vec4_bow.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_guess()
+	await _check_sum()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots() + Bank3.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -331,3 +344,33 @@ func _check_pole() -> void:
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 1, "竿子站直就過")
+
+
+func _check_guess() -> void:
+	await _start("cangle", 0)
+	var st: Dictionary = lv.steps[0]
+	ok(String(st.goal) == "guess" and st.sandbox.has("protractor"), "坐標量角度：第一步是量角器先猜")
+	var B := Vector2(1, 1)
+	_press(_px(B + Vector2.from_angle(deg_to_rad(53.13 - 60.0)) * 2.4))
+	var e0: int = lv.energy
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1 and lv.energy == e0, "猜 60° 也算，不扣能量")
+	ok(absf(_pl().guess_deg - 60.0) < 0.6, "畫布記下猜的角度（%s）" % str(_pl().guess_deg))
+	ok(String(lv.steps[0].line).contains("60"), "推導紀錄寫下猜的角度（%s）" % lv.steps[0].line)
+
+
+func _check_sum() -> void:
+	await _start("range", 0)
+	var st: Dictionary = lv.steps[0]
+	ok(st.sandbox.has("sum"), "最遠和最近：轉的時候畫出合起來的箭")
+	_press(_px(Vector2(3, 0) + Vector2(4, 0.3)))
+	ok(not _pl().place_lit(_pl().place_p), "同方向最長，燈不亮")
+	lv._custom_go()
+	await frames(2)
+	ok(lv.si == 0, "最長的位置不算")
+	_press(_px(Vector2(-2, 0.2)))
+	ok(_pl().place_lit(_pl().place_p), "反方向：合起來的箭最短，燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "最短就過")

@@ -53,9 +53,13 @@ const STORY := {
 		{"text": "日晷的指針投下影子了。太陽從正上方照下來，箭頭落在地上的影子，量的是它朝那個方向走了多遠。", "cam": "site", "site": 2, "zoom": 1.8, "light": 2},
 		{"text": "影子乘上地面那支箭頭的長，就是內積！竿子站直的時候內積是 0～", "who": "光靈", "cam": "site", "site": 2, "zoom": 1.4, "spirit": 2},
 	],
+	"V4": [
+		{"text": "靶心插上箭了。兩支箭合起來飛多遠，要看它們張開多大的角。反過來，量出長度也能算出角度。", "cam": "site", "site": 3, "zoom": 1.8, "light": 3},
+		{"text": "長度的平方就是自己和自己的內積！先用量角器猜，再算算看差幾度～", "who": "光靈", "cam": "site", "site": 3, "zoom": 1.4, "spirit": 3},
+	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:
@@ -319,6 +323,17 @@ func _draw_landmark(i: int) -> void:
 		if gl > 0.5:
 			Tg.draw_line(p + Vector2(0, -12), p + Vector2(18, -9), Color(0.1, 0.1, 0.15, 0.55), 3.0)
 		Tg.draw_colored_polygon(PackedVector2Array([p + Vector2(-2, -12), p + Vector2(-2, -40), p + Vector2(12, -12)]), lit_c)
+		return
+	if String(m_sites[i].id) == "V4":
+		# 箭靶：亮了之後靶心插著一支箭
+		var tc := p + Vector2(0, -32)
+		Tg.draw_line(p + Vector2(-8, -10), tc + Vector2(-4, 10), base.lightened(0.3), 2.0)
+		Tg.draw_line(p + Vector2(8, -10), tc + Vector2(4, 10), base.lightened(0.3), 2.0)
+		for k in 3:
+			UITheme.dot(Tg, tc, 16.0 - 5.0 * k, [base.lightened(0.35), lit_c, base.lightened(0.35)][k])
+		if gl > 0.5:
+			Tg.draw_line(tc + Vector2(-22, -6), tc, Color(0.95, 0.9, 0.8), 2.0)
+			Tg.draw_colored_polygon(PackedVector2Array([tc + Vector2(-22, -6), tc + Vector2(-28, -11), tc + Vector2(-26, -3)]), lit_c)
 		return
 	# 旗桿和旗子：亮了就迎風飄
 	Tg.draw_line(p + Vector2(0, -10), p + Vector2(0, -50), base.lightened(0.3), 2.5)
