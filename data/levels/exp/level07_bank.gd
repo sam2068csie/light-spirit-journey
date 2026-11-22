@@ -363,7 +363,7 @@ static func slots() -> Array:
 		 "story": "令 t = log_{a} x，算出 t 的範圍，配方後拖動 t 找極值。",
 		 "insight": "① 求 t 的範圍 ② 配方 ③ 頂點在範圍內是一個極值，另一個看端點。",
 		 "variants": [
-			{"eq": "f(x) = (log_{3} x)^{2} − 4log_{3} x + 1，1 ≤ x ≤ 81\n求最小值",
+			{"eq": "f(x) = (log_{3} x)^{2} − 4log_{3} x + 1，1 ≤ x ≤ 81\n求最小值，以及此時的 x",
 			 "steps": [
 				_tlog("3", "令 t = log_{3} x：f(x) = t^{2} − 4t + 1"),
 				_f("t 的範圍", "1 ≤ x ≤ 81，t = log_{3} x 的範圍是？", "[0] ≤ t ≤ [1]", ["0", "4"], "0 ≤ t ≤ 4", "log_{3} 1 = 0、log_{3} 81 = 4。",
@@ -374,7 +374,7 @@ static func slots() -> Array:
 				_f("最小值", "t = 2 代入，再換回 x。", "最小值 [0]，此時 x = [1]", ["-3", "9"], "最小值 −3，此時 log_{3} x = 2 ⇒ x = 9",
 					"配方的常數項\nlog_{3} x = 2 ⇒ x = 3^{2}。", "logineq_extreme"),
 			 ]},
-			{"eq": "f(x) = log_{2} (4x) · log_{2} (x/2)，1/2 ≤ x ≤ 8\n求最大值與最小值",
+			{"eq": "f(x) = log_{2} (4x) · log_{2} (x/2)，1/2 ≤ x ≤ 8\n求最大值與最小值，以及此時的 x",
 			 "steps": [
 				_c("拆開", "令 t = log_{2} x，log_{2} (4x) = ？", ["t + 2", "4t", "2t", "t + 4"], 0, "log_{2} 4 + log_{2} x = 2 + t。",
 					"相乘 ⇒ 相加。", "令 t = log_{2} x：log_{2} (4x) = t + 2，log_{2} (x/2) = t − 1", "logineq_extreme"),
@@ -391,7 +391,7 @@ static func slots() -> Array:
 				_f("最大值", "t = 3 代入，再換回 x。", "最大值 = [0]，此時 x = [1]", ["10", "8"], "最大值 10，此時 log_{2} x = 3 ⇒ x = 8",
 					"(3 + 2)(3 − 1)\nx = 2^{3}。", "logineq_extreme"),
 			 ]},
-			{"eq": "f(x) = (log_{1/2} x)^{2} − 2log_{1/2} x，1/4 ≤ x ≤ 4\n求最大值與最小值",
+			{"eq": "f(x) = (log_{1/2} x)^{2} − 2log_{1/2} x，1/4 ≤ x ≤ 4\n求最大值與最小值，以及此時的 x",
 			 "steps": [
 				_tlog("1/2", "令 t = log_{1/2} x：f(x) = t^{2} − 2t"),
 				_f("t 的範圍", "1/4 ≤ x ≤ 4，t = log_{1/2} x 的範圍？底數 1/2 < 1 遞減：x 越大，t 越小！", "[0] ≤ t ≤ [1]", ["-2", "2"], "−2 ≤ t ≤ 2",
@@ -410,7 +410,7 @@ static func slots() -> Array:
 		 "story": "兩邊取 log，就變成 t 的二次函數。",
 		 "insight": "log y = g(x)·log x，令 t = log x 求極值，再換回 y。",
 		 "variants": [
-			{"eq": "f(x) = x^{4 − log_{2} x}，1 ≤ x ≤ 8\n求最大值 M、最小值 m",
+			{"eq": "f(x) = x^{4 − log_{2} x}，1 ≤ x ≤ 8\n求最大值 M、最小值 m，以及此時的 x",
 			 "steps": [
 				_c("取 log", "兩邊取 log_{2}（令 t = log_{2} x）：log_{2} f = ？", ["(4 − t)·t", "4 − t", "4t", "log_{2} (4 − t)"], 0,
 					"log_{2} x^{r} = r·log_{2} x，r = 4 − log_{2} x。", "次方拿到前面當係數。", "令 t = log_{2} x：log_{2} f = t(4 − t) = −t^{2} + 4t", "logineq_extreme"),
@@ -424,7 +424,7 @@ static func slots() -> Array:
 					"t = 2 時 log_{2} f 最大 = 4", "開口向下：頂點 t = 2 在範圍內。"),
 				_f("M", "log_{2} f = 4，再換回 x。", "M = 2^{4} = [0]，此時 x = [1]", ["16", "4"], "M = 16，此時 log_{2} x = 2 ⇒ x = 4", "2^{4}\nx = 2^{2}。", "logineq_extreme"),
 			 ]},
-			{"eq": "f(x) = x^{2 + log_{3} x}，1/9 ≤ x ≤ 3\n求最大值 M、最小值 m",
+			{"eq": "f(x) = x^{2 + log_{3} x}，1/9 ≤ x ≤ 3\n求最大值 M、最小值 m，以及此時的 x",
 			 "steps": [
 				_c("取 log", "兩邊取 log_{3}（令 t = log_{3} x）：log_{3} f = ？", ["(2 + t)·t", "2 + t", "2t", "3^{2 + t}"], 0,
 					"次方 2 + log_{3} x 拿到前面。", "log_{3} x^{r} = r·log_{3} x。", "令 t = log_{3} x：log_{3} f = t^{2} + 2t", "logineq_extreme"),
@@ -444,7 +444,7 @@ static func slots() -> Array:
 		 "story": "log x + log y = log (xy)，再用算幾不等式。",
 		 "insight": "算幾：和固定 ⇒ 積有最大\n積固定 ⇒ 和有最小。",
 		 "variants": [
-			{"eq": "x、y > 0，2x + y = 16，求 log_{2} x + log_{2} y 的最大值",
+			{"eq": "x、y > 0，2x + y = 16\n求 log_{2} x + log_{2} y 的最大值，以及此時的 x、y",
 			 "steps": [
 				_r("log_{2} x + log_{2} y 先合併：", "add", ["sub", "pow", "recip"], "log_{2} x + log_{2} y = log_{2} (xy)", "相加 ⇒ 真數相乘。",
 					"兩項是「相加」。", "logineq_amgm"),
@@ -456,7 +456,7 @@ static func slots() -> Array:
 					"2x = y = 8。", "logineq_amgm"),
 			 ],
 			 "check": [lb(2, 4) + lb(2, 8), 5.0]},
-			{"eq": "x、y > 0，log_{2} x + log_{2} y = 3，求 x + 2y 的最小值",
+			{"eq": "x、y > 0，log_{2} x + log_{2} y = 3\n求 x + 2y 的最小值，以及此時的 x、y",
 			 "steps": [
 				_r("log_{2} x + log_{2} y 先合併：", "add", ["sub", "pow", "recip"], "log_{2} (xy) = 3", "相加 ⇒ 真數相乘。", "兩項是「相加」。",
 					"logineq_amgm"),
@@ -468,7 +468,7 @@ static func slots() -> Array:
 					"logineq_amgm"),
 			 ],
 			 "check": [4.0 + 2 * 2.0, 8.0]},
-			{"eq": "x、y > 0，x + 4y = 40，求 log x + log y 的最大值",
+			{"eq": "x、y > 0，x + 4y = 40\n求 log x + log y 的最大值，以及此時的 x、y",
 			 "steps": [
 				_r("log x + log y 先合併：", "add", ["sub", "pow", "recip"], "log x + log y = log (xy)", "相加 ⇒ 真數相乘。", "兩項是「相加」。",
 					"logineq_amgm"),
@@ -486,7 +486,7 @@ static func slots() -> Array:
 		 "story": "限時 350 秒！換元、取對數、算幾，三種極值一次考。",
 		 "insight": "令 t = log x → 配方看頂點與端點\n乘積的 log 用算幾。",
 		 "variants": [
-			{"eq": "f(x) = (log_{2} x)^{2} − log_{2} x^{2}，1/2 ≤ x ≤ 16\n求最大值與最小值",
+			{"eq": "f(x) = (log_{2} x)^{2} − log_{2} x^{2}，1/2 ≤ x ≤ 16\n求最大值與最小值，以及此時的 x",
 			 "steps": [
 				_r("log_{2} x^{2} 先怎麼處理？", "pow", ["add", "sub", "base"], "令 t = log_{2} x：f(x) = t^{2} − 2t", "次方拿到前面。", "x 有 2 次方。",
 					"logineq_extreme"),
@@ -499,7 +499,7 @@ static func slots() -> Array:
 				_f("最大值", "t = 4 代入，再換回 x。", "最大值 [0]，此時 x = [1]", ["8", "16"], "最大值 8，此時 log_{2} x = 4 ⇒ x = 16", "16 − 8\nx = 2^{4}。",
 					"logineq_extreme"),
 			 ]},
-			{"eq": "x、y > 0，log_{3} x + log_{3} y = 4，求 x + y 的最小值",
+			{"eq": "x、y > 0，log_{3} x + log_{3} y = 4\n求 x + y 的最小值，以及此時的 x、y",
 			 "steps": [
 				_r("log_{3} x + log_{3} y 先合併：", "add", ["sub", "pow", "recip"], "log_{3} (xy) = 4", "相加 ⇒ 真數相乘。", "兩項是「相加」。", "logineq_amgm"),
 				_f("積", "改寫成指數式。", "xy = [0]", ["81"], "xy = 3^{4} = 81", "3^{4}。", "logineq_amgm"),
@@ -507,7 +507,7 @@ static func slots() -> Array:
 				_f("等號", "等號成立：x = y。", "(x, y) = ([0], [1])", ["9", "9"], "最小值 18，(x, y) = (9, 9)", "x^{2} = 81。", "logineq_amgm"),
 			 ],
 			 "check": [9.0 + 9.0, 18.0]},
-			{"eq": "f(x) = x^{3 − log_{3} x}，1 ≤ x ≤ 27，求最大值",
+			{"eq": "f(x) = x^{3 − log_{3} x}，1 ≤ x ≤ 27\n求最大值，以及此時的 x",
 			 "steps": [
 				_c("取 log", "兩邊取 log_{3}（令 t = log_{3} x）：", ["log_{3} f = t(3 − t)", "log_{3} f = 3 − t", "log_{3} f = 3t", "f(x) = t(3 − t)"], 0,
 					"次方 3 − log_{3} x 拿到前面。", "log_{3} x^{r} = r·log_{3} x。", "令 t = log_{3} x：log_{3} f = −t^{2} + 3t", "logineq_extreme"),
