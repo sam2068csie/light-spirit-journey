@@ -101,8 +101,8 @@ const UNITS := [
 		{"id": "L7", "name": "正負羅盤", "topic": "對數不等式", "file": "level_07_compass.gd", "bank": "level07_bank.gd", "color": UITheme.GOOD},
 		{"id": "L8", "name": "位數望遠鏡", "topic": "首數、尾數與應用", "file": "level_08_telescope.gd", "bank": "level08_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	# 平面向量：V1～V7 做好了，最後一關建造中（docs/vec2_plan.md：八關 V1～V8，每關 2 章，地圖是光潮群島的箭羽高原）
-	# 先用 preview（開發者的「一鍵開放全部關卡」才進得去），八關做完再 open = true
+	# 平面向量：V1～V8 都做好了，終焉之塔還沒蓋（docs/vec2_plan.md：八關 V1～V8，每關 2 章，地圖是光潮群島的箭羽高原）
+	# 先用 preview（開發者的「一鍵開放全部關卡」才進得去），要正式開放時改 open = true
 	{"id": "vec2", "term": "高二上", "title": "平面向量", "exam": "", "color": UITheme.CYAN, "open": false, "preview": true,
 	 "world": "光靈的旅程：箭羽高原", "map": "vec2_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_vec2.gd",
 	 "levels": [
@@ -113,6 +113,7 @@ const UNITS := [
 		{"id": "V5", "name": "四心營火", "topic": "三角形的四心與面積比", "file": "level_vec5_camp.gd", "bank": "vec5_bank.gd", "color": UITheme.GOLD},
 		{"id": "V6", "name": "風箏航道", "topic": "直線的參數式與法向量", "file": "level_vec6_kite.gd", "bank": "vec6_bank.gd", "color": UITheme.LIME},
 		{"id": "V7", "name": "弓帆工坊", "topic": "柯西不等式與面積公式", "file": "level_vec7_bow.gd", "bank": "vec7_bank.gd", "color": UITheme.GOLD},
+		{"id": "V8", "name": "雙線織坊", "topic": "二階行列式與克拉瑪法則", "file": "level_vec8_loom.gd", "bank": "vec8_bank.gd", "color": UITheme.VIOLET},
 	 ]},
 	# ======================= 高二下 =======================
 	{"id": "vec3", "term": "高二下", "title": "空間向量", "exam": "", "color": UITheme.VIOLET, "open": false,

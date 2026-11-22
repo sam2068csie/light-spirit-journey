@@ -2480,7 +2480,7 @@ class ForgeView extends Control:
 		var pop := clampf(1.0 - (t - hit_t) / 0.3, 0.0, 1.0)
 		var y := size.y * speed_y
 		# 分式比較高：「第幾題」再往上一點，免得碰到分子
-		var tall := 22.0 if sp_eq.split("\n")[0].contains("\\frac") else 0.0
+		var tall := 22.0 if sp_eq.split("\n")[0].contains("\\frac") or sp_eq.split("\n")[0].contains("\\det") else 0.0
 		draw_string(font, Vector2(0, maxf(y - 70 - tall, 100.0)), "第 %d 題" % (sp_i + 1), HORIZONTAL_ALIGNMENT_CENTER, size.x, UITheme.fs(17), Color(1, 1, 1, 0.55))
 		# 題目可以有兩行：第一行是式子（大字），第二行是問句（小一點）
 		var sl := sp_eq.split("\n")

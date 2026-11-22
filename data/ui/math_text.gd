@@ -16,6 +16,7 @@ extends Control
 ##   \n                    換行
 ##   a/b、(x + 1)/2、a ÷ b 自動畫成上下的分數（上下標裡也會，例如 3^{1/2}、log_{1/2} x）
 ##   \frac{a}{b}           直接指定分數
+##   \det{a}{b}{c}{d}     二階行列式（兩列兩行、左右各一條直線；格子裡不能放空格 [ ]）
 ##
 ## 其他用法：
 ##   MathLabel.make_button("log_{2} 3")         產生顯示數學式的按鈕
@@ -32,6 +33,8 @@ const NO_BREAK_AFTER := "(（「『"
 const FRAC_SCALE := 0.82    # 分子、分母的字級比例
 const FRAC_AXIS := 0.30     # 分數線離基線的高度（以字級為單位）
 const FRAC_GAP := 0.16      # 分數線和分子、分母的間隔
+const DET_SCALE := 0.86     # 行列式裡的字級比例
+const DET_ROW := 1.1       # 行列式兩列的間距（以字級為單位）
 
 ## 數學字體：數字、運算符號用襯線正體，變數用襯線斜體（像課本、MathType 的樣子）；中文仍用原本的字型
 const MATH_REG_PATH := "res://fonts/MathSerif-Regular.otf"
@@ -43,7 +46,7 @@ const MATH_SYMS := "+−-=<>≤≥≠≈±×÷·()[]|,.:;'%∞"
 ## 襯線字的乘號點太窄：左右各多留一點空隙（以字級為單位）
 const SIDE_PAD := {"·": 0.14}
 ## 這些字母組合是函數名稱，維持正體（數學排版慣例）
-const UPRIGHT_WORDS := ["log", "ln", "lg", "sin", "cos", "tan", "cot", "sec", "csc", "lim", "max", "min", "exp", "mod", "gcd",
+const UPRIGHT_WORDS := ["log", "ln", "lg", "sin", "cos", "tan", "cot", "sec", "csc", "lim", "max", "min", "exp", "mod", "gcd", "det",
 	"pH", "Ct", "dB", "PCR", "Esc", "fps", "ms", "zzz", "II", "III", "IV", "OK", "sub", "mm", "cm", "km"]   # 單位、縮寫也不斜
 const GREEK_VARS := "αβγθλμφω"
 
@@ -198,6 +201,19 @@ static func _parse_into(s: String, i: int, scale: float, dy: float, colors: Arra
 				out.append({"ch": "", "frac": {"num": num, "den": den}, "scale": scale, "dy": dy,
 					"color": colors.back(), "glue": glue, "rads": rads})
 			continue
+		# 二階行列式：\det{a}{b}{c}{d}（借用分數的機制：frac 裡多一個 det，四格各自是一串字）
+		if c == "\\" and s.substr(i, 5) == "\\det{":
+			var cells := []
+			i += 5
+			for k in 4:
+				var cell := []
+				i = _parse_into(s, i, DET_SCALE, 0.0, colors, cell, glue, true, [])
+				cells.append(cell)
+				if k < 3 and i < s.length() and s[i] == "{":
+					i += 1
+			out.append({"ch": "", "frac": {"num": [], "den": [], "det": cells}, "scale": scale, "dy": dy,
+				"color": colors.back(), "glue": glue, "rads": rads})
+			continue
 		# 正體（單位）：\rm{m}，單獨一個 m 也不寫成斜體的變數
 		if c == "\\" and s.substr(i, 4) == "\\rm{":
 			var r0 := out.size()
@@ -269,6 +285,8 @@ static func _mark_italic(arr: Array) -> void:
 		if ch.has("frac"):
 			_mark_italic(ch.frac.num)
 			_mark_italic(ch.frac.den)
+			for cell in ch.frac.get("det", []):
+				_mark_italic(cell)
 			i += 1
 			continue
 		if ch.get("rm", false):
@@ -761,7 +779,7 @@ static func _line_ops(font: Font, markup: String, fs: int, col: Color) -> Dictio
 static var _extra_cache: Dictionary = {}
 
 static func line_extra(font: Font, markup: String, fs: float) -> Vector2:
-	if not (markup.contains("/") or markup.contains("÷") or markup.contains("\\frac")):
+	if not (markup.contains("/") or markup.contains("÷") or markup.contains("\\frac") or markup.contains("\\det")):
 		return Vector2.ZERO
 	# 版面計算每一幀會問很多次：結果快取起來
 	var key := "%s|%s|%s" % [fs, auto_frac, markup]
@@ -804,6 +822,8 @@ static func line_extent(markup: String, fs: float) -> Vector2:
 static func char_w(font: Font, ch: Dictionary, fs: float) -> float:
 	if ch.has("frac"):
 		var sz: float = fs * ch.scale
+		if ch.frac.has("det"):
+			return _det_w(font, ch.frac.det, sz).x
 		return maxf(_row_w(font, ch.frac.num, sz), _row_w(font, ch.frac.den, sz)) + sz * 0.36
 	var sz := int(round(fs * ch.scale))
 	var mf: int = ch.get("mf", 0)
@@ -849,6 +869,10 @@ static func _widths(font: Font, chars: Array, markup: String, fs: float) -> Arra
 
 ## 分數在基線上方、下方各占多高（Vector2(上, 下)，單位是像素）
 static func frac_extent(fr: Dictionary, fs: float) -> Vector2:
+	if fr.has("det"):
+		var axis0 := fs * FRAC_AXIS
+		var half := fs * DET_ROW * 0.5 + fs * 0.5
+		return Vector2(axis0 + half, -axis0 + half)
 	var axis := fs * FRAC_AXIS
 	var gap := fs * FRAC_GAP
 	var top := 0.0
@@ -869,6 +893,9 @@ static func frac_extent(fr: Dictionary, fs: float) -> Vector2:
 
 ## 畫一個分數：pos 是左邊、基線的位置
 static func draw_frac(ci: CanvasItem, font: Font, pos: Vector2, fr: Dictionary, fs: int, col: Color) -> void:
+	if fr.has("det"):
+		_draw_det(ci, font, pos, fr.det, fs, col)
+		return
 	var nw := _row_w(font, fr.num, fs)
 	var dw := _row_w(font, fr.den, fs)
 	var w := maxf(nw, dw) + fs * 0.36
@@ -885,6 +912,37 @@ static func draw_frac(ci: CanvasItem, font: Font, pos: Vector2, fr: Dictionary, 
 		# 分母有根號、上橫線（\ol）時多留一點空間，免得橫線和分數線黏在一起
 		den_asc = maxf(den_asc, -ch.dy * fs + ch.scale * fs * (0.96 if ch.has("rads") and not ch.rads.is_empty() else 0.74) * _hk(ch))
 	_draw_row(ci, font, Vector2(pos.x + (w - dw) / 2.0, axis_y + gap + den_asc), fr.den, fs, col)
+
+
+## 行列式：[總寬, 左行寬, 右行寬, 邊線到格子的空隙]
+static func _det_w(font: Font, cells: Array, fs: float) -> Vector4:
+	var l := maxf(_row_w(font, cells[0], fs), _row_w(font, cells[2], fs))
+	var r := maxf(_row_w(font, cells[1], fs), _row_w(font, cells[3], fs))
+	var pad := fs * 0.22
+	var mid := fs * 0.7
+	return Vector4(fs * 0.16 + pad + l + mid + r + pad + fs * 0.16, l, r, pad)
+
+
+## 畫行列式：pos 是左邊、基線；兩列以分數線的高度為中心，左右兩條直線
+static func _draw_det(ci: CanvasItem, font: Font, pos: Vector2, cells: Array, fs: int, col: Color) -> void:
+	var dw := _det_w(font, cells, fs)
+	var axis_y := pos.y - fs * FRAC_AXIS
+	var row := fs * DET_ROW
+	var cy := [axis_y - row * 0.5 + fs * 0.28, axis_y + row * 0.5 + fs * 0.28]   # 兩列的基線
+	var x0 := pos.x + fs * 0.08
+	var x1 := pos.x + dw.x - fs * 0.08
+	var top := axis_y - row * 0.5 - fs * 0.42
+	var bot := axis_y + row * 0.5 + fs * 0.42
+	var lw := maxf(1.2, fs * 0.07)
+	ci.draw_line(Vector2(x0, top), Vector2(x0, bot), col, lw, true)
+	ci.draw_line(Vector2(x1, top), Vector2(x1, bot), col, lw, true)
+	var lx := x0 + fs * 0.08 + dw.w
+	var rx := lx + dw.y + fs * 0.7
+	for k in 4:
+		var cw := _row_w(font, cells[k], fs)
+		var colw: float = dw.y if k % 2 == 0 else dw.z
+		var x: float = (lx if k % 2 == 0 else rx) + (colw - cw) / 2.0
+		_draw_row(ci, font, Vector2(x, cy[k / 2]), cells[k], fs, col)
 
 
 static func _draw_row(ci: CanvasItem, font: Font, base: Vector2, row: Array, fs: float, col: Color) -> void:

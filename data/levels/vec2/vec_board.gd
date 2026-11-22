@@ -41,6 +41,10 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##       {"k": "plot", "f": "u * u", "u0": 0, "u1": 3, "cur": "t", "s": "f"}  小函數圖（V7）：右下角的小框，cur 是目前的 u（滑桿裡跟著動）
 ##         "corner": "tr" 改放右上角（直線的標籤在右下角的時候）
 ##            cfg.sail = [A, B]：帆（V7）：拖的點和 A、B 張成三角形，塗色（燈亮時金色）
+##            cfg.cloth = {o, a}：布（V8）：o、\vec{a} 和拖的點（\vec{b} 的尖端）張成平行四邊形，行列式正的金色、負的紫色、0 壓成一條線
+##            cfg.rect = true：從原點到拖的點畫長方形（V8，面積 xy）
+##       {"k": "cloth", "o": [x, y], "a": [x, y], "b": [x, y], "s": "5"}  一塊布（V8）：正面金色、翻面紫色（"c" 可以指定顏色），s 寫在布的中間
+##       {"k": "curve", "f": "12 / x", "x0": 0.5, "x1": 13, "c": "gold"}  曲線 y = f(x)（V8），跑出畫布的地方斷開
 ##       {"k": "beads", "a": [x, y], "b": [x, y], "n": 16}  格子點的珠子（V6）：等距的 n 顆，一顆一顆亮起來
 ##            cfg.mirror = {o, u, len}：鏡岩（V6）：鏡子是 o 到拖的點的直線，入射光沿 u 打到 o，反射光跟著畫（燈亮時金色）
 ##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
@@ -447,7 +451,7 @@ func _shape_by_id(id: String) -> Dictionary:
 
 func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 	var kk := String(ln.get("k", "line"))
-	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right", "fire", "plot", "ellipse"]:
+	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right", "fire", "plot", "ellipse", "cloth", "curve"]:
 		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
 			return {}
 		var out := ln.duplicate(true)
@@ -726,6 +730,30 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 				var from := guess_deg if bool(sh.get("guess", false)) and is_finite(guess_deg) else dg
 				_protractor_hand(font, sh, lerpf(from, dg, k * k * (3.0 - 2.0 * k)), UITheme.ACCENT, 3.5)
 			return
+		"cloth":
+			_draw_cloth(font, _v(sh.o), _v(sh.a), _v(sh.b), String(sh.get("c", "")), String(sh.get("s", "")),
+				_anim_k(sh) if sh.has("at") else 1.0)
+			return
+		"curve":
+			var cc := _col(String(sh.get("c", "gold")))
+			var x0 := float(sh.get("x0", -10.0))
+			var x1 := float(sh.get("x1", 10.0))
+			var seg := PackedVector2Array()
+			var kk := _anim_k(sh) if sh.has("at") else 1.0
+			var n := 160
+			for i in int(n * kk) + 1:
+				var x := lerpf(x0, x1, float(i) / n)
+				var y := calc(String(sh.f), {"x": x})
+				var q := _to(Vector2(x, y))
+				if not is_finite(y) or q.y < -40.0 or q.y > size.y + 40.0:
+					if seg.size() >= 2:
+						_pl(seg, cc, float(sh.get("w", 2.0)), bool(sh.get("dash", false)))
+					seg = PackedVector2Array()
+					continue
+				seg.append(q)
+			if seg.size() >= 2:
+				_pl(seg, cc, float(sh.get("w", 2.0)), bool(sh.get("dash", false)))
+			return
 		"ellipse":
 			# 橢圓（V7 的等高線）：中心 o、半軸 rx、ry（rx = ry 就是圓）
 			var eo := _v(sh.o)
@@ -848,6 +876,16 @@ func _draw_modes(font: Font) -> void:
 				var sc := sp.duplicate()
 				sc.append(sp[0])
 				_pl(sc, Color(scol.r, scol.g, scol.b, 0.8), 2.0, false)
+			if is_finite(place_p.x) and place_cfg.has("cloth"):
+				var cd: Dictionary = place_cfg.cloth
+				_draw_cloth(font, _v(cd.o), _v(cd.a), place_p - _v(cd.o), "", "", 1.0)
+			if is_finite(place_p.x) and place_cfg.has("rect"):
+				var rc := UITheme.ACCENT if place_lit(place_p) else UITheme.CYAN
+				var r0 := _to(Vector2.ZERO)
+				var r1 := _to(place_p)
+				var rr := Rect2(Vector2(minf(r0.x, r1.x), minf(r0.y, r1.y)), (r1 - r0).abs())
+				draw_rect(rr, Color(rc.r, rc.g, rc.b, 0.16))
+				draw_rect(rr, Color(rc.r, rc.g, rc.b, 0.8), false, 2.0)
 			if is_finite(place_p.x) and place_cfg.has("mirror"):
 				_draw_mirror(font, place_cfg.mirror, place_p, place_lit(place_p))
 			if is_finite(place_p.x) and place_cfg.has("ropes"):
@@ -911,6 +949,25 @@ func _draw_modes(font: Font) -> void:
 				p = q
 			if is_finite(path_from.x):
 				_kite(_to(p) + Vector2(0, -8), 0.0, UITheme.ACCENT, 0.8)
+
+
+## 布（V8）：o、o + a、o + a + b、o + b 的平行四邊形。行列式正的金色、負的紫色（翻面）、0 只剩一條線
+func _draw_cloth(font: Font, o: Vector2, a: Vector2, b: Vector2, c: String, s: String, k: float) -> void:
+	var det := a.x * b.y - a.y * b.x
+	var col := _col(c) if c != "" else (UITheme.ACCENT if det > 1e-6 else (UITheme.VIOLET if det < -1e-6 else Color(1, 1, 1, 0.6)))
+	var pts := PackedVector2Array([_to(o), _to(o + a), _to(o + a + b), _to(o + b)])
+	if absf(det) > 1e-6:
+		draw_colored_polygon(pts, Color(col.r, col.g, col.b, 0.26 * k))
+		# 布的紋路：和 a、b 平行的細線，看得出是「織」出來的
+		for i in range(1, 4):
+			var f := i / 4.0
+			draw_line(_to(o + a * f), _to(o + a * f + b), Color(col.r, col.g, col.b, 0.18 * k), 1.0, true)
+			draw_line(_to(o + b * f), _to(o + b * f + a), Color(col.r, col.g, col.b, 0.18 * k), 1.0, true)
+	var cl := pts.duplicate()
+	cl.append(pts[0])
+	_pl(cl, Color(col.r, col.g, col.b, 0.85 * k), 2.0, false)
+	if s != "":
+		_label(font, _to(o + (a + b) * 0.5), s, [0, 0], col, true)
 
 
 ## 小函數圖（V7）：右下角一個小框，畫 f(u)（u 從 u0 到 u1），目前的 u = cur 是一個點在上面跑

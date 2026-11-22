@@ -236,6 +236,10 @@ const MISTAKE_INFO := {
 	"vec_cauchyapp":   {"name": "柯西不等式的應用", "level": 2},
 	"vec_triineq":     {"name": "三角不等式", "level": 2},
 	"vec_areaf":       {"name": "面積公式", "level": 2},
+	"vec_det":         {"name": "二階行列式", "level": 1},
+	"vec_detprop":     {"name": "行列式的性質", "level": 2},
+	"vec_cramer":      {"name": "克拉瑪法則", "level": 2},
+	"vec_solcount":    {"name": "聯立方程式解的個數", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},

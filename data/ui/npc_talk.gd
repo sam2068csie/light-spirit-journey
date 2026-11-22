@@ -227,7 +227,7 @@ func say(i: int) -> void:
 
 ## 這句有沒有數學排版（要用 MathLabel 畫）
 static func is_math(txt: String) -> bool:
-	return txt.contains("√{") or txt.contains("^") or txt.contains("\\frac")
+	return txt.contains("√{") or txt.contains("^") or txt.contains("\\frac") or txt.contains("\\det")
 
 
 func _next() -> void:

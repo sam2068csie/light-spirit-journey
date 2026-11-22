@@ -19,6 +19,7 @@ const Bank4 := preload("res://data/levels/vec2/vec4_bank.gd")
 const Bank5 := preload("res://data/levels/vec2/vec5_bank.gd")
 const Bank6 := preload("res://data/levels/vec2/vec6_bank.gd")
 const Bank7 := preload("res://data/levels/vec2/vec7_bank.gd")
+const Bank8 := preload("res://data/levels/vec2/vec8_bank.gd")
 
 var lv
 
@@ -108,11 +109,22 @@ func _initialize() -> void:
 	await _check_sail()
 	await _check_feet_on()
 	await _check_plot()
+	# V8：布（翻面）、長方形
+	g.goto("level_vec8_loom.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_cloth()
+	await _check_rect()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots() + Bank6.slots() + Bank7.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots() + Bank6.slots() + Bank7.slots() + Bank8.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -557,3 +569,41 @@ func _check_plot() -> void:
 	lv._slide_submit()
 	await frames(3)
 	ok(lv.si == 1, "t = 2 最小，過")
+
+
+func _check_cloth() -> void:
+	await _start("kspread", 0)
+	ok(String(lv.steps[1].kind) == "vplace" and lv.steps[1].sandbox.has("cloth"), "張開的布：第二步拖 \\vec{b} 讓布翻面")
+	lv.slot_vals = ["3", "2", "1", "1", "5"]
+	lv._fill_submit()
+	await frames(3)
+	ok(lv.si == 1, "3 × 2 − 1 × 1 = 5")
+	_press(_px(Vector2(1, 2)))
+	ok(not _pl().place_lit(_pl().place_p), "\\vec{b} = (1, 2)：行列式 5（正面），燈不亮")
+	_press(_px(Vector2(2, -1)))
+	ok(_pl().place_lit(_pl().place_p), "\\vec{b} = (2, −1)：行列式 −5（翻面），燈亮（%s）" % str(_pl().place_p))
+	var a := Vector2(3, 1)
+	var b: Vector2 = _pl().place_p
+	ok(a.x * b.y - a.y * b.x < 0.0, "翻面的布：行列式是負的")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 2, "燈亮就過")
+
+
+func _check_rect() -> void:
+	await _start("kints", 0)
+	lv.slot_vals = ["12", "6"]
+	lv._fill_submit()
+	await frames(3)
+	ok(lv.si == 1, "12 − ab = 6 ⇒ ab = 6")
+	ok(bool(lv.steps[1].sandbox.get("rect", false)), "整數的織法：從原點拉長方形")
+	_press(_px(Vector2(2, 2)))
+	ok(not _pl().place_lit(_pl().place_p), "(2, 2)：面積 4，燈不亮")
+	_press(_px(Vector2(2, 3)))
+	ok(_pl().place_lit(_pl().place_p), "(2, 3)：面積 6，燈亮")
+	var pl = _pl()
+	var cv := {}
+	for sh in _slot("kints").variants[0].plane.shapes:
+		if String(sh.get("k", "")) == "curve":
+			cv = sh
+	ok(not cv.is_empty() and absf(pl.calc(String(cv.f), {"x": 3.0}) - 2.0) < 1e-9, "曲線 ab = 6：x = 3 時 y = 2")
