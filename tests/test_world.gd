@@ -205,6 +205,7 @@ func _check_sea_npcs() -> void:
 	var w = await _world("高二")
 	ok(w != null and w.has_method("_sn_tick"), "高二：海上有數學家")
 	w.pos = Vector2(760, 2240)                 # 光舟停在港口，不要打擾他們
+	seed(20261122)                             # 數學家往哪裡划是亂數：固定種子，CI 每次結果一樣（不固定的話偶爾 5 分鐘內剛好都在附近打轉）
 	w._snpcs = []
 	w._sn_tick(0.0)
 	ok(w._snpcs.size() == 2 and w._sn("euler").size() > 0 and w._sn("archimedes").size() > 0, "歐拉、阿基米德都在海上")
