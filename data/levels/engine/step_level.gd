@@ -2485,7 +2485,7 @@ class ForgeView extends Control:
 		# 題目可以有兩行：第一行是式子（大字），第二行是問句（小一點）
 		var sl := sp_eq.split("\n")
 		MathLabel.draw_on(self, font, cx + shake, y, sl[0], _fit_fs(font, sl[0], UITheme.fs(40)), Color(1, 0.97, 0.9))
-		var y_after := y + 70.0
+		var y_after := y + 70.0 + tall
 		if sl.size() > 1:
 			var q2 := "\n".join(sl.slice(1))
 			MathLabel.draw_on(self, font, cx + shake, y + 62.0 + tall, q2, _fit_fs(font, q2, UITheme.fs(24)), Color(1, 0.92, 0.75))

@@ -179,7 +179,7 @@ static func _taut() -> Dictionary:
 		var k := int(L[2])
 		var shapes := [_L(L[0], L[1], -L[2], "cyan", cfg.eqn),
 			{"k": "ellipse", "o": [0, 0], "rx": cfg.rx, "ry": cfg.ry, "c": "gold", "fill": "gold", "alpha": 0.1, "at": 4},
-			_dot(P, "P", "gold", {"at": 4, "off": [10, -8]})]
+			_dot(P, "P", "gold", {"at": 1, "off": [10, -8]})]
 		var lines := [{"k": "dot", "p": ["t", cfg.y], "c": "gold", "s": "P"},
 			{"k": "plot", "f": cfg.fx, "u0": cfg.u[0], "u1": cfg.u[1], "cur": "t", "corner": cfg.corner}]
 		var fe := String(cfg.fx).replace("u", "t")
@@ -364,7 +364,7 @@ static func _ineq() -> Dictionary:
 		for k in cfg.cards.size():
 			var cd: Array = cfg.cards[k]
 			var j := _j("審判%s" % ["一", "二", "三", "四"][k], cd[0], cd[1], cd[2], "%s：%s" % [cd[0], "○" if cd[1] else "✕"], cd[5])
-			j["sandbox"] = {"label": "(m, n)", "start": [1, 1], "lit": "%s >= %s - 0.0001" % [cd[3], cd[4]],
+			j["sandbox"] = {"label": "(m, n)", "label_off": [10, 16], "start": [1, 1], "lit": "%s >= %s - 0.0001" % [cd[3], cd[4]],
 				"read": "L = {%s}   R = {%s}" % [cd[3], cd[4]], "read_at": "tl"}
 			st.append(j)
 		vars.append({"eq": cfg.eq, "plane": _plane([-6.0, 6.0], [-3.0, 3.0], shapes), "steps": st})
@@ -442,9 +442,14 @@ static func _lake() -> Dictionary:
 			{"k": "seg", "a": [cx, cy], "b": [B.x, 0], "c": "cyan"}, {"k": "plot", "f": fx, "u0": 0, "u1": 90, "cur": "t", "corner": "tr"}]
 		var shapes := [_half(Vector2.ZERO, r, "cyan", {"w": 2.0}), _seg(A, B, "faint", {"dash": true})]
 		shapes += B1._dots({"A": A, "B": B}, "text", {"A": [-16, 16], "B": [8, 16]})
-		shapes += [_seg(A, C, "lime", {"until": 3}), _seg(C, B, "cyan", {"until": 3}), _dot(C, "C", "text", {"until": 3, "off": [-6, -10]}),
-			_right(C, A - C, B - C, {"at": 1, "until": 3}), _tag(A, "θ", "gold", {"off": [22, -6], "until": 3})]
-		vars.append({"eq": "半圓湖直徑 \\ol{AB} = %d\nA 走到 C（時速 %d）\nC 划船到 B（時速 %d），最多幾小時？" % [d, cfg.v[0], cfg.v[1]],
+		# 拖 θ 的那一步（第 3 步）只留滑桿裡的 C，答完畫出最久的 C
+		var ts := atan2(float(cfg.wv[1]), float(cfg.wv[0]))
+		var Cs := A + Vector2(cos(ts), sin(ts)) * d * cos(ts)
+		shapes += [_seg(A, C, "lime", {"until": 2}), _seg(C, B, "cyan", {"until": 2}), _dot(C, "C", "text", {"until": 2, "off": [-6, -10]}),
+			_right(C, A - C, B - C, {"at": 1, "until": 2}), _tag(A, "θ", "gold", {"off": [22, -6], "until": 2}),
+			_seg(A, Cs, "lime", {"at": 3}), _seg(Cs, B, "cyan", {"at": 3}), _dot(Cs, "C", "gold", {"at": 3, "off": [-6, -10]}),
+			_right(Cs, A - Cs, B - Cs, {"at": 3})]
+		vars.append({"eq": "半圓湖直徑 \\ol{AB} = %d\nA 走到 C，時速 %d\nC 划船到 B，時速 %d，最多幾小時？" % [d, cfg.v[0], cfg.v[1]],
 			"plane": _plane(cfg.x, cfg.y, shapes),
 			"steps": [
 				_f("兩段路", "θ = ∠CAB", "\\ol{AC} = [0]cos θ，\\ol{CB} = [1]sin θ", [str(d), str(d)], "∠ACB = 90°：\\ol{AC} = %dcos θ、\\ol{CB} = %dsin θ" % [d, d],
@@ -454,7 +459,7 @@ static func _lake() -> Dictionary:
 				{"kind": "slide", "name": "拖 θ", "q": "拖 θ，看時間", "tag": T_CAP, "free": true,
 				 "params": [{"n": "t", "min": 0, "max": 90, "step": 1, "v": 60}], "lines": lines,
 				 "eq": "θ = {t}°：時間 = {%s}" % fx.replace("u", "t"), "line": "時間會變，中間有一個最長的地方", "nudge": "拉動滑桿，看右上角的小圖。"},
-				_f("最長", "柯西", "最長 [0] 小時", [cfg.mx], "(%scos θ + %ssin θ)^{2} ≤ (%s^{2} + %s^{2})(cos^{2} θ + sin^{2} θ)：%s" % [cfg.w[0], B6._fv(cfg.wv[1]), cfg.w[0], B6._fv(cfg.wv[1]), cfg.ml],
+				_f("最長", "柯西", "最長 [0] 小時", [cfg.mx], "(%s, %s) · (cos θ, sin θ) ≤ %s" % [cfg.w[0], B6._fv(cfg.wv[1]), cfg.ml],
 					"(cos θ, sin θ) 是單位向量。", T_CAP),
 			]})
 	return {"id": "klake", "chapter": 1, "type": "forge", "title": "半圓湖",
@@ -627,9 +632,9 @@ static func _squares() -> Dictionary:
 		var D := Vector2(0, -oa)
 		var E := Vector2(-ob, ob)
 		var F := Vector2(-ob, 0)
-		var shapes := [_poly([O, A, C, D], "faint", {"dash": true}), _poly([O, B, E, F], "faint", {"dash": true}),
+		var shapes := [_poly([O, A, C, D], "dim", {"dash": true, "fill": "dim", "alpha": 0.12}), _poly([O, B, E, F], "dim", {"dash": true, "fill": "dim", "alpha": 0.12}),
 			_seg(O, A, "cyan", {"w": 3.0}), _seg(O, B, "cyan", {"w": 3.0}), _right(O, A, B)]
-		shapes += B1._dots({"O": O, "A": A, "B": B}, "text", {"O": [8, -8], "A": [8, -8], "B": [8, -6]})
+		shapes += B1._dots({"O": O, "A": A, "B": B}, "text", {"O": [-16, 16], "A": [8, -8], "B": [8, -6]})
 		shapes += [_ar(A, C, "gold", "", {"at": 1}), _dot(C, "C", "gold", {"at": 1, "off": [10, 14]}),
 			_ar(O, F, "gold", "", {"at": 2}), _dot(F, "F", "gold", {"at": 2, "off": [-16, 16]}), _fillp([B, C, F], "lime", 3)]
 		vars.append({"eq": "\\ol{OA} = %d、\\ol{OB} = %d、∠AOB = 90°\n往外作正方形 OACD、OBEF\n求 △BCF 的面積" % [cfg.oa, cfg.ob], "plane": _axes(cfg.x, cfg.y, shapes),

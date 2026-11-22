@@ -920,7 +920,7 @@ func _draw_modes(font: Font) -> void:
 				UITheme.dot(self, sp, 10.0, Color(1, 0.86, 0.42, 0.25))
 				UITheme.dot(self, sp, 6.0, UITheme.ACCENT)
 				if String(place_cfg.get("label", "D")) != "":
-					_label(font, sp, String(place_cfg.get("label", "D")), [9, -9], UITheme.ACCENT)
+					_label(font, sp, String(place_cfg.get("label", "D")), place_cfg.get("label_off", [9, -9]), UITheme.ACCENT)
 			elif is_finite(place_p.x):
 				UITheme.dot(self, _to(place_p), 9.0, Color(1, 0.86, 0.42, 0.3))
 			if is_finite(place_p.x) and place_cfg.has("read"):

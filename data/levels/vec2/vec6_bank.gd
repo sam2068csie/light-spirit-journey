@@ -237,7 +237,9 @@ static func _fly() -> Dictionary:
 		var tg := 4.0
 		var Pg := A + v * tg
 		var shapes := [_dot(A, "A", "text", {"off": [-14, 16]}), _ar(A, A + v, "cyan", "\\vec{v}", {"ls": -1})]
-		shapes += [_walk([A, A + v, P2], 1), _dot(Pg, "", "gold", {"at": 3}), _tag(Pg, "t = 4", "gold", {"at": 3, "off": [10, -8]})]
+		# 拖 t 的時候（第 4 步）只留滑桿裡的那隻風箏，飛完停在 t = 4
+		shapes += [_walk([A, A + v, P2], 1, {"until": 3}), _dot(Pg, "", "gold", {"at": 3}), _tag(Pg, "t = 4", "gold", {"at": 3, "off": [10, -8]}),
+			{"k": "kite", "p": _p(Pg), "c": "gold", "at": 4}]
 		var axn := "x" if int(cfg.ax) == 0 else "y"
 		var lines := [{"k": "dot", "p": [_ex(A.x, v.x), _ex(A.y, v.y)], "c": "gold", "s": "", "trail": true},
 			{"k": "kite", "p": [_ex(A.x, v.x), _ex(A.y, v.y)], "c": "gold"}]
@@ -314,7 +316,7 @@ static func _seg_judge() -> Dictionary:
 	var s1 := [_seg(A, B, "cyan", {"w": 3.0})]
 	s1 += B1._dots({"A": A, "B": B}, "text", {"A": [8, 14], "B": [8, -6]})
 	s1 += [_seg(A, A + Vector2(4, 0), "gold", {"at": 1, "until": 2, "dash": true}), _seg(A + Vector2(4, 0), A + d, "gold", {"at": 1, "until": 2, "dash": true}),
-		_tag(A + Vector2(2, 0), "4", "gold", {"at": 1, "until": 2, "off": [-4, 16]}), _tag(A + Vector2(4, 1.5), "3", "gold", {"at": 1, "until": 2, "off": [8, 4]}),
+		_tag(A + Vector2(3, 0), "4", "gold", {"at": 1, "until": 2, "off": [-4, 16]}), _tag(A + Vector2(4, 1.5), "3", "gold", {"at": 1, "until": 2, "off": [8, 4]}),
 		_ar(P0, P0 + d, "cyan", "(4, 3)", {"at": 2, "until": 3, "w": 3.5}), _ar(P0, P0 + Vector2(3, -4), "pink", "(3, −4)", {"at": 2, "until": 3, "ls": -1}),
 		_right(P0, d, Vector2(3, -4), {"at": 2, "until": 3}),
 		_sweep(P0, d, -1, -2, 3, {"until": 4, "ref": [_p(A), _p(B)]}), _dot(X, "", "pink", {"at": 3, "until": 4}), _tag(X, "t = −2", "pink", {"at": 3, "until": 4, "off": [10, 4]}),
@@ -335,7 +337,8 @@ static func _seg_judge() -> Dictionary:
 	var s2 := [_seg(A2, B2, "cyan", {"w": 3.0})]
 	s2 += B1._dots({"A": A2, "B": B2}, "text", {"A": [8, 14], "B": [-14, -8]})
 	s2 += [_seg(A2, A2 + Vector2(-3, 0), "gold", {"at": 1, "until": 2, "dash": true}), _seg(A2 + Vector2(-3, 0), B2, "gold", {"at": 1, "until": 2, "dash": true}),
-		_ar(A2, B2, "cyan", "(−3, 4)", {"at": 2, "until": 3, "w": 3.5, "ls": 1}), _ar(A2, A2 + Vector2(4, 3), "pink", "(4, 3)", {"at": 2, "until": 3}),
+		_tag(A2 + Vector2(-2, 0), "3", "gold", {"at": 1, "until": 2, "off": [-4, 16]}), _tag(A2 + Vector2(-3, 3), "4", "gold", {"at": 1, "until": 2, "off": [-16, 4]}),
+		_ar(A2, B2, "cyan", "(−3, 4)", {"at": 2, "until": 3, "w": 3.5, "ls": -1}), _ar(A2, A2 + Vector2(4, 3), "pink", "(4, 3)", {"at": 2, "until": 3}),
 		_right(A2, e, Vector2(4, 3), {"at": 2, "until": 3}),
 		_sweep(Q0, e, 0, -1, 3, {"until": 4, "ref": [_p(A2), _p(B2)]}), _dot(X2, "", "pink", {"at": 3, "until": 4}), _tag(X2, "t = −1", "pink", {"at": 3, "until": 4, "off": [10, 4]}),
 		_walk([A2, M2], 4), _dot(M2, "", "gold", {"at": 4}), _tag(M2, "t = \\frac{1}{2}", "gold", {"at": 4, "off": [-58, 8]})]
@@ -723,7 +726,7 @@ static func _mirror() -> Dictionary:
 		var vh: Vector2 = cfg.vh * 3.0
 		var shapes := [_ar(O, v.normalized() * 3.5, "lime", "\\vec{v}", {"dash": true, "w": 2.0, "ls": -1}), _dot(O, "O", "text", {"off": [-16, 14]}),
 			_ar(O, uh, "pink", "", {"at": 2, "w": 2.5}), _ar(uh, uh + vh, "lime", "", {"at": 2, "w": 2.5}), _ar(O, uh + vh, "gold", "", {"at": 2, "w": 3.5}),
-			_L(m.y, -m.x, 0, "faint", "", {"at": 1})]
+			_L(m.y, -m.x, 0, "faint", "", {"at": 1}), _ar(-u.normalized() * 3.0, O, "pink", "\\vec{u}", {"at": 1, "w": 2.0, "ls": -1})]
 		var good := "\\vec{u} + \\vec{v} = %s 不對：兩支長度不一樣，要先變成單位向量。" % _pt(u + v) if not is_equal_approx(u.length(), v.length()) else "單位向量：除以自己的長度。"
 		vars.append({"eq": "光沿 \\vec{u} = %s 前進，碰到鏡子 L 反射後\n沿 \\vec{v} = %s 前進，求 L 的斜率" % [_pt(u), _pt(v)],
 			"plane": _plane([-6.5, 6.5], [-3.4, 3.6], shapes),
@@ -867,7 +870,7 @@ static func _pcross() -> Dictionary:
 			"plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				_f("交點", "解 L₁ = L₂", "t = [0]，P = ([1], [2])", [str(t), _ans(P.x), _ans(P.y)],
-					"%s = %s、%s = %s ⇒ t = %d（s = %d），P%s" % [_pc(P1.x, d1.x, "t"), _pc(P2.x, d2.x, "s"), _pc(P1.y, d1.y, "t"), _pc(P2.y, d2.y, "s"), t, s, _pt(P)],
+					"%s = %s、%s = %s ⇒ t = %d、s = %d，P%s" % [_pc(P1.x, d1.x, "t"), _pc(P2.x, d2.x, "s"), _pc(P1.y, d1.y, "t"), _pc(P2.y, d2.y, "s"), t, s, _pt(P)],
 					"x、y 各列一條，解 t、s。", T_PAR),
 				_f("cos θ", "方向向量的夾角", "cos θ = [0]", [cfg.cos],
 					"cos θ = \\frac{|%s · %s|}{|%s||%s|} = %s" % [_pt(d1), _pt(d2), _pt(d1), _pt(d2), _rad_frac(String(cfg.cos))], "方向向量 %s、%s，取絕對值。" % [_pt(d1), _pt(d2)], T_ANG),

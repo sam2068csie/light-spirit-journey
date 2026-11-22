@@ -229,7 +229,7 @@ static func _ints() -> Dictionary:
 				 "sandbox": {"label": "(a, b)", "rect": true, "trace": true, "start": cfg.start,
 					"lit": "x > 0 and y > 0 and abs(x * y - %d) < 0.01" % ab, "read": "ab = {x * y}"},
 				 "nudge": "長方形的面積要剛好是 %d：寬 × 高 = %d。" % [ab, ab], "line": "第一象限有 %d 個：%s" % [n, "、".join(pts.map(func(q): return _pt(q)))]},
-				_f("負的也行", "一共幾組", "一共 [0] 組", [str(2 * n)], "a、b 都是負的也可以（%s…）：%d × 2 = %d" % [neg[0], n, 2 * n],
+				_f("負的也行", "一共幾組", "一共 [0] 組", [str(2 * n)], "a、b 都是負的也可以，例如 %s：%d × 2 = %d" % [neg[0], n, 2 * n],
 					"負 × 負也是正的。", T_DET),
 			]})
 	return {"id": "kints", "chapter": 1, "type": "forge", "title": "整數的織法",
@@ -241,8 +241,8 @@ static func _ints() -> Dictionary:
 ## 4 拉長、推斜的布（B42、B43）
 static func _shear() -> Dictionary:
 	var vars := []
-	for cfg in [{"u": Vector2(2, 1), "v": Vector2(-1, 2), "x": [-5.5, 7.0], "y": [-1.0, 4.6]},
-			{"u": Vector2(2, 1), "v": Vector2(0, 2), "x": [-5.0, 7.5], "y": [-0.8, 5.2]}]:
+	for cfg in [{"u": Vector2(2, 1), "v": Vector2(-1, 2), "x": [-4.2, 4.6], "y": [-0.8, 4.4]},
+			{"u": Vector2(2, 1), "v": Vector2(0, 2), "x": [-3.4, 5.0], "y": [-0.6, 4.4]}]:
 		var u: Vector2 = cfg.u
 		var v: Vector2 = cfg.v
 		var D := int(_det2(u, v))
@@ -265,7 +265,7 @@ static func _shear() -> Dictionary:
 				]})
 		else:
 			shapes += [_cloth(Vector2.ZERO, u, v, str(D), {"at": 1})]
-			vars.append({"eq": "Δ = %s，%s\n+ %s = 20，求 Δ" % [_D("a", "b", "c", "d"), _D("−3a + b", "4a − b", "−3c + d", "4c − d"), _D("3d", "6c", "b", "2a")],
+			vars.append({"eq": "Δ = %s，已知 %s\n+ %s = 20，求 Δ" % [_D("a", "b", "c", "d"), _D("−3a + b", "4a − b", "−3c + d", "4c − d"), _D("3d", "6c", "b", "2a")],
 				"plane": _plane(cfg.x, cfg.y, shapes),
 				"steps": [slide, ch,
 					_f("第一個", "兩行都是組合", "第一個 = [0]Δ", ["-1"], "直的兩行也一樣：(−3) × (−1) − 4 × 1 = −1，第一個 = −Δ",
@@ -404,7 +404,7 @@ static func _ljudge() -> Dictionary:
 ## 9 交叉的線（B52）
 static func _cross() -> Dictionary:
 	var vars := []
-	var s1 := [_Lk(2, 1, 7, "cyan", "2x + y = 7"), _Lk(1, -3, -7, "pink", "x − 3y = −7"), _dot(Vector2(2, 3), "", "gold", {"at": 3})]
+	var s1 := [_Lk(2, 1, 7, "cyan", "2x + y = 7"), _Lk(1, -3, -7, "pink", "x − 3y = −7", {"off": [-104, 18]}), _dot(Vector2(2, 3), "", "gold", {"at": 3})]
 	vars.append({"eq": "2x + y = 7、x − 3y = −7\n解聯立方程式", "plane": _axes([-8.0, 8.0], [-1.6, 6.0], s1),
 		"steps": [
 			_f("Δ", "係數的行列式", "Δ = [0]", ["-7"], "Δ = %s = −6 − 1 = −7" % _D(2, 1, 1, -3), "x、y 的係數排成行列式。", T_CRM),
@@ -466,7 +466,7 @@ static func _measure() -> Dictionary:
 		var shapes := [_cloth(Vector2.ZERO, a, b, str(ar[0]), {"until": 2}),
 			{"k": "skew", "o": [0, 0], "a": _p(a), "b": _p(b), "i": [-2, 4], "j": [-1, 4], "div": 1, "c": "cyan", "at": 1},
 			_cloth(Vector2.ZERO, c, b, str(ar[1]), {"at": 2, "until": 3}), _cloth(Vector2.ZERO, a, c, str(ar[2]), {"at": 3}),
-			_ar(Vector2.ZERO, a, "cyan", "\\vec{a}", {"ls": -1}), _ar(Vector2.ZERO, b, "pink", "\\vec{b}"), _ar(Vector2.ZERO, c, "gold", "\\vec{c}")]
+			_ar(Vector2.ZERO, a, "cyan", "\\vec{a}", {"ls": -1}), _ar(Vector2.ZERO, b, "pink", "\\vec{b}", {"ls": -1 if int(cfg.sg) == 1 else 1}), _ar(Vector2.ZERO, c, "gold", "\\vec{c}")]
 		var where := "\\vec{c} 在 \\vec{a}、\\vec{b} 中間" if int(cfg.sg) == 0 else "\\vec{c} 在 \\vec{b} 的外側"
 		vars.append({"eq": "\\vec{a}、\\vec{b} 的布面積 %d，\\vec{b}、\\vec{c} 的是 %d\n\\vec{a}、\\vec{c} 的是 %d，\\vec{c} = x\\vec{a} + y\\vec{b}，求 x、y" % ar,
 			"plane": _plane(cfg.x, cfg.y, shapes),
@@ -523,7 +523,7 @@ static func _cjudge() -> Dictionary:
 	var c := a * 2 + b * 3
 	var s1 := [_ar(Vector2.ZERO, a, "cyan", "\\vec{a}", {"ls": -1}), _ar(Vector2.ZERO, b, "pink", "\\vec{b}"), _ar(Vector2.ZERO, c, "lime", "\\vec{c}"),
 		_poly([Vector2.ZERO, a, b], "gold", {"fill": "gold", "alpha": 0.2, "at": 2, "until": 3}),
-		_ar(Vector2.ZERO, a * 2 - c, "gold", "2\\vec{a} − \\vec{c}", {"at": 3, "until": 4}),
+		_ar(Vector2.ZERO, a * 2 - c, "gold", "2\\vec{a} − \\vec{c}", {"at": 3, "until": 4, "ls": -1, "lt": 0.75}),
 		{"k": "skew", "o": [0, 0], "a": _p(a), "b": _p(b), "i": [-1, 3], "j": [-1, 4], "div": 1, "c": "cyan", "at": 4}, _dot(c, "(2, 3)", "gold", {"at": 4, "off": [10, -6]})]
 	var e1 := "%s = 2、%s = −4\n%s = 6，下面哪些正確？" % [_D("a_{1}", "b_{1}", "a_{2}", "b_{2}"), _D("b_{1}", "c_{1}", "b_{2}", "c_{2}"), _D("a_{1}", "c_{1}", "a_{2}", "c_{2}")]
 	vars.append({"eq": e1, "plane": _plane([-3.0, 7.0], [-3.6, 4.0], s1),
@@ -567,13 +567,13 @@ static func _count() -> Dictionary:
 	var s1 := []
 	for k in 4:
 		var e: Array = ex[k]
-		var ext := {"at": k, "until": k + 1}
+		var ext := {"at": k, "until": k + 1} if k < 3 else {"at": k}
 		s1 += [_ar(Vector2.ZERO, e[0], "cyan", "\\vec{a}", ext.merged({"ls": -1})), _ar(Vector2.ZERO, e[1], "pink", "\\vec{b}", ext.duplicate()),
 			_ar(Vector2.ZERO, e[2], "gold", "\\vec{c}", ext.duplicate())]
 		if k == 0:
 			s1.append({"k": "skew", "o": [0, 0], "a": _p(e[0]), "b": _p(e[1]), "i": [-3, 3], "j": [-3, 3], "div": 1, "c": "cyan", "at": 0, "until": 1})
 		else:
-			s1.append(_Lk(1, -2, 0, "faint", "", {"at": k, "until": k + 1, "dash": true}))
+			s1.append(_Lk(1, -2, 0, "faint", "", ext.merged({"dash": true})))
 	vars.append({"eq": "x\\vec{a} + y\\vec{b} = \\vec{c}（都不是 \\vec{0}）\n(x, y) 有幾組？下面哪些正確？", "plane": _plane([-7.0, 7.0], [-3.4, 5.0], s1),
 		"steps": [
 			_j("審判一", "\\vec{a}、\\vec{b} 不平行 ⇒ 恰有一組", true, "布張得開（Δ ≠ 0）：斜格子鋪滿整面，每一點的地址只有一個。", "不平行：恰一組 ○", T_SOL),
@@ -587,13 +587,13 @@ static func _count() -> Dictionary:
 	var s2 := []
 	for k in 4:
 		var e: Array = ex2[k]
-		var ext := {"at": k, "until": k + 1}
+		var ext := {"at": k, "until": k + 1} if k < 3 else {"at": k}
 		s2 += [_ar(Vector2.ZERO, e[0], "cyan", "\\vec{a}", ext.merged({"ls": -1})), _ar(Vector2.ZERO, e[1], "pink", "\\vec{b}", ext.duplicate()),
 			_ar(Vector2.ZERO, e[2], "gold", "\\vec{c}", ext.duplicate())]
 		if k == 0 or k == 3:
-			s2.append({"k": "skew", "o": [0, 0], "a": _p(e[0]), "b": _p(e[1]), "i": [-3, 4], "j": [-3, 4], "div": 1, "c": "cyan", "at": k, "until": k + 1})
+			s2.append({"k": "skew", "o": [0, 0], "a": _p(e[0]), "b": _p(e[1]), "i": [-3, 4], "j": [-3, 4], "div": 1, "c": "cyan"}.merged(ext))
 		else:
-			s2.append(_Lk(2, -1, 0, "faint", "", {"at": k, "until": k + 1, "dash": true}))
+			s2.append(_Lk(2, -1, 0, "faint", "", ext.merged({"dash": true})))
 	vars.append({"eq": "x\\vec{a} + y\\vec{b} = \\vec{c}，(x, y) 有幾組？\n下面哪些正確？", "plane": _plane([-8.0, 8.0], [-4.6, 6.4], s2),
 		"steps": [
 			_j("審判一", "\\vec{a} = (1, 2)、\\vec{b} = (3, 1)、\\vec{c} = (5, 5)：恰有一組", true, "Δ = 1 − 6 = −5 ≠ 0：(x, y) = (2, 1)。", "Δ ≠ 0：恰一組 (2, 1) ○", T_SOL),
@@ -632,9 +632,10 @@ static func _turn() -> Dictionary:
 			var av := float(cd[0])
 			var l1 := [_ev(cfg.L1[0], av), _ev(cfg.L1[1], av), _ev(cfg.L1[2], av)]
 			var l2 := [_ev(cfg.L2[0], av), _ev(cfg.L2[1], av), _ev(cfg.L2[2], av)]
-			var ext := {"at": k + 2, "until": k + 3}
+			# 判完這張卡才畫出那個 a 的兩條線（證據），最後一張留著
+			var ext := {"at": k + 3, "until": k + 4} if k < 3 else {"at": k + 3}
 			shapes += [_Lk(l1[0], l1[1], l1[2], "cyan", "", ext.duplicate()), _Lk(l2[0], l2[1], l2[2], "pink", "", ext.merged({"dash": true}))]
-			st.append(_j("審判%s" % ["一", "二", "三", "四"][k], "a = %d 時%s" % [cd[0], cd[1]], cd[2], cd[3], "a = %d：%s" % [cd[0], cd[3]], T_SOL))
+			st.append(_j("審判%s" % ["一", "二", "三", "四"][k], "a = %d 時%s" % [cd[0], cd[1]], cd[2], cd[3], "a = %d：%s" % [cd[0], String(cd[3]).trim_suffix("。")], T_SOL))
 		vars.append({"eq": cfg.eq, "plane": _axes(cfg.x, cfg.y, shapes), "steps": st})
 	return {"id": "kturn", "chapter": 2, "type": "forge", "title": "轉動的線",
 		"story": "a 一變，兩條線跟著轉：什麼時候碰不到、什麼時候疊在一起？",
