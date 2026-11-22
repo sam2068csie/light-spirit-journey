@@ -54,6 +54,11 @@ static func _poly(pts: Array, c := "dim", extra := {}) -> Dictionary:
 	return B1._poly(pts, c, extra)
 
 
+## 負數加括號：3 × (−1)
+static func _par(v: float) -> String:
+	return "(%s)" % B6._num(v) if v < 0 else B6._num(v)
+
+
 static func _fillp(pts: Array, c := "lime", at := 0) -> Dictionary:
 	return _poly(pts, c, {"fill": c, "alpha": 0.2, "at": at})
 
@@ -90,11 +95,7 @@ static func _circ(o: Vector2, r: float, c := "faint", extra := {}) -> Dictionary
 
 ## 上半圓（半圓湖、只知道長度的那支箭頭）
 static func _half(o: Vector2, r: float, c := "faint", extra := {}) -> Dictionary:
-	var pts := []
-	for i in 37:
-		var a := PI * i / 36.0
-		pts.append(o + Vector2(cos(a), sin(a)) * r)
-	var d := {"k": "walk", "pts": pts.map(func(q): return _p(q)), "c": c, "arrows": false}
+	var d := {"k": "arc", "o": _p(o), "r": r, "a0": 0, "a1": 180, "c": c}
 	d.merge(extra, true)
 	return d
 
@@ -169,10 +170,10 @@ static func _taut() -> Dictionary:
 	var vars := []
 	for cfg in [{"L": [2, 3, 10], "p": 2, "q": 3, "fx": "2*u*u + 3*pow((10 - 2*u)/3, 2)", "y": "(10 - 2 * t) / 3", "u": [-1, 5], "v0": 4,
 				"goal": 2, "P": Vector2(2, 2), "mn": 20, "w": ["2", "3"], "lhs": "2x^{2} + 3y^{2}", "rx": sqrt(10.0), "ry": sqrt(20.0 / 3.0),
-				"eqn": "2x + 3y = 10", "par": "(√2x, √3y) ∥ (√2, √3) ⇒ x = y", "x": [-5.0, 7.0], "y_": [-3.0, 4.2]},
+				"eqn": "2x + 3y = 10", "corner": "tr", "par": "(√2x, √3y) ∥ (√2, √3) ⇒ x = y", "x": [-5.0, 7.0], "y_": [-3.0, 4.2]},
 			{"L": [1, -2, 9], "p": 1, "q": 2, "fx": "u*u + 2*pow((u - 9)/2, 2)", "y": "(t - 9) / 2", "u": [0, 6], "v0": 5,
 				"goal": 3, "P": Vector2(3, -3), "mn": 27, "w": ["1", "2"], "lhs": "x^{2} + 2y^{2}", "rx": sqrt(27.0), "ry": sqrt(13.5),
-				"eqn": "x − 2y = 9", "par": "(x, √2y) ∥ (1, −√2) ⇒ y = −x", "x": [-6.5, 9.5], "y_": [-4.6, 3.6]}]:
+				"eqn": "x − 2y = 9", "corner": "", "par": "(x, √2y) ∥ (1, −√2) ⇒ y = −x", "x": [-6.5, 9.5], "y_": [-4.6, 3.6]}]:
 		var L: Array = cfg.L
 		var P: Vector2 = cfg.P
 		var k := int(L[2])
@@ -180,13 +181,13 @@ static func _taut() -> Dictionary:
 			{"k": "ellipse", "o": [0, 0], "rx": cfg.rx, "ry": cfg.ry, "c": "gold", "fill": "gold", "alpha": 0.1, "at": 4},
 			_dot(P, "P", "gold", {"at": 4, "off": [10, -8]})]
 		var lines := [{"k": "dot", "p": ["t", cfg.y], "c": "gold", "s": "P"},
-			{"k": "plot", "f": cfg.fx, "u0": cfg.u[0], "u1": cfg.u[1], "cur": "t"}]
+			{"k": "plot", "f": cfg.fx, "u0": cfg.u[0], "u1": cfg.u[1], "cur": "t", "corner": cfg.corner}]
 		var fe := String(cfg.fx).replace("u", "t")
 		vars.append({"eq": "%s，求 %s 的最小值\n和那時候的 (x, y)" % [cfg.eqn, cfg.lhs], "plane": _axes(cfg.x, cfg.y_, shapes),
 			"steps": [
 				{"kind": "slide", "name": "拖 P", "q": "拖 P，找最小的地方", "tag": T_CAU,
 				 "params": [{"n": "t", "min": cfg.u[0], "max": cfg.u[1], "step": 0.5, "v": cfg.v0}], "lines": lines, "goal": {"t": cfg.goal},
-				 "eq": "x = {t}：%s = {%s}" % [cfg.lhs, fe], "line": "P%s 的時候最小" % _pt(P), "nudge": "看右下角的小圖：最低點在哪裡？"},
+				 "eq": "x = {t}：%s = {%s}" % [cfg.lhs, fe], "line": "P%s 的時候最小" % _pt(P), "nudge": "看角落的小圖：最低點在哪裡？"},
 				_f("柯西", "湊成兩支向量", "(%s)([0] + [1]) ≥ %d^{2}" % [cfg.lhs, k], cfg.w,
 					"(%s)(%s + %s) ≥ (%s)^{2} = %d" % [cfg.lhs, cfg.w[0], cfg.w[1], cfg.eqn.split(" = ")[0], k * k],
 					"兩支向量的內積要剛好是 %s。" % cfg.eqn.split(" = ")[0], T_CAU, "set"),
@@ -311,13 +312,13 @@ static func _inv() -> Dictionary:
 		var fx := "%s / a + %s / (%s)" % [_e(uv[0]), _e(uv[1]), bx]
 		var lin := B6._lin2(co[0], co[1], 0.0).replace("x", "a").replace("y", "b")
 		var frac := "\\frac{%d}{a} + \\frac{%d}{b}" % [uv[0], uv[1]]
-		var lines := [{"k": "dot", "p": ["a", bx], "c": "gold", "s": "(a, b)"}, {"k": "plot", "f": fx.replace("a", "u"), "u0": cfg.a[0], "u1": cfg.a[1], "cur": "a"}]
+		var lines := [{"k": "dot", "p": ["a", bx], "c": "gold", "s": "(a, b)"}, {"k": "plot", "f": fx.replace("a", "u"), "u0": cfg.a[0], "u1": cfg.a[1], "cur": "a", "corner": "tr"}]
 		var shapes := [_L(co[0], co[1], -co[2], "cyan", "%s = %d" % [lin, co[2]])]
 		vars.append({"eq": "a、b > 0，%s = %d\n求 %s 的最小值" % [lin, co[2], frac], "plane": _axes(cfg.x, cfg.y, shapes),
 			"steps": [
 				{"kind": "slide", "name": "拖 a", "q": "拖 a，找最小的地方", "tag": T_CAP,
 				 "params": [{"n": "a", "min": cfg.a[0], "max": cfg.a[1], "step": 0.25, "v": cfg.v0}], "lines": lines, "goal": {"a": cfg.goal},
-				 "eq": "a = {a}：%s = {%s}" % [frac, fx], "line": "a = %s、b = %s 的時候最小" % cfg.ab, "nudge": "看右下角的小圖：最低點在哪裡？"},
+				 "eq": "a = {a}：%s = {%s}" % [frac, fx], "line": "a = %s、b = %s 的時候最小" % cfg.ab, "nudge": "看右上角的小圖：最低點在哪裡？"},
 				_f("柯西", "a、b 消掉", "(%s)(%s) ≥ ([0] + [1])^{2}" % [frac, lin], cfg.w,
 					"(√{\\frac{%d}{a}}, √{\\frac{%d}{b}}) · (√{%sa}, √{%sb}) = %s + %s" % [uv[0], uv[1], "" if co[0] == 1 else str(co[0]), "" if co[1] == 1 else str(co[1]), cfg.w[0], cfg.w[1]],
 					"\\frac{%d}{a} × %sa 開根號。" % [uv[0], "" if co[0] == 1 else str(co[0])], T_CAP, "set"),
@@ -363,7 +364,7 @@ static func _ineq() -> Dictionary:
 		for k in cfg.cards.size():
 			var cd: Array = cfg.cards[k]
 			var j := _j("審判%s" % ["一", "二", "三", "四"][k], cd[0], cd[1], cd[2], "%s：%s" % [cd[0], "○" if cd[1] else "✕"], cd[5])
-			j["sandbox"] = {"label": "", "start": [1, 1], "lit": "%s >= %s - 0.0001" % [cd[3], cd[4]],
+			j["sandbox"] = {"label": "(m, n)", "start": [1, 1], "lit": "%s >= %s - 0.0001" % [cd[3], cd[4]],
 				"read": "L = {%s}   R = {%s}" % [cd[3], cd[4]], "read_at": "tl"}
 			st.append(j)
 		vars.append({"eq": cfg.eq, "plane": _plane([-6.0, 6.0], [-3.0, 3.0], shapes), "steps": st})
@@ -385,7 +386,7 @@ static func _dist2() -> Dictionary:
 	s1 += B1._dots({"A": A, "B": B, "C": C}, "text", {"A": [-16, 16], "B": [8, 16], "C": [-16, -4]})
 	s1 += [_tag(Vector2(1.5, 0), "3", "dim", {"off": [-4, 18]}), _tag(Vector2(0, 2), "4", "dim", {"off": [-18, 4]}), _tag(Vector2(1.5, 2), "5", "dim", {"off": [8, -4]}),
 		_seg(A, Fo, "gold", {"at": 3, "w": 3.0}), _right(Fo, C - B, A - Fo, {"at": 3}), _tag(Fo * 0.5, "\\frac{12}{5}", "gold", {"at": 3, "off": [-30, -4]})]
-	vars.append({"eq": "△ABC：\\ol{AB} = 3、\\ol{AC} = 4、\\ol{BC} = 5\nP 在 \\ol{BC} 上，到 AB、AC 的距離 x、y\n求 x^{2} + y^{2} 的最小值",
+	vars.append({"eq": "\\ol{AB} = 3、\\ol{AC} = 4、\\ol{BC} = 5，P 在 \\ol{BC} 上\n到 AB、AC 的距離 x、y，求 x^{2} + y^{2} 最小值",
 		"plane": _plane([-4.0, 6.0], [-0.6, 4.6], s1),
 		"steps": [
 			{"kind": "vplace", "name": "拖 P", "q": "拖 P，找最小", "tag": T_CAP, "goal": "lit", "ans": _p(Fo), "big": true,
@@ -406,7 +407,7 @@ static func _dist2() -> Dictionary:
 		_dot(Vector2.ZERO, "P", "gold", {"at": 3, "off": [-4, 18]})]
 	var dab := "(4 * x - 3 * y + 12) / 5"
 	var dac := "(4 * x + 3 * y - 12) / 5"
-	vars.append({"eq": "△ABC：\\ol{AB} = \\ol{AC} = 5、\\ol{BC} = 6\nP 在 \\ol{BC} 上，到 AB、AC 的距離 x、y\n求 x^{2} + y^{2} 的最小值",
+	vars.append({"eq": "\\ol{AB} = \\ol{AC} = 5、\\ol{BC} = 6，P 在 \\ol{BC} 上\n到 AB、AC 的距離 x、y，求 x^{2} + y^{2} 最小值",
 		"plane": _plane([-5.0, 5.0], [-0.8, 4.6], s2),
 		"steps": [
 			{"kind": "vplace", "name": "拖 P", "q": "拖 P，找最小", "tag": T_CAP, "goal": "lit", "ans": [0, 0], "big": true,
@@ -426,8 +427,8 @@ static func _dist2() -> Dictionary:
 ## 9 半圓湖（B35）
 static func _lake() -> Dictionary:
 	var vars := []
-	for cfg in [{"d": 10, "v": [5, 12], "w": ["2", "5/6"], "wv": [2.0, 5.0 / 6.0], "mx": "13/6", "ml": "√{2^{2} + (\\frac{5}{6})^{2}} = \\frac{13}{6}", "x": [-7.0, 7.0], "y": [-1.0, 6.0]},
-			{"d": 6, "v": [3, 4], "w": ["2", "3/2"], "wv": [2.0, 1.5], "mx": "5/2", "ml": "√{2^{2} + (\\frac{3}{2})^{2}} = \\frac{5}{2}", "x": [-4.4, 4.4], "y": [-0.6, 3.8]}]:
+	for cfg in [{"d": 10, "v": [5, 12], "w": ["2", "5/6"], "wv": [2.0, 5.0 / 6.0], "mx": "13/6", "ml": "√{2^{2} + (\\frac{5}{6})^{2}} = \\frac{13}{6}", "x": [-8.6, 8.6], "y": [-1.0, 7.4]},
+			{"d": 6, "v": [3, 4], "w": ["2", "3/2"], "wv": [2.0, 1.5], "mx": "5/2", "ml": "√{2^{2} + (\\frac{3}{2})^{2}} = \\frac{5}{2}", "x": [-5.2, 5.2], "y": [-0.6, 4.45]}]:
 		var d := int(cfg.d)
 		var r := d / 2.0
 		var A := Vector2(-r, 0)
@@ -438,7 +439,7 @@ static func _lake() -> Dictionary:
 		var cy := "%s * cos(t * 0.0174533) * sin(t * 0.0174533)" % _e(d)
 		var fx := "%s * cos(u * 0.0174533) + %s * sin(u * 0.0174533)" % [_e(cfg.wv[0]), _e(cfg.wv[1])]
 		var lines := [{"k": "dot", "p": [cx, cy], "c": "gold", "s": "C"}, {"k": "seg", "a": [A.x, 0], "b": [cx, cy], "c": "lime"},
-			{"k": "seg", "a": [cx, cy], "b": [B.x, 0], "c": "cyan"}, {"k": "plot", "f": fx, "u0": 0, "u1": 90, "cur": "t"}]
+			{"k": "seg", "a": [cx, cy], "b": [B.x, 0], "c": "cyan"}, {"k": "plot", "f": fx, "u0": 0, "u1": 90, "cur": "t", "corner": "tr"}]
 		var shapes := [_half(Vector2.ZERO, r, "cyan", {"w": 2.0}), _seg(A, B, "faint", {"dash": true})]
 		shapes += B1._dots({"A": A, "B": B}, "text", {"A": [-16, 16], "B": [8, 16]})
 		shapes += [_seg(A, C, "lime", {"until": 3}), _seg(C, B, "cyan", {"until": 3}), _dot(C, "C", "text", {"until": 3, "off": [-6, -10]}),
@@ -452,7 +453,7 @@ static func _lake() -> Dictionary:
 					"\\frac{%dcos θ}{%d} + \\frac{%dsin θ}{%d} = %scos θ + %ssin θ" % [d, cfg.v[0], d, cfg.v[1], cfg.w[0], B6._fv(cfg.wv[1])], "走路的時間 + 划船的時間。", T_CAP),
 				{"kind": "slide", "name": "拖 θ", "q": "拖 θ，看時間", "tag": T_CAP, "free": true,
 				 "params": [{"n": "t", "min": 0, "max": 90, "step": 1, "v": 60}], "lines": lines,
-				 "eq": "θ = {t}°：時間 = {%s}" % fx.replace("u", "t"), "line": "時間會變，中間有一個最長的地方", "nudge": "拉動滑桿，看右下角的小圖。"},
+				 "eq": "θ = {t}°：時間 = {%s}" % fx.replace("u", "t"), "line": "時間會變，中間有一個最長的地方", "nudge": "拉動滑桿，看右上角的小圖。"},
 				_f("最長", "柯西", "最長 [0] 小時", [cfg.mx], "(%scos θ + %ssin θ)^{2} ≤ (%s^{2} + %s^{2})(cos^{2} θ + sin^{2} θ)：%s" % [cfg.w[0], B6._fv(cfg.wv[1]), cfg.w[0], B6._fv(cfg.wv[1]), cfg.ml],
 					"(cos θ, sin θ) 是單位向量。", T_CAP),
 			]})
@@ -491,7 +492,7 @@ static func _sail() -> Dictionary:
 				_f("三個數", "長度平方和內積", "|\\vec{a}|^{2} = [0]，|\\vec{b}|^{2} = [1]，\\vec{a} · \\vec{b} = [2]", cfg.sq,
 					"|\\vec{a}|^{2} = %s、|\\vec{b}|^{2} = %s、\\vec{a} · \\vec{b} = %s" % cfg.sq, "坐標平方相加、對應相乘相加。", T_AREA),
 				_f("面積", "向量的面積公式", "面積 = [0]", [cfg.ar], cfg.l3, "\\frac{1}{2}√{|\\vec{a}|^{2}|\\vec{b}|^{2} − (\\vec{a} · \\vec{b})^{2}}。", T_AREA),
-				_f("坐標", "交叉相乘", "a_{1}b_{2} − a_{2}b_{1} = [0]", [cfg.det], cfg.l4, "%s × %s − %s × %s。" % [B6._num(a.x), B6._num(b.y), B6._num(a.y), B6._num(b.x)], T_AREA),
+				_f("坐標", "交叉相乘", "a_{1}b_{2} − a_{2}b_{1} = [0]", [cfg.det], cfg.l4, "%s × %s − %s × %s。" % [B6._num(a.x), _par(b.y), _par(a.y), _par(b.x)], T_AREA),
 			]})
 	return {"id": "ksail", "chapter": 2, "type": "forge", "title": "張開的帆",
 		"story": "兩支箭頭張開，張成一面三角形的帆。",
@@ -557,7 +558,7 @@ static func _csail() -> Dictionary:
 				 "nudge": "讀數要是 %s：底 \\ol{AB} 一樣，高也要一樣。" % B6._fv(k / 2.0), "line": "光點排成和 \\ol{AB} 平行的直線：底一樣、高一樣"},
 				_f("兩支箭頭", "從 A 出發", "\\vec{AB} = ([0], [1])，\\vec{AC} = ([2], [3])", [B6._ans(ab.x), B6._ans(ab.y), B6._ans(ac.x), B6._ans(ac.y)],
 					"\\vec{AB} = %s、\\vec{AC} = %s" % [_pt(ab), _pt(ac)], "終點減起點。", T_AREA),
-				_f("面積", "交叉相乘", "△ABC = [0]", [cfg.ar], "\\frac{1}{2}|%s × %s − %s × %s| = %s" % [B6._num(ab.x), B6._num(ac.y), B6._num(ab.y), B6._num(ac.x), B6._fv(k / 2.0)],
+				_f("面積", "交叉相乘", "△ABC = [0]", [cfg.ar], "\\frac{1}{2}|%s × %s − %s × %s| = %s" % [B6._num(ab.x), _par(ac.y), _par(ab.y), _par(ac.x), B6._fv(k / 2.0)],
 					"\\frac{1}{2}|a_{1}b_{2} − a_{2}b_{1}|。", T_AREA),
 			]})
 	return {"id": "kcsail", "chapter": 2, "type": "forge", "title": "坐標的帆",

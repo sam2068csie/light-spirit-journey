@@ -39,6 +39,7 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##            航跡（V6）：光點照 p0 + t·d 從 t0 飛到 t1，null 那一頭飛出畫布畫箭頭；不在 ref 線段（ray 射線）上的光點是紅色
 ##       {"k": "ellipse", "o": [x, y], "rx": 3, "ry": 2, "c": "gold", "fill": "gold"}  橢圓（V7 的等高線，rx = ry 是圓；滑桿裡 rx、ry 可以寫算式）
 ##       {"k": "plot", "f": "u * u", "u0": 0, "u1": 3, "cur": "t", "s": "f"}  小函數圖（V7）：右下角的小框，cur 是目前的 u（滑桿裡跟著動）
+##         "corner": "tr" 改放右上角（直線的標籤在右下角的時候）
 ##            cfg.sail = [A, B]：帆（V7）：拖的點和 A、B 張成三角形，塗色（燈亮時金色）
 ##       {"k": "beads", "a": [x, y], "b": [x, y], "n": 16}  格子點的珠子（V6）：等距的 n 顆，一顆一顆亮起來
 ##            cfg.mirror = {o, u, len}：鏡岩（V6）：鏡子是 o 到拖的點的直線，入射光沿 u 打到 o，反射光跟著畫（燈亮時金色）
@@ -880,7 +881,8 @@ func _draw_modes(font: Font) -> void:
 				var sp := _to(place_p)
 				UITheme.dot(self, sp, 10.0, Color(1, 0.86, 0.42, 0.25))
 				UITheme.dot(self, sp, 6.0, UITheme.ACCENT)
-				_label(font, sp, String(place_cfg.get("label", "D")), [9, -9], UITheme.ACCENT)
+				if String(place_cfg.get("label", "D")) != "":
+					_label(font, sp, String(place_cfg.get("label", "D")), [9, -9], UITheme.ACCENT)
 			elif is_finite(place_p.x):
 				UITheme.dot(self, _to(place_p), 9.0, Color(1, 0.86, 0.42, 0.3))
 			if is_finite(place_p.x) and place_cfg.has("read"):
@@ -913,7 +915,7 @@ func _draw_modes(font: Font) -> void:
 
 ## 小函數圖（V7）：右下角一個小框，畫 f(u)（u 從 u0 到 u1），目前的 u = cur 是一個點在上面跑
 func _draw_plot(font: Font, sh: Dictionary) -> void:
-	var box := Rect2(size.x - 176.0, size.y - 112.0, 160.0, 96.0)
+	var box := Rect2(size.x - 176.0, 16.0 if String(sh.get("corner", "")) == "tr" else size.y - 112.0, 160.0, 96.0)
 	draw_rect(box, Color(0.05, 0.07, 0.12, 0.82))
 	draw_rect(box, Color(1, 1, 1, 0.18), false, 1.0)
 	var u0 := float(sh.u0)
