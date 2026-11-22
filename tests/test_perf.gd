@@ -6,7 +6,9 @@ extends "res://tests/test_base.gd"
 
 ## 各畫面的預算（目前實測值再多留約 25% 空間）
 const BUDGET := {
-	"main_menu": 95, "world_g11": 150, "world_g10": 220, "map_exp": 600,
+	# 大地圖上有到處走的數學家 NPC（高一：高斯、拉馬努金、牛頓，高二：歐拉、阿基米德），
+	# 走路、揮手、坐船的姿勢不一樣，每次量的數字會差很多（2026/11/22 實測：高二 180～338、高一 349～495），預算照最大值再留約 20%
+	"main_menu": 95, "world_g11": 400, "world_g10": 600, "map_exp": 600,
 	"map_trig": 420, "house": 185, "L1": 230, "L3": 310,
 	# 多項式、三角函數各關（每關自己的背景 data/ui/scenery.gd）
 	"P1": 190, "P2": 170, "P3": 220, "P4": 250, "P5": 285, "P6": 245, "P7": 300, "P8": 320,
@@ -107,6 +109,11 @@ func _initialize() -> void:
 		quit()
 		return
 	await setup()
+	# 量的是「全新存檔」的畫面：別的測試（test_bond）會在 user:// 留下親密度 Lv 10、戴著頭飾的存檔，
+	# 光靈就會畫成進化後的樣子（每個畫面多 28 個 draw calls），預算就對不上了
+	g.bond = {"pts": 0, "day": g.bond.get("day", ""), "today": {}}
+	g.equipped = {}
+	g._sync_look()
 	g.power_save = false
 	g.story_seen = ["world/g10", "world/g11", "prologue", "trig/prologue",
 		"L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "epilogue"]
