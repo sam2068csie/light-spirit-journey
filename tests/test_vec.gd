@@ -9,6 +9,7 @@ extends "test_base.gd"
 ##   ・V4：量角器先猜（guess）、合起來的箭（sum）
 ##   ・V5：繩子＋半格吸附（外心）、竿子（內心）、三分花圃（split）
 ##   ・V6：鏡岩（mirror）、多個答案的滑桿（goals）、風箏滑桿的光點（trail）
+##   ・V7：帆（sail＋ring）、沿直線拖＋竿子（on＋feet）、滑桿的小函數圖（plot）
 ## GODOT=… tests/run_tests.sh vec
 
 const Bank := preload("res://data/levels/vec2/vec1_bank.gd")
@@ -17,6 +18,7 @@ const Bank3 := preload("res://data/levels/vec2/vec3_bank.gd")
 const Bank4 := preload("res://data/levels/vec2/vec4_bank.gd")
 const Bank5 := preload("res://data/levels/vec2/vec5_bank.gd")
 const Bank6 := preload("res://data/levels/vec2/vec6_bank.gd")
+const Bank7 := preload("res://data/levels/vec2/vec7_bank.gd")
 
 var lv
 
@@ -94,11 +96,23 @@ func _initialize() -> void:
 	await _check_mirror()
 	await _check_goals()
 	await _check_kite()
+	# V7：帆、沿直線拖、小函數圖
+	g.goto("level_vec7_bow.gd")
+	await wait(0.8)
+	lv = current_scene
+	for n in lv.get_children():
+		if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_index() > 3:
+			n.queue_free()
+	await frames()
+	lv.journey_mode = true
+	await _check_sail()
+	await _check_feet_on()
+	await _check_plot()
 	finish("VEC")
 
 
 func _slot(id: String) -> Dictionary:
-	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots() + Bank6.slots():
+	for s in Bank.slots() + Bank2.slots() + Bank3.slots() + Bank4.slots() + Bank5.slots() + Bank6.slots() + Bank7.slots():
 		if String(s.id) == id:
 			return s
 	return {}
@@ -494,3 +508,52 @@ func _check_kite() -> void:
 		lv.slide_vals["t"] = v
 		lv._refresh_slide()
 	ok(_pl().trail_pts.size() >= 4, "拖 t，風箏走過的地方留下光點（%d 個）" % _pl().trail_pts.size())
+
+
+func _check_sail() -> void:
+	await _start("ksail", 0)
+	ok(lv.steps[0].sandbox.has("sail") and lv.steps[0].sandbox.has("ring"), "張開的帆：轉 \\vec{b} 張帆")
+	_press(_px(Vector2(1, 3)))
+	ok(not _pl().place_lit(_pl().place_p), "\\vec{b} = (1, 3) 附近：帆不是最大，燈不亮")
+	var a := Vector2(4, 1)
+	var perp := Vector2(-a.y, a.x).normalized() * sqrt(10.0)
+	_press(_px(perp * 1.2))
+	ok(_pl().place_lit(_pl().place_p), "轉到和 \\vec{a} 垂直：帆最大，燈亮（%s）" % str(_pl().place_p))
+	ok(absf(_pl().place_p.length() - sqrt(10.0)) < 1e-4, "拖到圈外也吸附在轉盤上（長度 √10）")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "燈亮就過")
+
+
+func _check_feet_on() -> void:
+	await _start("kdist2", 0)
+	_press(_px(Vector2(0, 0)))
+	var p: Vector2 = _pl().place_p
+	ok(absf(4.0 * p.x + 3.0 * p.y - 12.0) < 1e-6, "拖到 \\ol{BC} 外面，P 還是吸附在 \\ol{BC} 上（%s）" % str(p))
+	_press(_px(Vector2(1.92, 1.44)))
+	ok(_pl().place_lit(_pl().place_p), "P 在 A 的垂足：燈亮")
+	lv._custom_go()
+	await frames(3)
+	ok(lv.si == 1, "找到最小就過")
+
+
+func _check_plot() -> void:
+	await _start("ktaut", 0)
+	ok(String(lv.steps[0].kind) == "slide", "拉最緊的弓：第一步是滑桿")
+	var pl = _pl()
+	var plot := {}
+	for ln in lv.steps[0].lines:
+		if String(ln.get("k", "")) == "plot":
+			plot = pl.eval_line(ln, {"t": 2.0})
+	ok(not plot.is_empty() and absf(float(plot.cur) - 2.0) < 1e-9, "小函數圖：目前的位置跟著 t（%s）" % str(plot.get("cur")))
+	ok(absf(pl.calc(String(plot.f), {"u": 2.0}) - 20.0) < 1e-6, "小函數圖：t = 2 的值是 20（最小值）")
+	lv.slide_vals["t"] = 3.0
+	lv._refresh_slide()
+	lv._slide_submit()
+	await frames(2)
+	ok(lv.si == 0, "t = 3 不是最小，不算")
+	lv.slide_vals["t"] = 2.0
+	lv._refresh_slide()
+	lv._slide_submit()
+	await frames(3)
+	ok(lv.si == 1, "t = 2 最小，過")

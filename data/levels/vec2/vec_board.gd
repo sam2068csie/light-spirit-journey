@@ -37,6 +37,9 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 ##       {"k": "kite", "p": [x, y], "c": "gold", "s": "P"}  一隻風箏（V6，滑桿的 lines 裡跟著 t 飛；光點另外放一個 "trail": true 的點）
 ##       {"k": "sweep", "p0": [x, y], "d": [x, y], "t0": 數字或 null, "t1": 數字或 null, "ref": [A, B] 或 "ray": [S, 方向], "dur": 1.6}
 ##            航跡（V6）：光點照 p0 + t·d 從 t0 飛到 t1，null 那一頭飛出畫布畫箭頭；不在 ref 線段（ray 射線）上的光點是紅色
+##       {"k": "ellipse", "o": [x, y], "rx": 3, "ry": 2, "c": "gold", "fill": "gold"}  橢圓（V7 的等高線，rx = ry 是圓；滑桿裡 rx、ry 可以寫算式）
+##       {"k": "plot", "f": "u * u", "u0": 0, "u1": 3, "cur": "t", "s": "f"}  小函數圖（V7）：右下角的小框，cur 是目前的 u（滑桿裡跟著動）
+##            cfg.sail = [A, B]：帆（V7）：拖的點和 A、B 張成三角形，塗色（燈亮時金色）
 ##       {"k": "beads", "a": [x, y], "b": [x, y], "n": 16}  格子點的珠子（V6）：等距的 n 顆，一顆一顆亮起來
 ##            cfg.mirror = {o, u, len}：鏡岩（V6）：鏡子是 o 到拖的點的直線，入射光沿 u 打到 o，反射光跟著畫（燈亮時金色）
 ##       {"k": "protractor", "o", "r", "a0", "side", "deg": 正確的角度, "guess": true}  量角器的圖層：指針指在 deg，
@@ -443,7 +446,7 @@ func _shape_by_id(id: String) -> Dictionary:
 
 func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 	var kk := String(ln.get("k", "line"))
-	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right", "fire"]:
+	if kk in ["arrow", "poly", "walk", "balloon", "tag", "label", "kite", "skew", "beam", "ruler", "plant", "shadow", "right", "fire", "plot", "ellipse"]:
 		if ln.has("when") and absf(calc(String(ln.when), vals)) < 0.5:
 			return {}
 		var out := ln.duplicate(true)
@@ -457,6 +460,11 @@ func eval_line(ln: Dictionary, vals: Dictionary) -> Dictionary:
 			out["pts"] = arr
 		if ln.has("r"):
 			out["r"] = calc(str(ln.r), vals)
+		if ln.has("cur"):
+			out["cur"] = calc(str(ln.cur), vals)
+		for key in ["rx", "ry"]:
+			if ln.has(key):
+				out[key] = calc(str(ln[key]), vals)
 		out.erase("at")
 		return out
 	return super(ln, vals)
@@ -717,6 +725,24 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 				var from := guess_deg if bool(sh.get("guess", false)) and is_finite(guess_deg) else dg
 				_protractor_hand(font, sh, lerpf(from, dg, k * k * (3.0 - 2.0 * k)), UITheme.ACCENT, 3.5)
 			return
+		"ellipse":
+			# 橢圓（V7 的等高線）：中心 o、半軸 rx、ry（rx = ry 就是圓）
+			var eo := _v(sh.o)
+			var rx := float(sh.rx)
+			var ry := float(sh.get("ry", sh.rx))
+			var ec := _col(String(sh.get("c", "gold")))
+			var ep := PackedVector2Array()
+			for i in 73:
+				var a := TAU * i / 72.0
+				ep.append(_to(eo + Vector2(rx * cos(a), ry * sin(a))))
+			if sh.has("fill"):
+				var fc := _col(String(sh.fill))
+				draw_colored_polygon(ep.slice(0, 72), Color(fc.r, fc.g, fc.b, float(sh.get("alpha", 0.12))))
+			_pl(ep, ec, float(sh.get("w", 2.0)), bool(sh.get("dash", false)))
+			return
+		"plot":
+			_draw_plot(font, sh)
+			return
 		"kite":
 			# 風箏（V6）：跟著滑桿的 t 飛，"s" 是旁邊的字母
 			var kp := _to(_v(sh.p))
@@ -812,6 +838,15 @@ func _draw_modes(font: Font) -> void:
 				_draw_protractor(font, _v(pr.o), float(pr.r), float(pr.get("a0", 0.0)), float(pr.get("side", 1.0)))
 			if is_finite(place_p.x) and place_cfg.has("split"):
 				_draw_split(font, place_p, place_cfg.split)
+			if is_finite(place_p.x) and place_cfg.has("sail"):
+				# 帆（V7）：拖的點和 sail 的兩點張成三角形，塗色
+				var sp := PackedVector2Array([_to(_v(place_cfg.sail[0])), _to(_v(place_cfg.sail[1])), _to(place_p)])
+				var lit_s := place_lit(place_p)
+				var scol := UITheme.ACCENT if lit_s else UITheme.LIME
+				draw_colored_polygon(sp, Color(scol.r, scol.g, scol.b, 0.22))
+				var sc := sp.duplicate()
+				sc.append(sp[0])
+				_pl(sc, Color(scol.r, scol.g, scol.b, 0.8), 2.0, false)
 			if is_finite(place_p.x) and place_cfg.has("mirror"):
 				_draw_mirror(font, place_cfg.mirror, place_p, place_lit(place_p))
 			if is_finite(place_p.x) and place_cfg.has("ropes"):
@@ -874,6 +909,44 @@ func _draw_modes(font: Font) -> void:
 				p = q
 			if is_finite(path_from.x):
 				_kite(_to(p) + Vector2(0, -8), 0.0, UITheme.ACCENT, 0.8)
+
+
+## 小函數圖（V7）：右下角一個小框，畫 f(u)（u 從 u0 到 u1），目前的 u = cur 是一個點在上面跑
+func _draw_plot(font: Font, sh: Dictionary) -> void:
+	var box := Rect2(size.x - 176.0, size.y - 112.0, 160.0, 96.0)
+	draw_rect(box, Color(0.05, 0.07, 0.12, 0.82))
+	draw_rect(box, Color(1, 1, 1, 0.18), false, 1.0)
+	var u0 := float(sh.u0)
+	var u1 := float(sh.u1)
+	var f := String(sh.f)
+	var ys := []
+	var lo := INF
+	var hi := -INF
+	for i in 61:
+		var u := lerpf(u0, u1, i / 60.0)
+		var y := calc(f, {"u": u})
+		ys.append(y)
+		lo = minf(lo, y)
+		hi = maxf(hi, y)
+	if sh.has("ymax"):
+		hi = minf(hi, float(sh.ymax))
+	if hi - lo < 1e-6:
+		hi = lo + 1.0
+	var inner := box.grow(-8.0)
+	var at := func(u: float, y: float) -> Vector2:
+		return Vector2(inner.position.x + (u - u0) / (u1 - u0) * inner.size.x,
+			inner.end.y - (clampf(y, lo, hi) - lo) / (hi - lo) * inner.size.y)
+	var pts := PackedVector2Array()
+	for i in 61:
+		pts.append(at.call(lerpf(u0, u1, i / 60.0), float(ys[i])))
+	_pl(pts, Color(0.7, 0.85, 1.0, 0.85), 2.0, false)
+	if sh.has("cur"):
+		var cu := float(sh.cur)
+		var cp: Vector2 = at.call(cu, calc(f, {"u": cu}))
+		UITheme.dot(self, cp, 9.0, Color(1, 0.86, 0.42, 0.25))
+		UITheme.dot(self, cp, 4.5, UITheme.ACCENT)
+	if String(sh.get("s", "")) != "":
+		_label(font, box.position, String(sh.s), [6, 16], Color(1, 1, 1, 0.7))
 
 
 ## 航跡（V6）：光點照參數式 p0 + t·d 從 t0 飛到 t1（null = 一直飛到畫布外，畫箭頭）

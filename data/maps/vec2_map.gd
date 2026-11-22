@@ -65,9 +65,13 @@ const STORY := {
 		{"text": "風箏沿著航道飛起來了。t 是時間：從起點出發、照著方向走，就知道風箏什麼時候在哪裡。", "cam": "site", "site": 5, "zoom": 1.8, "light": 5},
 		{"text": "每一條航道都有兩支箭頭：一支指著往哪走，一支站在上面插旗！光打到鏡岩也反射回來了～", "who": "光靈", "cam": "site", "site": 5, "zoom": 1.4, "spirit": 5},
 	],
+	"V7": [
+		{"text": "工坊裡的弓都拉滿了。兩支箭頭對齊，弦才拉得緊。張開九十度，帆才吃得飽風。", "cam": "site", "site": 6, "zoom": 1.8, "light": 6},
+		{"text": "內積不會超過兩支長度相乘，帆的面積就是交叉相乘的一半！帆張開了～", "who": "光靈", "cam": "site", "site": 6, "zoom": 1.4, "spirit": 6},
+	],
 }
 
-const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "V5": "第五幕．四心營火", "V6": "第六幕．風箏航道", "epilogue": "終章．平面向量"}
+const STORY_TITLES := {"prologue": "序章．沒有風的高原", "V1": "第一幕．風向台", "V2": "第二幕．斜紋麥田", "V3": "第三幕．日晷影場", "V4": "第四幕．長弓靶場", "V5": "第五幕．四心營火", "V6": "第六幕．風箏航道", "V7": "第七幕．弓帆工坊", "epilogue": "終章．平面向量"}
 
 
 static func sites() -> Array:
@@ -339,6 +343,20 @@ func _draw_landmark(i: int) -> void:
 			Tg.draw_line(fp + Vector2(-4, 1), fp + Vector2(4, -1), base.lightened(0.2), 2.0)
 			var hh := (12.0 + 3.0 * sin(t * 6.0 + k)) if gl > 0.5 else 4.0
 			Tg.draw_colored_polygon(PackedVector2Array([fp + Vector2(-4, 0), fp + Vector2(0, -hh), fp + Vector2(4, 0)]), lit_c)
+		return
+	if String(m_sites[i].id) == "V7":
+		# 弓和三角帆：亮了之後弓弦拉滿、帆張開
+		var bow_c := p + Vector2(-14, -28)
+		var pull := 6.0 * gl
+		Tg.draw_arc(bow_c, 18.0, deg_to_rad(-70), deg_to_rad(70), 14, base.lightened(0.3), 3.0)
+		var top := bow_c + Vector2.from_angle(deg_to_rad(-70)) * 18.0
+		var bot := bow_c + Vector2.from_angle(deg_to_rad(70)) * 18.0
+		var mid := bow_c + Vector2(-pull, 0)
+		Tg.draw_polyline(PackedVector2Array([top, mid, bot]), Color(col.r, col.g, col.b, 0.5 + 0.5 * gl), 1.4)
+		var mast := p + Vector2(16, -8)
+		Tg.draw_line(mast, mast + Vector2(0, -40), base.lightened(0.2), 2.0)
+		var open := 6.0 + 14.0 * gl
+		Tg.draw_colored_polygon(PackedVector2Array([mast + Vector2(0, -40), mast + Vector2(0, -8), mast + Vector2(open, -12)]), lit_c)
 		return
 	if String(m_sites[i].id) == "V6":
 		# 鏡岩和風箏：亮了之後風箏沿著虛線航道飛，光打到鏡岩反射

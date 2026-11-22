@@ -232,6 +232,10 @@ const MISTAKE_INFO := {
 	"vec_langle":      {"name": "兩直線的夾角", "level": 2},
 	"vec_reflect":     {"name": "對稱點與反射", "level": 2},
 	"vec_turn":        {"name": "轉 90° 的頂點", "level": 2},
+	"vec_cauchy":      {"name": "柯西不等式", "level": 2},
+	"vec_cauchyapp":   {"name": "柯西不等式的應用", "level": 2},
+	"vec_triineq":     {"name": "三角不等式", "level": 2},
+	"vec_areaf":       {"name": "面積公式", "level": 2},
 	# 直線與圓（C1～）
 	"line_mid":        {"name": "中點與兩點距離", "level": 1},
 	"line_divide":     {"name": "分點公式（權重交叉放）", "level": 1},
