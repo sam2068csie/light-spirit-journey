@@ -255,7 +255,7 @@ static func _slots() -> Array:
 		 "story": "合成後只有一個最亮、一個最暗。拖動 x，看什麼時候最亮。",
 		 "insight": "r sin(x + φ)：最大 r（x + φ = 90° + 360°k），最小 −r（x + φ = 270° + 360°k）。",
 		 "variants": [
-			{"eq": "f(x) = sin x + √3 cos x\n求最大值、最小值",
+			{"eq": "f(x) = sin x + √3 cos x\n求最大值、最小值，以及此時的 x",
 			 "steps": [
 				_sup("sin x + √3 cos x", "1² + (√3)²", "2", "(1/2) sin x + (√3/2) cos x", "1/2", "√3/2", T_PEAK, "60", "60°", "2 sin(x + 60°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。（f(x) 最大）", 1.0, S3, "max", [30.0],
@@ -267,7 +267,7 @@ static func _slots() -> Array:
 				_f("最小值", "最暗的時候 x + 60° = 270°（0° ≤ x < 360°）。", "最小值 = [0]，x = [1]°", ["-2", "210"],
 					"最小值 −2，在 x = 210°", "x = 270° − 60°。", T_PEAK),
 			 ]},
-			{"eq": "f(x) = √3 sin x − cos x\n求零點與最大值",
+			{"eq": "f(x) = √3 sin x − cos x\n求零點、最大值，以及最大值發生的 x",
 			 "steps": [
 				_sup("√3 sin x − cos x", "(√3)² + (−1)²", "2", "(√3/2) sin x − (1/2) cos x", "√3/2", "−1/2", T_PEAK, "-30", "−30°", "2 sin(x − 30°)"),
 				_peak("找熄滅", "拖動 x，讓光束熄滅。（f(x) = 0，有兩個位置，找到一個就好）", S3, -1.0, "zero", [30.0, 210.0],
@@ -279,7 +279,7 @@ static func _slots() -> Array:
 				_f("最大值", "x − 30° = 90°（0° ≤ x < 360°）。", "最大值 = [0]，x = [1]°", ["2", "120"],
 					"最大值 2，在 x = 120°", "x = 90° + 30°。", T_PEAK),
 			 ]},
-			{"eq": "f(x) = sin x − cos x\n求最大值與週期",
+			{"eq": "f(x) = sin x − cos x\n求最大值、最大值發生的 x，以及週期",
 			 "steps": [
 				_sup("sin x − cos x", "1² + (−1)²", "√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_PEAK, "-45", "−45°", "√2 sin(x − 45°)"),
 				_peak("找最亮", "拖動 x，讓光束最亮。", 1.0, -1.0, "max", [135.0],
@@ -295,7 +295,7 @@ static func _slots() -> Array:
 		 "story": "比較誰的光最強：只要算每道光的 r。",
 		 "insight": "a sin x + b cos x 的最大值是 √(a² + b²)，最小值是 −√(a² + b²)。比較大小只要比 a² + b²，不用開根號。",
 		 "variants": [
-			{"eq": "四道光，比較最大亮度",
+			{"eq": "四道光，依最大亮度由小到大排好\n最亮的那道最大值是多少？",
 			 "steps": [
 				SB.order("把四道光的最大亮度，由小到大排好。（點按鈕，依序放進去）", [
 					SB.item("A", "sin x + cos x", S2),
@@ -306,7 +306,7 @@ static func _slots() -> Array:
 				_f("最亮的", "最亮的是 D：3 sin x − 4 cos x。", "最大值 = [0]", ["5"],
 					"√(9 + 16) = 5", "3² + 4² = 25。", T_BRIGHT),
 			 ]},
-			{"eq": "哪些光的最大值是整數？",
+			{"eq": "哪些光的最大值是整數？\n其中最亮的最大值是多少？",
 			 "steps": [
 				SB.with_pre(_filter("篩選", "最大值是整數的才留下。", ["sin x + cos x", "3 sin x + 4 cos x", "√3 sin x + cos x",
 					"5 sin x − 12 cos x", "2 sin x + cos x"], [false, true, true, true, false],
@@ -334,7 +334,7 @@ static func _slots() -> Array:
 				_f("最大值", "最亮的時候 x = 30°。", "最大值 = [0]", ["2√3"],
 					"最大值 = 2√3", "最大值就是 r。", T_LIGHT),
 			 ]},
-			{"eq": "f(x) = 3 sin x − 3 cos x\n合成並求最小值",
+			{"eq": "f(x) = 3 sin x − 3 cos x\n合成並求最大值、最小值，以及最小值發生的 x",
 			 "steps": [
 				_sup("3 sin x − 3 cos x", "3² + (−3)²", "3√2", "(√2/2) sin x − (√2/2) cos x", "√2/2", "−√2/2", T_FORM, "-45", "−45°", "3√2 sin(x − 45°)"),
 				_wave("拼合成", "照算好的 r 和 φ，用積木把 3 sin x − 3 cos x 拼成一個 sin。", "3 sin x − 3 cos x", 3.0, -3.0,
@@ -439,7 +439,7 @@ static func _slots() -> Array:
 		 "story": "sin x cos x、cos²x 用倍角、降冪一換，就變成 sin 2x、cos 2x 的疊合。",
 		 "insight": "2 sin x cos x = sin 2x\ncos²x = \\frac{1 + cos 2x}{2}\nsin²x = \\frac{1 − cos 2x}{2}\n換完再疊合 a sin 2x + b cos 2x，週期 π。",
 		 "variants": [
-			{"eq": "f(x) = 2√3 sin x cos x + 2cos²x − 1\n化成 r sin(2x + φ)",
+			{"eq": "f(x) = 2√3 sin x cos x + 2cos²x − 1\n化成 r sin(2x + φ)，並求最大值、最小值與週期",
 			 "steps": [
 				_f("倍角", "2 sin x cos x 和 2cos²x − 1 各是哪一個二倍角公式展開的結果？", "2 sin x cos x = sin [0]x，2cos²x − 1 = cos [1]x", ["2", "2"],
 					"2 sin x cos x = sin 2x\n2cos²x − 1 = cos 2x", "兩個都是 2x。", T_HOMOG),
@@ -579,7 +579,7 @@ static func _slots() -> Array:
 					"segs": [["A", "B", "60 cos θ"], ["B", "C", "60 sin θ"], ["C", "D", ""], ["D", "A", ""], ["A", "C", "60"]],
 					"fill": ["A", "B", "C", "D"], "right": [["B", "A", "C"]], "angles": [["A", "B", "C", "θ"]], "hide": ["O", "A", "B", "C", "D"], "ghost": ["Z"]}],
 			},
-			{"eq": "半徑 25 公尺的半圓形花圃，\n內接長方形（一邊在直徑上），求周長最大值",
+			{"eq": "半徑 25 公尺的半圓形花圃，內接長方形（一邊在直徑上）\n圓心到頂點的線與直徑夾 θ，求周長最大值與此時的 cos θ",
 			 "steps": [
 				_f("底與高", "圓心到頂點的線與直徑夾角 θ（0° < θ < 90°）：底的一半 25 cos θ，高 25 sin θ。", "底 = [0] cos θ，高 = [1] sin θ", ["50", "25"],
 					"底 = 50 cos θ，高 = 25 sin θ", "底是一半的兩倍。", T_APPLY),
@@ -635,7 +635,7 @@ static func _slots() -> Array:
 				_f("最大最小", "x = 120°：6 sin 90°\nx = 0°：6 sin(−30°)。", "M = [0]，m = [1]", ["6", "-3"],
 					"M = 6，m = −3", "sin(−30°) = −1/2。", T_RANGE),
 			 ]},
-			{"eq": "f(x) = cos²x + √3 sin x cos x\n求最大值，以及最大值發生的 x",
+			{"eq": "f(x) = cos²x + √3 sin x cos x\n求最大值、最小值，以及最大值發生的 x",
 			 "steps": [
 				_f("降冪、倍角", "cos²x = \\frac{1 + cos 2x}{2}\nsin x cos x = \\frac{sin 2x}{2}。", "f(x) = 1/2 + [0] cos 2x + [1] sin 2x", ["1/2", "√3/2"],
 					"f(x) = 1/2 + (1/2) cos 2x + (√3/2) sin 2x", "√3 × (1/2) = √3/2。", T_HOMOG),

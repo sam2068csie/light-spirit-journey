@@ -307,7 +307,7 @@ static func _fan_v(r: float, p: int, q: int, _arc: String, area: String) -> Dict
 	# 面積寫成 \frac{16}{3}π（不要寫 16/3π，會被排成 16 ÷ 3π）
 	var am := ("\\frac{%s}{%s}π" % Array(area.split("/"))) if area.contains("/") else area + "π"
 	# 順序：先算 θ → 再把扇子拉到那個角 → 算面積要的 θ → 再拉一次
-	return {"eq": "半徑 r = %d 的扇子" % ri,
+	return {"eq": "半徑 %d 的扇子：弧長 = 半徑、面積 = %s 時，圓心角各是多少？" % [ri, am],
 		"steps": [
 			_f("算弧度", "弧長要剛好等於半徑 %d。l = rθ，θ 是多少弧度？" % ri, "%dθ = %d ⇒ θ = [0]" % [ri, ri], ["1"],
 				"弧長 = 半徑：%dθ = %d ⇒ θ = 1 弧度" % [ri, ri], "l = rθ，兩邊同除以 %d。" % ri, T_FORM),
@@ -367,7 +367,7 @@ static func _perim_v(L: int, A: int, coef: Array, roots: Array, thetas: Array, k
 static func _max_v(eq: String, L: int) -> Dictionary:
 	var h := L / 4                 # 頂點 r = L/4
 	var amax := h * h
-	return {"eq": eq,
+	return {"eq": eq + "\n此時半徑和圓心角各是多少？",
 		"steps": [
 			_f("面積", "弧長 l = %d − 2r，面積 A = \\frac{1}{2}rl = \\frac{1}{2}r(%d − 2r)。展開：" % [L, L], "A = −r^{2} + [0]r", [str(L / 2)],
 				"A = \\frac{1}{2}r(%d − 2r) = −r^{2} + %dr" % [L, L / 2], "\\frac{1}{2} × r × %d − \\frac{1}{2} × r × 2r。" % L, T_MAX),
