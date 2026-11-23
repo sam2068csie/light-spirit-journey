@@ -18,8 +18,8 @@ const UITheme := preload("res://data/ui/game_theme.gd")
 const UNITS := [
 	# ======================= 高一 =======================
 	# 高一的單元：在「曦光大陸」（g10_world.gd）上，一個地區一個單元。題目還沒放，先 open = false（進去會顯示準備中）
-	# 數與式：八關和終焉之塔（num_tower_bank.gd）都做好了。還是 preview（開發者的「一鍵開放全部關卡」才進得去），要正式開放時改 open = true
-	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": false, "preview": true,
+	# 數與式：八關和終焉之塔（num_tower_bank.gd），2026/11/23 正式開放
+	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": true,
 	 "world": "光靈的旅程：數之原野", "map": "num_map.gd", "tower": "num_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_num.gd",
 	 "levels": [
 		{"id": "R1", "name": "風車小數", "topic": "數線、循環小數與比大小", "file": "level_num1_mill.gd", "bank": "num1_bank.gd", "color": UITheme.GOLD},
@@ -31,8 +31,8 @@ const UNITS := [
 		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "level_num7_field.gd", "bank": "num7_bank.gd", "color": UITheme.PINK},
 		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "level_num8_canal.gd", "bank": "num8_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	# 指數與常用對數：E1～E3 和終焉之塔（h1exp_tower_bank.gd）做好了（preview：開發者的「一鍵開放全部關卡」才進得去）。規劃見 docs/exp_plan.md
-	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false, "preview": true,
+	# 指數與常用對數：E1～E3 和終焉之塔（h1exp_tower_bank.gd），2026/11/23 正式開放。規劃見 docs/exp_plan.md
+	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": true,
 	 "world": "光靈的旅程：倍增峽谷", "map": "h1exp_map.gd", "tower": "h1exp_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_h1exp.gd",
 	 "levels": [
 		{"id": "E1", "name": "倍增岩壁", "topic": "指數律", "file": "level_exp1_cliff.gd", "bank": "exp1_bank.gd", "color": UITheme.ORANGE},

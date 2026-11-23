@@ -154,7 +154,7 @@ def nf_two(A, B, m, n):
                 "數線上 A(%s)、B(%s)。P_{1}、P_{2} 都滿足 \\ol{PA} : \\ol{PB} = %d : %d，P_{1} 在 \\ol{AB} 上，P_{2} 在 \\ol{AB} 外。求 \\ol{P_{1}P_{2}}。" % (t(A), t(B), m, n),
                 [fl("內分點 P_{1}：", "P_{1} = \\frac{%d × %s + %d × %s}{%d} = [0]" % (n, tp(A), m, tp(B), m + n), [a(P1)],
                     "\\ol{AP_{1}} : \\ol{P_{1}B} = %d : %d，份數交叉相乘：A 乘 %d、B 乘 %d，再除以 %d" % (m, n, n, m, m + n)),
-                 ch("P_{2} 在哪一邊？", ["%s 的外側（靠近 %s）" % (side, side), "%s 的外側" % ("B" if side == "A" else "A"), "A、B 中間", "原點"],
+                 ch("P_{2} 在哪一邊？", ["%s 的外側" % side, "%s 的外側" % ("B" if side == "A" else "A"), "A、B 中間", "原點"],
                     "P_{2} 到 %s 比較近（%d < %d），所以在 %s 外面" % (side, min(m, n), max(m, n), side),
                     "\\ol{PA} %s \\ol{PB}：P_{2} 在 %s 的外側" % ("<" if m < n else ">", side)),
                  fl("外分點 P_{2}，再求距離：", "P_{2} = [0]，\\ol{P_{1}P_{2}} = [1]", [a(P2), a(d)],

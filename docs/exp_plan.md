@@ -204,6 +204,7 @@
 ## 5. 製作順序
 
 進度：E1 做好了（2026/11/17，設計稿 `docs/exp_e1_design.md`），單元先用 preview 開放給開發者。
+E1～E3 和終焉之塔（設計稿 `docs/h1exp_tower_design.md`）都做好了，2026/11/23 正式開放（open = true）。
 
 1. 地圖 `h1exp_map.gd`、單元設定（`units.gd` 的 h1exp）、E1。E1 做完先給你試玩。
 2. 做 E2、E3，每關照 `design_rules.md` 第 8 節的清單檢查，延後的題型記到 backlog。

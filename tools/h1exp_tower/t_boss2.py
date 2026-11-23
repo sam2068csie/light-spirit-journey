@@ -146,8 +146,7 @@ def xb_tv(N, each, limit, lgN_t, lgN, k, lk, lk1, each2):
                 (N, each, each, lgN_t, ("%.4f" % lgN).rstrip("0"), k, lk, k + 1, lk1, N, limit, each2, N, limit),
                 [fl("k = %d 代入：" % N, "(1)　%d + 10 %s ≈ [0]（取一位小數）" % (each, lgN_t), [_one(tot)], "%s ≈ %s" % (lgN_t, ("%.4f" % lgN).rstrip("0")), part="(1)"),
                  fl("列不等式：", "(2)　%d + 10 log k ≤ %d → log k ≤ [0]，最多 [1] 台" % (each, limit), [cs, str(k)], "log %d ≤ %s < log %d" % (k, cs, k + 1), part="(2)"),
-                 ch("每台 %d 分貝，%d 台全開：" % (each2, N), ["不會超過（約 %s 分貝）" % _one(tot2) if not over else "會超過（約 %s 分貝）" % _one(tot2),
-                                                       "會超過" if not over else "不會超過", "剛好 %d 分貝" % limit, "要看是哪幾台"],
+                 ch("每台 %d 分貝，%d 台全開：" % (each2, N), ["不會超過" if not over else "會超過", "會超過" if not over else "不會超過", "剛好 %d 分貝" % limit, "要看是哪幾台"],
                     "%d + 10 %s，和 %d 比" % (each2, lgN_t, limit), "(3)　%d + 10 %s ≈ %s，%s %d" % (each2, lgN_t, _one(tot2), ">" if over else "≤", limit), part="(3)")])
 
 
