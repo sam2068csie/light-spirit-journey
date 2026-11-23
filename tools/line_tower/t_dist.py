@@ -26,13 +26,8 @@ def ld_parallel(m, diff, m2, diff2):
             "steps": [
                 fill("寫成一般式 %s、%s，代平行線距離公式：" % (gen(0), gen(diff)),
                      "d(L_{1}, L_{2}) = \\frac{|k − (k − %d)|}{√{[0]}}" % diff, [n], "分母是 √{a^{2} + b^{2}} = √{%d + 1}" % (m * m)),
-                fill("化簡：", "d(L_{1}, L_{2}) = \\frac{%d}{√{%d}} = [0]" % (diff, n), [d.ans()],
-                     "有理化：\\frac{%d√{%d}}{%d}" % (diff, n, n) if not is_square(n) else "直接約分"),
-                choice("截距明明差 %d，為什麼距離不是 %d？（距離要垂直於直線量）" % (diff, diff), ["%d 是鉛直方向量的" % diff, "要再乘上斜率 %d" % m, "截距差要除以斜率", "距離和截距無關"],
-                       "黃色虛線是鉛直量的 %d，綠色才是垂直於直線的距離" % diff, "截距差是鉛直方向，垂直距離 = \\frac{截距差}{√{1 + m^{2}}}"),
-                fill("換一組：斜率 %d、截距差 %d 的兩條平行線：" % (m2, diff2),
-                     "答：d(L_{1}, L_{2}) = \\frac{%d}{√{1 + %d}} = [0]" % (diff2, m2 * m2), [d2.ans()],
-                     "\\frac{%d}{√{%d}}" % (diff2, m2 * m2 + 1))]}
+                fill("化簡：", "答：d(L_{1}, L_{2}) = \\frac{%d}{√{%d}} = [0]" % (diff, n), [d.ans()],
+                     "有理化：\\frac{%d√{%d}}{%d}" % (diff, n, n) if not is_square(n) else "直接約分")]}
 
 
 # ---------- ld_bounce：碰兩面牆的路 ----------

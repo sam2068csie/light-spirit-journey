@@ -178,9 +178,7 @@ def lc_quad(R2, A, B, offs, pq_name):
                 fill("d(O, AB) = %s。兩邊最遠的高：一邊是 r + d(O, AB)，一邊是 r − d(O, AB)：" % rtt(d2), "兩個高加起來最大 = [0]",
                      [Surd(2 * R.c, R.n).ans()], "相加之後 d(O, AB) 消掉了，剩 2r"),
                 fill("面積最大：", "答：\\frac{1}{2} · %s · %s = [0]" % (ab.text(), Surd(2 * R.c, R.n).text()), [area.ans()],
-                     "%s × %s" % (ab.text(), R.text())),
-                choice("這時候 P、Q 在哪裡？", ["%s 和圓的交點" % pq_name, "x 軸和圓的交點", "y 軸和圓的交點", "A、B 對 O 的對稱點"],
-                       "離 \\ol{AB} 最遠的點，在過圓心且垂直 \\ol{AB} 的直線上", "P、Q 在直線 %s 上（\\ol{PQ} 是直徑）" % pq_name)]}
+                     "%s × %s" % (ab.text(), R.text()))]}
 
 
 def items():
