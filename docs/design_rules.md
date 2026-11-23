@@ -288,7 +288,7 @@
 
 ### 7.5 終焉之塔怎麼出題（2026/11/09）
 
-四座塔（直線與圓、多項式、三角函數、指數與對數）的題目都是**程式產生**的，`data/levels/tower/*_tower_data.gd` 不能手改。
+每一座塔（直線與圓、多項式、三角函數、指數與對數、數與式、指數與常用對數）的題目都是**程式產生**的，`data/levels/tower/*_tower_data.gd` 不能手改。
 
 **資料夾**
 - `tools/towerlib/`：共用工具。
@@ -297,8 +297,8 @@
   - `gen.py`：產生器。
   - `compare.py`：把手寫題庫改成模板時，比對第 1 組。
 - `tools/<塔>_tower/t_*.py`：這座塔的題目模板。
-  - 塔名是 line、poly、trig、explog。
-  - 每座塔可以有自己的工具（`plib.py`、`elib.py`）。
+  - 塔名是 line、poly、trig、explog、num、h1exp（高一的指數與常用對數，和高二的 explog 分開）。
+  - 每座塔可以有自己的工具（`plib.py`、`elib.py`、`nlib.py`、`xlib.py`）。
 
 **一題的寫法**
 - 一題是一個模板函式：參數是數字，傳回一組完整的題目。

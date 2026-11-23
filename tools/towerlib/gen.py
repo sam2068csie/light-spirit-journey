@@ -1,7 +1,7 @@
 # 產生終焉之塔的題庫：data/levels/tower/<塔>_tower_data.gd
 #
-#   python3 tools/towerlib/gen.py              四座塔全部重新產生
-#   python3 tools/towerlib/gen.py trig         只產生一座（line、poly、trig、explog）
+#   python3 tools/towerlib/gen.py              每一座塔全部重新產生
+#   python3 tools/towerlib/gen.py trig         只產生一座（line、poly、trig、explog、num、h1exp）
 #   python3 tools/towerlib/gen.py --check      不寫檔，只檢查 repo 裡的 *_data.gd 和產生器一致（測試用）
 #   python3 tools/towerlib/gen.py trig --json /tmp/trig.json   輸出 JSON（比對、除錯用）
 #
@@ -19,6 +19,8 @@ TOWERS = {
     "poly": ["t_judge", "t_graph", "t_remain", "t_line", "t_param", "t_boss", "t_boss2"],
     "trig": ["t_judge", "t_graph", "t_cross", "t_angle", "t_extreme", "t_quest", "t_boss", "t_boss2"],
     "explog": ["t_judge", "t_roots", "t_line", "t_extreme", "t_quest", "t_boss", "t_boss2"],
+    "num": ["t_frac", "t_root", "t_abs", "t_amgm", "t_judge", "t_boss", "t_boss2"],
+    "h1exp": ["t_pow", "t_log", "t_digit", "t_quest", "t_judge", "t_boss", "t_boss2"],
 }
 FIXED = ["id", "kind", "tier", "title", "tmul"]
 VARY = ["stem", "plot", "steps", "routes"]

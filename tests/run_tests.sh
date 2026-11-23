@@ -22,7 +22,7 @@ status=0
 for t in $WHICH; do
   echo "=== test_$t ==="
   if [ "$t" = gen ]; then
-    # 這一項不用 Godot：重跑四座塔的產生器（只比對、不寫檔）
+    # 這一項不用 Godot：重跑每一座塔的產生器（只比對、不寫檔）
     PY="${PYTHON:-python3}"
     if ! command -v "$PY" >/dev/null 2>&1 || ! "$PY" -c "import numpy" >/dev/null 2>&1; then
       echo "（跳過：需要 python3 和 numpy）"

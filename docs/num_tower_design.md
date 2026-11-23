@@ -1,6 +1,6 @@
 # 數與式（高一上）終焉之塔設計稿
 
-2026/11/23 草案 v1，等使用者審。
+2026/11/23 草案 v1，使用者審過，已實作（tools/num_tower/t_*.py → data/levels/tower/num_tower_data.gd）。
 
 ## 依據
 

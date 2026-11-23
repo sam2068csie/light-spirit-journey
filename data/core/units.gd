@@ -18,9 +18,9 @@ const UITheme := preload("res://data/ui/game_theme.gd")
 const UNITS := [
 	# ======================= 高一 =======================
 	# 高一的單元：在「曦光大陸」（g10_world.gd）上，一個地區一個單元。題目還沒放，先 open = false（進去會顯示準備中）
-	# 數與式：R1、R2 做好了，其他六關建造中。先用 preview（開發者的「一鍵開放全部關卡」才進得去），八關做完再 open = true
+	# 數與式：八關和終焉之塔（num_tower_bank.gd）都做好了。還是 preview（開發者的「一鍵開放全部關卡」才進得去），要正式開放時改 open = true
 	{"id": "h1num", "term": "高一上", "title": "數與式", "exam": "", "color": UITheme.GOLD, "open": false, "preview": true,
-	 "world": "光靈的旅程：數之原野", "map": "num_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_num.gd",
+	 "world": "光靈的旅程：數之原野", "map": "num_map.gd", "tower": "num_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_num.gd",
 	 "levels": [
 		{"id": "R1", "name": "風車小數", "topic": "數線、循環小數與比大小", "file": "level_num1_mill.gd", "bank": "num1_bank.gd", "color": UITheme.GOLD},
 		{"id": "R2", "name": "繩上珠子", "topic": "分點公式", "file": "level_num2_bead.gd", "bank": "num2_bank.gd", "color": UITheme.CYAN},
@@ -31,9 +31,9 @@ const UNITS := [
 		{"id": "R7", "name": "方田拼圖", "topic": "乘法公式", "file": "level_num7_field.gd", "bank": "num7_bank.gd", "color": UITheme.PINK},
 		{"id": "R8", "name": "谷底水渠", "topic": "數線上的幾何", "file": "level_num8_canal.gd", "bank": "num8_bank.gd", "color": UITheme.BLUE},
 	 ]},
-	# 指數與常用對數：E1～E3 做好了（終焉之塔還沒做）（preview：開發者的「一鍵開放全部關卡」才進得去）。規劃見 docs/exp_plan.md
+	# 指數與常用對數：E1～E3 和終焉之塔（h1exp_tower_bank.gd）做好了（preview：開發者的「一鍵開放全部關卡」才進得去）。規劃見 docs/exp_plan.md
 	{"id": "h1exp", "term": "高一上", "title": "指數與常用對數", "exam": "", "color": UITheme.ORANGE, "open": false, "preview": true,
-	 "world": "光靈的旅程：倍增峽谷", "map": "h1exp_map.gd", "tower": "", "tower_name": "終焉之塔", "concepts": "concepts_h1exp.gd",
+	 "world": "光靈的旅程：倍增峽谷", "map": "h1exp_map.gd", "tower": "h1exp_tower_bank.gd", "tower_name": "終焉之塔", "concepts": "concepts_h1exp.gd",
 	 "levels": [
 		{"id": "E1", "name": "倍增岩壁", "topic": "指數律", "file": "level_exp1_cliff.gd", "bank": "exp1_bank.gd", "color": UITheme.ORANGE},
 		{"id": "E2", "name": "十倍石階", "topic": "常用對數", "file": "level_exp2_stairs.gd", "bank": "exp2_bank.gd", "color": UITheme.GOLD},
