@@ -51,7 +51,7 @@ def xb_pressure(P, k, k_dec, dB3):
     return item("xb_pressure", "boss", 2, "聲壓與分貝", 1.6,
                 "聲音的分貝 = 20 log \\frac{P}{20}（P 是聲壓）。（log 2 ≈ 0.3010）\n(1) 聲壓 %d 時是幾分貝？　(2) 聲壓變成原來的 %s 倍，分貝增加多少？　(3) %d 分貝時的聲壓" % (P, k_dec, dB3),
                 [fl("代入：", "(1)　20 log \\frac{%d}{20} = 20 log [0] = [1] 分貝" % P, [str(r), str(d1)], "log 10^{n} = n", part="(1)"),
-                 fl("20 log \\frac{kP}{20} = 20 log k + 20 log \\frac{P}{20}：", "(2)　增加 20 log %s ≈ [0] 分貝" % k_dec, [incs],
+                 fl("20 log \\frac{kP}{20} = 20 log k + 20 log \\frac{P}{20}：", "(2)　增加 20 log %s %s [0] 分貝" % (k_dec, "=" if near(inc, round(inc)) else "≈"), [incs],
                     "log %s %s" % (k_dec, "≈ 0.3010" if k == 2 else "= %d" % round(lg(k))), part="(2)"),
                  fl("反過來解 P：", "(3)　20 log \\frac{P}{20} = %d　→　log \\frac{P}{20} = [0]，P = [1]" % dB3, [a(e3), str(P3)], "\\frac{P}{20} = 10^{%s}" % t(e3), part="(3)")])
 
@@ -70,7 +70,7 @@ def xb_car(e1, d_big, n, d_small):
     approx = d_big + 10 * {2: L2, 3: L3, 4: 2 * L2, 5: 1 - L2}[c]
     assert _one(dB) == _one(approx)
     return item("xb_car", "boss", 2, "汽車和汽笛", 1.65,
-                "聲音強度 I 的分貝數 d = 10 log \\frac{I}{10^{−12}}，幾個聲音一起響時強度相加。（log 2 ≈ 0.3010、log 3 ≈ 0.4771）\n(1) I = 10^{%d} 是幾分貝？　(2) 一支 %d 分貝的汽笛和 %d 支 %d 分貝的汽笛一起響，是幾分貝？" % (e1, d_big, n, d_small),
+                "分貝 d = 10 log \\frac{I}{10^{−12}}（I 是聲音強度，一起響時強度相加）。（log 2 ≈ 0.3010、log 3 ≈ 0.4771）\n(1) I = 10^{%d} 是幾分貝？　(2) 一支 %d 分貝汽笛加 %d 支 %d 分貝汽笛，共幾分貝？" % (e1, d_big, n, d_small),
                 [fl("代入：", "(1)　10 log 10^{%d − (−12)} = 10 × [0] = [1] 分貝" % e1, [str(e1 + 12), str(d1)], "指數相減：%d − (−12)" % e1, part="(1)"),
                  fl("分貝換回強度：", "(2)　%d 分貝：I = 10^{[0]}；%d 分貝：I = 10^{[1]}" % (d_big, d_small), [str(d_big // 10 - 12), str(d_small // 10 - 12)],
                     "\\frac{d}{10} = log \\frac{I}{10^{−12}}", part="(2)"),

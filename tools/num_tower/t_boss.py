@@ -125,11 +125,11 @@ def nb_stairs(rows, align, L):
         for j in range(r):
             shapes.append(poly_sh([(x0 + j * w, y0), (x0 + (j + 1) * w, y0), (x0 + (j + 1) * w, y0 + h), (x0 + j * w, y0 + h)], "lime", fill="lime"))
     shapes += [lab((W / 2, -0.35), "x", "text"), lab((-0.3, h / 2), "y", "text")]
-    plot = {"x": [-0.7, fx(W + 0.4)], "y": [-0.7, fx(len(rows) * h + 0.3)], "geo": True, "h": 150, "shapes": shapes}
+    plot = {"x": [-0.7, fx(W + 0.4)], "y": [-0.7, fx(len(rows) * h + 0.3)], "geo": True, "h": 120, "shapes": shapes}
     desc = "、".join(str(r) for r in rows)
     return item("nb_stairs", "boss", 2, "階梯形的農地", 1.6,
-                "%d 塊一樣大的長方形農地（寬 x、高 y）排成由上到下 %s 塊的階梯（如圖），每塊四周都要圍柵欄（共用的邊只圍一次），柵欄總長 %d 公尺。\n(1) 數柵欄　(2) 一塊的面積最大多少？　(3) 這時總面積與 x、y" % (N, desc, L),
-                [fl("數一數橫的、直的柵欄各有幾段：", "(1)　橫的 [0] 段（每段長 x），直的 [1] 段（每段長 y）", [str(nh), str(nv)],
+                "%d 塊一樣的長方形農地（寬 x、高 y）排成 %s 塊的階梯（如圖），每塊都圍柵欄（共用的邊只圍一次），總長 %d 公尺。\n(1) 數柵欄　(2) 一塊面積最大多少？　(3) 這時總面積與 x、y" % (N, desc, L),
+                [fl("數一數橫的、直的柵欄各有幾段：", "(1)　橫的 [0] 段 x，直的 [1] 段 y", [str(nh), str(nv)],
                     "橫線：每一條水平線的長度看上下兩列比較長的那一列；直線：每一列有「塊數 + 1」條", part="(1)"),
                  fl("用算幾：", "(2)　%d = %dx + %dy ≥ 2√{%dxy}，xy ≤ [0]" % (L, nh, nv, nh * nv), [a(xy)],
                     "%d ≥ 2√{%dxy}，兩邊除以 2 再平方" % (L, nh * nv), part="(2)"),

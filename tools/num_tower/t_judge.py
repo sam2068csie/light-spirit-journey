@@ -107,9 +107,9 @@ def nj_nosol(u, v, specs):
         has = any(OPS2[op](fn(x), r) for x in xs)
         nos = not has
         if which == "f":
-            why = "%s 是數線上 x 到 %s、%s 的距離和，最小值 %d" % (ft, t(u), t(v), D)
+            why = "x 到 %s、%s 的距離和，最小值 %d" % (t(u), t(v), D)
         else:
-            why = "%s 是距離差，範圍 −%d ≤ … ≤ %d" % (gt, D, D)
+            why = "距離差在 −%d 和 %d 之間" % (D, D)
         why += "，%s" % ("所以無解" if nos else "有解")
         cards.append(cardc("%s %s %s 無解" % (ft if which == "f" else gt, op, t(r)), nos, why, nos))
     return item("nj_nosol", "judge", 2, "哪些無解", 1.15, "下列方程式或不等式，哪些無解？",

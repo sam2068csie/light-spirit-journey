@@ -128,9 +128,23 @@ def xl_system(e1, r1, e2, r2, ask):
         return ("a" if p == 1 else "a^{%d}" % p) + ("b" if q == 1 else "b^{%d}" % q)
     name, val, how = ask
     v = how(x, y)
+    # 係數 1 不用填
+    tpl1, ans1 = "", []
+    for k_, (pc, qc, rr) in enumerate([(p1, q1, r1), (p2, q2, r2)]):
+        part = ""
+        for c_, var in ((pc, "x"), (qc, "y")):
+            if part:
+                part += " + "
+            if c_ == 1:
+                part += var
+            else:
+                part += "[%d]%s" % (len(ans1), var)
+                ans1.append(str(c_))
+        tpl1 += ("，" if k_ else "") + "%s = %d" % (part, rr)
+    assert ans1
     return item("xl_system", "log", 2, "兩個方程式取 log", 1.15,
                 "a、b 是正數，%s = 10^{%d}、%s = 10^{%d}，求 %s。" % (mono(p1, q1), r1, mono(p2, q2), r2, name),
-                [fl("兩邊取 log，設 log a = x、log b = y：", "[0]x + [1]y = %d，[2]x + [3]y = %d" % (r1, r2), [str(p1), str(q1), str(p2), str(q2)], "log a^{m}b^{n} = m log a + n log b"),
+                [fl("兩邊取 log，設 log a = x、log b = y：", tpl1, ans1, "log a^{m}b^{n} = m log a + n log b"),
                  fl("解聯立：", "x = [0]，y = [1]", [a(x), a(y)], "加減消去法"),
                  fl("換回 a、b：", "%s = [0]" % name, [v], "a = 10^{x}、b = 10^{y}")])
 

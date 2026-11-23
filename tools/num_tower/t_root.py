@@ -215,15 +215,16 @@ def nr_paper(k, a4=False):
     """沿長邊 k 等分（摺），小長方形和原來的相似；長 x、寬 1"""
     assert k in (2, 3)
     st = "對摺" if k == 2 else "摺成三等份"
+    how = "把長邊%s（長邊分成 %d 段）" % (st, k)
     piece = "\\frac{x}{%d}" % k
     steps = [ch("長 x、寬 1，%s後每一小塊的長和寬是？" % st, ["長 1、寬 %s" % piece, "長 x、寬 \\frac{1}{%d}" % k, "長 %s、寬 \\frac{1}{%d}" % (piece, k), "長 %dx、寬 1" % k],
-                "沿長邊%s：長邊 x 被分成 %d 份，原來的寬 1 變成長" % (st, k), "小長方形：長 1、寬 %s" % piece),
+                "長邊 x 被分成 %d 份，每份 \\frac{x}{%d}；原來的寬 1 變成長" % (k, k), "小長方形：長 1、寬 %s" % piece),
              fl("長寬比一樣：", "\\frac{x}{1} = \\frac{1}{%s}　→　x^{2} = [0]，x = [1]" % piece, [str(k), "√%d" % k], "交叉相乘，x > 0")]
     if a4:
         w = 297 / S(2)
         assert abs(w - 210) < 0.5
         steps.append(fl("A4 紙長 297 mm，寬約幾 mm？", "寬 = \\frac{297}{√{2}} ≈ [0]（取整數）", ["210"], "√{2} ≈ 1.414"))
-    stem = ("一張長方形紙，長 x、寬 1，沿長邊%s後，每一小塊都和原來的紙形狀一樣（相似）。求 x。" % st) if not a4 else \
+    stem = ("一張長方形紙，長 x、寬 1，%s後，每一小塊都和原來的紙形狀一樣（相似）。求 x。" % how) if not a4 else \
         "A4 紙的特點是對摺後的形狀和原來一樣（相似）。設長 x、寬 1，求 x；A4 紙長 297 mm，寬約多少？"
     return item("nr_paper", "root", 1, "對摺後一樣的長方形", 1.0, stem, steps)
 

@@ -169,10 +169,10 @@ def nf_root_pt(sa, ra, ra_fill, sb, rb, rb_fill, k, inside, p_ans):
     assert near(float(ra), _m.sqrt(float(eval_nest(sa)))) and near(float(rb), _m.sqrt(float(eval_nest(sb))))
     if inside:
         P = (k * ra + rb) / (k + 1)
-        form = "\\frac{%d a + b}{%d}" % (k, k + 1)
+        form = "\\frac{%da + b}{%d}" % (k, k + 1)
     else:
         P = (k * ra - rb) / (k - 1)
-        form = "\\frac{%d a − b}{%d}" % (k, k - 1)
+        form = "\\frac{%da − b}{%d}" % (k, k - 1)
     assert abs(float(P) - float(rb)) / abs(float(P) - float(ra)) - k < 1e-9
     assert (min(float(ra), float(rb)) < float(P) < max(float(ra), float(rb))) == inside
     chk(p_ans, float(P))
