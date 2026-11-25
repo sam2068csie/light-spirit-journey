@@ -7,7 +7,7 @@ extends "res://data/levels/num/num_level.gd"
 ##       點一個格子點（例如從 P 出發的 \vec{a} 指到哪裡）
 ##   {"kind": "vdrag", …, "fixed": ["A", "B"]（可省略）, "need": 4, "pairs": [["AB", "DC"], …]（全部的答案）,
 ##    "seed": [["AB", "DC"]]（上一步已經找到的）, "done_btn": true}
-##       拖箭頭平移，頭尾都落在點上就找到一對。fixed：只能拖這一支。done_btn：按「找齊了」才判斷（太早按會說還剩幾對）
+##       拖箭頭平移，頭尾都落在點上就找到一對。fixed：只能拖這一支。done_btn：找齊了「找齊了」才亮，按了才過（題目後面標 n / need 對）
 ##   {"kind": "vpath", …, "from": [x, y], "to": [x, y], "tiles": [{"s": "\\vec{AB}", "v": [x, y]}, …], "flip": true, "sol": [[磁磚, ±1], …]}
 ##       鋪路：右邊點磁磚（＋、−），箭頭一支接一支從 from 鋪出去，按「確定」：終點是 to 就對，風箏沿著路飛過去
 ##   {"kind": "vplace", …, "sandbox": {"label": "D", "poly": ["A", "B", "C", "D"], "lit": [[x, y]] 或 "all", "start": [x, y]},
@@ -111,7 +111,7 @@ func _forge_step() -> void:
 			_vd_refresh()
 			if bool(st.get("done_btn", false)):
 				go_btn.visible = true
-				go_btn.disabled = true      # 防呆：自己找到一對以後才亮（_vgo_refresh）
+				go_btn.disabled = true      # 防呆：對數找齊了才亮（_vgo_refresh）
 				go_btn.text = "找齊了"
 		"vpath":
 			_vp().path_on(_v2(st.from), _v2(st.to))
@@ -214,6 +214,9 @@ func _vd_refresh() -> void:
 	for p in _vp().found_pairs:
 		rows.append("\\vec{%s} = \\vec{%s}" % [p[0], p[1]])
 	vd_list.text = "　".join(rows) if rows.size() <= 2 else "\n".join(_pairs_rows(rows))
+	# 題目後面標出找到幾對、一共幾對
+	if si < steps.size() and String(steps[si].kind) == "vdrag" and int(steps[si].need) > 1:
+		task_label.text = "%s（%d / %d 對）" % [String(steps[si].q), vd_found.size(), int(steps[si].need)]
 
 
 static func _pairs_rows(rows: Array) -> Array:
@@ -524,14 +527,15 @@ func _vweigh_submit() -> void:
 
 # ---------- 防呆：還沒開始作答，按鈕不亮 ----------
 
-## 「找齊了」「確定」：自己動過（找到一對、鋪了一支、拖過點、掛過砝碼、拉過滑桿）才亮
+## 「找齊了」：對數找齊了才亮（題目後面標「n / 共幾對」）
+## 「確定」：自己動過（鋪了一支、拖過點、掛過砝碼、拉過滑桿）才亮
 func _vgo_ready() -> bool:
 	if si >= steps.size():
 		return false
 	var st: Dictionary = steps[si]
 	match String(st.kind):
 		"vdrag":
-			return vd_found.size() > (st.get("seed", []) as Array).size()
+			return vd_found.size() >= int(st.need)
 		"vpath":
 			return not vpath_seq.is_empty()
 		"vplace":

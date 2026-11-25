@@ -1,11 +1,11 @@
 extends "test_base.gd"
 ## 平面向量的箭頭畫布：用「真的滑鼠事件」作答（test_play 是直接放答案，這裡檢查拖、點、鋪路的操作本身）
 ##   ・vtap：點相等的箭頭（點錯扣一顆心）
-##   ・vdrag：拖 \vec{AB} 疊到 DC；自己點兩點畫箭頭再拖；太早按「找齊了」
+##   ・vdrag：拖 \vec{AB} 疊到 DC；自己點兩點畫箭頭再拖；標出幾對，找齊了「找齊了」才亮
 ##   ・vplace：判斷的時候拖 D 看燈；把 D 拖到燈亮的地方
 ##   ・vpath：點磁磚鋪路，鋪錯不會過、鋪對會過
 ##   ・vweigh：掛砝碼，平衡才過
-##   ・防呆：還沒開始找（拖、鋪、掛、拉滑桿）之前，「找齊了」「確定」不亮
+##   ・防呆：沒找齊不能按「找齊了」；還沒動手（鋪、拖點、掛、拉滑桿）之前「確定」不亮
 ##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
 ##   ・V4：量角器先猜（guess）、合起來的箭（sum）
 ##   ・V5：繩子＋半格吸附（外心）、竿子（內心）、三分花圃（split）
@@ -220,7 +220,8 @@ func _check_drag() -> void:
 	lv._fill_submit()
 	await frames(3)
 	ok(lv.si == 2, "4 × 3 = 12")
-	ok(lv.go_btn.visible and lv.go_btn.disabled, "防呆：還沒自己找到一對，「找齊了」不亮")
+	ok(lv.go_btn.visible and lv.go_btn.disabled, "防呆：還沒找齊，「找齊了」不亮")
+	ok(String(lv.task_label.text).contains("（1 / 4 對）"), "題目後面標出找到幾對（%s）" % lv.task_label.text)
 	ok(_pl().found_pairs.size() == 1, "上一步的 \vec{AB} = \vec{DC} 只列一次（%d）" % _pl().found_pairs.size())
 	# 自己畫 \vec{BA}，拖到 CD
 	_press(_px(B))
@@ -228,20 +229,16 @@ func _check_drag() -> void:
 	ok(String(_pl().drag_arrow.get("src", "")) == "BA", "點 B 再點 A 畫出 \\vec{BA}")
 	await _drag(_px(B.lerp(A, 0.5)), _px(C.lerp(D, 0.5)))
 	ok(lv.vd_found.size() == 2, "找到 \\vec{BA} = \\vec{CD}（共 %d 對）" % lv.vd_found.size())
-	ok(not lv.go_btn.disabled, "找到一對以後「找齊了」才亮")
+	ok(lv.go_btn.disabled and String(lv.task_label.text).contains("（2 / 4 對）"), "找到 2 / 4 對：「找齊了」還不亮")
 	# 拖到不是點的地方：彈回去
 	await _drag(_px(B.lerp(A, 0.5)), _px(B.lerp(A, 0.5) + Vector2(0.4, 1.3)))
 	ok(lv.vd_found.size() == 2 and Vector2(_pl().drag_arrow.a).is_equal_approx(B), "沒對到點就彈回原位")
-	# 太早按找齊了
-	var e0: int = lv.energy
-	lv._custom_go()
-	await frames(2)
-	ok(lv.si == 2 and lv.energy == e0 - 1, "還沒找齊就按「找齊了」：扣一顆心")
 	for pr in [["A", "D", "B", "C"], ["D", "A", "C", "B"]]:
 		_press(_px(nm[pr[0]]))
 		_press(_px(nm[pr[1]]))
 		await _drag(_px(Vector2(nm[pr[0]]).lerp(nm[pr[1]], 0.5)), _px(Vector2(nm[pr[2]]).lerp(nm[pr[3]], 0.5)))
 	ok(lv.vd_found.size() == 4, "四對都找到了（%d）" % lv.vd_found.size())
+	ok(not lv.go_btn.disabled, "對數找齊了，「找齊了」才亮")
 	lv._custom_go()
 	await frames(3)
 	ok(lv.si == 3, "找齊了就過")
