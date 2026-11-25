@@ -34,6 +34,8 @@ var vpath_expr: MathLabel
 var vweigh_labels := {}
 var vpick_ok := false
 var vo_i := 0
+var vplace_touched := false
+var vweigh_touched := false
 
 
 func scene_theme() -> String:
@@ -100,6 +102,7 @@ func _forge_step() -> void:
 			for p in st.get("seed", []):
 				vd_found.append(_pair_key(String(p[0]), String(p[1])))
 			_vp().drag_on(st.get("fixed", []), _vdrag_event)
+			_vp().found_pairs = []      # 上一步找到的會留在畫布上；這一步只列 seed，不然會重複
 			for p in st.get("seed", []):
 				_vp().found_pairs.append([String(p[0]), String(p[1])])
 			vd_list = _wrap_label(17, UITheme.GOOD)
@@ -108,24 +111,26 @@ func _forge_step() -> void:
 			_vd_refresh()
 			if bool(st.get("done_btn", false)):
 				go_btn.visible = true
-				go_btn.disabled = false
+				go_btn.disabled = true      # 防呆：自己找到一對以後才亮（_vgo_refresh）
 				go_btn.text = "找齊了"
 		"vpath":
 			_vp().path_on(_v2(st.from), _v2(st.to))
 			_build_tiles(st)
 			go_btn.visible = true
-			go_btn.disabled = false
+			go_btn.disabled = true      # 防呆：鋪了第一支才亮
 			go_btn.text = "確定"
 		"vplace":
+			vplace_touched = false
 			_vp().place_on(st.sandbox, _vplace_moved)
 			go_btn.visible = true
-			go_btn.disabled = false
+			go_btn.disabled = true      # 防呆：拖過點才亮
 			go_btn.text = "確定"
 		"vweigh":
 			_vp().weigh_on({"b": st.b, "c": st.c, "p": st.p, "wb0": 1, "wc0": 1})
+			vweigh_touched = false
 			_build_weigh()
 			go_btn.visible = true
-			go_btn.disabled = false
+			go_btn.disabled = true      # 防呆：掛過砝碼才亮
 			go_btn.text = "確定"
 		"vorder":
 			vo_i = 0
@@ -232,6 +237,7 @@ func _vdrag_event(d: Dictionary) -> void:
 		return
 	vd_found.append(key)
 	_vp().drag_found(String(d.from), String(d.to))
+	_vgo_refresh()
 	Game.of(self).play("blip", 1.0 + 0.08 * vd_found.size(), -8.0)
 	_vd_refresh()
 	if not bool(st.get("done_btn", false)) and vd_found.size() >= int(st.need):
@@ -334,6 +340,7 @@ func _tile_refresh() -> void:
 		else:
 			terms += (" − " if c < 0 else " + ") + body
 	vpath_expr.text = "鋪好的路：" + (terms if terms != "" else "（還沒有）")
+	_vgo_refresh()
 
 
 func _vpath_submit() -> void:
@@ -405,7 +412,11 @@ func _vplace_submit() -> void:
 
 ## 拖的時候：光點描圖數一數找到幾個
 func _vplace_moved(_p: Vector2) -> void:
-	if _vkind() != "vplace" or String(steps[si].get("goal", "")) != "trace":
+	if _vkind() != "vplace":
+		return
+	vplace_touched = true
+	_vgo_refresh()
+	if String(steps[si].get("goal", "")) != "trace":
 		return
 	var n := _vp().trace_pts.size()
 	var need := int(steps[si].get("need", 4))
@@ -489,7 +500,9 @@ func _weigh_add(side: String, sg: int) -> void:
 		return
 	var pl := _vp()
 	pl.weigh[side] = clampi(int(pl.weigh[side]) + sg, 1, 9)
+	vweigh_touched = true
 	_weigh_refresh()
+	_vgo_refresh()
 
 
 func _weigh_refresh() -> void:
@@ -507,6 +520,45 @@ func _vweigh_submit() -> void:
 		_vec_finish(si)
 		return
 	_vwrong(st, ("B 那一邊太重了。" if tq > 0.0 else "C 那一邊太重了。") + String(st.nudge))
+
+
+# ---------- 防呆：還沒開始作答，按鈕不亮 ----------
+
+## 「找齊了」「確定」：自己動過（找到一對、鋪了一支、拖過點、掛過砝碼、拉過滑桿）才亮
+func _vgo_ready() -> bool:
+	if si >= steps.size():
+		return false
+	var st: Dictionary = steps[si]
+	match String(st.kind):
+		"vdrag":
+			return vd_found.size() > (st.get("seed", []) as Array).size()
+		"vpath":
+			return not vpath_seq.is_empty()
+		"vplace":
+			return vplace_touched
+		"vweigh":
+			return vweigh_touched
+		"slide":
+			return slide_moved
+	return true
+
+
+func _vgo_refresh() -> void:
+	if r.get("type", "") != "forge" or si >= steps.size() or not go_btn.visible:
+		return
+	if String(steps[si].kind) in ["vdrag", "vpath", "vplace", "vweigh", "slide"]:
+		go_btn.disabled = not _vgo_ready()
+
+
+## 滑桿（line_level.gd）：拉過才亮
+func _build_slide(st: Dictionary) -> void:
+	super(st)
+	go_btn.disabled = not slide_moved
+
+
+func _refresh_slide() -> void:
+	super()
+	_vgo_refresh()
 
 
 # ---------- 送出、測試 ----------
@@ -598,6 +650,7 @@ func test_answer(st: Dictionary) -> bool:
 			vd_found = []
 			for p in st.pairs:
 				vd_found.append(_pair_key(String(p[0]), String(p[1])))
+			_vgo_refresh()
 			return true
 		"vpath":
 			vpath_seq = []
@@ -606,11 +659,13 @@ func test_answer(st: Dictionary) -> bool:
 			_tile_refresh()
 			return true
 		"vplace":
+			vplace_touched = true
 			_vp().place_p = _v2(st.ans)
 			if String(st.get("goal", "")) == "trace":
 				_vp().trace_pts = []
 				for q in st.trace_ans:
 					_vp().trace_pts.append(_v2(q))
+			_vgo_refresh()
 			return true
 		"vorder":
 			vo_i = (st.order as Array).size()
@@ -618,7 +673,9 @@ func test_answer(st: Dictionary) -> bool:
 		"vweigh":
 			_vp().weigh["wb"] = int(st.ans[0])
 			_vp().weigh["wc"] = int(st.ans[1])
+			vweigh_touched = true
 			_weigh_refresh()
+			_vgo_refresh()
 			return true
 	return super(st)
 

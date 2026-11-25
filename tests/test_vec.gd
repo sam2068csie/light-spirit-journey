@@ -5,6 +5,7 @@ extends "test_base.gd"
 ##   ・vplace：判斷的時候拖 D 看燈；把 D 拖到燈亮的地方
 ##   ・vpath：點磁磚鋪路，鋪錯不會過、鋪對會過
 ##   ・vweigh：掛砝碼，平衡才過
+##   ・防呆：還沒開始找（拖、鋪、掛、拉滑桿）之前，「找齊了」「確定」不亮
 ##   ・V3：轉箭頭（ring）、排隊點（vorder）、光點描圓（trace）、拖影子讓竿子站直（pole）
 ##   ・V4：量角器先猜（guess）、合起來的箭（sum）
 ##   ・V5：繩子＋半格吸附（外心）、竿子（內心）、三分花圃（split）
@@ -219,12 +220,15 @@ func _check_drag() -> void:
 	lv._fill_submit()
 	await frames(3)
 	ok(lv.si == 2, "4 × 3 = 12")
+	ok(lv.go_btn.visible and lv.go_btn.disabled, "防呆：還沒自己找到一對，「找齊了」不亮")
+	ok(_pl().found_pairs.size() == 1, "上一步的 \vec{AB} = \vec{DC} 只列一次（%d）" % _pl().found_pairs.size())
 	# 自己畫 \vec{BA}，拖到 CD
 	_press(_px(B))
 	_press(_px(A))
 	ok(String(_pl().drag_arrow.get("src", "")) == "BA", "點 B 再點 A 畫出 \\vec{BA}")
 	await _drag(_px(B.lerp(A, 0.5)), _px(C.lerp(D, 0.5)))
 	ok(lv.vd_found.size() == 2, "找到 \\vec{BA} = \\vec{CD}（共 %d 對）" % lv.vd_found.size())
+	ok(not lv.go_btn.disabled, "找到一對以後「找齊了」才亮")
 	# 拖到不是點的地方：彈回去
 	await _drag(_px(B.lerp(A, 0.5)), _px(B.lerp(A, 0.5) + Vector2(0.4, 1.3)))
 	ok(lv.vd_found.size() == 2 and Vector2(_pl().drag_arrow.a).is_equal_approx(B), "沒對到點就彈回原位")
@@ -255,7 +259,9 @@ func _check_place() -> void:
 	lv._on_answer(int(lv.cur_q.correct))
 	await frames(3)
 	ok(lv.si == 1 and String(lv.steps[1].kind) == "vplace", "判 ✕ 之後要找反例")
+	ok(lv.go_btn.disabled, "防呆：還沒拖點，「確定」不亮")
 	_press(_px(Vector2(0, 2)))
+	ok(not lv.go_btn.disabled, "拖過點，「確定」就亮")
 	lv._custom_go()
 	await frames(2)
 	ok(lv.si == 1, "燈沒亮的地方不算")
@@ -267,7 +273,9 @@ func _check_place() -> void:
 
 func _check_path() -> void:
 	await _start("detour", 0)
+	ok(lv.go_btn.disabled, "防呆：還沒鋪路，「確定」不亮")
 	lv._tile_add(0, 1)
+	ok(not lv.go_btn.disabled, "鋪了一支，「確定」就亮")
 	lv._custom_go()
 	await frames(2)
 	ok(lv.si == 0, "只鋪 \\vec{AB}：停在別的地方，不會過")
@@ -282,11 +290,16 @@ func _check_path() -> void:
 
 func _check_weigh() -> void:
 	await _start("bead", 0)
+	ok(lv.go_btn.disabled, "防呆：還沒拉滑桿，「確定」不亮")
+	lv.slide_sliders["n"].value = 1.0
+	ok(not lv.go_btn.disabled, "拉過滑桿，「確定」就亮")
 	lv.slide_vals = {"n": 1.0}
 	lv._slide_submit()
 	await frames(3)
 	ok(lv.si == 1 and String(lv.steps[1].kind) == "vweigh", "拖好珠子，下一步掛砝碼")
+	ok(lv.go_btn.disabled, "防呆：還沒掛砝碼，「確定」不亮")
 	lv._weigh_add("wb", 1)
+	ok(not lv.go_btn.disabled, "掛了砝碼，「確定」就亮")
 	lv._custom_go()
 	await frames(2)
 	ok(lv.si == 1, "B 掛 2、C 掛 1：不平衡")
