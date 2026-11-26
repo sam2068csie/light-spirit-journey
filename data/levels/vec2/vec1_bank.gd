@@ -111,7 +111,7 @@ static func slots() -> Array:
 
 static func _slots() -> Array:
 	return [
-		_same(), _dex(), _detour(), _hexa(), _flag(), _bow(), _skew(), _locks(),
+		_same(), _dex(), _detour(), _hexa(), _hexa2(), _bow(), _skew(), _locks(),
 		{"id": "speed1", "chapter": 1, "type": "speed", "title": "風向速算", "time": 120.0,
 		 "story": "斜格子上的風，看一眼就讀出係數！",
 		 "insight": "\\vec{OP} = x\\vec{a} + y\\vec{b}：沿 \\vec{a} 走 x 格、沿 \\vec{b} 走 y 格\n往反方向走，係數就是負的。",
@@ -236,7 +236,7 @@ static func _detour() -> Dictionary:
 		_ar(A, S, "lime", "\\vec{AB} + \\vec{AC}", {"at": 2, "w": 2.5, "lt": 0.78})]
 	var v1 := _plane([-8, 8], [-4, 4],
 		[_ar(A, B, "cyan", "\\vec{AB}", {"ls": -1}), _ar(A, C, "pink", "\\vec{AC}")] + _dots(pts, "gold", offs) + react
-			+ [_ar(C, B, "gold", "\\vec{AB} − \\vec{AC}", {"at": 2, "w": 2.5, "ls": -1, "lt": 0.25})], pts)
+			+ [_ar(C, B, "gold", "\\vec{AB} − \\vec{AC}", {"at": 2, "w": 2.5, "ls": -1, "lt": 0.38})], pts)
 	var v2 := _plane([-8, 8], [-4, 4],
 		[_ar(A, C, "pink", "\\vec{AC}"), _ar(B, C, "cyan", "\\vec{BC}", {"ls": -1})] + _dots(pts, "gold", offs)
 			+ [_ar(A, B, "gold", "\\vec{AC} − \\vec{BC}", {"at": 2, "w": 2.5, "ls": -1})], pts)
@@ -266,7 +266,8 @@ static func _detour() -> Dictionary:
 
 
 ## 4 六角風場：正六邊形的審判卡，判完照式子走一遍（A3、A4）
-static func _hexa() -> Dictionary:
+## part 0：從 A 出發（AD、AC）；part 1：不從 A 出發（CE、BE / FC、AB）。一題只判兩張卡。
+static func _hexa_parts(part: int) -> Array:
 	var H := {}
 	var names := "ABCDEF"
 	for i in 6:
@@ -292,11 +293,11 @@ static func _hexa() -> Dictionary:
 				out.append(p)
 		return out
 	var sa := base + [_tag(H.O, "O", "dim", {"off": [6, 14]}), _ar(H.A, H.B, "cyan", "\\vec{a}", {"ls": -1}),
-		_ar(H.A, H.F, "pink", "\\vec{b}")] + vdots + [
+		_ar(H.A, H.F, "pink", "\\vec{b}")] + vdots + ([
 		_walk(wa.call(H.A, [[2, a], [2, b]]), 1, "gold", true, {"until": 2}),
-		_walk(wa.call(H.A, [[1, a], [2, b]]), 2, "gold", true, {"bad": true, "target": _p(H.C), "until": 3}),
-		_walk(wa.call(H.C, [[1, b], [-1, a]]), 4, "gold", true, {"until": 5}),
-		_walk(wa.call(H.B, [[-2, a]]), 5, "gold", true, {"bad": true, "target": _p(H.E), "until": 6})]
+		_walk(wa.call(H.A, [[1, a], [2, b]]), 2, "gold", true, {"bad": true, "target": _p(H.C), "until": 3})] if part == 0 else [
+		_walk(wa.call(H.C, [[1, b], [-1, a]]), 1, "gold", true, {"until": 2}),
+		_walk(wa.call(H.B, [[-2, a]]), 2, "gold", true, {"bad": true, "target": _p(H.E), "until": 3})])
 	var tiles_ab := [{"s": "\\vec{a}", "v": _p(a)}, {"s": "\\vec{b}", "v": _p(b)}]
 	var va := {"eq": "正六邊形 ABCDEF，\\vec{a} = \\vec{AB}、\\vec{b} = \\vec{AF}\n下面哪些正確？",
 		"plane": _plane([-7, 7], [-3.4, 3.4], sa, named),
@@ -322,11 +323,11 @@ static func _hexa() -> Dictionary:
 	var wl := func(st: Vector2, cu: float, cv: float) -> Array:
 		return [st, st + u * cu, st + u * cu + v * cv]
 	var sb := base + [{"k": "skew", "o": _p(H.A), "a": _p(u), "b": _p(v), "i": [-1, 2], "j": [-1, 2], "div": 3, "c": "cyan"},
-		_tag(H.O, "O", "dim", {"off": [6, 14]}), _ar(H.A, H.C, "cyan", "\\vec{u}", {"ls": -1}), _ar(H.A, H.E, "pink", "\\vec{v}")] + vdots + [
+		_tag(H.O, "O", "dim", {"off": [6, 14]}), _ar(H.A, H.C, "cyan", "\\vec{u}", {"ls": -1}), _ar(H.A, H.E, "pink", "\\vec{v}")] + vdots + ([
 		_walk(wl.call(H.A, 2.0 / 3.0, 2.0 / 3.0), 1, "gold", true, {"until": 2}),
-		_walk([H.B, H.B + u], 2, "gold", true, {"bad": true, "target": _p(H.D), "until": 3}),
-		_walk(wl.call(H.F, 4.0 / 3.0, -2.0 / 3.0), 4, "gold", true, {"until": 5}),
-		_walk(wl.call(H.A, 2.0 / 3.0, 1.0 / 3.0), 5, "gold", true, {"bad": true, "target": _p(H.B), "until": 6})]
+		_walk([H.B, H.B + u], 2, "gold", true, {"bad": true, "target": _p(H.D), "until": 3})] if part == 0 else [
+		_walk(wl.call(H.F, 4.0 / 3.0, -2.0 / 3.0), 1, "gold", true, {"until": 2}),
+		_walk(wl.call(H.A, 2.0 / 3.0, 1.0 / 3.0), 2, "gold", true, {"bad": true, "target": _p(H.B), "until": 3})])
 	var vb := {"eq": "正六邊形 ABCDEF，\\vec{u} = \\vec{AC}、\\vec{v} = \\vec{AE}\n下面哪些正確？",
 		"plane": _plane([-7, 7], [-3.4, 3.4], sb, named),
 		"steps": [
@@ -344,79 +345,30 @@ static func _hexa() -> Dictionary:
 				"\\vec{AB} = \\frac{2}{3}\\vec{u} − \\frac{1}{3}\\vec{v}", "B 在 \\vec{v} 的反方向那一邊。", T_LIN),
 		]}
 	for vv in [va, vb]:
+		vv.steps = vv.steps.slice(part * 3, part * 3 + 3)
+		var k := 0
 		for st in vv.steps:
+			if String(st.kind) == "choice" or st.has("stmt"):
+				st.name = ["審判一", "審判二"][k]
+				k += 1
 			if String(st.kind) != "fill":      # 填空要留位置給作答框
 				st["big"] = true
+	return [va, vb]
+
+
+static func _hexa() -> Dictionary:
 	return {"id": "hexa", "chapter": 1, "type": "forge", "title": "六角風場",
-		"story": "照卡片上的式子走一遍，看風箏停在哪裡。",
-		"insight": "正六邊形：\\vec{AO} = \\vec{AB} + \\vec{AF}，對邊平行、一樣長\n用兩支箭頭表示一支：沿著六邊形的邊首尾接起來。",
-		"variants": [va, vb]}
+		"story": "照卡片上的式子從 A 走一遍，看風箏停在哪裡。",
+		"insight": "正六邊形：\\vec{AO} = \\vec{AB} + \\vec{AF}，\\vec{AD} = 2\\vec{AO}\n從 A 出發的箭頭：沿著六邊形的邊首尾接起來。",
+		"variants": _hexa_parts(0)}
 
 
-## 5 第四根旗桿：哪些條件保證 ABCD 是平行四邊形（A7）
-static func _flag() -> Dictionary:
-	var vars := []
-	for cfg in [
-			{"A": Vector2(-5, -2), "B": Vector2(0, -2), "C": Vector2(2, 2), "E": Vector2(5, -3), "start": Vector2(-6, 3),
-			 "cards": [["\\vec{AB} = \\vec{CD}", "bow", "\\vec{CD} = \\vec{AB} 的 D 只有一個，可是連起來是交叉的：ABDC 才是平行四邊形。"],
-				["\\vec{AC} = \\vec{AB} + \\vec{AD}", "o", "平行四邊形法：\\vec{AB}、\\vec{AD} 為兩邊，對角線就是 \\vec{AC}。"],
-				["\\vec{EA} + \\vec{EC} = \\vec{EB} + \\vec{ED}", "o", "兩條對角線的中點重合（E 放哪裡都一樣）。"],
-				["\\vec{AB} + \\vec{BC} + \\vec{CD} = \\vec{AD}", "all", "首尾相接，任何四邊形都成立。"]],
-			 "ans_all": Vector2(4, 0)},
-			{"A": Vector2(-3, 0), "B": Vector2(1, -2), "C": Vector2(3, 0), "E": Vector2(-6, -3), "start": Vector2(5, 3),
-			 "cards": [["\\vec{AD} = \\vec{BC}", "o", "一組對邊平行而且一樣長。"],
-				["\\vec{EA} + \\vec{EB} = \\vec{EC} + \\vec{ED}", "bow2", "\\ol{AB}、\\ol{CD} 的中點重合：ACBD 才是平行四邊形。"],
-				["\\vec{BD} = \\vec{BA} + \\vec{BC}", "o", "平行四邊形法：\\vec{BA}、\\vec{BC} 為兩邊，對角線是 \\vec{BD}。"],
-				["\\vec{AB} − \\vec{AD} = \\vec{DB}", "all", "終點減起點，任何四個點都成立。"]],
-			 "ans_all": Vector2(4, 2)}]:
-		var A: Vector2 = cfg.A
-		var B: Vector2 = cfg.B
-		var C: Vector2 = cfg.C
-		var E: Vector2 = cfg.E
-		var para := A + C - B
-		var pts := {"A": A, "B": B, "C": C}
-		var shapes := [_seg(A, B, "faint"), _seg(B, C, "faint")] + _dots(pts, "gold", {"A": [-16, 4], "B": [6, 14], "C": [8, -4]})
-		shapes.append(_tag(E, "E", "dim"))
-		var steps := []
-		var k := 0
-		for cd in cfg.cards:
-			k += 1
-			var kind := String(cd[1])
-			var lit = [_p(para)]
-			var bow := Vector2.INF
-			if kind == "bow":
-				bow = C + B - A
-				lit = [_p(bow)]
-			elif kind == "bow2":
-				bow = A + B - C
-				lit = [_p(bow)]
-			elif kind == "all":
-				lit = "all"
-			var sbx := {"label": "D", "poly": ["A", "B", "C", "D"], "lit": lit, "start": _p(cfg.start)}
-			var ok := kind == "o"
-			var st := _j(["審判一", "審判二", "審判三", "審判四"][k - 1], String(cd[0]), ok, String(cd[2]),
-				("%s ⇒ 平行四邊形" if ok else "%s 不能保證") % cd[0], T_PARA)
-			st["sandbox"] = sbx
-			if ok:
-				st["ribbon"] = [_p(A), _p(B), _p(C), _p(para)]
-			steps.append(st)
-			if not ok:
-				var pl := {"kind": "vplace", "name": "反例", "sandbox": sbx, "para": _p(para), "tag": T_PARA}
-				if kind == "all":
-					pl.merge({"q": "燈亮，但不是平行四邊形", "goal": "lit_not_para", "ans": _p(cfg.ans_all),
-						"nudge": "這個條件哪裡都成立，隨便放一個不是平行四邊形的地方。",
-						"line": "反例：D 在別的地方燈也亮，ABCD 不是平行四邊形"})
-				else:
-					pl.merge({"q": "把 D 拖到燈亮的地方", "goal": "lit", "ans": _p(bow),
-						"nudge": "燈只在一個地方亮，慢慢拖找找看。",
-						"line": "燈只在 D(%s, %s) 亮：ABCD 交叉成蝴蝶結" % [_n(bow.x), _n(bow.y)]})
-				steps.append(pl)
-		vars.append({"eq": "A、B、C 已經立好，哪些條件保證\nABCD 是平行四邊形？",
-			"plane": _plane([-8, 8], [-4, 4], shapes, {"A": A, "B": B, "C": C, "E": E}), "steps": steps})
-	return {"id": "flag", "chapter": 1, "type": "forge", "title": "第四根旗桿",
-		"story": "拖第四根旗桿 D，條件成立時燈會亮。",
-		"insight": "保證平行四邊形 ABCD：\\vec{AB} = \\vec{DC}、\\vec{AD} = \\vec{BC}、\\vec{AC} = \\vec{AB} + \\vec{AD}、對角線中點重合\n\\vec{AB} = \\vec{CD} 是交叉的（ABDC 才是），首尾相接的式子永遠成立。",
-		"variants": vars}
+## 5 六角接力：起點不在 A 的箭頭（A3、A4）
+static func _hexa2() -> Dictionary:
+	return {"id": "hexa2", "chapter": 1, "type": "forge", "title": "六角接力",
+		"story": "這次起點不在 A，照卡片上的式子走一遍。",
+		"insight": "正六邊形的對邊平行、一樣長：\\vec{BE} = 2\\vec{AF}、\\vec{BD} = \\vec{AE}\n起點不在 A 也一樣：從起點出發，首尾接起來走到終點。",
+		"variants": _hexa_parts(1)}
 
 
 ## 6 伸縮弓：k\vec{a} 射得到哪些氣球（係數積與平行）

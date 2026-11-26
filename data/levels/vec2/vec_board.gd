@@ -55,6 +55,7 @@ extends "res://data/levels/line/line_level.gd".CoordPlane
 const UITheme := preload("res://data/ui/game_theme.gd")
 const InkV := preload("res://data/ui/ink_audit.gd")
 const MathV := preload("res://data/ui/math_text.gd")
+const InkR := preload("res://data/ui/ink_audit.gd")
 
 var mode := ""                    # 目前的作答模式
 var _cb := Callable()
@@ -525,10 +526,26 @@ func _arrow_label(font: Font, sa: Vector2, sb: Vector2, s: String, col: Color, s
 		return
 	var u := d.normalized()
 	var n := Vector2(u.y, -u.x) * side       # side = 1：箭頭前進方向的左手邊
-	_label(font, sa.lerp(sb, at) + n * 16.0, s, [0, 0], col, true)
+	# 標籤（連同後面墊的深色底）整塊都要離開箭頭：往旁邊推「半個標籤在法向的寬度」再多 7 點
+	var fs := UITheme.fs(15)
+	var box := InkR.math_box(font, 0.0, 0.0, s, fs) if (s.contains("\\") or s.contains("^{")) \
+		else Rect2(Vector2.ZERO, font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs))
+	var push := 7.0 + absf(n.x) * box.size.x / 2.0 + absf(n.y) * box.size.y / 2.0
+	_label(font, sa.lerp(sb, at) + n * push, s, [0, 0], col, true)
 
 
-func _kite(p: Vector2, ang: float, col: Color, sc := 1.0) -> void:
+## 箭頭指到有名字的點：尖端停在點的外緣，不蓋住點（兩支箭頭指到同一點時也不會疊成一團）
+func _tip_off_dot(sa: Vector2, sb: Vector2) -> Vector2:
+	var L := sa.distance_to(sb)
+	if L < 30.0:
+		return sb
+	for k in named:
+		if _to(named[k]).distance_to(sb) < 1.0:
+			return sb - (sb - sa) / L * 5.0
+	return sb
+
+
+func _kite(p: Vector2, ang: float, col: Color, sc := 1.0, tail := true) -> void:
 	var up := Vector2(0, -1).rotated(ang)
 	var rt := Vector2(1, 0).rotated(ang)
 	var top := p + up * 13.0 * sc
@@ -539,10 +556,12 @@ func _kite(p: Vector2, ang: float, col: Color, sc := 1.0) -> void:
 	draw_colored_polygon(PackedVector2Array([top, r, p]), col.lightened(0.35))
 	draw_line(top, bot, Color(1, 1, 1, 0.5), 1.0, true)
 	draw_line(l, r, Color(1, 1, 1, 0.5), 1.0, true)
-	var tail := PackedVector2Array()
+	if not tail:
+		return
+	var tl := PackedVector2Array()
 	for k in 7:
-		tail.append(bot - up * k * 4.0 * sc + rt * sin(t * 6.0 + k) * 3.0 * sc)
-	draw_polyline(tail, Color(col.r, col.g, col.b, 0.7), 1.2, true)
+		tl.append(bot - up * k * 4.0 * sc + rt * sin(t * 6.0 + k) * 3.0 * sc)
+	draw_polyline(tl, Color(col.r, col.g, col.b, 0.7), 1.2, true)
 
 
 ## 風箏沿著折線飛：k 是 0～1（整段的進度）
@@ -603,7 +622,7 @@ func _shape(sh: Dictionary, o: Vector2, rot: float, font: Font) -> void:
 				glow = 0.6 + 0.3 * sin(t * 3.0)
 			if merged.has(id):
 				col = Color(col.r, col.g, col.b, 0.35)
-			_arrow_px(sa, sb, col, float(sh.get("w", 3.0)), glow, bool(sh.get("dash", false)))
+			_arrow_px(sa, _tip_off_dot(sa, sb), col, float(sh.get("w", 3.0)), glow, bool(sh.get("dash", false)))
 			_arrow_label(font, sa, sb, String(sh.get("s", "")), col, float(sh.get("ls", 1.0)), float(sh.get("lt", 0.5)))
 			return
 		"skew":
@@ -948,7 +967,8 @@ func _draw_modes(font: Font) -> void:
 				_arrow_px(_to(p), _to(q), UITheme.ACCENT, 3.0, 0.3)
 				p = q
 			if is_finite(path_from.x):
-				_kite(_to(p) + Vector2(0, -8), 0.0, UITheme.ACCENT, 0.8)
+				# 風箏停在點的正上方（下尖端碰到點），不拖尾巴：不蓋住點的名字和出發的箭頭
+				_kite(_to(p) + Vector2(0, -17.0 * 0.75 - 3.0), 0.0, UITheme.ACCENT, 0.75, false)
 
 
 ## 布（V8）：o、o + a、o + a + b、o + b 的平行四邊形。行列式正的金色、負的紫色（翻面）、0 只剩一條線

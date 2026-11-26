@@ -245,27 +245,19 @@ func _check_drag() -> void:
 
 
 func _check_place() -> void:
-	await _start("flag", 0)
-	ok(String(lv.steps[0].kind) == "choice" and lv.steps[0].has("sandbox"), "第四根旗桿：判斷時可以拖 D")
-	_press(_px(Vector2(-3, 2)))
-	await frames(2)
-	ok(not _pl().place_lit(_pl().place_p), "\\vec{AB} = \\vec{CD}：平行四邊形的位置燈不亮")
-	_press(_px(Vector2(7, 2)))
-	await frames(2)
-	ok(_pl().place_lit(_pl().place_p), "蝴蝶結的位置燈亮")
-	lv._on_answer(int(lv.cur_q.correct))
-	await frames(3)
-	ok(lv.si == 1 and String(lv.steps[1].kind) == "vplace", "判 ✕ 之後要找反例")
+	await _start("bands", 0)
+	ok(String(lv.steps[0].kind) == "vplace", "三條橡皮筋：第一步拖 P")
 	ok(lv.go_btn.disabled, "防呆：還沒拖點，「確定」不亮")
-	_press(_px(Vector2(0, 2)))
+	var P := Vector2(lv.steps[0].ans[0], lv.steps[0].ans[1])
+	_press(_px(P + Vector2(2, 1)))
 	ok(not lv.go_btn.disabled, "拖過點，「確定」就亮")
 	lv._custom_go()
 	await frames(2)
-	ok(lv.si == 1, "燈沒亮的地方不算")
-	_press(_px(Vector2(7, 2)))
+	ok(lv.si == 0, "燈沒亮的地方不算")
+	_press(_px(P))
 	lv._custom_go()
 	await frames(3)
-	ok(lv.si == 2, "拖到燈亮的地方就過")
+	ok(lv.si == 1, "拖到燈亮的地方就過")
 
 
 func _check_path() -> void:
